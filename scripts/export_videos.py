@@ -243,9 +243,13 @@ def main():
         sys.exit(1)
 
     output_dir = get_output_dir()
-    full_dir = output_dir / "full"
-    thumb_dir = output_dir / "thumb"
-    json_path = output_dir / "videos.json"
+    public_dir = output_dir / "public"
+    full_dir = public_dir / "full"
+    thumb_dir = public_dir / "thumb"
+    json_path = public_dir / "videos.json"
+
+    # Create public directory
+    public_dir.mkdir(exist_ok=True)
 
     # Create directories
     full_dir.mkdir(exist_ok=True)

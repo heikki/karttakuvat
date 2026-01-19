@@ -237,9 +237,13 @@ def main():
     args = parser.parse_args()
 
     output_dir = get_output_dir()
-    full_dir = output_dir / "full"
-    thumb_dir = output_dir / "thumb"
-    json_path = output_dir / "photos.json"
+    public_dir = output_dir / "public"
+    full_dir = public_dir / "full"
+    thumb_dir = public_dir / "thumb"
+    json_path = public_dir / "photos.json"
+
+    # Create public directory
+    public_dir.mkdir(exist_ok=True)
 
     # Create directories
     full_dir.mkdir(exist_ok=True)

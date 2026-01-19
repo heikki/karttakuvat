@@ -1,5 +1,7 @@
 node_modules
 .claude
 .DS_Store
-full
-thumb
+public/full
+public/thumb
+dist
+.osxphotos_export.db

@@ -21,6 +21,7 @@ Add an interactive timeline UI that allows users to visualize and filter photos 
 A scrubable bar at the bottom of the screen showing photo density over time.
 
 **Visual:**
+
 ```
 [=========|||||||||===|||=======|||||||=========]
 2013                 2018                    2025
@@ -28,6 +29,7 @@ A scrubable bar at the bottom of the screen showing photo density over time.
 ```
 
 **Features:**
+
 - Bar chart showing photo count per month/year
 - Draggable range handles to filter date range
 - Click to jump to specific date
@@ -43,6 +45,7 @@ A scrubable bar at the bottom of the screen showing photo density over time.
 Trips are user-defined collections (matching Apple Photos albums like "2018 Kuhmo"). When a trip is selected, draw lines connecting photos in chronological order to show the travel route.
 
 **Visual:**
+
 ```
      [Photo 1] -----> [Photo 2]
          9:00am          9:45am
@@ -79,6 +82,7 @@ Trips come from Apple Photos albums, exported via `osxphotos`:
 ### Timeline + Trip Integration
 
 When a trip is selected:
+
 - Timeline auto-zooms to the trip's date range (handles snap to trip bounds)
 - Rest of timeline outside trip range is grayed out / de-emphasized
 - Trip's date range highlighted with accent color band
@@ -99,6 +103,7 @@ Trip "2018 Kuhmo" selected:
 ### Route Display
 
 **Within a trip:**
+
 - Connect all photos chronologically with a line
 - Different color for each day within the trip
 - Dashed line for overnight gaps (>8 hours)
@@ -107,16 +112,22 @@ Trip "2018 Kuhmo" selected:
 
 ```css
 .route-line {
-  stroke: #007AFF;
+  stroke: #007aff;
   stroke-width: 3;
   stroke-opacity: 0.7;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
-.route-line-day-1 { stroke: #007AFF; }  /* Blue */
-.route-line-day-2 { stroke: #34C759; }  /* Green */
-.route-line-day-3 { stroke: #FF9500; }  /* Orange */
+.route-line-day-1 {
+  stroke: #007aff;
+} /* Blue */
+.route-line-day-2 {
+  stroke: #34c759;
+} /* Green */
+.route-line-day-3 {
+  stroke: #ff9500;
+} /* Orange */
 ```
 
 ### Data Structures
@@ -124,21 +135,21 @@ Trip "2018 Kuhmo" selected:
 ```javascript
 // Trip (from album)
 const trips = [
-  { name: "2018 Kuhmo", photoCount: 45, dateRange: "Jul 15-20, 2018" },
-  { name: "2019 Summer", photoCount: 120, dateRange: "Jun-Aug 2019" },
+  { name: '2018 Kuhmo', photoCount: 45, dateRange: 'Jul 15-20, 2018' },
+  { name: '2019 Summer', photoCount: 120, dateRange: 'Jun-Aug 2019' }
   // ...
 ];
 
 // Route segments for selected trip
 const routeSegments = [
   {
-    date: "2018-07-15",
+    date: '2018-07-15',
     points: [
-      { lat, lon, time: "09:00", photoIndex: 0 },
-      { lat, lon, time: "09:45", photoIndex: 1 },
+      { lat, lon, time: '09:00', photoIndex: 0 },
+      { lat, lon, time: '09:45', photoIndex: 1 }
       // ...
     ]
-  },
+  }
   // ... more days
 ];
 ```
@@ -150,6 +161,7 @@ const routeSegments = [
 Animate through photos chronologically like a slideshow with map panning and route drawing.
 
 **Features:**
+
 - Play button starts animation
 - Speed control slider
 - Map pans smoothly to each photo location
@@ -158,6 +170,7 @@ Animate through photos chronologically like a slideshow with map panning and rou
 - Pause/resume support
 
 **Animation Flow:**
+
 1. Start at first photo in range
 2. Pan map to photo location
 3. Show photo popup briefly
@@ -191,12 +204,14 @@ Animate through photos chronologically like a slideshow with map panning and rou
 ## Implementation Steps
 
 ### Phase 1: Timeline Bar
+
 1. Build timeline data (group photos by month)
 2. Render histogram with Canvas/SVG
 3. Add draggable range handles
 4. Connect to photo filtering
 
 ### Phase 2: Trip/Route Visualization
+
 1. Create `sync_metadata.py` for fast metadata updates (albums, location, date)
 2. Add trip dropdown to stats panel
 3. Add MapLibre line layer for routes
@@ -204,6 +219,7 @@ Animate through photos chronologically like a slideshow with map panning and rou
 5. Style lines with day-based colors
 
 ### Phase 3: Playback Animation
+
 1. Add play/pause controls to timeline
 2. Implement animation loop with requestAnimationFrame
 3. Smooth map panning between photos
@@ -239,12 +255,14 @@ map.addLayer({
 Two scripts for different use cases:
 
 **`export_photos.py`** (existing, slow)
+
 - Exports full images and thumbnails
 - Also includes album metadata (from osxphotos query)
 - Run when adding new photos
 - Takes minutes to run
 
 **`sync_metadata.py`** (new, fast)
+
 - Updates metadata in photos.json without re-exporting images
 - Reads existing photos.json, queries Photos library by UUID
 - Syncs any changed fields: albums, location, date, title
@@ -303,7 +321,7 @@ function generateRouteGeoJSON(photos) {
   byDay.forEach((dayPhotos, i) => {
     if (dayPhotos.length < 2) return;
 
-    const coords = dayPhotos.map(p => [p.lon, p.lat]);
+    const coords = dayPhotos.map((p) => [p.lon, p.lat]);
     features.push({
       type: 'Feature',
       properties: { color: colors[i % colors.length], day: i + 1 },
@@ -322,12 +340,12 @@ function generateRouteGeoJSON(photos) {
   position: absolute;
   bottom: 20px;
   left: 20px;
-  right: 270px;  /* Account for stats panel */
+  right: 270px; /* Account for stats panel */
   height: 70px;
-  background: rgba(255,255,255,0.95);
+  background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
   border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
   z-index: 1000;
   display: flex;
   align-items: center;
@@ -345,7 +363,7 @@ function generateRouteGeoJSON(photos) {
   height: 32px;
   border: none;
   border-radius: 50%;
-  background: #007AFF;
+  background: #007aff;
   color: white;
   cursor: pointer;
 }
@@ -370,7 +388,7 @@ function generateRouteGeoJSON(photos) {
 1. **Performance**: Large trips may have many line segments - use simplification
 2. **Mobile**: Timeline collapses to minimal view, trip selector in menu
 3. **Colors**: Use colorblind-friendly palette for multi-day routes
-4. **Album naming**: Trips are identified by album name pattern (could filter to "YYYY*" pattern)
+4. **Album naming**: Trips are identified by album name pattern (could filter to "YYYY\*" pattern)
 5. **No album**: Photos without albums still show on map but aren't part of any trip
 
 ## Files to Modify

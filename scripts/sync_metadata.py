@@ -190,8 +190,9 @@ def build_photos_json(photos, full_dir, json_path, old_photos):
 
 def main():
     output_dir = get_output_dir()
-    full_dir = output_dir / "full"
-    json_path = output_dir / "photos.json"
+    public_dir = output_dir / "public"
+    full_dir = public_dir / "full"
+    json_path = public_dir / "photos.json"
 
     if not full_dir.exists():
         print(f"Error: {full_dir} does not exist. Run export_photos.py first.")

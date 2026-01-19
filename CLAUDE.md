@@ -5,74 +5,56 @@ Geolocation photo visualization web app displaying geotagged photographs on an i
 ## Project Structure
 
 ```
-├── index.html          # Single-file web app (HTML + CSS + JS)
-├── photos.json         # Photo metadata (3,629 entries)
-├── full/               # Full-size photo assets
-├── thumb/              # Thumbnail images
-└── scripts/
-    ├── export_photos.py    # Export photos from Apple Photos
-    ├── export_videos.py    # Export videos (WIP)
-    └── sync_metadata.py    # Sync metadata without re-exporting
+├── src/
+│   ├── index.ts        # Main application logic (TypeScript)
+│   └── index.html      # Entry point HTML
+├── public/             # Static assets (served at root)
+│   ├── photos.json     # Photo metadata
+│   ├── full/           # Full-size photos
+│   └── thumb/          # Thumbnails
+├── scripts/            # Python data export scripts
+├── server.ts           # Bun dev server
+├── eslint.config.js    # Linting config
+├── prettier.config.js  # Formatting config
+└── tsconfig.json       # TypeScript config
 ```
 
 ## Tech Stack
 
-- **Vanilla HTML/CSS/JavaScript** - No build tools or framework
-- **MapLibre GL JS 4.7** - WebGL map with smooth zoom (CDN)
-- **Multiple tile sources** - OpenTopoMap, Esri Satellite, OSM, CyclOSM
+- **Runtime/Bundler**: Bun
+- **Language**: TypeScript
+- **Map Library**: MapLibre GL JS (bundled)
+- **Styling**: Vanilla CSS (in `src/index.html`)
 
-## Running Locally
+## Commands
 
-No build step required. Serve with:
-
-```bash
-bunx serve
-```
+- `bun dev`: Start dev server (Hot Reloading)
+- `bun run build`: Build for production (`dist/`)
+- `bun run lint`: Run ESLint
+- `bun run format`: Run Prettier
 
 ## Data Format
 
-`photos.json` contains entries with:
+`public/photos.json` entries:
 ```json
 {
-  "uuid": "266A013D-41FC-49CE-8BA4-62D94D65CEF5",
-  "full": "full/266A013D-41FC-49CE-8BA4-62D94D65CEF5.jpg",
-  "thumb": "thumb/266A013D-41FC-49CE-8BA4-62D94D65CEF5.jpg",
-  "lat": 69.0443084,
-  "lon": 20.8032964,
+  "uuid": "...",
+  "full": "full/ID.jpg",
+  "thumb": "thumb/ID.jpg",
+  "lat": 69.04,
+  "lon": 20.80,
   "date": "2008:07:09 17:53:13",
-  "gps": "inferred",
-  "albums": ["2008 Halti"],
-  "photos_url": "photos:albums?albumUuid=...&assetUuid=..."
+  "gps": "inferred|exif|user",
+  "albums": ["Name"],
+  "photos_url": "photos:albums?..."
 }
 ```
 
-- `gps`: Source of coordinates - `exif` (from image metadata), `inferred` (from album/context), or `user` (manually set/modified)
-- `albums`: Array of album names the photo belongs to
-- `photos_url`: Deep link to open photo in Apple Photos
-
-## Key Features
-
-- Distance-based color coding (green <5km, blue 5-20km, amber 20-35km, red 35-50km)
-- Year filter dropdown
-- Map type switcher (OpenTopoMap, Satellite, OSM, CyclOSM)
-- Photo popups with previews
-- Full-screen lightbox with keyboard navigation (arrows, Escape)
-- Stats panel showing photo count and date range
-
 ## Scripts
 
-Requires `osxphotos` (`pipx install osxphotos`), `Pillow`, and Full Disk Access for Terminal.
+Requires `osxphotos` (`pipx install osxphotos`), `Pillow`.
 
 ```bash
-python3 scripts/export_photos.py              # Incremental export (new photos only)
-python3 scripts/export_photos.py --full       # Full re-export
-python3 scripts/export_photos.py --album "X"  # Filter by album
-
-python3 scripts/sync_metadata.py              # Update photos.json from Photos app
-                                              # (coordinates, albums) without re-exporting
+python3 scripts/export_photos.py              # Export to public/
+python3 scripts/sync_metadata.py              # Sync json metadata
 ```
-
-## Architecture Notes
-
-- All logic in single `index.html` file
-- No external dependencies beyond CDN libraries

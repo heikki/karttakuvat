@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Karttakuvat</title>
+    <!-- MapLibre CSS -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      }
+      #map {
+        height: 100vh;
+        width: 100%;
+      }
+
+      .maplibregl-popup-content {
+        padding: 0;
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      .photo-popup {
+        text-align: center;
+        min-width: 280px;
+        padding: 12px;
+      }
+      .photo-popup img {
+        max-width: 260px;
+        max-height: 200px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: transform 0.2s;
+      }
+      .photo-popup img:hover {
+        transform: scale(1.02);
+      }
+      .photo-popup .info {
+        margin-top: 8px;
+        font-size: 12px;
+        color: #666;
+      }
+
+      .stats-panel {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: white;
+        padding: 15px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+        max-width: 250px;
+      }
+      .stats-panel h2 {
+        font-size: 16px;
+        margin-bottom: 10px;
+      }
+      .stats-panel p {
+        font-size: 13px;
+        color: #666;
+        margin: 4px 0;
+      }
+      .stats-panel .count {
+        font-size: 24px;
+        font-weight: bold;
+        color: #007aff;
+      }
+
+      .lightbox {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.9);
+        z-index: 2000;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+      }
+      .lightbox.active {
+        display: flex;
+      }
+      .lightbox img {
+        max-width: 95%;
+        max-height: 95%;
+        object-fit: contain;
+      }
+      .lightbox .close {
+        position: absolute;
+        top: 20px;
+        right: 30px;
+        font-size: 40px;
+        color: white;
+        cursor: pointer;
+      }
+      .lightbox .nav {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 50px;
+        color: white;
+        cursor: pointer;
+        padding: 20px;
+        user-select: none;
+      }
+      .lightbox .nav.prev {
+        left: 10px;
+      }
+      .lightbox .nav.next {
+        right: 10px;
+      }
+      .lightbox .info {
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        color: white;
+        text-align: center;
+        background: rgba(0, 0, 0, 0.5);
+        padding: 10px 20px;
+        border-radius: 8px;
+      }
+
+      .filter-section {
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid #eee;
+      }
+      .filter-section label {
+        font-size: 12px;
+        color: #666;
+        display: block;
+        margin-bottom: 4px;
+      }
+      .filter-section select {
+        width: 100%;
+        padding: 6px 8px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 13px;
+        cursor: pointer;
+        margin-bottom: 8px;
+      }
+
+      .photo-popup .thumb-strip {
+        display: flex;
+        gap: 6px;
+        overflow-x: auto;
+        padding: 8px 0;
+        margin-top: 8px;
+        scrollbar-width: thin;
+      }
+      .photo-popup .thumb-strip::-webkit-scrollbar {
+        height: 6px;
+      }
+      .photo-popup .thumb-strip::-webkit-scrollbar-thumb {
+        background: #ccc;
+        border-radius: 3px;
+      }
+      .photo-popup .thumb {
+        flex-shrink: 0;
+        width: 60px;
+        height: 60px;
+        object-fit: cover;
+        border-radius: 6px;
+        cursor: pointer;
+        border: 2px solid transparent;
+        transition: border-color 0.2s;
+      }
+      .photo-popup .thumb:hover,
+      .photo-popup .thumb.active {
+        border-color: #007aff;
+      }
+      .photo-popup .main-image {
+        max-width: 320px;
+        max-height: 220px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: transform 0.2s;
+      }
+      .photo-popup .main-image:hover {
+        transform: scale(1.02);
+      }
+      .photo-popup .photo-count {
+        font-size: 11px;
+        color: #999;
+        margin-bottom: 6px;
+      }
+      .photo-popup .photos-link {
+        display: inline-block;
+        margin-top: 8px;
+        font-size: 11px;
+        color: #007aff;
+        text-decoration: none;
+      }
+      .photo-popup .photos-link:hover {
+        text-decoration: underline;
+      }
+      .lightbox .photos-link {
+        position: absolute;
+        bottom: 70px;
+        left: 50%;
+        transform: translateX(-50%);
+        color: #007aff;
+        font-size: 14px;
+        text-decoration: none;
+        background: rgba(0, 0, 0, 0.5);
+        padding: 6px 12px;
+        border-radius: 6px;
+      }
+      .lightbox .photos-link:hover {
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+
+    <div class="stats-panel">
+      <h2>All Photos</h2>
+      <!-- Functions are now global window.browseAllPhotos etc. -->
+      <div class="count" id="photo-count">0</div>
+      <p>photos found</p>
+      <p id="date-range"></p>
+      <p style="margin-top: 10px; font-size: 11px; color: #999">
+        Shift+drag to select area.
+      </p>
+      <div class="filter-section">
+        <label for="year-select">Filter by year</label>
+        <select id="year-select">
+          <option value="all">All years</option>
+        </select>
+        <label for="gps-select">Location precision</label>
+        <select id="gps-select">
+          <option value="all">All locations</option>
+          <option value="exif">Precise GPS only</option>
+          <option value="inferred">Inferred only</option>
+          <option value="user">User modified</option>
+        </select>
+        <label for="map-select">Map type</label>
+        <select id="map-select">
+          <option value="opentopomap">OpenTopoMap</option>
+          <option value="satellite">Satellite</option>
+          <option value="osm">OpenStreetMap</option>
+          <option value="cyclosm">CyclOSM</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="lightbox" id="lightbox">
+      <span class="close">&times;</span>
+      <span class="nav prev">&#10094;</span>
+      <span class="nav next">&#10095;</span>
+      <img id="lightbox-img" src="" alt="" />
+      <a id="lightbox-photos-link" class="photos-link" href="#" target="_blank"
+        >Open in Photos</a
+      >
+      <div class="info" id="lightbox-info"></div>
+    </div>
+
+    <!-- Bundled Script -->
+    <script src="./index.ts"></script>
+  </body>
+</html>
