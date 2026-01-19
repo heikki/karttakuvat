@@ -22,13 +22,15 @@ export function subscribe(fn: Listener) {
 }
 
 function notify() {
-  listeners.forEach((fn) => { fn(state.filteredPhotos); });
+  listeners.forEach((fn) => {
+    fn(state.filteredPhotos);
+  });
 }
 
 export async function loadPhotos() {
   try {
     const response = await fetch('photos.json');
-    const data: Photo[] = await response.json();
+    const data = (await response.json()) as Photo[];
     data.sort(compareDates);
     state.photos = data;
     applyFilters(state.filters.year, state.filters.gps);

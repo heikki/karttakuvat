@@ -1,18 +1,22 @@
-import type { FeatureCollection, Point, Polygon } from 'geojson';
+import type { FeatureCollection, Point } from 'geojson';
 import maplibregl from 'maplibre-gl';
-import type {
-  FilterSpecification,
-  MapGeoJSONFeature,
-  StyleSpecification
-} from 'maplibre-gl';
+import type { FilterSpecification, StyleSpecification } from 'maplibre-gl';
 
 import { mapStyles } from './config';
 import { state, subscribe } from './data';
-import type { MapStyle, MapStyles, Photo } from './types';
+import type { MapStyles, Photo } from './types';
 import { updateLightboxGroup } from './ui';
 import { compareDates, formatDate, getThumbUrl } from './utils';
 
+// Declare window augmentation for map
+declare global {
+  interface Window {
+    map?: maplibregl.Map;
+  }
+}
+
 // Global map variable (local to module)
+// eslint-disable-next-line @typescript-eslint/init-declarations -- map is initialized in initMap() which is called before any other usage
 let map: maplibregl.Map;
 let currentPopup: maplibregl.Popup | null = null;
 let clusterPhotos: Photo[] = [];
@@ -36,7 +40,7 @@ export function initMap() {
   map.addControl(new maplibregl.NavigationControl(), 'bottom-right');
 
   // Expose map to window
-  (window as any).map = map;
+  window.map = map;
 
   map.on('load', () => {
     addPhotoLayers();
@@ -49,17 +53,18 @@ export function initMap() {
   });
 
   subscribe(() => {
-    if (map?.isStyleLoaded()) {
+    if (map?.isStyleLoaded() === true) {
       updateMapData();
     }
   });
 }
 
 function updateMapData() {
-  if (!map.getSource('photos')) return;
+  const source = map.getSource('photos');
+  if (source === undefined) return;
   // eslint-disable-next-line @typescript-eslint/non-nullable-type-assertion-style -- cast to specific source type is required
-  const source = map.getSource('photos') as maplibregl.GeoJSONSource;
-  source.setData(createGeoJSON());
+  const geoSource = source as maplibregl.GeoJSONSource;
+  geoSource.setData(createGeoJSON());
 
   const mapBounds = map.getBounds();
   const allVisible =
@@ -71,12 +76,13 @@ function updateMapData() {
 }
 
 export function changeMapStyle(styleKey: string) {
-  // @ts-ignore
-  const style = mapStyles[styleKey as keyof MapStyles];
-  if (!style) return;
+  const style = mapStyles[styleKey as keyof MapStyles] as
+    | StyleSpecification
+    | undefined;
+  if (style === undefined) return;
 
-  map.setStyle(style as StyleSpecification);
-  map.once('idle', () => {
+  map.setStyle(style);
+  void map.once('idle', () => {
     addPhotoLayers();
     addSelectionLayer();
     setupMarkerInteractions();
@@ -178,12 +184,17 @@ function setupMarkerInteractions() {
     e.preventDefault();
     e.originalEvent.stopPropagation();
 
-    if (!e.features || e.features.length === 0) return;
+    if (
+      e.features === undefined ||
+      e.features === null ||
+      e.features.length === 0
+    )
+      return;
     const feature = e.features[0]!;
-    const clickedIndex = feature.properties?.index;
+    const clickedIndex = feature.properties?.index as number | undefined;
 
     // Check if part of cluster
-    if (currentPopup && clusterPhotos.length > 1) {
+    if (currentPopup !== null && clusterPhotos.length > 1) {
       const groupIndex = clusterPhotos.findIndex(
         (p) => p._index === clickedIndex
       );
@@ -199,6 +210,7 @@ function setupMarkerInteractions() {
       geom.coordinates[0]!,
       geom.coordinates[1]!
     ];
+    if (clickedIndex === undefined) return;
     showPopup({ index: clickedIndex }, coords);
   });
 
@@ -218,24 +230,28 @@ function setupMarkerInteractions() {
       layers: ['selection-fill']
     });
     if (selectionFeatures.length > 0) return;
-    if (currentPopup) currentPopup.remove();
+    if (currentPopup !== null) currentPopup.remove();
   });
 }
 
-function showPopup(props: any, coords: [number, number]) {
-  if (currentPopup) currentPopup.remove();
+interface FeatureProps {
+  index: number;
+}
+function showPopup(props: FeatureProps, coords: [number, number]) {
+  if (currentPopup !== null) currentPopup.remove();
 
   const index = props.index;
   const photo = state.filteredPhotos[index];
-  if (!photo) return;
+  if (photo === undefined) return;
 
   currentSinglePhotoIndex = index;
   clusterPhotos = [];
   highlightMarker(index);
 
-  const photosLink = photo.photos_url
-    ? `<a class="photos-link" href="${photo.photos_url}">Open in Photos</a>`
-    : '';
+  const photosLink =
+    photo.photos_url !== undefined && photo.photos_url !== ''
+      ? `<a class="photos-link" href="${photo.photos_url}">Open in Photos</a>`
+      : '';
 
   const popupContent = `
         <div class="photo-popup">
@@ -263,21 +279,24 @@ function showPopup(props: any, coords: [number, number]) {
   panToFitPopup(coords);
 }
 
+interface MapFeature {
+  properties: Record<string, unknown>;
+}
 function showMultiPhotoPopup(
-  features: any[],
+  features: MapFeature[],
   coords: [number, number],
   keepSelection = false
 ) {
-  if (currentPopup) currentPopup.remove();
+  if (currentPopup !== null) currentPopup.remove();
   currentSinglePhotoIndex = null;
 
   if (!keepSelection) clearSelection();
 
   clusterPhotos = features
     .map((f) => {
-      const idx = f.properties.index;
+      const idx = f.properties.index as number;
       const photo = state.filteredPhotos[idx];
-      if (!photo) return undefined;
+      if (photo === undefined) return undefined;
       const p: Photo = { ...photo, _index: idx };
       return p;
     })
@@ -290,18 +309,22 @@ function showMultiPhotoPopup(
 
   clusterPhotos.sort(compareDates);
   currentGroupIndex = 0;
-  highlightMarker(clusterPhotos[0]!._index || 0);
+  highlightMarker(clusterPhotos[0]!._index ?? 0);
 
   const firstPhoto = clusterPhotos[0]!;
   const lastPhoto = clusterPhotos[clusterPhotos.length - 1];
 
   let dateRangeStr = '';
-  if (firstPhoto && lastPhoto && firstPhoto.date && lastPhoto.date) {
+  if (
+    lastPhoto !== undefined &&
+    firstPhoto.date !== '' &&
+    lastPhoto.date !== ''
+  ) {
     const firstDate = formatDate(firstPhoto.date);
     const lastDate = formatDate(lastPhoto.date);
     dateRangeStr =
       firstDate === lastDate ? firstDate : `${firstDate} – ${lastDate}`;
-  } else if (firstPhoto?.date) {
+  } else if (firstPhoto.date !== undefined && firstPhoto.date !== '') {
     dateRangeStr = formatDate(firstPhoto.date);
   }
 
@@ -316,13 +339,14 @@ function showMultiPhotoPopup(
     )
     .join('');
 
-  const firstPhotosLink = firstPhoto.photos_url
-    ? `<a class="photos-link" id="group-photos-link" href="${firstPhoto.photos_url}">Open in Photos</a>`
-    : '';
+  const firstPhotosLink =
+    firstPhoto.photos_url !== undefined && firstPhoto.photos_url !== ''
+      ? `<a class="photos-link" id="group-photos-link" href="${firstPhoto.photos_url}">Open in Photos</a>`
+      : '';
 
   const popupContent = `
         <div class="photo-popup">
-            <div class="photo-count">${clusterPhotos.length} photos${dateRangeStr ? ` • ${dateRangeStr}` : ''}</div>
+            <div class="photo-count">${clusterPhotos.length} photos${dateRangeStr !== '' ? ` • ${dateRangeStr}` : ''}</div>
             <img class="main-image" id="group-main-img" src="${getThumbUrl(firstPhoto)}"
                     onclick="window.showGroupLightbox(0)" 
                     onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22150%22><rect fill=%22%23f0f0f0%22 width=%22200%22 height=%22150%22/><text x=%22100%22 y=%2275%22 text-anchor=%22middle%22 fill=%22%23999%22>Preview unavailable</text></svg>'" />
@@ -353,23 +377,27 @@ function showMultiPhotoPopup(
 
 export function selectGroupPhoto(index: number) {
   const photo = clusterPhotos[index];
-  if (!photo) return;
+  if (photo === undefined) return;
 
-  const mainImg = document.getElementById('group-main-img') as HTMLImageElement;
+  const mainImg = document.getElementById(
+    'group-main-img'
+  ) as HTMLImageElement | null;
   const info = document.getElementById('group-info');
   const photosLink = document.getElementById(
     'group-photos-link'
-  ) as HTMLAnchorElement;
+  ) as HTMLAnchorElement | null;
 
-  if (mainImg) {
+  if (mainImg !== null) {
     mainImg.src = getThumbUrl(photo);
-    mainImg.onclick = () => (window as any).showGroupLightbox(index);
+    mainImg.onclick = () => {
+      window.showGroupLightbox(index);
+    };
   }
-  if (info) {
+  if (info !== null) {
     info.innerHTML = `${formatDate(photo.date)}<br>${photo.lat.toFixed(4)}°N, ${photo.lon.toFixed(4)}°E`;
   }
-  if (photosLink) {
-    if (photo.photos_url) {
+  if (photosLink !== null) {
+    if (photo.photos_url !== undefined && photo.photos_url !== '') {
       photosLink.href = photo.photos_url;
       photosLink.style.display = 'inline-block';
     } else {
@@ -381,13 +409,13 @@ export function selectGroupPhoto(index: number) {
     thumb.classList.toggle('active', i === index);
   });
 
-  highlightMarker(photo._index || null);
+  highlightMarker(photo._index ?? null);
   currentGroupIndex = index;
 }
 
 function scrollToActiveThumbnail() {
   const activeThumb = document.querySelector('.photo-popup .thumb.active');
-  if (activeThumb) {
+  if (activeThumb !== null) {
     activeThumb.scrollIntoView({
       behavior: 'smooth',
       block: 'nearest',
@@ -398,9 +426,9 @@ function scrollToActiveThumbnail() {
 
 function panToFitPopup(coords: [number, number]) {
   setTimeout(() => {
-    if (!currentPopup) return;
+    if (currentPopup === null) return;
     const popupEl = currentPopup.getElement();
-    if (!popupEl) return;
+    if (popupEl === null) return;
     const mapContainer = map.getContainer();
     const mapRect = mapContainer.getBoundingClientRect();
     const popupRect = popupEl.getBoundingClientRect();
@@ -565,10 +593,10 @@ function setupRectangularSelection() {
       if (features.length === 1) {
         clearSelection();
         const geom = features[0]!.geometry as Point;
-        showPopup(
-          features[0]!.properties,
-          geom.coordinates as [number, number]
-        );
+        const props = features[0]!.properties as Record<string, unknown>;
+        const index = props.index as number | undefined;
+        if (index === undefined) return;
+        showPopup({ index }, geom.coordinates as [number, number]);
       } else {
         showMultiPhotoPopup(
           features,

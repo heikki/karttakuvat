@@ -6,10 +6,17 @@ import {
   populateYearFilter,
   showGroupLightbox,
   showLightbox,
-  updateLightboxGroup,
   updateStats
 } from './lib/ui';
 import { getYear } from './lib/utils';
+
+declare global {
+  interface Window {
+    selectGroupPhoto: typeof selectGroupPhoto;
+    showLightbox: typeof showLightbox;
+    showGroupLightbox: typeof showGroupLightbox;
+  }
+}
 
 // Note: map.ts might need to call updateLightboxGroup.
 // Ideally map.ts is updated to import updateLightboxGroup and call it in showMultiPhotoPopup.
@@ -45,9 +52,9 @@ import { getYear } from './lib/utils';
 // For now write index.ts assuming exports exist.
 
 // Expose global functions for HTML access
-(window as any).selectGroupPhoto = selectGroupPhoto;
-(window as any).showLightbox = showLightbox;
-(window as any).showGroupLightbox = showGroupLightbox;
+window.selectGroupPhoto = selectGroupPhoto;
+window.showLightbox = showLightbox;
+window.showGroupLightbox = showGroupLightbox;
 
 document.addEventListener('DOMContentLoaded', () => {
   void (async () => {
@@ -55,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Event Listeners
     const mapSelect = document.getElementById('map-select');
-    if (mapSelect) {
+    if (mapSelect !== null) {
       mapSelect.addEventListener('change', (e) => {
         changeMapStyle((e.target as HTMLSelectElement).value);
       });
@@ -65,22 +72,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const gpsSelect = document.getElementById('gps-select');
 
     const handleFilterChange = () => {
+      if (yearSelect === null || gpsSelect === null) return;
       const y = (yearSelect as HTMLSelectElement).value;
       const g = (gpsSelect as HTMLSelectElement).value;
       applyFilters(y, g);
     };
 
-    if (yearSelect) yearSelect.addEventListener('change', handleFilterChange);
-    if (gpsSelect) gpsSelect.addEventListener('change', handleFilterChange);
+    if (yearSelect !== null)
+      yearSelect.addEventListener('change', handleFilterChange);
+    if (gpsSelect !== null)
+      gpsSelect.addEventListener('change', handleFilterChange);
 
     // Stats interactions
     const countEl = document.getElementById('photo-count');
-    const countLabel = countEl?.nextElementSibling as HTMLElement;
-    if (countEl) {
+    const countLabel = countEl?.nextElementSibling as HTMLElement | null;
+    if (countEl !== null) {
       countEl.addEventListener('click', browseAllPhotos);
       countEl.style.cursor = 'pointer';
     }
-    if (countLabel) {
+    if (countLabel !== null) {
       countLabel.addEventListener('click', browseAllPhotos);
       countLabel.style.cursor = 'pointer';
     }

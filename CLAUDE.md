@@ -36,13 +36,14 @@ Geolocation photo visualization web app displaying geotagged photographs on an i
 ## Data Format
 
 `public/photos.json` entries:
+
 ```json
 {
   "uuid": "...",
   "full": "full/ID.jpg",
   "thumb": "thumb/ID.jpg",
   "lat": 69.04,
-  "lon": 20.80,
+  "lon": 20.8,
   "date": "2008:07:09 17:53:13",
   "gps": "inferred|exif|user",
   "albums": ["Name"],

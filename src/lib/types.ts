@@ -15,8 +15,8 @@ export interface Photo {
 
 export interface MapStyle {
   version: number;
-  sources: Record<string, any>;
-  layers: any[];
+  sources: Record<string, unknown>;
+  layers: unknown[];
 }
 
 export interface MapStyles {

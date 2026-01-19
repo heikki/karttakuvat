@@ -1,12 +1,12 @@
 import { state } from './data';
 import type { Photo } from './types';
-import { formatDate, getFullUrl, getThumbUrl } from './utils';
+import { formatDate, getFullUrl } from './utils';
 
 // --- Lightbox Elements ---
-let lightbox: HTMLElement;
-let lightboxImg: HTMLImageElement;
-let lightboxInfo: HTMLElement;
-let lightboxPhotosLink: HTMLAnchorElement;
+let lightbox: HTMLElement | null = null;
+let lightboxImg: HTMLImageElement | null = null;
+let lightboxInfo: HTMLElement | null = null;
+let lightboxPhotosLink: HTMLAnchorElement | null = null;
 
 // --- State Tracking for Lightbox ---
 let currentPhotoIndex = 0;
@@ -16,43 +16,63 @@ let lightboxMode: 'all' | 'group' | '' = '';
 
 export function initUI() {
   const lb = document.getElementById('lightbox');
-  if (!lb) throw new Error('Lightbox element not found');
+  if (lb === null) {
+    throw new Error('Lightbox element not found');
+  }
   lightbox = lb;
 
   lightboxImg = document.getElementById('lightbox-img') as HTMLImageElement;
-  lightboxInfo = document.getElementById('lightbox-info')!;
+  lightboxInfo = document.getElementById('lightbox-info');
   lightboxPhotosLink = document.getElementById(
     'lightbox-photos-link'
   ) as HTMLAnchorElement;
+
+  // lightbox is confirmed non-null at this point
+  if (
+    lightboxImg === null ||
+    lightboxInfo === null ||
+    lightboxPhotosLink === null
+  ) {
+    console.error('Lightbox elements not found');
+    return;
+  }
 
   setupLightboxEvents();
 }
 
 function setupLightboxEvents() {
-  const closeBtn = lightbox.querySelector('.close');
-  const nextBtn = lightbox.querySelector('.next');
-  const prevBtn = lightbox.querySelector('.prev');
+  const closeBtn = lightbox?.querySelector('.close');
+  const nextBtn = lightbox?.querySelector('.next');
+  const prevBtn = lightbox?.querySelector('.prev');
 
-  if (closeBtn) closeBtn.addEventListener('click', hideLightbox);
-  if (nextBtn) {
+  if (closeBtn !== null && closeBtn !== undefined) {
+    closeBtn.addEventListener('click', hideLightbox);
+  }
+  if (nextBtn !== null && nextBtn !== undefined) {
     nextBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       nextPhoto();
     });
   }
-  if (prevBtn) {
+  if (prevBtn !== null && prevBtn !== undefined) {
     prevBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       prevPhoto();
     });
   }
-  lightbox.addEventListener('click', hideLightbox);
-  lightboxImg.addEventListener('click', (e) => {
-    e.stopPropagation();
-  });
+  if (lightbox !== null) {
+    lightbox.addEventListener('click', hideLightbox);
+  }
+  if (lightboxImg !== null) {
+    lightboxImg.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+  }
 
   document.addEventListener('keydown', (e) => {
-    if (!lightbox.classList.contains('active')) return;
+    if (lightbox?.classList.contains('active') !== true) {
+      return;
+    }
 
     if (e.key === 'Escape') hideLightbox();
     if (e.key === 'ArrowRight') nextPhoto();
@@ -61,7 +81,8 @@ function setupLightboxEvents() {
 }
 
 function updateLightboxPhotosLink(photo: Photo) {
-  if (photo.photos_url) {
+  if (lightboxPhotosLink === null) return;
+  if (photo.photos_url !== undefined && photo.photos_url !== '') {
     lightboxPhotosLink.href = photo.photos_url;
     lightboxPhotosLink.style.display = 'block';
   } else {
@@ -73,10 +94,10 @@ export function showLightbox(index: number) {
   currentPhotoIndex = index;
   lightboxMode = 'all';
   const photo = state.filteredPhotos[index];
-  if (!photo) return;
+  if (photo === undefined) return;
 
   displayPhoto(photo, index + 1, state.filteredPhotos.length);
-  lightbox.classList.add('active');
+  if (lightbox !== null) lightbox.classList.add('active');
 }
 
 export function showGroupLightbox(index: number, groupPhotos?: Photo[]) {
@@ -125,10 +146,10 @@ export function showGroupLightbox(index: number, groupPhotos?: Photo[]) {
   lightboxMode = 'group';
 
   const photo = currentGroupPhotos[index];
-  if (!photo) return;
+  if (photo === undefined) return;
 
   displayPhoto(photo, index + 1, currentGroupPhotos.length);
-  lightbox.classList.add('active');
+  if (lightbox !== null) lightbox.classList.add('active');
 }
 
 export function updateLightboxGroup(photos: Photo[]) {
@@ -136,14 +157,18 @@ export function updateLightboxGroup(photos: Photo[]) {
 }
 
 function displayPhoto(photo: Photo, index: number, total: number) {
-  lightboxImg.src = getFullUrl(photo);
+  if (lightboxImg !== null) {
+    lightboxImg.src = getFullUrl(photo);
+  }
   const countInfo = `<br>(${index} of ${total})`;
-  lightboxInfo.innerHTML = `${formatDate(photo.date)}<br>${photo.lat.toFixed(4)}°N, ${photo.lon.toFixed(4)}°E${countInfo}`;
+  if (lightboxInfo !== null) {
+    lightboxInfo.innerHTML = `${formatDate(photo.date)}<br>${photo.lat.toFixed(4)}°N, ${photo.lon.toFixed(4)}°E${countInfo}`;
+  }
   updateLightboxPhotosLink(photo);
 }
 
 function hideLightbox() {
-  lightbox.classList.remove('active');
+  if (lightbox !== null) lightbox.classList.remove('active');
   lightboxMode = '';
 }
 
@@ -151,13 +176,13 @@ function nextPhoto() {
   if (lightboxMode === 'group') {
     currentGroupIndex = (currentGroupIndex + 1) % currentGroupPhotos.length;
     const photo = currentGroupPhotos[currentGroupIndex];
-    if (photo) {
+    if (photo !== undefined) {
       displayPhoto(photo, currentGroupIndex + 1, currentGroupPhotos.length);
     }
   } else {
     currentPhotoIndex = (currentPhotoIndex + 1) % state.filteredPhotos.length;
     const photo = state.filteredPhotos[currentPhotoIndex];
-    if (photo) {
+    if (photo !== undefined) {
       displayPhoto(photo, currentPhotoIndex + 1, state.filteredPhotos.length);
     }
   }
@@ -169,7 +194,7 @@ function prevPhoto() {
       (currentGroupIndex - 1 + currentGroupPhotos.length) %
       currentGroupPhotos.length;
     const photo = currentGroupPhotos[currentGroupIndex];
-    if (photo) {
+    if (photo !== undefined) {
       displayPhoto(photo, currentGroupIndex + 1, currentGroupPhotos.length);
     }
   } else {
@@ -177,7 +202,7 @@ function prevPhoto() {
       (currentPhotoIndex - 1 + state.filteredPhotos.length) %
       state.filteredPhotos.length;
     const photo = state.filteredPhotos[currentPhotoIndex];
-    if (photo) {
+    if (photo !== undefined) {
       displayPhoto(photo, currentPhotoIndex + 1, state.filteredPhotos.length);
     }
   }
@@ -186,11 +211,11 @@ function prevPhoto() {
 export function updateStats(filteredPhotos: Photo[]) {
   const countEl = document.getElementById('photo-count');
   const dateRangeEl = document.getElementById('date-range');
-  if (!countEl || !dateRangeEl) return;
+  if (countEl === null || dateRangeEl === null) return;
 
   countEl.textContent = filteredPhotos.length.toString();
 
-  const photosWithDates = filteredPhotos.filter((p) => p.date);
+  const photosWithDates = filteredPhotos.filter((p) => p.date !== '');
   if (photosWithDates.length > 0) {
     const firstDate = formatDate(photosWithDates[0]!.date);
     const lastDate = formatDate(
@@ -203,8 +228,10 @@ export function updateStats(filteredPhotos: Photo[]) {
 }
 
 export function populateYearFilter(years: string[]) {
-  const select = document.getElementById('year-select') as HTMLSelectElement;
-  if (!select) return;
+  const select = document.getElementById(
+    'year-select'
+  ) as HTMLSelectElement | null;
+  if (select === null) return;
   // Clear existing options except first
   while (select.options.length > 1) {
     select.remove(1);
