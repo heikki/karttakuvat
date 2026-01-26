@@ -12416,14 +12416,12 @@
     "uuid": "5B6F5C67-4150-403B-9F14-38763DFCEC53",
     "full": "full/5B6F5C67-4150-403B-9F14-38763DFCEC53.jpg",
     "thumb": "thumb/5B6F5C67-4150-403B-9F14-38763DFCEC53.jpg",
-    "lat": 62.1328019,
-    "lon": 27.4603997,
+    "lat": 63.982692634661646,
+    "lon": 29.593046852761592,
     "date": "2014:07:12 20:44:57",
-    "gps": "inferred",
-    "albums": [
-      "Fix location"
-    ],
-    "photos_url": "photos:albums?albumUuid=23F73F5D-9AC8-433D-AF2A-9F40F13678FF&assetUuid=5B6F5C67-4150-403B-9F14-38763DFCEC53"
+    "gps": "user",
+    "albums": [],
+    "photos_url": "photos:albums?albumUuid=81938C84-C5B0-4258-BC19-0B3EFA9BF296&assetUuid=5B6F5C67-4150-403B-9F14-38763DFCEC53"
   },
   {
     "uuid": "7C4CBA87-8415-418C-A9F3-B49E67035E5E",
@@ -15753,13 +15751,12 @@
     "uuid": "03D78054-A54D-4492-8534-CFFAE563883B",
     "full": "full/03D78054-A54D-4492-8534-CFFAE563883B.jpg",
     "thumb": "thumb/03D78054-A54D-4492-8534-CFFAE563883B.jpg",
-    "lat": 69.0126152,
-    "lon": 28.0055502,
+    "lat": 69.10309127918256,
+    "lon": 27.196629461672437,
     "date": "2014:08:14 06:43:17",
-    "gps": "inferred",
+    "gps": "user",
     "albums": [
-      "2014 Inarij\u00e4rvi",
-      "Fix location"
+      "2014 Inarij\u00e4rvi"
     ],
     "photos_url": "photos:albums?albumUuid=A2AAEFC7-EE8A-4CEB-925D-34E3F966E6E5&assetUuid=03D78054-A54D-4492-8534-CFFAE563883B"
   },
@@ -16001,13 +15998,12 @@
     "uuid": "A20CD84E-BEBA-4FFD-88DE-0A0AD060D0D8",
     "full": "full/A20CD84E-BEBA-4FFD-88DE-0A0AD060D0D8.jpg",
     "thumb": "thumb/A20CD84E-BEBA-4FFD-88DE-0A0AD060D0D8.jpg",
-    "lat": 62.2999225,
-    "lon": 27.1602314,
+    "lat": 62.04330845430194,
+    "lon": 26.998280849959592,
     "date": "2014:08:17 10:31:50",
-    "gps": "inferred",
+    "gps": "user",
     "albums": [
-      "2014 Naarajoki",
-      "Fix location"
+      "2014 Naarajoki"
     ],
     "photos_url": "photos:albums?albumUuid=809F7F9F-9630-42EA-A13D-9EF6AC11ECDB&assetUuid=A20CD84E-BEBA-4FFD-88DE-0A0AD060D0D8"
   },
@@ -35618,40 +35614,34 @@
     "uuid": "DC163228-8159-45D4-9EE1-0F3B12731AA9",
     "full": "full/DC163228-8159-45D4-9EE1-0F3B12731AA9.jpg",
     "thumb": "thumb/DC163228-8159-45D4-9EE1-0F3B12731AA9.jpg",
-    "lat": 62.154236166666664,
-    "lon": 27.075325,
+    "lat": 62.154065,
+    "lon": 27.076057,
     "date": "2018:04:02 14:41:55",
-    "gps": "exif",
-    "albums": [
-      "Fix location"
-    ],
-    "photos_url": "photos:albums?albumUuid=23F73F5D-9AC8-433D-AF2A-9F40F13678FF&assetUuid=DC163228-8159-45D4-9EE1-0F3B12731AA9"
+    "gps": "user",
+    "albums": [],
+    "photos_url": "photos:albums?albumUuid=81938C84-C5B0-4258-BC19-0B3EFA9BF296&assetUuid=DC163228-8159-45D4-9EE1-0F3B12731AA9"
   },
   {
     "uuid": "1591A751-2651-40D2-A61B-674047F54BE6",
     "full": "full/1591A751-2651-40D2-A61B-674047F54BE6.jpg",
     "thumb": "thumb/1591A751-2651-40D2-A61B-674047F54BE6.jpg",
-    "lat": 62.154097166666666,
-    "lon": 27.075666666666667,
+    "lat": 62.154065,
+    "lon": 27.076057,
     "date": "2018:04:02 14:41:58",
-    "gps": "exif",
-    "albums": [
-      "Fix location"
-    ],
-    "photos_url": "photos:albums?albumUuid=23F73F5D-9AC8-433D-AF2A-9F40F13678FF&assetUuid=1591A751-2651-40D2-A61B-674047F54BE6"
+    "gps": "user",
+    "albums": [],
+    "photos_url": "photos:albums?albumUuid=81938C84-C5B0-4258-BC19-0B3EFA9BF296&assetUuid=1591A751-2651-40D2-A61B-674047F54BE6"
   },
   {
     "uuid": "099B6DFA-B2D7-4DE1-AE6B-938B72766044",
     "full": "full/099B6DFA-B2D7-4DE1-AE6B-938B72766044.jpg",
     "thumb": "thumb/099B6DFA-B2D7-4DE1-AE6B-938B72766044.jpg",
-    "lat": 62.15411666666667,
-    "lon": 27.075791666666667,
+    "lat": 62.15406482898643,
+    "lon": 27.07605691776928,
     "date": "2018:04:02 14:42:03",
-    "gps": "exif",
-    "albums": [
-      "Fix location"
-    ],
-    "photos_url": "photos:albums?albumUuid=23F73F5D-9AC8-433D-AF2A-9F40F13678FF&assetUuid=099B6DFA-B2D7-4DE1-AE6B-938B72766044"
+    "gps": "user",
+    "albums": [],
+    "photos_url": "photos:albums?albumUuid=81938C84-C5B0-4258-BC19-0B3EFA9BF296&assetUuid=099B6DFA-B2D7-4DE1-AE6B-938B72766044"
   },
   {
     "uuid": "88D61198-BC1D-4259-8CFF-A73FAD10BE49",
@@ -35668,14 +35658,12 @@
     "uuid": "DA732536-9F21-4B14-A3C8-D91F63622500",
     "full": "full/DA732536-9F21-4B14-A3C8-D91F63622500.jpg",
     "thumb": "thumb/DA732536-9F21-4B14-A3C8-D91F63622500.jpg",
-    "lat": 62.15374716666667,
-    "lon": 27.075972166666666,
+    "lat": 62.15380879964913,
+    "lon": 27.076303435949733,
     "date": "2018:04:02 14:44:14",
-    "gps": "exif",
-    "albums": [
-      "Fix location"
-    ],
-    "photos_url": "photos:albums?albumUuid=23F73F5D-9AC8-433D-AF2A-9F40F13678FF&assetUuid=DA732536-9F21-4B14-A3C8-D91F63622500"
+    "gps": "user",
+    "albums": [],
+    "photos_url": "photos:albums?albumUuid=81938C84-C5B0-4258-BC19-0B3EFA9BF296&assetUuid=DA732536-9F21-4B14-A3C8-D91F63622500"
   },
   {
     "uuid": "E6DD410A-3B99-40AD-988E-608E53496724",
@@ -35879,14 +35867,12 @@
     "uuid": "6FB87B92-BC93-4749-9726-1527DB5AFE71",
     "full": "full/6FB87B92-BC93-4749-9726-1527DB5AFE71.jpg",
     "thumb": "thumb/6FB87B92-BC93-4749-9726-1527DB5AFE71.jpg",
-    "lat": 62.15266117,
-    "lon": 27.07655833,
+    "lat": 62.1531002991605,
+    "lon": 27.07742626477817,
     "date": "2018:04:10 13:35:41",
-    "gps": "exif",
-    "albums": [
-      "Fix location"
-    ],
-    "photos_url": "photos:albums?albumUuid=23F73F5D-9AC8-433D-AF2A-9F40F13678FF&assetUuid=6FB87B92-BC93-4749-9726-1527DB5AFE71"
+    "gps": "user",
+    "albums": [],
+    "photos_url": "photos:albums?albumUuid=81938C84-C5B0-4258-BC19-0B3EFA9BF296&assetUuid=6FB87B92-BC93-4749-9726-1527DB5AFE71"
   },
   {
     "uuid": "1038E027-C979-47E2-B274-A3AF92DA376C",
@@ -36166,14 +36152,12 @@
     "uuid": "8AAF1AF2-B1FC-4CB2-9B42-E3A4F82D8EC7",
     "full": "full/8AAF1AF2-B1FC-4CB2-9B42-E3A4F82D8EC7.jpg",
     "thumb": "thumb/8AAF1AF2-B1FC-4CB2-9B42-E3A4F82D8EC7.jpg",
-    "lat": 62.15365283333333,
-    "lon": 27.0756805,
+    "lat": 62.153881257692106,
+    "lon": 27.076380748193255,
     "date": "2018:06:27 16:58:04",
-    "gps": "exif",
-    "albums": [
-      "Fix location"
-    ],
-    "photos_url": "photos:albums?albumUuid=23F73F5D-9AC8-433D-AF2A-9F40F13678FF&assetUuid=8AAF1AF2-B1FC-4CB2-9B42-E3A4F82D8EC7"
+    "gps": "user",
+    "albums": [],
+    "photos_url": "photos:albums?albumUuid=81938C84-C5B0-4258-BC19-0B3EFA9BF296&assetUuid=8AAF1AF2-B1FC-4CB2-9B42-E3A4F82D8EC7"
   },
   {
     "uuid": "6BD637D7-AA2D-4F2C-A464-543C3A2FF760",
@@ -36632,14 +36616,12 @@
     "uuid": "885E826B-B650-4518-973A-F3E66F043234",
     "full": "full/885E826B-B650-4518-973A-F3E66F043234.jpg",
     "thumb": "thumb/885E826B-B650-4518-973A-F3E66F043234.jpg",
-    "lat": 62.14577758861609,
-    "lon": 27.05740355560104,
+    "lat": 62.153901484443345,
+    "lon": 27.076412159356583,
     "date": "2018:10:16 18:36:17",
-    "gps": "inferred",
-    "albums": [
-      "Fix location"
-    ],
-    "photos_url": "photos:albums?albumUuid=23F73F5D-9AC8-433D-AF2A-9F40F13678FF&assetUuid=885E826B-B650-4518-973A-F3E66F043234"
+    "gps": "user",
+    "albums": [],
+    "photos_url": "photos:albums?albumUuid=81938C84-C5B0-4258-BC19-0B3EFA9BF296&assetUuid=885E826B-B650-4518-973A-F3E66F043234"
   },
   {
     "uuid": "E5765ACD-753C-41A4-A723-FD17F3E95D37",
@@ -37052,27 +37034,23 @@
     "uuid": "7030C1DF-5CE0-4D05-BB2D-41F6648E5192",
     "full": "full/7030C1DF-5CE0-4D05-BB2D-41F6648E5192.jpg",
     "thumb": "thumb/7030C1DF-5CE0-4D05-BB2D-41F6648E5192.jpg",
-    "lat": 62.154025,
-    "lon": 27.075572166666667,
+    "lat": 62.153975915122345,
+    "lon": 27.076039146562586,
     "date": "2019:07:13 18:33:21",
-    "gps": "exif",
-    "albums": [
-      "Fix location"
-    ],
-    "photos_url": "photos:albums?albumUuid=23F73F5D-9AC8-433D-AF2A-9F40F13678FF&assetUuid=7030C1DF-5CE0-4D05-BB2D-41F6648E5192"
+    "gps": "user",
+    "albums": [],
+    "photos_url": "photos:albums?albumUuid=81938C84-C5B0-4258-BC19-0B3EFA9BF296&assetUuid=7030C1DF-5CE0-4D05-BB2D-41F6648E5192"
   },
   {
     "uuid": "0375D816-74E2-4AE2-AB3C-1441D5861F8F",
     "full": "full/0375D816-74E2-4AE2-AB3C-1441D5861F8F.jpg",
     "thumb": "thumb/0375D816-74E2-4AE2-AB3C-1441D5861F8F.jpg",
-    "lat": 62.154036166666664,
-    "lon": 27.075752833333333,
+    "lat": 62.153965756804695,
+    "lon": 27.075949982093487,
     "date": "2019:07:13 18:33:56",
-    "gps": "exif",
-    "albums": [
-      "Fix location"
-    ],
-    "photos_url": "photos:albums?albumUuid=23F73F5D-9AC8-433D-AF2A-9F40F13678FF&assetUuid=0375D816-74E2-4AE2-AB3C-1441D5861F8F"
+    "gps": "user",
+    "albums": [],
+    "photos_url": "photos:albums?albumUuid=81938C84-C5B0-4258-BC19-0B3EFA9BF296&assetUuid=0375D816-74E2-4AE2-AB3C-1441D5861F8F"
   },
   {
     "uuid": "3F4DE8B8-41CD-40A7-AE8F-81EA2CFD1D56",
@@ -37394,14 +37372,12 @@
     "uuid": "DA882B9D-6EAA-4966-A1AB-3800CD48C445",
     "full": "full/DA882B9D-6EAA-4966-A1AB-3800CD48C445.jpg",
     "thumb": "thumb/DA882B9D-6EAA-4966-A1AB-3800CD48C445.jpg",
-    "lat": 62.1660305,
-    "lon": 27.050786166666665,
+    "lat": 62.150039,
+    "lon": 27.061389,
     "date": "2019:09:08 14:06:58",
-    "gps": "exif",
-    "albums": [
-      "Fix location"
-    ],
-    "photos_url": "photos:albums?albumUuid=23F73F5D-9AC8-433D-AF2A-9F40F13678FF&assetUuid=DA882B9D-6EAA-4966-A1AB-3800CD48C445"
+    "gps": "user",
+    "albums": [],
+    "photos_url": "photos:albums?albumUuid=81938C84-C5B0-4258-BC19-0B3EFA9BF296&assetUuid=DA882B9D-6EAA-4966-A1AB-3800CD48C445"
   },
   {
     "uuid": "A62893B0-5ABA-4AC7-BC89-5F38D5F281CD",
@@ -37411,10 +37387,8 @@
     "lon": 27.061388833333332,
     "date": "2019:09:08 14:09:02",
     "gps": "exif",
-    "albums": [
-      "Fix location"
-    ],
-    "photos_url": "photos:albums?albumUuid=23F73F5D-9AC8-433D-AF2A-9F40F13678FF&assetUuid=A62893B0-5ABA-4AC7-BC89-5F38D5F281CD"
+    "albums": [],
+    "photos_url": "photos:albums?albumUuid=81938C84-C5B0-4258-BC19-0B3EFA9BF296&assetUuid=A62893B0-5ABA-4AC7-BC89-5F38D5F281CD"
   },
   {
     "uuid": "12DFA65D-F143-4A89-92DB-FBF22623A270",
@@ -38172,14 +38146,12 @@
     "uuid": "71C36B31-57F4-46E1-8629-0F135CCE118C",
     "full": "full/71C36B31-57F4-46E1-8629-0F135CCE118C.jpg",
     "thumb": "thumb/71C36B31-57F4-46E1-8629-0F135CCE118C.jpg",
-    "lat": 62.17234667,
-    "lon": 27.06793883000001,
+    "lat": 62.153961984584456,
+    "lon": 27.07592505208933,
     "date": "2020:07:15 15:47:46",
-    "gps": "exif",
-    "albums": [
-      "Fix location"
-    ],
-    "photos_url": "photos:albums?albumUuid=23F73F5D-9AC8-433D-AF2A-9F40F13678FF&assetUuid=71C36B31-57F4-46E1-8629-0F135CCE118C"
+    "gps": "user",
+    "albums": [],
+    "photos_url": "photos:albums?albumUuid=81938C84-C5B0-4258-BC19-0B3EFA9BF296&assetUuid=71C36B31-57F4-46E1-8629-0F135CCE118C"
   },
   {
     "uuid": "0F75881C-252B-4612-8F3C-C4B0DAA639AD",
@@ -38955,14 +38927,12 @@
     "uuid": "AF14623F-70F1-4A06-9DEF-2CF3B31DDE42",
     "full": "full/AF14623F-70F1-4A06-9DEF-2CF3B31DDE42.jpg",
     "thumb": "thumb/AF14623F-70F1-4A06-9DEF-2CF3B31DDE42.jpg",
-    "lat": 62.15905282999999,
-    "lon": 27.05817217,
+    "lat": 62.145535297334874,
+    "lon": 27.057270453603778,
     "date": "2021:06:15 11:52:16",
-    "gps": "exif",
-    "albums": [
-      "Fix location"
-    ],
-    "photos_url": "photos:albums?albumUuid=23F73F5D-9AC8-433D-AF2A-9F40F13678FF&assetUuid=AF14623F-70F1-4A06-9DEF-2CF3B31DDE42"
+    "gps": "user",
+    "albums": [],
+    "photos_url": "photos:albums?albumUuid=81938C84-C5B0-4258-BC19-0B3EFA9BF296&assetUuid=AF14623F-70F1-4A06-9DEF-2CF3B31DDE42"
   },
   {
     "uuid": "6360C011-3C2B-4364-AAFB-25FE87845A47",
@@ -39320,13 +39290,12 @@
     "uuid": "F1E3E7A2-4B86-4E05-A0C8-CB5D77223C19",
     "full": "full/F1E3E7A2-4B86-4E05-A0C8-CB5D77223C19.jpg",
     "thumb": "thumb/F1E3E7A2-4B86-4E05-A0C8-CB5D77223C19.jpg",
-    "lat": 62.182291670000005,
-    "lon": 27.06556383000001,
+    "lat": 62.175890468239714,
+    "lon": 27.072987960374466,
     "date": "2021:08:07 16:16:49",
-    "gps": "exif",
+    "gps": "user",
     "albums": [
-      "2021 Naarajoki",
-      "Fix location"
+      "2021 Naarajoki"
     ],
     "photos_url": "photos:albums?albumUuid=1BF7FFC1-CF39-4496-B29E-35CC605663D5&assetUuid=F1E3E7A2-4B86-4E05-A0C8-CB5D77223C19"
   },
@@ -39803,14 +39772,12 @@
     "uuid": "A90B7895-75CF-47E7-896B-A0C5C4E054C9",
     "full": "full/A90B7895-75CF-47E7-896B-A0C5C4E054C9.jpg",
     "thumb": "thumb/A90B7895-75CF-47E7-896B-A0C5C4E054C9.jpg",
-    "lat": 62.1540195,
-    "lon": 27.0768695,
+    "lat": 62.15395861407883,
+    "lon": 27.07626206176614,
     "date": "2022:07:09 21:45:55",
-    "gps": "exif",
-    "albums": [
-      "Fix location"
-    ],
-    "photos_url": "photos:albums?albumUuid=23F73F5D-9AC8-433D-AF2A-9F40F13678FF&assetUuid=A90B7895-75CF-47E7-896B-A0C5C4E054C9"
+    "gps": "user",
+    "albums": [],
+    "photos_url": "photos:albums?albumUuid=81938C84-C5B0-4258-BC19-0B3EFA9BF296&assetUuid=A90B7895-75CF-47E7-896B-A0C5C4E054C9"
   },
   {
     "uuid": "9C13EF98-A7FC-4672-B45A-6B9A7C5EB237",
@@ -43233,14 +43200,12 @@
     "uuid": "4E654FF4-E2A0-428E-BF01-4EC3FE275ED6",
     "full": "full/4E654FF4-E2A0-428E-BF01-4EC3FE275ED6.jpg",
     "thumb": "thumb/4E654FF4-E2A0-428E-BF01-4EC3FE275ED6.jpg",
-    "lat": 64.3143,
-    "lon": 30.144383333333334,
+    "lat": 64.31591715567573,
+    "lon": 30.199412705142173,
     "date": "2024:07:30 18:58:31",
-    "gps": "exif",
-    "albums": [
-      "Fix location"
-    ],
-    "photos_url": "photos:albums?albumUuid=23F73F5D-9AC8-433D-AF2A-9F40F13678FF&assetUuid=4E654FF4-E2A0-428E-BF01-4EC3FE275ED6"
+    "gps": "user",
+    "albums": [],
+    "photos_url": "photos:albums?albumUuid=81938C84-C5B0-4258-BC19-0B3EFA9BF296&assetUuid=4E654FF4-E2A0-428E-BF01-4EC3FE275ED6"
   },
   {
     "uuid": "3B6A613D-6CEC-49D4-914E-33BFF2B520D3",
@@ -43529,14 +43494,12 @@
     "uuid": "5656932A-6629-434F-8807-E88BFADD27E5",
     "full": "full/5656932A-6629-434F-8807-E88BFADD27E5.jpg",
     "thumb": "thumb/5656932A-6629-434F-8807-E88BFADD27E5.jpg",
-    "lat": 64.32182166666666,
-    "lon": 30.0926055,
+    "lat": 64.31959237153083,
+    "lon": 30.141900212737216,
     "date": "2024:09:06 19:09:40",
-    "gps": "exif",
-    "albums": [
-      "Fix location"
-    ],
-    "photos_url": "photos:albums?albumUuid=23F73F5D-9AC8-433D-AF2A-9F40F13678FF&assetUuid=5656932A-6629-434F-8807-E88BFADD27E5"
+    "gps": "user",
+    "albums": [],
+    "photos_url": "photos:albums?albumUuid=81938C84-C5B0-4258-BC19-0B3EFA9BF296&assetUuid=5656932A-6629-434F-8807-E88BFADD27E5"
   },
   {
     "uuid": "8F192C50-DB19-4510-ABCD-EE91E306FAF1",
@@ -45720,14 +45683,12 @@
     "uuid": "B891D5CE-39B6-40F6-80F0-275EDD0CBF3E",
     "full": "full/B891D5CE-39B6-40F6-80F0-275EDD0CBF3E.jpg",
     "thumb": "thumb/B891D5CE-39B6-40F6-80F0-275EDD0CBF3E.jpg",
-    "lat": 62.28474666666666,
-    "lon": 27.04025,
+    "lat": 62.28772828147051,
+    "lon": 27.043517600159866,
     "date": "2025:12:13 13:10:23",
-    "gps": "exif",
-    "albums": [
-      "Fix location"
-    ],
-    "photos_url": "photos:albums?albumUuid=23F73F5D-9AC8-433D-AF2A-9F40F13678FF&assetUuid=B891D5CE-39B6-40F6-80F0-275EDD0CBF3E"
+    "gps": "user",
+    "albums": [],
+    "photos_url": "photos:albums?albumUuid=81938C84-C5B0-4258-BC19-0B3EFA9BF296&assetUuid=B891D5CE-39B6-40F6-80F0-275EDD0CBF3E"
   },
   {
     "uuid": "1456A63E-0AA3-4E5C-BC10-A4865CA6E651",
