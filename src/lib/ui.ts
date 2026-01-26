@@ -27,57 +27,45 @@ export function initUI() {
     'lightbox-photos-link'
   ) as HTMLAnchorElement;
 
-  // lightbox is confirmed non-null at this point
-  if (
-    lightboxImg === null ||
-    lightboxInfo === null ||
-    lightboxPhotosLink === null
-  ) {
-    console.error('Lightbox elements not found');
-    return;
-  }
-
   setupLightboxEvents();
 }
 
+function addButtonListener(
+  selector: string,
+  handler: (e: Event) => void
+): void {
+  const btn = lightbox?.querySelector(selector);
+  if (btn !== null && btn !== undefined) {
+    btn.addEventListener('click', handler);
+  }
+}
+
+function handleLightboxKeydown(e: KeyboardEvent): void {
+  if (lightbox?.classList.contains('active') !== true) {
+    return;
+  }
+  if (e.key === 'Escape') hideLightbox();
+  if (e.key === 'ArrowRight') nextPhoto();
+  if (e.key === 'ArrowLeft') prevPhoto();
+}
+
 function setupLightboxEvents() {
-  const closeBtn = lightbox?.querySelector('.close');
-  const nextBtn = lightbox?.querySelector('.next');
-  const prevBtn = lightbox?.querySelector('.prev');
-
-  if (closeBtn !== null && closeBtn !== undefined) {
-    closeBtn.addEventListener('click', hideLightbox);
-  }
-  if (nextBtn !== null && nextBtn !== undefined) {
-    nextBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      nextPhoto();
-    });
-  }
-  if (prevBtn !== null && prevBtn !== undefined) {
-    prevBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      prevPhoto();
-    });
-  }
-  if (lightbox !== null) {
-    lightbox.addEventListener('click', hideLightbox);
-  }
-  if (lightboxImg !== null) {
-    lightboxImg.addEventListener('click', (e) => {
-      e.stopPropagation();
-    });
-  }
-
-  document.addEventListener('keydown', (e) => {
-    if (lightbox?.classList.contains('active') !== true) {
-      return;
-    }
-
-    if (e.key === 'Escape') hideLightbox();
-    if (e.key === 'ArrowRight') nextPhoto();
-    if (e.key === 'ArrowLeft') prevPhoto();
+  addButtonListener('.close', hideLightbox);
+  addButtonListener('.next', (e) => {
+    e.stopPropagation();
+    nextPhoto();
   });
+  addButtonListener('.prev', (e) => {
+    e.stopPropagation();
+    prevPhoto();
+  });
+
+  lightbox?.addEventListener('click', hideLightbox);
+  lightboxImg?.addEventListener('click', (e) => {
+    e.stopPropagation();
+  });
+
+  document.addEventListener('keydown', handleLightboxKeydown);
 }
 
 function updateLightboxPhotosLink(photo: Photo) {

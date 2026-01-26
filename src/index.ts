@@ -78,10 +78,12 @@ document.addEventListener('DOMContentLoaded', () => {
       applyFilters(y, g);
     };
 
-    if (yearSelect !== null)
+    if (yearSelect !== null) {
       yearSelect.addEventListener('change', handleFilterChange);
-    if (gpsSelect !== null)
+    }
+    if (gpsSelect !== null) {
       gpsSelect.addEventListener('change', handleFilterChange);
+    }
 
     // Stats interactions
     const countEl = document.getElementById('photo-count');

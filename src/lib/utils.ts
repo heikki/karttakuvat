@@ -12,28 +12,34 @@ export function compareDates(a: Photo, b: Photo): number {
   return a.date.localeCompare(b.date);
 }
 
+function parseTimePart(timePart: string | undefined): string {
+  if (timePart === undefined || timePart === '') return '';
+  const [hours, minutes] = timePart.split(':');
+  if (hours !== undefined && minutes !== undefined) {
+    return ` ${hours}:${minutes}`;
+  }
+  return '';
+}
+
+function parseDatePart(datePart: string): string | null {
+  const parts = datePart.split(':');
+  const hasAllParts =
+    parts.length >= 3 &&
+    parts[0] !== undefined &&
+    parts[1] !== undefined &&
+    parts[2] !== undefined;
+  if (!hasAllParts) return null;
+  return `${parseInt(parts[2]!, 10)}.${parseInt(parts[1]!, 10)}.${parts[0]!}`;
+}
+
 export function formatDate(dateStr: string): string {
   if (dateStr === '') return 'Unknown date';
   // Input format: "YYYY:MM:DD HH:MM:SS" -> Output: "D.M.YYYY HH:MM"
   const [datePart, timePart] = dateStr.split(' ');
   if (datePart === undefined || datePart === '') return dateStr;
-  const parts = datePart.split(':');
-  if (
-    parts.length >= 3 &&
-    parts[0] !== undefined &&
-    parts[1] !== undefined &&
-    parts[2] !== undefined
-  ) {
-    const date = `${parseInt(parts[2], 10)}.${parseInt(parts[1], 10)}.${parts[0]}`;
-    if (timePart !== undefined && timePart !== '') {
-      const [hours, minutes] = timePart.split(':');
-      if (hours !== undefined && minutes !== undefined) {
-        return `${date} ${hours}:${minutes}`;
-      }
-    }
-    return date;
-  }
-  return dateStr;
+  const formattedDate = parseDatePart(datePart);
+  if (formattedDate === null) return dateStr;
+  return formattedDate + parseTimePart(timePart);
 }
 
 export function getThumbUrl(photo: Photo): string {
