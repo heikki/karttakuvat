@@ -286,6 +286,9 @@ function panToFitPopup(coords: [number, number]) {
 
 export function fitToPhotos(animate = true) {
   if (state.filteredPhotos.length === 0) return;
+  // Stop any in-progress animation to avoid MapLibre crashing
+  // when a new fitBounds is called mid-ease
+  map.stop();
   const bounds = new maplibregl.LngLatBounds();
   state.filteredPhotos.forEach((p) => bounds.extend([p.lon, p.lat]));
   map.fitBounds(bounds, {
