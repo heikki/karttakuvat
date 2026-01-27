@@ -17,6 +17,7 @@ Requirements:
 import argparse
 import json
 import shutil
+import sqlite3
 import subprocess
 import sys
 import tempfile
@@ -183,11 +184,52 @@ def format_date(date_str):
     return date_str
 
 
+def query_gps_accuracy():
+    """Read GPS horizontal accuracy from the Photos database.
+
+    Returns a dict of {uuid: accuracy}. Apple Photos stores accuracy=10.0
+    for user-set locations, -1.0 for inferred, and real GPS accuracy for
+    EXIF GPS photos.
+    """
+    db_path = Path.home() / "Pictures/Photos Library.photoslibrary/database/Photos.sqlite"
+    if not db_path.exists():
+        return {}
+    db = sqlite3.connect(str(db_path))
+    cur = db.cursor()
+    cur.execute("""
+        SELECT a.ZUUID, aa.ZGPSHORIZONTALACCURACY
+        FROM ZASSET a
+        JOIN ZADDITIONALASSETATTRIBUTES aa ON a.Z_PK = aa.ZASSET
+        WHERE a.ZLATITUDE IS NOT NULL
+    """)
+    result = dict(cur.fetchall())
+    db.close()
+    return result
+
+
+def determine_gps_source(photo, gps_accuracy):
+    """Determine GPS source: 'user', 'exif', or 'inferred'.
+
+    - accuracy = 10.0 → user manually set the location
+    - has EXIF GPS → camera embedded GPS coordinates
+    - otherwise → Apple Photos inferred the location
+    """
+    acc = gps_accuracy.get(photo["uuid"])
+    if acc == 10.0:
+        return "user"
+    exif_info = photo.get("exif_info") or {}
+    if exif_info.get("latitude") is not None:
+        return "exif"
+    return "inferred"
+
+
 def build_photos_json(photos, full_dir, json_path):
     """Build photos.json from queried photos and exported files."""
     # Get list of actually exported files
     exported_uuids = {f.stem for f in full_dir.glob("*.jpg")}
     print(f"Building photos.json ({len(photos)} photos, {len(exported_uuids)} exported)...")
+
+    gps_accuracy = query_gps_accuracy()
 
     progress = Progress(len(photos), "JSON: ")
     entries = []
@@ -204,25 +246,7 @@ def build_photos_json(photos, full_dir, json_path):
         if lat is None or lon is None:
             continue
 
-        # Determine GPS source: exif, user, or inferred
-        exif_info = photo.get("exif_info", {})
-        exif_lat = exif_info.get("latitude")
-        exif_lon = exif_info.get("longitude")
-        has_exif_gps = exif_lat is not None
-
-        # Check if user moved photo from original EXIF location
-        def coords_differ(lat1, lon1, lat2, lon2, threshold=0.0001):
-            if lat1 is None or lon1 is None:
-                return False
-            return abs(lat1 - lat2) > threshold or abs(lon1 - lon2) > threshold
-
-        if has_exif_gps:
-            if coords_differ(exif_lat, exif_lon, lat, lon):
-                gps_source = "user"  # User moved photo from original EXIF location
-            else:
-                gps_source = "exif"  # Still at original EXIF location
-        else:
-            gps_source = "inferred"  # Apple Photos inferred (can't detect user changes on first export)
+        gps_source = determine_gps_source(photo, gps_accuracy)
 
         # Get albums
         albums = photo.get("albums", [])

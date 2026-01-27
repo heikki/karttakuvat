@@ -18,6 +18,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from export_photos import determine_gps_source, query_gps_accuracy
+
 
 def get_output_dir():
     """Get the output directory (project root, parent of scripts/)."""
@@ -101,6 +103,7 @@ def coords_changed(old_lat, old_lon, new_lat, new_lon, threshold=0.0001):
 def build_photos_json(photos, full_dir, json_path, old_photos):
     """Build photos.json from queried photos and exported files."""
     exported_uuids = get_exported_uuids(full_dir)
+    gps_accuracy = query_gps_accuracy()
 
     entries = []
     skipped_no_location = 0
@@ -120,12 +123,6 @@ def build_photos_json(photos, full_dir, json_path, old_photos):
             skipped_no_location += 1
             continue
 
-        # Determine GPS source: exif, user, or inferred
-        exif_info = photo.get("exif_info", {})
-        exif_lat = exif_info.get("latitude")
-        exif_lon = exif_info.get("longitude")
-        has_exif_gps = exif_lat is not None
-
         # Check for location changes
         old_photo = old_photos.get(uuid)
         location_changed = old_photo and coords_changed(old_photo.get("lat"), old_photo.get("lon"), lat, lon)
@@ -140,20 +137,7 @@ def build_photos_json(photos, full_dir, json_path, old_photos):
                 "albums": photo.get("albums", [])
             })
 
-        # Determine gps field value
-        if has_exif_gps:
-            # Has EXIF GPS - check if user moved it
-            if coords_changed(exif_lat, exif_lon, lat, lon):
-                gps_source = "user"  # User moved photo from original EXIF location
-            else:
-                gps_source = "exif"  # Still at original EXIF location
-        else:
-            # No EXIF GPS - check if previously marked as user or if location changed
-            old_gps = old_photo.get("gps") if old_photo else None
-            if location_changed or old_gps == "user":
-                gps_source = "user"  # User assigned/modified location
-            else:
-                gps_source = "inferred"  # Apple Photos inferred
+        gps_source = determine_gps_source(photo, gps_accuracy)
 
         # Get albums
         albums = photo.get("albums", [])
