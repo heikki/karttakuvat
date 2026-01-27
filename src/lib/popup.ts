@@ -8,7 +8,6 @@ import { compareDates, formatDate, getThumbUrl } from './utils';
 // State
 let currentPopup: maplibregl.Popup | null = null;
 let clusterPhotos: Photo[] = [];
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- used indirectly via setCurrentSinglePhotoIndex
 let currentSinglePhotoIndex: number | null = null;
 let currentGroupIndex = 0;
 
@@ -43,6 +42,10 @@ export function getCurrentGroupIndex(): number {
   return currentGroupIndex;
 }
 
+export function getCurrentSinglePhotoIndex(): number | null {
+  return currentSinglePhotoIndex;
+}
+
 export function setCurrentSinglePhotoIndex(index: number | null) {
   currentSinglePhotoIndex = index;
 }
@@ -67,17 +70,17 @@ export function showPopup(props: FeatureProps, coords: [number, number]) {
   clusterPhotos = [];
   highlightMarkerFn(index);
 
-  const photosLink =
+  const photosLinkHtml =
     photo.photos_url !== undefined && photo.photos_url !== ''
-      ? `<a class="photos-link" href="${photo.photos_url}">Open in Photos</a>`
-      : '';
+      ? `<a class="photos-link" id="single-photos-link" href="${photo.photos_url}">Open in Photos</a>`
+      : `<a class="photos-link" id="single-photos-link" href="#" style="display:none">Open in Photos</a>`;
 
   const popupContent = `
         <div class="photo-popup">
-            <img src="${getThumbUrl(photo)}" alt="Photo" onclick="window.showLightbox(${index})"
+            <img id="single-img" src="${getThumbUrl(photo)}" alt="Photo" onclick="window.showLightbox(${index})"
                     onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22150%22><rect fill=%22%23f0f0f0%22 width=%22200%22 height=%22150%22/><text x=%22100%22 y=%2275%22 text-anchor=%22middle%22 fill=%22%23999%22>Preview unavailable</text></svg>'" />
-            <div class="info">${formatDate(photo.date)}<br>${photo.lat.toFixed(4)}°N, ${photo.lon.toFixed(4)}°E</div>
-            ${photosLink}
+            <div class="info" id="single-info">${formatDate(photo.date)}<br>${photo.lat.toFixed(4)}°N, ${photo.lon.toFixed(4)}°E</div>
+            ${photosLinkHtml}
         </div>`;
 
   currentPopup = new maplibregl.Popup({
@@ -281,4 +284,39 @@ export function scrollToActiveThumbnail() {
       inline: 'center'
     });
   }
+}
+
+export function navigateSinglePhoto(newIndex: number) {
+  const photo = state.filteredPhotos[newIndex];
+  if (photo === undefined || currentPopup === null) return;
+
+  currentSinglePhotoIndex = newIndex;
+  highlightMarkerFn(newIndex);
+
+  const img = document.getElementById('single-img') as HTMLImageElement | null;
+  const info = document.getElementById('single-info');
+  const photosLink = document.getElementById(
+    'single-photos-link'
+  ) as HTMLAnchorElement | null;
+
+  if (img !== null) {
+    img.src = getThumbUrl(photo);
+    img.onclick = () => {
+      window.showLightbox(newIndex);
+    };
+  }
+  if (info !== null) {
+    info.innerHTML = `${formatDate(photo.date)}<br>${photo.lat.toFixed(4)}°N, ${photo.lon.toFixed(4)}°E`;
+  }
+  if (photosLink !== null) {
+    if (photo.photos_url !== undefined && photo.photos_url !== '') {
+      photosLink.href = photo.photos_url;
+      photosLink.style.display = 'inline-block';
+    } else {
+      photosLink.style.display = 'none';
+    }
+  }
+
+  currentPopup.setLngLat([photo.lon, photo.lat]);
+  panToFitPopupFn([photo.lon, photo.lat]);
 }

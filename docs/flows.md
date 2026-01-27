@@ -6,7 +6,9 @@ User opens the app and sees all photos on the map, zoomed to fit. The stats pane
 
 ## Find a specific photo on the map
 
-User sees markers on the map and clicks one. A popup appears with a thumbnail, date, and coordinates. If the popup is cut off by the screen edge, the map pans to make room. Clicking the thumbnail opens the full-screen viewer. Clicking elsewhere on the map dismisses the popup.
+User sees markers on the map and clicks one. A popup appears with a thumbnail, date, and coordinates. If the popup is cut off by the screen edge, the map pans to make room.
+
+The user can press left/right arrow keys to step through all filtered photos chronologically. The popup moves to each photo's marker on the map. Clicking the thumbnail opens the full-screen viewer. Clicking elsewhere on the map dismisses the popup.
 
 ## Explore a cluster of nearby photos
 

@@ -1,12 +1,15 @@
 import type { Point } from 'geojson';
 import maplibregl from 'maplibre-gl';
 
+import { state } from './data';
 import {
   type FeatureProps,
   type MapFeature,
   getClusterPhotos,
   getCurrentGroupIndex,
   getCurrentPopup,
+  getCurrentSinglePhotoIndex,
+  navigateSinglePhoto,
   scrollToActiveThumbnail,
   selectGroupPhoto,
   showMultiPhotoPopup,
@@ -207,12 +210,30 @@ function handleKeyUp(e: KeyboardEvent) {
   }
 }
 
+function handleArrowNavigation(key: string) {
+  const clusterPhotos = getClusterPhotos();
+  const delta = key === 'ArrowRight' ? 1 : -1;
+
+  if (clusterPhotos.length > 1) {
+    const currentGroupIndex = getCurrentGroupIndex();
+    const next =
+      (currentGroupIndex + delta + clusterPhotos.length) %
+      clusterPhotos.length;
+    selectGroupPhoto(next);
+    scrollToActiveThumbnail();
+  } else {
+    const singleIndex = getCurrentSinglePhotoIndex();
+    if (singleIndex === null) return;
+    const total = state.filteredPhotos.length;
+    if (total === 0) return;
+    navigateSinglePhoto((singleIndex + delta + total) % total);
+  }
+}
+
 function handleKeyDown(e: KeyboardEvent) {
-  // Ignore if lightbox is active
   if (document.querySelector('.lightbox.active') !== null) return;
 
   const popup = getCurrentPopup();
-  // Ignore if no popup
   if (popup === null) return;
 
   if (e.key === 'Escape') {
@@ -221,20 +242,8 @@ function handleKeyDown(e: KeyboardEvent) {
     return;
   }
 
-  const clusterPhotos = getClusterPhotos();
-  // Navigation requires multiple photos
-  if (clusterPhotos.length <= 1) return;
-
-  const currentGroupIndex = getCurrentGroupIndex();
-  if (e.key === 'ArrowRight') {
-    const nextIndex = (currentGroupIndex + 1) % clusterPhotos.length;
-    selectGroupPhoto(nextIndex);
-    scrollToActiveThumbnail();
-  } else if (e.key === 'ArrowLeft') {
-    const prevIndex =
-      (currentGroupIndex - 1 + clusterPhotos.length) % clusterPhotos.length;
-    selectGroupPhoto(prevIndex);
-    scrollToActiveThumbnail();
+  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+    handleArrowNavigation(e.key);
   }
 }
 

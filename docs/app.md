@@ -72,6 +72,7 @@ Shown on marker click or single-marker selection:
 - Thumbnail (click opens lightbox in all mode)
 - Date and coordinates
 - "Open in Photos" link when available
+- Arrow keys navigate to next/prev photo in the full filtered set (chronological order), moving the popup to each marker
 - Closing clears marker highlight
 
 ### Multi-Photo
