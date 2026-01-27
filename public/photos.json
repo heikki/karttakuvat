@@ -4737,10 +4737,10 @@
     "uuid": "05B0C470-A682-4512-A8B7-6319F7658841",
     "full": "full/05B0C470-A682-4512-A8B7-6319F7658841.jpg",
     "thumb": "thumb/05B0C470-A682-4512-A8B7-6319F7658841.jpg",
-    "lat": 42.35633333,
-    "lon": -71.05600000000001,
+    "lat": 42.350683386966296,
+    "lon": -71.06708244312874,
     "date": "2011:06:23 22:41:00",
-    "gps": "exif",
+    "gps": "user",
     "albums": [
       "2011 Boston"
     ],
@@ -4750,10 +4750,10 @@
     "uuid": "4A6CB18F-E7CE-4567-A94C-A233C7D4D1D5",
     "full": "full/4A6CB18F-E7CE-4567-A94C-A233C7D4D1D5.jpg",
     "thumb": "thumb/4A6CB18F-E7CE-4567-A94C-A233C7D4D1D5.jpg",
-    "lat": 42.35633333,
-    "lon": -71.05600000000001,
+    "lat": 42.350683,
+    "lon": -71.067082,
     "date": "2011:06:23 22:41:11",
-    "gps": "exif",
+    "gps": "user",
     "albums": [
       "2011 Boston"
     ],
@@ -4763,10 +4763,10 @@
     "uuid": "201D329C-A05E-41E0-A529-CFE1E7AC16B9",
     "full": "full/201D329C-A05E-41E0-A529-CFE1E7AC16B9.jpg",
     "thumb": "thumb/201D329C-A05E-41E0-A529-CFE1E7AC16B9.jpg",
-    "lat": 42.35633333,
-    "lon": -71.05600000000001,
+    "lat": 42.350683,
+    "lon": -71.067082,
     "date": "2011:06:23 22:41:22",
-    "gps": "exif",
+    "gps": "user",
     "albums": [
       "2011 Boston"
     ],
@@ -4776,10 +4776,10 @@
     "uuid": "8CD53F0F-CD4E-4DFC-9ECF-2C23E7FE5EC1",
     "full": "full/8CD53F0F-CD4E-4DFC-9ECF-2C23E7FE5EC1.jpg",
     "thumb": "thumb/8CD53F0F-CD4E-4DFC-9ECF-2C23E7FE5EC1.jpg",
-    "lat": 42.35633333,
-    "lon": -71.05600000000001,
+    "lat": 42.350683,
+    "lon": -71.067082,
     "date": "2011:06:23 22:53:45",
-    "gps": "exif",
+    "gps": "user",
     "albums": [
       "2011 Boston"
     ],
@@ -4789,10 +4789,10 @@
     "uuid": "5C30B6EF-0652-463F-A8E0-033604CCD1B7",
     "full": "full/5C30B6EF-0652-463F-A8E0-033604CCD1B7.jpg",
     "thumb": "thumb/5C30B6EF-0652-463F-A8E0-033604CCD1B7.jpg",
-    "lat": 42.34983332999999,
-    "lon": -71.06783283,
+    "lat": 42.350683,
+    "lon": -71.067082,
     "date": "2011:06:24 06:58:28",
-    "gps": "exif",
+    "gps": "user",
     "albums": [
       "2011 Boston"
     ],
@@ -4802,10 +4802,10 @@
     "uuid": "CCA2C1F0-48C8-4284-8090-132FE51C85C1",
     "full": "full/CCA2C1F0-48C8-4284-8090-132FE51C85C1.jpg",
     "thumb": "thumb/CCA2C1F0-48C8-4284-8090-132FE51C85C1.jpg",
-    "lat": 42.351000000000006,
-    "lon": -71.0675,
+    "lat": 42.350683,
+    "lon": -71.067082,
     "date": "2011:06:24 06:58:53",
-    "gps": "exif",
+    "gps": "user",
     "albums": [
       "2011 Boston"
     ],
@@ -14083,8 +14083,10 @@
     "lon": 29.5201,
     "date": "2014:07:28 00:27:14",
     "gps": "inferred",
-    "albums": [],
-    "photos_url": "photos:albums?albumUuid=81938C84-C5B0-4258-BC19-0B3EFA9BF296&assetUuid=88DD75AC-EECE-4184-81DA-AD63107CADB5"
+    "albums": [
+      "Fix location"
+    ],
+    "photos_url": "photos:albums?albumUuid=23F73F5D-9AC8-433D-AF2A-9F40F13678FF&assetUuid=88DD75AC-EECE-4184-81DA-AD63107CADB5"
   },
   {
     "uuid": "8B30D95D-E40E-4828-9CC8-4C2E15EAB865",
