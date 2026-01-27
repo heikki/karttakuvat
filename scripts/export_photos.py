@@ -119,11 +119,15 @@ def batch_export(photos, full_dir):
     if result.returncode != 0:
         print("Warning: Some photos may have failed to export")
 
-    # Rename .jpeg to .jpg
+    # Replace originals with edited versions (e.g. rotation edits)
+    for f in full_dir.glob("*_edited.*"):
+        uuid = f.stem.removesuffix("_edited")
+        target = full_dir / f"{uuid}.jpg"
+        f.rename(target)
+
+    # Rename remaining .jpeg to .jpg
     for f in full_dir.glob("*.jpeg"):
-        new_name = f.with_suffix(".jpg")
-        if not new_name.exists():
-            f.rename(new_name)
+        f.rename(f.with_suffix(".jpg"))
 
 
 THUMB_SIZE = 400
