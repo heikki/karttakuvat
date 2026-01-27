@@ -3,10 +3,11 @@
 Export geotagged photos from Apple Photos library.
 
 Usage:
-    python export_photos.py              # Incremental update (only new photos)
-    python export_photos.py --full       # Full re-export (all photos)
-    python export_photos.py --album "X"  # Filter by album
-    python export_photos.py --thumb-size 400  # Thumbnail max dimension (default: 400)
+    python export_photos.py                    # Incremental update (only new photos)
+    python export_photos.py --full             # Full re-export (all photos)
+    python export_photos.py --refresh-edited   # Re-export only edited photos
+    python export_photos.py --album "X"        # Filter by album
+    python export_photos.py --thumb-size 400   # Thumbnail max dimension (default: 400)
 
 Requirements:
     - osxphotos: pipx install osxphotos
@@ -86,7 +87,6 @@ def batch_export(photos, full_dir, album=None):
         "--convert-to-jpeg",
         "--jpeg-quality", "0.9",
         "--filename", "{uuid}",
-        "--skip-edited",
         "--download-missing",
         "--update"  # Only export new/changed files
     ]
@@ -229,9 +229,38 @@ def build_photos_json(photos, full_dir, json_path):
     return entries
 
 
+def query_edited_uuids():
+    """Query UUIDs of photos that have been edited in Apple Photos."""
+    cmd = [
+        "osxphotos", "query",
+        "--location",
+        "--not-hidden",
+        "--only-photos",
+        "--edited",
+        "--json"
+    ]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode != 0 or not result.stdout.strip():
+        return set()
+    return {p["uuid"] for p in json.loads(result.stdout)}
+
+
+def delete_files_for_uuids(uuids, full_dir, thumb_dir):
+    """Delete full and thumbnail files for given UUIDs."""
+    count = 0
+    for uuid in uuids:
+        for d in (full_dir, thumb_dir):
+            path = d / f"{uuid}.jpg"
+            if path.exists():
+                path.unlink()
+                count += 1
+    return count
+
+
 def main():
     parser = argparse.ArgumentParser(description="Export geotagged photos from Apple Photos")
     parser.add_argument("--full", action="store_true", help="Full re-export (default is incremental update)")
+    parser.add_argument("--refresh-edited", action="store_true", help="Re-export only photos that have been edited in Apple Photos")
     parser.add_argument("--album", type=str, help="Filter by album name")
     parser.add_argument("--thumb-size", type=int, default=400, help="Thumbnail max dimension (default: 400)")
     args = parser.parse_args()
@@ -265,6 +294,14 @@ def main():
         if db_path.exists():
             db_path.unlink()
             print("Cleared export database for full re-export")
+
+    # Delete files for edited photos so --update re-exports them
+    if args.refresh_edited:
+        print("Finding edited photos...")
+        edited_uuids = query_edited_uuids()
+        print(f"Found {len(edited_uuids)} edited photos")
+        deleted = delete_files_for_uuids(edited_uuids, full_dir, thumb_dir)
+        print(f"Deleted {deleted} files, will re-export")
 
     # Batch export all photos
     batch_export(photos, full_dir, args.album)
