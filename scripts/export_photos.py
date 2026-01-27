@@ -6,8 +6,6 @@ Usage:
     python export_photos.py                    # Incremental update (only new photos)
     python export_photos.py --full             # Full re-export (all photos)
     python export_photos.py --refresh-edited   # Re-export only edited photos
-    python export_photos.py --album "X"        # Filter by album
-    python export_photos.py --thumb-size 400   # Thumbnail max dimension (default: 400)
 
 Requirements:
     - osxphotos: pipx install osxphotos
@@ -17,7 +15,6 @@ Requirements:
 
 import argparse
 import json
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -34,20 +31,8 @@ def get_output_dir():
     return Path(__file__).parent.parent
 
 
-def load_existing_photos(json_path):
-    """Load existing photos.json if it exists."""
-    if json_path.exists():
-        with open(json_path) as f:
-            return json.load(f)
-    return []
 
-
-def get_existing_uuids(photos):
-    """Get set of UUIDs from existing photos."""
-    return {p["uuid"] for p in photos if "uuid" in p}
-
-
-def query_photos(album=None):
+def query_photos():
     """Query Apple Photos for geotagged photos using osxphotos CLI."""
     cmd = [
         "osxphotos", "query",
@@ -56,9 +41,6 @@ def query_photos(album=None):
         "--only-photos",
         "--json"
     ]
-
-    if album:
-        cmd.extend(["--album", album])
 
     print("Querying Photos library...")
     result = subprocess.run(cmd, capture_output=True, text=True)
@@ -73,7 +55,7 @@ def query_photos(album=None):
     return json.loads(result.stdout)
 
 
-def batch_export(photos, full_dir, album=None):
+def batch_export(photos, full_dir):
     """Export all photos in a single osxphotos command (much faster)."""
     print(f"Exporting {len(photos)} photos to {full_dir}...")
 
@@ -91,9 +73,6 @@ def batch_export(photos, full_dir, album=None):
         "--update"  # Only export new/changed files
     ]
 
-    if album:
-        cmd.extend(["--album", album])
-
     # Run export (this will show progress)
     result = subprocess.run(cmd)
 
@@ -107,7 +86,10 @@ def batch_export(photos, full_dir, album=None):
             f.rename(new_name)
 
 
-def create_thumbnails(full_dir, thumb_dir, thumb_size):
+THUMB_SIZE = 400
+
+
+def create_thumbnails(full_dir, thumb_dir):
     """Create thumbnails for all full-size images."""
     full_images = list(full_dir.glob("*.jpg"))
     print(f"Creating thumbnails for {len(full_images)} images...")
@@ -131,7 +113,7 @@ def create_thumbnails(full_dir, thumb_dir, thumb_size):
 
                 if img.mode in ("RGBA", "P"):
                     img = img.convert("RGB")
-                img.thumbnail((thumb_size, thumb_size), Image.Resampling.LANCZOS)
+                img.thumbnail((THUMB_SIZE, THUMB_SIZE), Image.Resampling.LANCZOS)
                 img.save(thumb_path, "JPEG", quality=80)
         except Exception as e:
             print(f"  Error creating thumbnail for {full_path.name}: {e}")
@@ -261,8 +243,6 @@ def main():
     parser = argparse.ArgumentParser(description="Export geotagged photos from Apple Photos")
     parser.add_argument("--full", action="store_true", help="Full re-export (default is incremental update)")
     parser.add_argument("--refresh-edited", action="store_true", help="Re-export only photos that have been edited in Apple Photos")
-    parser.add_argument("--album", type=str, help="Filter by album name")
-    parser.add_argument("--thumb-size", type=int, default=400, help="Thumbnail max dimension (default: 400)")
     args = parser.parse_args()
 
     output_dir = get_output_dir()
@@ -279,7 +259,7 @@ def main():
     thumb_dir.mkdir(exist_ok=True)
 
     # Query Photos library
-    photos = query_photos(album=args.album)
+    photos = query_photos()
     print(f"Found {len(photos)} geotagged photos in library")
 
     if not photos:
@@ -304,10 +284,10 @@ def main():
         print(f"Deleted {deleted} files, will re-export")
 
     # Batch export all photos
-    batch_export(photos, full_dir, args.album)
+    batch_export(photos, full_dir)
 
     # Create thumbnails
-    create_thumbnails(full_dir, thumb_dir, args.thumb_size)
+    create_thumbnails(full_dir, thumb_dir)
 
     # Build photos.json
     entries = build_photos_json(photos, full_dir, json_path)
