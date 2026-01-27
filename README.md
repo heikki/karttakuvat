@@ -4,33 +4,35 @@ Geolocation photo visualization web app. Displays geotagged photographs on an in
 
 ## Setup
 
-1.  Install dependencies:
+1. Install dependencies:
 
-    ```bash
-    bun install
-    ```
+   ```bash
+   bun install
+   ```
 
-2.  Run dev server:
-    ```bash
-    bun dev
-    ```
-    Open http://localhost:3000
+2. Run dev server:
+   ```bash
+   bun dev
+   ```
+   Open http://localhost:3000
 
 ## Build
-
-To build for production:
 
 ```bash
 bun run build
 ```
 
-## Structure
-
-- `src/`: Source code (`index.ts`, `index.html`)
-- `public/`: Static assets (`photos.json`, `full/`, `thumb/`)
-- `scripts/`: Python scripts for data export
-- `server.ts`: Bun dev server
-
 ## Data Pipeline
 
-See `scripts/` directory for Python scripts to export photos from Apple Photos.
+Export photos from Apple Photos using scripts in `scripts/`. Requires `osxphotos` and `Pillow`.
+
+```bash
+python3 scripts/export_photos.py    # Full export to public/
+python3 scripts/sync_metadata.py    # Sync metadata in photos.json
+```
+
+## Docs
+
+- [App spec](docs/app.md) — current behavior
+- [User flows](docs/flows.md) — interaction flows
+- [Timeline plan](docs/timeline.md) — upcoming features
