@@ -126,9 +126,10 @@ def batch_export(photos, full_dir):
         target = full_dir / f"{uuid}.jpg"
         f.rename(target)
 
-    # Rename remaining .jpeg to .jpg
-    for f in full_dir.glob("*.jpeg"):
-        f.rename(f.with_suffix(".jpg"))
+    # Normalize extensions to .jpg
+    for pattern in ["*.jpeg", "*.JPEG", "*.JPG"]:
+        for f in full_dir.glob(pattern):
+            f.rename(f.with_suffix(".jpg"))
 
 
 THUMB_SIZE = 400

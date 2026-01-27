@@ -37,12 +37,7 @@ def load_existing_photos(json_path):
 
 def get_exported_uuids(full_dir):
     """Get UUIDs from exported files in full/ directory."""
-    uuids = set()
-    for f in full_dir.glob("*.jpg"):
-        uuids.add(f.stem)
-    for f in full_dir.glob("*.JPG"):
-        uuids.add(f.stem)
-    return uuids
+    return {f.stem for f in full_dir.glob("*.jpg")}
 
 
 def query_photos_by_uuids(uuids):
