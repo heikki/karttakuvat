@@ -6,6 +6,7 @@ Usage:
     python export_photos.py                    # Incremental update (only new photos)
     python export_photos.py --full             # Full re-export (all photos)
     python export_photos.py --refresh-edited   # Re-export only edited photos
+    python export_photos.py --verify            # Check files match photos.json
 
 Requirements:
     - osxphotos: pipx install osxphotos
@@ -15,8 +16,11 @@ Requirements:
 
 import argparse
 import json
+import shutil
 import subprocess
 import sys
+import tempfile
+import time
 from pathlib import Path
 
 try:
@@ -24,6 +28,42 @@ try:
 except ImportError:
     print("Pillow not found. Install with: pip install Pillow")
     sys.exit(1)
+
+
+class Progress:
+    """In-place progress counter with elapsed/remaining time."""
+
+    def __init__(self, total, label=""):
+        self.total = total
+        self.label = label
+        self.start = time.monotonic()
+        self._print(0)
+
+    def update(self, current):
+        self._print(current)
+
+    def _print(self, current):
+        elapsed = time.monotonic() - self.start
+        pct = current / self.total * 100 if self.total else 0
+        parts = [f"\r  {self.label}{current}/{self.total} ({pct:.0f}%)"]
+        if current > 0 and elapsed > 1:
+            rate = current / elapsed
+            remaining = (self.total - current) / rate
+            parts.append(f" — {self._fmt(elapsed)} elapsed, ~{self._fmt(remaining)} left")
+        print("".join(parts), end="\033[K", flush=True)
+
+    def done(self, suffix=""):
+        elapsed = time.monotonic() - self.start
+        msg = f"\r  {self.label}{self.total}/{self.total} done in {self._fmt(elapsed)}"
+        if suffix:
+            msg += f" ({suffix})"
+        print(msg + "\033[K")
+
+    @staticmethod
+    def _fmt(secs):
+        if secs < 60:
+            return f"{secs:.0f}s"
+        return f"{int(secs) // 60}m{int(secs) % 60:02d}s"
 
 
 def get_output_dir():
@@ -92,31 +132,31 @@ THUMB_SIZE = 400
 def create_thumbnails(full_dir, thumb_dir):
     """Create thumbnails for all full-size images."""
     full_images = list(full_dir.glob("*.jpg"))
-    print(f"Creating thumbnails for {len(full_images)} images...")
+    to_create = [f for f in full_images if not (thumb_dir / f.name).exists()]
+    print(f"Thumbnails: {len(full_images)} images, {len(to_create)} need creating")
 
-    for i, full_path in enumerate(full_images, 1):
+    if not to_create:
+        return
+
+    progress = Progress(len(to_create), "Thumbnails: ")
+    errors = 0
+    for i, full_path in enumerate(to_create, 1):
         thumb_path = thumb_dir / full_path.name
-
-        if thumb_path.exists():
-            continue
-
-        if i % 100 == 0 or i == len(full_images):
-            print(f"  Thumbnails: {i}/{len(full_images)}")
-
         try:
             with Image.open(full_path) as img:
-                # Handle orientation from EXIF
                 try:
                     img = ImageOps.exif_transpose(img)
                 except Exception:
                     pass
-
                 if img.mode in ("RGBA", "P"):
                     img = img.convert("RGB")
                 img.thumbnail((THUMB_SIZE, THUMB_SIZE), Image.Resampling.LANCZOS)
                 img.save(thumb_path, "JPEG", quality=80)
         except Exception as e:
-            print(f"  Error creating thumbnail for {full_path.name}: {e}")
+            print(f"\n  Error: {full_path.name}: {e}")
+            errors += 1
+        progress.update(i)
+    progress.done(f"{errors} errors" if errors else "")
 
 
 def format_date(date_str):
@@ -143,9 +183,11 @@ def build_photos_json(photos, full_dir, json_path):
     """Build photos.json from queried photos and exported files."""
     # Get list of actually exported files
     exported_uuids = {f.stem for f in full_dir.glob("*.jpg")}
+    print(f"Building photos.json ({len(photos)} photos, {len(exported_uuids)} exported)...")
 
+    progress = Progress(len(photos), "JSON: ")
     entries = []
-    for photo in photos:
+    for idx, photo in enumerate(photos, 1):
         uuid = photo["uuid"]
 
         # Skip if not exported
@@ -201,6 +243,8 @@ def build_photos_json(photos, full_dir, json_path):
             "albums": albums,
             "photos_url": photos_url
         })
+        progress.update(idx)
+    progress.done(f"{len(entries)} with files")
 
     # Sort by date, then UUID for deterministic order
     entries.sort(key=lambda p: (p.get("date") or "", p.get("uuid") or ""))
@@ -227,22 +271,123 @@ def query_edited_uuids():
     return {p["uuid"] for p in json.loads(result.stdout)}
 
 
-def delete_files_for_uuids(uuids, full_dir, thumb_dir):
-    """Delete full and thumbnail files for given UUIDs."""
-    count = 0
-    for uuid in uuids:
-        for d in (full_dir, thumb_dir):
-            path = d / f"{uuid}.jpg"
-            if path.exists():
-                path.unlink()
-                count += 1
-    return count
+def refresh_edited(full_dir, thumb_dir):
+    """Re-export edited photos safely (export first, then replace originals)."""
+    print("Finding edited photos...")
+    edited_uuids = query_edited_uuids()
+    if not edited_uuids:
+        print("No edited photos found")
+        return
+
+    print(f"Found {len(edited_uuids)} edited photos, re-exporting...")
+
+    # Export to temp dir so originals stay intact until replacements are ready
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        tmp_path = Path(tmp_dir)
+
+        cmd = [
+            "osxphotos", "export",
+            str(tmp_path),
+            "--convert-to-jpeg",
+            "--jpeg-quality", "0.9",
+            "--filename", "{uuid}",
+            "--download-missing",
+        ]
+        for uuid in edited_uuids:
+            cmd.extend(["--uuid", uuid])
+
+        result = subprocess.run(cmd)
+        if result.returncode != 0:
+            print("Warning: Some photos may have failed to export")
+
+        # Move exported files over originals, preferring _edited versions
+        progress = Progress(len(edited_uuids), "Replacing: ")
+        replaced = 0
+        for i, uuid in enumerate(sorted(edited_uuids), 1):
+            # osxphotos creates both UUID.jpeg (original) and UUID_edited.jpeg (edited)
+            # Prefer the edited version
+            src = None
+            for name in [f"{uuid}_edited.jpeg", f"{uuid}_edited.jpg",
+                         f"{uuid}.jpeg", f"{uuid}.jpg"]:
+                candidate = tmp_path / name
+                if candidate.exists():
+                    src = candidate
+                    break
+
+            if src is None:
+                progress.update(i)
+                continue
+
+            dst = full_dir / f"{uuid}.jpg"
+            shutil.move(str(src), str(dst))
+
+            # Delete stale thumbnail so it gets regenerated
+            thumb = thumb_dir / f"{uuid}.jpg"
+            if thumb.exists():
+                thumb.unlink()
+
+            replaced += 1
+            progress.update(i)
+        progress.done(f"{replaced} replaced")
+
+
+def verify(full_dir, thumb_dir, json_path):
+    """Check that all photos.json entries have files and there are no orphans."""
+    with open(json_path) as f:
+        photos = json.load(f)
+    json_uuids = {p["uuid"] for p in photos}
+    full_files = {f.stem for f in full_dir.glob("*.jpg")}
+    thumb_files = {f.stem for f in thumb_dir.glob("*.jpg")}
+
+    missing_full = sorted(json_uuids - full_files)
+    missing_thumb = sorted(json_uuids - thumb_files)
+    orphan_full = sorted(full_files - json_uuids)
+    orphan_thumb = sorted(thumb_files - json_uuids)
+
+    print(f"photos.json: {len(json_uuids)} entries")
+    print(f"Full-size:   {len(full_files)} files")
+    print(f"Thumbnails:  {len(thumb_files)} files")
+
+    ok = True
+
+    if missing_full:
+        ok = False
+        print(f"\nMissing full-size ({len(missing_full)}):")
+        for uuid in missing_full:
+            print(f"  {uuid}")
+
+    if missing_thumb:
+        ok = False
+        print(f"\nMissing thumbnails ({len(missing_thumb)}):")
+        for uuid in missing_thumb:
+            print(f"  {uuid}")
+
+    if orphan_full:
+        ok = False
+        print(f"\nOrphan full-size ({len(orphan_full)}):")
+        for uuid in orphan_full:
+            print(f"  {uuid}")
+
+    if orphan_thumb:
+        ok = False
+        print(f"\nOrphan thumbnails ({len(orphan_thumb)}):")
+        for uuid in orphan_thumb:
+            print(f"  {uuid}")
+
+    if ok:
+        print("\nAll OK")
+    else:
+        print(f"\nIssues found: {len(missing_full)} missing full, "
+              f"{len(missing_thumb)} missing thumb, "
+              f"{len(orphan_full)} orphan full, {len(orphan_thumb)} orphan thumb")
+        sys.exit(1)
 
 
 def main():
     parser = argparse.ArgumentParser(description="Export geotagged photos from Apple Photos")
     parser.add_argument("--full", action="store_true", help="Full re-export (default is incremental update)")
     parser.add_argument("--refresh-edited", action="store_true", help="Re-export only photos that have been edited in Apple Photos")
+    parser.add_argument("--verify", action="store_true", help="Check that all files match photos.json")
     args = parser.parse_args()
 
     output_dir = get_output_dir()
@@ -250,6 +395,10 @@ def main():
     full_dir = public_dir / "full"
     thumb_dir = public_dir / "thumb"
     json_path = public_dir / "photos.json"
+
+    if args.verify:
+        verify(full_dir, thumb_dir, json_path)
+        return
 
     # Create public directory
     public_dir.mkdir(exist_ok=True)
@@ -268,23 +417,19 @@ def main():
         print("  2. Photos with GPS location data")
         return
 
-    # Remove osxphotos database if doing full export
-    if args.full:
-        db_path = full_dir / ".osxphotos_export.db"
-        if db_path.exists():
-            db_path.unlink()
-            print("Cleared export database for full re-export")
-
-    # Delete files for edited photos so --update re-exports them
     if args.refresh_edited:
-        print("Finding edited photos...")
-        edited_uuids = query_edited_uuids()
-        print(f"Found {len(edited_uuids)} edited photos")
-        deleted = delete_files_for_uuids(edited_uuids, full_dir, thumb_dir)
-        print(f"Deleted {deleted} files, will re-export")
+        # Targeted re-export of edited photos only (safe to interrupt)
+        refresh_edited(full_dir, thumb_dir)
+    else:
+        # Remove osxphotos database if doing full export
+        if args.full:
+            db_path = full_dir / ".osxphotos_export.db"
+            if db_path.exists():
+                db_path.unlink()
+                print("Cleared export database for full re-export")
 
-    # Batch export all photos
-    batch_export(photos, full_dir)
+        # Batch export all photos
+        batch_export(photos, full_dir)
 
     # Create thumbnails
     create_thumbnails(full_dir, thumb_dir)
