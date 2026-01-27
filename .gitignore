@@ -5,3 +5,4 @@ public/full
 public/thumb
 dist
 .osxphotos_export.db
+__pycache__
