@@ -61,7 +61,7 @@ export function initMap() {
 
     updateMapData();
     if (state.filteredPhotos.length > 0) {
-      fitToPhotos();
+      fitToPhotos(false);
     }
   });
 
@@ -284,12 +284,13 @@ function panToFitPopup(coords: [number, number]) {
   }, 50);
 }
 
-export function fitToPhotos() {
+export function fitToPhotos(animate = true) {
   if (state.filteredPhotos.length === 0) return;
   const bounds = new maplibregl.LngLatBounds();
   state.filteredPhotos.forEach((p) => bounds.extend([p.lon, p.lat]));
   map.fitBounds(bounds, {
-    padding: { top: 20, bottom: 150, left: 20, right: 270 }
+    padding: { top: 20, bottom: 150, left: 20, right: 270 },
+    duration: animate ? undefined : 0
   });
 }
 
