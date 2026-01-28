@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Sync photo metadata from Apple Photos library without re-exporting images.
+Sync metadata from Apple Photos library without re-exporting images.
 
-Updates photos.json with current metadata (location, date, albums, etc.)
-for all photos that already have exported images in full/.
+Updates items.json with current metadata (location, date, albums, etc.)
+for all items that already have exported images in full/.
 
 Usage:
-    python sync_metadata.py
+    python sync.py
 
 Requirements:
     - osxphotos: pipx install osxphotos
@@ -18,7 +18,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from export_photos import determine_gps_source, query_gps_accuracy
+from export import determine_gps_source, format_duration, query_gps_accuracy
 
 
 def get_output_dir():
@@ -26,8 +26,8 @@ def get_output_dir():
     return Path(__file__).parent.parent
 
 
-def load_existing_photos(json_path):
-    """Load existing photos.json if it exists."""
+def load_existing_items(json_path):
+    """Load existing items.json if it exists."""
     if json_path.exists():
         with open(json_path) as f:
             data = json.load(f)
@@ -55,11 +55,11 @@ def query_photos_by_uuids(uuids):
         "--json"
     ]
 
-    print(f"Querying metadata for {len(uuids)} photos...")
+    print(f"Querying metadata for {len(uuids)} items...")
     result = subprocess.run(cmd, capture_output=True, text=True)
 
     if result.returncode != 0:
-        print(f"Error querying photos: {result.stderr}")
+        print(f"Error querying items: {result.stderr}")
         sys.exit(1)
 
     if not result.stdout.strip():
@@ -95,8 +95,17 @@ def coords_changed(old_lat, old_lon, new_lat, new_lon, threshold=0.0001):
     return abs(old_lat - new_lat) > threshold or abs(old_lon - new_lon) > threshold
 
 
-def build_photos_json(photos, full_dir, json_path, old_photos):
-    """Build photos.json from queried photos and exported files."""
+def is_video(item):
+    """Check if an osxphotos item is a video (has duration or ismovie flag)."""
+    if item.get("ismovie"):
+        return True
+    if item.get("duration") and item["duration"] > 0:
+        return True
+    return False
+
+
+def build_items_json(items, full_dir, json_path, old_items):
+    """Build items.json from queried items and exported files."""
     exported_uuids = get_exported_uuids(full_dir)
     gps_accuracy = query_gps_accuracy()
 
@@ -104,59 +113,64 @@ def build_photos_json(photos, full_dir, json_path, old_photos):
     skipped_no_location = 0
     location_changes = []
 
-    for photo in photos:
-        uuid = photo["uuid"]
+    for item in items:
+        uuid = item["uuid"]
 
         # Skip if not exported
         if uuid not in exported_uuids:
             continue
 
-        lat = photo.get("latitude")
-        lon = photo.get("longitude")
+        lat = item.get("latitude")
+        lon = item.get("longitude")
 
         if lat is None or lon is None:
             skipped_no_location += 1
             continue
 
         # Check for location changes
-        old_photo = old_photos.get(uuid)
-        location_changed = old_photo and coords_changed(old_photo.get("lat"), old_photo.get("lon"), lat, lon)
+        old_item = old_items.get(uuid)
+        location_changed = old_item and coords_changed(old_item.get("lat"), old_item.get("lon"), lat, lon)
 
         if location_changed:
             location_changes.append({
                 "uuid": uuid,
-                "old_lat": old_photo.get("lat"),
-                "old_lon": old_photo.get("lon"),
+                "old_lat": old_item.get("lat"),
+                "old_lon": old_item.get("lon"),
                 "new_lat": lat,
                 "new_lon": lon,
-                "albums": photo.get("albums", [])
+                "albums": item.get("albums", [])
             })
 
-        gps_source = determine_gps_source(photo, gps_accuracy)
+        gps_source = determine_gps_source(item, gps_accuracy)
 
-        # Get albums
-        albums = photo.get("albums", [])
-        album_info = photo.get("album_info", [])
+        albums = item.get("albums", [])
+        album_info = item.get("album_info", [])
 
-        # Build photos_url with album UUID if available
-        # Use "Not in album" smart album (81938C84-C5B0-4258-BC19-0B3EFA9BF296) as fallback
+        item_is_video = is_video(item)
+
         if album_info:
             album_uuid = album_info[0].get("uuid", "")
         else:
-            album_uuid = "81938C84-C5B0-4258-BC19-0B3EFA9BF296"  # "Not in album" smart album
+            album_uuid = "81938C84-C5B0-4258-BC19-0B3EFA9BF296"
         photos_url = f"photos:albums?albumUuid={album_uuid}&assetUuid={uuid}"
 
-        entries.append({
+        entry = {
             "uuid": uuid,
+            "type": "video" if item_is_video else "photo",
             "full": f"full/{uuid}.jpg",
             "thumb": f"thumb/{uuid}.jpg",
             "lat": lat,
             "lon": lon,
-            "date": format_date(photo.get("date")),
+            "date": format_date(item.get("date")),
             "gps": gps_source,
             "albums": albums,
             "photos_url": photos_url
-        })
+        }
+
+        if item_is_video:
+            entry["duration"] = format_duration(item.get("duration"))
+
+        entries.append(entry)
 
     # Sort by date, then UUID for deterministic order
     entries.sort(key=lambda p: (p.get("date") or "", p.get("uuid") or ""))
@@ -171,10 +185,10 @@ def main():
     output_dir = get_output_dir()
     public_dir = output_dir / "public"
     full_dir = public_dir / "full"
-    json_path = public_dir / "photos.json"
+    json_path = public_dir / "items.json"
 
     if not full_dir.exists():
-        print(f"Error: {full_dir} does not exist. Run export_photos.py first.")
+        print(f"Error: {full_dir} does not exist. Run export.py first.")
         sys.exit(1)
 
     # Get UUIDs from exported files
@@ -185,24 +199,26 @@ def main():
         print("No exported images found.")
         return
 
-    # Load existing photos for change detection
-    old_photos = load_existing_photos(json_path)
-    print(f"Loaded {len(old_photos)} existing entries for change detection")
+    # Load existing items for change detection
+    old_items = load_existing_items(json_path)
+    print(f"Loaded {len(old_items)} existing entries for change detection")
 
-    # Query Photos library for metadata
-    photos = query_photos_by_uuids(exported_uuids)
-    print(f"Got metadata for {len(photos)} photos from Apple Photos")
+    # Query Photos library for metadata (both photos and videos)
+    items = query_photos_by_uuids(exported_uuids)
+    print(f"Got metadata for {len(items)} items from Apple Photos")
 
-    # Build photos.json
-    entries, skipped, location_changes = build_photos_json(photos, full_dir, json_path, old_photos)
+    # Build items.json
+    entries, skipped, location_changes = build_items_json(items, full_dir, json_path, old_items)
 
-    # Count GPS types
+    # Count types and GPS sources
+    photo_count = sum(1 for e in entries if e["type"] == "photo")
+    video_count = sum(1 for e in entries if e["type"] == "video")
     exif_count = sum(1 for e in entries if e["gps"] == "exif")
     inferred_count = sum(1 for e in entries if e["gps"] == "inferred")
     user_count = sum(1 for e in entries if e["gps"] == "user")
 
     print(f"\nUpdated {json_path}")
-    print(f"  Total entries: {len(entries)}")
+    print(f"  Total entries: {len(entries)} ({photo_count} photos, {video_count} videos)")
     print(f"  EXIF GPS: {exif_count}")
     print(f"  Inferred location: {inferred_count}")
     print(f"  User modified: {user_count}")

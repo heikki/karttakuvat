@@ -217,8 +217,7 @@ function handleArrowNavigation(key: string) {
   if (clusterPhotos.length > 1) {
     const currentGroupIndex = getCurrentGroupIndex();
     const next =
-      (currentGroupIndex + delta + clusterPhotos.length) %
-      clusterPhotos.length;
+      (currentGroupIndex + delta + clusterPhotos.length) % clusterPhotos.length;
     selectGroupPhoto(next);
     scrollToActiveThumbnail();
   } else {

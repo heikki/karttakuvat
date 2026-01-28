@@ -1,5 +1,6 @@
 export interface Photo {
   uuid: string;
+  type: 'photo' | 'video';
   full: string;
   thumb: string;
   lat: number;
@@ -8,6 +9,7 @@ export interface Photo {
   gps: string;
   albums: string[];
   photos_url?: string;
+  duration?: string;
   // Internal use
   _index?: number;
   filename?: string;

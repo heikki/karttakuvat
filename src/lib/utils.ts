@@ -42,6 +42,10 @@ export function formatDate(dateStr: string): string {
   return formattedDate + parseTimePart(timePart);
 }
 
+export function isVideo(item: Photo): boolean {
+  return item.type === 'video';
+}
+
 export function getThumbUrl(photo: Photo): string {
   if (photo.thumb === '') {
     return photo.filename ?? '';

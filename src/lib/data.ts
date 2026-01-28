@@ -29,13 +29,13 @@ function notify() {
 
 export async function loadPhotos() {
   try {
-    const response = await fetch('photos.json');
+    const response = await fetch('items.json');
     const data = (await response.json()) as Photo[];
     data.sort(compareDates);
     state.photos = data;
     applyFilters(state.filters.year, state.filters.gps);
   } catch (error) {
-    console.error('Error loading photos.json:', error);
+    console.error('Error loading items.json:', error);
     throw error;
   }
 }

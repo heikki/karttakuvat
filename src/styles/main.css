@@ -211,3 +211,107 @@ body {
 .lightbox .photos-link:hover {
   text-decoration: underline;
 }
+
+/* Play overlay for video items in lightbox */
+.play-overlay {
+  display: none;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80px;
+  height: 80px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 50%;
+  cursor: pointer;
+  pointer-events: auto;
+  z-index: 10;
+}
+.play-overlay::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 54%;
+  transform: translate(-50%, -50%);
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 16px 0 16px 28px;
+  border-color: transparent transparent transparent white;
+}
+.play-overlay:hover {
+  background: rgba(0, 0, 0, 0.7);
+}
+.lightbox.video .play-overlay {
+  display: block;
+}
+
+/* Video indicator on popup images */
+.popup-image-wrap {
+  position: relative;
+  display: inline-block;
+}
+.video-indicator {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 48px;
+  height: 48px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 50%;
+  pointer-events: none;
+}
+.video-indicator::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 54%;
+  transform: translate(-50%, -50%);
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 10px 0 10px 18px;
+  border-color: transparent transparent transparent white;
+}
+
+/* Small play badge on thumbnails in thumb strip */
+.thumb-wrap {
+  position: relative;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.thumb-video-badge {
+  position: absolute;
+  bottom: 4px;
+  left: 4px;
+  width: 18px;
+  height: 18px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 50%;
+  pointer-events: none;
+}
+.thumb-video-badge::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 55%;
+  transform: translate(-50%, -50%);
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 4px 0 4px 7px;
+  border-color: transparent transparent transparent white;
+}
+
+/* Duration text */
+.photo-popup .duration {
+  margin-left: 6px;
+  font-size: 11px;
+  color: #999;
+}
+.lightbox .duration {
+  font-size: 13px;
+  color: #ccc;
+  margin-left: 6px;
+}

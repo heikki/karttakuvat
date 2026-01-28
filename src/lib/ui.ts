@@ -1,12 +1,13 @@
 import { state } from './data';
 import type { Photo } from './types';
-import { formatDate, getFullUrl } from './utils';
+import { formatDate, getFullUrl, isVideo } from './utils';
 
 // --- Lightbox Elements ---
 let lightbox: HTMLElement | null = null;
 let lightboxImg: HTMLImageElement | null = null;
 let lightboxInfo: HTMLElement | null = null;
 let lightboxPhotosLink: HTMLAnchorElement | null = null;
+let lightboxPlay: HTMLElement | null = null;
 
 // --- State Tracking for Lightbox ---
 let currentPhotoIndex = 0;
@@ -26,6 +27,7 @@ export function initUI() {
   lightboxPhotosLink = document.getElementById(
     'lightbox-photos-link'
   ) as HTMLAnchorElement;
+  lightboxPlay = document.getElementById('lightbox-play');
 
   setupLightboxEvents();
 }
@@ -72,6 +74,9 @@ function updateLightboxPhotosLink(photo: Photo) {
   if (lightboxPhotosLink === null) return;
   if (photo.photos_url !== undefined && photo.photos_url !== '') {
     lightboxPhotosLink.href = photo.photos_url;
+    lightboxPhotosLink.textContent = isVideo(photo)
+      ? 'Play in Photos'
+      : 'Open in Photos';
     lightboxPhotosLink.style.display = 'block';
   } else {
     lightboxPhotosLink.style.display = 'none';
@@ -148,15 +153,33 @@ function displayPhoto(photo: Photo, index: number, total: number) {
   if (lightboxImg !== null) {
     lightboxImg.src = getFullUrl(photo);
   }
+  const isVid = isVideo(photo);
+  const durationHtml =
+    isVid && photo.duration !== undefined
+      ? ` <span class="duration">${photo.duration}</span>`
+      : '';
   const countInfo = `<br>(${index} of ${total})`;
   if (lightboxInfo !== null) {
-    lightboxInfo.innerHTML = `${formatDate(photo.date)}<br>${photo.lat.toFixed(4)}°N, ${photo.lon.toFixed(4)}°E${countInfo}`;
+    lightboxInfo.innerHTML = `${formatDate(photo.date)}${durationHtml}<br>${photo.lat.toFixed(4)}°N, ${photo.lon.toFixed(4)}°E${countInfo}`;
+  }
+  if (lightbox !== null) {
+    lightbox.classList.toggle('video', isVid);
+  }
+  if (lightboxPlay !== null && isVid) {
+    lightboxPlay.onclick = () => {
+      if (photo.photos_url !== undefined && photo.photos_url !== '') {
+        window.open(photo.photos_url, '_blank');
+      }
+    };
   }
   updateLightboxPhotosLink(photo);
 }
 
 function hideLightbox() {
-  if (lightbox !== null) lightbox.classList.remove('active');
+  if (lightbox !== null) {
+    lightbox.classList.remove('active');
+    lightbox.classList.remove('video');
+  }
   lightboxMode = '';
 }
 

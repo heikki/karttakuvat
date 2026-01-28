@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 """
-Export geotagged photos from Apple Photos library.
+Export geotagged photos and videos from Apple Photos library.
 
 Usage:
-    python export_photos.py                    # Incremental update (only new photos)
-    python export_photos.py --full             # Full re-export (all photos)
-    python export_photos.py --refresh-edited   # Re-export only edited photos
-    python export_photos.py --verify            # Check files match photos.json
+    python export.py                    # Incremental update (only new items)
+    python export.py --full             # Full re-export (all items)
+    python export.py --refresh-edited   # Re-export only edited photos
+    python export.py --verify           # Check files match items.json
 
 Requirements:
     - osxphotos: pipx install osxphotos
     - Pillow: pip install Pillow
+    - ffmpeg: brew install ffmpeg (optional, needed for video frame extraction)
     - Full Disk Access for Terminal in System Settings
 """
 
@@ -83,11 +84,34 @@ def query_photos():
         "--json"
     ]
 
-    print("Querying Photos library...")
+    print("Querying Photos library for photos...")
     result = subprocess.run(cmd, capture_output=True, text=True)
 
     if result.returncode != 0:
         print(f"Error querying photos: {result.stderr}")
+        sys.exit(1)
+
+    if not result.stdout.strip():
+        return []
+
+    return json.loads(result.stdout)
+
+
+def query_videos():
+    """Query Apple Photos for geotagged videos using osxphotos CLI."""
+    cmd = [
+        "osxphotos", "query",
+        "--location",
+        "--not-hidden",
+        "--only-movies",
+        "--json"
+    ]
+
+    print("Querying Photos library for videos...")
+    result = subprocess.run(cmd, capture_output=True, text=True)
+
+    if result.returncode != 0:
+        print(f"Error querying videos: {result.stderr}")
         sys.exit(1)
 
     if not result.stdout.strip():
@@ -130,6 +154,90 @@ def batch_export(photos, full_dir):
     for pattern in ["*.jpeg", "*.JPEG", "*.JPG"]:
         for f in full_dir.glob(pattern):
             f.rename(f.with_suffix(".jpg"))
+
+
+def check_ffmpeg():
+    """Check if ffmpeg is available."""
+    try:
+        subprocess.run(["ffmpeg", "-version"], capture_output=True, check=True)
+        return True
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return False
+
+
+def extract_frame(video_path, output_path):
+    """Extract a frame from video at 1 second mark (or first frame)."""
+    # Try to get frame at 1 second
+    cmd = [
+        "ffmpeg", "-y",
+        "-ss", "1",
+        "-i", str(video_path),
+        "-vframes", "1",
+        "-q:v", "2",
+        str(output_path)
+    ]
+    subprocess.run(cmd, capture_output=True)
+
+    if not output_path.exists():
+        # Try first frame instead
+        cmd = [
+            "ffmpeg", "-y",
+            "-i", str(video_path),
+            "-vframes", "1",
+            "-q:v", "2",
+            str(output_path)
+        ]
+        subprocess.run(cmd, capture_output=True)
+
+    return output_path.exists()
+
+
+def export_video_frames(videos, full_dir):
+    """Extract a frame from each video to use as its image."""
+    to_export = [v for v in videos if not (full_dir / f"{v['uuid']}.jpg").exists()]
+    print(f"Video frames: {len(videos)} videos, {len(to_export)} need frame extraction")
+
+    if not to_export:
+        return
+
+    progress = Progress(len(to_export), "Video frames: ")
+    errors = 0
+    for i, video in enumerate(to_export, 1):
+        uuid = video["uuid"]
+        output_path = full_dir / f"{uuid}.jpg"
+
+        video_path = video.get("path")
+
+        if video_path and Path(video_path).exists():
+            # Extract frame directly from local file
+            if not extract_frame(Path(video_path), output_path):
+                print(f"\n  Error extracting frame: {uuid}")
+                errors += 1
+        else:
+            # Export video to temp dir, extract frame, clean up
+            with tempfile.TemporaryDirectory() as tmpdir:
+                cmd = [
+                    "osxphotos", "export",
+                    tmpdir,
+                    "--uuid", uuid,
+                    "--download-missing"
+                ]
+                subprocess.run(cmd, capture_output=True, text=True)
+
+                # Find exported video file
+                video_files = list(Path(tmpdir).glob("*"))
+                if not video_files:
+                    print(f"\n  Could not export video {uuid}")
+                    errors += 1
+                    progress.update(i)
+                    continue
+
+                if not extract_frame(video_files[0], output_path):
+                    print(f"\n  Error extracting frame: {uuid}")
+                    errors += 1
+
+        progress.update(i)
+    progress.done(f"{errors} errors" if errors else "")
 
 
 THUMB_SIZE = 400
@@ -185,6 +293,16 @@ def format_date(date_str):
     return date_str
 
 
+def format_duration(seconds):
+    """Format duration in seconds to MM:SS or HH:MM:SS."""
+    if not seconds:
+        return None
+    seconds = int(seconds)
+    if seconds < 3600:
+        return f"{seconds // 60}:{seconds % 60:02d}"
+    return f"{seconds // 3600}:{(seconds % 3600) // 60:02d}:{seconds % 60:02d}"
+
+
 def query_gps_accuracy():
     """Read GPS horizontal accuracy from the Photos database.
 
@@ -211,9 +329,9 @@ def query_gps_accuracy():
 def determine_gps_source(photo, gps_accuracy):
     """Determine GPS source: 'user', 'exif', or 'inferred'.
 
-    - accuracy = 10.0 → user manually set the location
-    - has EXIF GPS → camera embedded GPS coordinates
-    - otherwise → Apple Photos inferred the location
+    - accuracy = 10.0 -> user manually set the location
+    - has EXIF GPS -> camera embedded GPS coordinates
+    - otherwise -> Apple Photos inferred the location
     """
     acc = gps_accuracy.get(photo["uuid"])
     if acc == 10.0:
@@ -224,45 +342,46 @@ def determine_gps_source(photo, gps_accuracy):
     return "inferred"
 
 
-def build_photos_json(photos, full_dir, json_path):
-    """Build photos.json from queried photos and exported files."""
+def build_items_json(photos, videos, full_dir, json_path):
+    """Build items.json from queried photos/videos and exported files."""
     # Get list of actually exported files
     exported_uuids = {f.stem for f in full_dir.glob("*.jpg")}
-    print(f"Building photos.json ({len(photos)} photos, {len(exported_uuids)} exported)...")
+    print(f"Building items.json ({len(photos)} photos, {len(videos)} videos, {len(exported_uuids)} exported)...")
 
     gps_accuracy = query_gps_accuracy()
 
-    progress = Progress(len(photos), "JSON: ")
     entries = []
+
+    # Process photos
+    progress = Progress(len(photos), "Photos: ")
     for idx, photo in enumerate(photos, 1):
         uuid = photo["uuid"]
 
-        # Skip if not exported
         if uuid not in exported_uuids:
+            progress.update(idx)
             continue
 
         lat = photo.get("latitude")
         lon = photo.get("longitude")
 
         if lat is None or lon is None:
+            progress.update(idx)
             continue
 
         gps_source = determine_gps_source(photo, gps_accuracy)
 
-        # Get albums
         albums = photo.get("albums", [])
         album_info = photo.get("album_info", [])
 
-        # Build photos_url with album UUID if available
-        # Use "Not in album" smart album (81938C84-C5B0-4258-BC19-0B3EFA9BF296) as fallback
         if album_info:
             album_uuid = album_info[0].get("uuid", "")
         else:
-            album_uuid = "81938C84-C5B0-4258-BC19-0B3EFA9BF296"  # "Not in album" smart album
+            album_uuid = "81938C84-C5B0-4258-BC19-0B3EFA9BF296"
         photos_url = f"photos:albums?albumUuid={album_uuid}&assetUuid={uuid}"
 
         entries.append({
             "uuid": uuid,
+            "type": "photo",
             "full": f"full/{uuid}.jpg",
             "thumb": f"thumb/{uuid}.jpg",
             "lat": lat,
@@ -273,7 +392,51 @@ def build_photos_json(photos, full_dir, json_path):
             "photos_url": photos_url
         })
         progress.update(idx)
-    progress.done(f"{len(entries)} with files")
+    progress.done(f"{len([e for e in entries if e['type'] == 'photo'])} with files")
+
+    # Process videos
+    if videos:
+        progress = Progress(len(videos), "Videos: ")
+        for idx, video in enumerate(videos, 1):
+            uuid = video["uuid"]
+
+            if uuid not in exported_uuids:
+                progress.update(idx)
+                continue
+
+            lat = video.get("latitude")
+            lon = video.get("longitude")
+
+            if lat is None or lon is None:
+                progress.update(idx)
+                continue
+
+            gps_source = determine_gps_source(video, gps_accuracy)
+
+            albums = video.get("albums", [])
+            album_info = video.get("album_info", [])
+
+            if album_info:
+                album_uuid = album_info[0].get("uuid", "")
+            else:
+                album_uuid = "81938C84-C5B0-4258-BC19-0B3EFA9BF296"
+            photos_url = f"photos:albums?albumUuid={album_uuid}&assetUuid={uuid}"
+
+            entries.append({
+                "uuid": uuid,
+                "type": "video",
+                "full": f"full/{uuid}.jpg",
+                "thumb": f"thumb/{uuid}.jpg",
+                "lat": lat,
+                "lon": lon,
+                "date": format_date(video.get("date")),
+                "duration": format_duration(video.get("duration")),
+                "gps": gps_source,
+                "albums": albums,
+                "photos_url": photos_url
+            })
+            progress.update(idx)
+        progress.done(f"{len([e for e in entries if e['type'] == 'video'])} with files")
 
     # Sort by date, then UUID for deterministic order
     entries.sort(key=lambda p: (p.get("date") or "", p.get("uuid") or ""))
@@ -361,19 +524,22 @@ def refresh_edited(full_dir, thumb_dir):
 
 
 def verify(full_dir, thumb_dir, json_path):
-    """Check that all photos.json entries have files and there are no orphans."""
+    """Check that all items.json entries have files and there are no orphans."""
     with open(json_path) as f:
-        photos = json.load(f)
-    json_uuids = {p["uuid"] for p in photos}
+        items = json.load(f)
+    json_uuids = {p["uuid"] for p in items}
     full_files = {f.stem for f in full_dir.glob("*.jpg")}
     thumb_files = {f.stem for f in thumb_dir.glob("*.jpg")}
+
+    photo_count = sum(1 for i in items if i.get("type") == "photo")
+    video_count = sum(1 for i in items if i.get("type") == "video")
 
     missing_full = sorted(json_uuids - full_files)
     missing_thumb = sorted(json_uuids - thumb_files)
     orphan_full = sorted(full_files - json_uuids)
     orphan_thumb = sorted(thumb_files - json_uuids)
 
-    print(f"photos.json: {len(json_uuids)} entries")
+    print(f"items.json: {len(json_uuids)} entries ({photo_count} photos, {video_count} videos)")
     print(f"Full-size:   {len(full_files)} files")
     print(f"Thumbnails:  {len(thumb_files)} files")
 
@@ -413,17 +579,17 @@ def verify(full_dir, thumb_dir, json_path):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Export geotagged photos from Apple Photos")
+    parser = argparse.ArgumentParser(description="Export geotagged photos and videos from Apple Photos")
     parser.add_argument("--full", action="store_true", help="Full re-export (default is incremental update)")
     parser.add_argument("--refresh-edited", action="store_true", help="Re-export only photos that have been edited in Apple Photos")
-    parser.add_argument("--verify", action="store_true", help="Check that all files match photos.json")
+    parser.add_argument("--verify", action="store_true", help="Check that all files match items.json")
     args = parser.parse_args()
 
     output_dir = get_output_dir()
     public_dir = output_dir / "public"
     full_dir = public_dir / "full"
     thumb_dir = public_dir / "thumb"
-    json_path = public_dir / "photos.json"
+    json_path = public_dir / "items.json"
 
     if args.verify:
         verify(full_dir, thumb_dir, json_path)
@@ -460,14 +626,29 @@ def main():
         # Batch export all photos
         batch_export(photos, full_dir)
 
-    # Create thumbnails
+    # Query and export video frames
+    videos = query_videos()
+    print(f"Found {len(videos)} geotagged videos in library")
+
+    if videos:
+        has_ffmpeg = check_ffmpeg()
+        if has_ffmpeg:
+            export_video_frames(videos, full_dir)
+        else:
+            print("Warning: ffmpeg not found, skipping video frame extraction")
+            print("  Install with: brew install ffmpeg")
+            videos = []
+
+    # Create thumbnails (covers both photos and video frames)
     create_thumbnails(full_dir, thumb_dir)
 
-    # Build photos.json
-    entries = build_photos_json(photos, full_dir, json_path)
+    # Build unified items.json
+    entries = build_items_json(photos, videos, full_dir, json_path)
 
-    print(f"\nExported {len(entries)} photos")
-    print(f"Photos JSON: {json_path}")
+    photo_count = sum(1 for e in entries if e["type"] == "photo")
+    video_count = sum(1 for e in entries if e["type"] == "video")
+    print(f"\nExported {len(entries)} items ({photo_count} photos, {video_count} videos)")
+    print(f"Items JSON: {json_path}")
 
 
 if __name__ == "__main__":
