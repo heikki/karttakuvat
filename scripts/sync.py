@@ -18,7 +18,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from export import determine_gps_source, format_duration, query_gps_accuracy
+from export import determine_gps_source, format_duration, query_gps_accuracy, query_video_durations
 
 
 def get_output_dir():
@@ -108,6 +108,7 @@ def build_items_json(items, full_dir, json_path, old_items):
     """Build items.json from queried items and exported files."""
     exported_uuids = get_exported_uuids(full_dir)
     gps_accuracy = query_gps_accuracy()
+    video_durations = query_video_durations()
 
     entries = []
     skipped_no_location = 0
@@ -154,6 +155,8 @@ def build_items_json(items, full_dir, json_path, old_items):
             album_uuid = "81938C84-C5B0-4258-BC19-0B3EFA9BF296"
         photos_url = f"photos:albums?albumUuid={album_uuid}&assetUuid={uuid}"
 
+        acc = gps_accuracy.get(uuid)
+
         entry = {
             "uuid": uuid,
             "type": "video" if item_is_video else "photo",
@@ -163,12 +166,13 @@ def build_items_json(items, full_dir, json_path, old_items):
             "lon": lon,
             "date": format_date(item.get("date")),
             "gps": gps_source,
+            "gps_accuracy": round(acc, 1) if acc is not None else None,
             "albums": albums,
             "photos_url": photos_url
         }
 
         if item_is_video:
-            entry["duration"] = format_duration(item.get("duration"))
+            entry["duration"] = format_duration(video_durations.get(uuid))
 
         entries.append(entry)
 

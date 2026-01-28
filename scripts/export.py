@@ -303,6 +303,26 @@ def format_duration(seconds):
     return f"{seconds // 3600}:{(seconds % 3600) // 60:02d}:{seconds % 60:02d}"
 
 
+def query_video_durations():
+    """Read video durations from the Photos database.
+
+    Returns a dict of {uuid: duration_seconds}.
+    """
+    db_path = Path.home() / "Pictures/Photos Library.photoslibrary/database/Photos.sqlite"
+    if not db_path.exists():
+        return {}
+    db = sqlite3.connect(str(db_path))
+    cur = db.cursor()
+    cur.execute("""
+        SELECT a.ZUUID, a.ZDURATION
+        FROM ZASSET a
+        WHERE a.ZDURATION > 0
+    """)
+    result = dict(cur.fetchall())
+    db.close()
+    return result
+
+
 def query_gps_accuracy():
     """Read GPS horizontal accuracy from the Photos database.
 
@@ -349,6 +369,7 @@ def build_items_json(photos, videos, full_dir, json_path):
     print(f"Building items.json ({len(photos)} photos, {len(videos)} videos, {len(exported_uuids)} exported)...")
 
     gps_accuracy = query_gps_accuracy()
+    video_durations = query_video_durations()
 
     entries = []
 
@@ -379,6 +400,7 @@ def build_items_json(photos, videos, full_dir, json_path):
             album_uuid = "81938C84-C5B0-4258-BC19-0B3EFA9BF296"
         photos_url = f"photos:albums?albumUuid={album_uuid}&assetUuid={uuid}"
 
+        acc = gps_accuracy.get(uuid)
         entries.append({
             "uuid": uuid,
             "type": "photo",
@@ -388,6 +410,7 @@ def build_items_json(photos, videos, full_dir, json_path):
             "lon": lon,
             "date": format_date(photo.get("date")),
             "gps": gps_source,
+            "gps_accuracy": round(acc, 1) if acc is not None else None,
             "albums": albums,
             "photos_url": photos_url
         })
@@ -422,6 +445,7 @@ def build_items_json(photos, videos, full_dir, json_path):
                 album_uuid = "81938C84-C5B0-4258-BC19-0B3EFA9BF296"
             photos_url = f"photos:albums?albumUuid={album_uuid}&assetUuid={uuid}"
 
+            acc = gps_accuracy.get(uuid)
             entries.append({
                 "uuid": uuid,
                 "type": "video",
@@ -430,8 +454,9 @@ def build_items_json(photos, videos, full_dir, json_path):
                 "lat": lat,
                 "lon": lon,
                 "date": format_date(video.get("date")),
-                "duration": format_duration(video.get("duration")),
+                "duration": format_duration(video_durations.get(uuid)),
                 "gps": gps_source,
+                "gps_accuracy": round(acc, 1) if acc is not None else None,
                 "albums": albums,
                 "photos_url": photos_url
             })

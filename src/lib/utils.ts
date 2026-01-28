@@ -46,6 +46,13 @@ export function isVideo(item: Photo): boolean {
   return item.type === 'video';
 }
 
+export function durationSpan(item: Photo): string {
+  if (item.duration !== undefined && item.duration !== null) {
+    return `<span class="duration">${item.duration}</span>`;
+  }
+  return '';
+}
+
 export function getThumbUrl(photo: Photo): string {
   if (photo.thumb === '') {
     return photo.filename ?? '';

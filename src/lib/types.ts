@@ -9,7 +9,7 @@ export interface Photo {
   gps: string;
   albums: string[];
   photos_url?: string;
-  duration?: string;
+  duration?: string | null;
   // Internal use
   _index?: number;
   filename?: string;

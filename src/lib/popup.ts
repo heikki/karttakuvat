@@ -3,7 +3,13 @@ import maplibregl from 'maplibre-gl';
 import { state } from './data';
 import type { Photo } from './types';
 import { updateLightboxGroup } from './ui';
-import { compareDates, formatDate, getThumbUrl, isVideo } from './utils';
+import {
+  compareDates,
+  durationSpan,
+  formatDate,
+  getThumbUrl,
+  isVideo
+} from './utils';
 
 // State
 let currentPopup: maplibregl.Popup | null = null;
@@ -77,10 +83,6 @@ export function showPopup(props: FeatureProps, coords: [number, number]) {
       ? `<a class="photos-link" id="single-photos-link" href="${photo.photos_url}">${linkText}</a>`
       : `<a class="photos-link" id="single-photos-link" href="#" style="display:none">${linkText}</a>`;
   const videoOverlay = isVid ? '<div class="video-indicator"></div>' : '';
-  const durationHtml =
-    isVid && photo.duration !== undefined
-      ? `<span class="duration">${photo.duration}</span>`
-      : '';
 
   const popupContent = `
         <div class="photo-popup">
@@ -89,7 +91,7 @@ export function showPopup(props: FeatureProps, coords: [number, number]) {
                         onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22150%22><rect fill=%22%23f0f0f0%22 width=%22200%22 height=%22150%22/><text x=%22100%22 y=%2275%22 text-anchor=%22middle%22 fill=%22%23999%22>Preview unavailable</text></svg>'" />
                 ${videoOverlay}
             </div>
-            <div class="info" id="single-info">${formatDate(photo.date)}${durationHtml}<br>${photo.lat.toFixed(4)}°N, ${photo.lon.toFixed(4)}°E</div>
+            <div class="info" id="single-info">${formatDate(photo.date)}${durationSpan(photo)}<br>${photo.lat.toFixed(4)}°N, ${photo.lon.toFixed(4)}°E</div>
             ${photosLinkHtml}
         </div>`;
 
@@ -351,12 +353,8 @@ export function navigateSinglePhoto(newIndex: number) {
       window.showLightbox(newIndex);
     };
   }
-  const durationHtml =
-    isVideo(photo) && photo.duration !== undefined
-      ? `<span class="duration">${photo.duration}</span>`
-      : '';
   if (info !== null) {
-    info.innerHTML = `${formatDate(photo.date)}${durationHtml}<br>${photo.lat.toFixed(4)}°N, ${photo.lon.toFixed(4)}°E`;
+    info.innerHTML = `${formatDate(photo.date)}${durationSpan(photo)}<br>${photo.lat.toFixed(4)}°N, ${photo.lon.toFixed(4)}°E`;
   }
   updatePhotosLink('single-photos-link', photo);
   updateVideoIndicator(photo);
