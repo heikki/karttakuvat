@@ -6,7 +6,8 @@ export const state = {
   filteredPhotos: [] as Photo[],
   filters: {
     year: 'all',
-    gps: 'all'
+    gps: 'all',
+    media: 'all'
   }
 };
 
@@ -33,16 +34,17 @@ export async function loadPhotos() {
     const data = (await response.json()) as Photo[];
     data.sort(compareDates);
     state.photos = data;
-    applyFilters(state.filters.year, state.filters.gps);
+    applyFilters(state.filters.year, state.filters.gps, state.filters.media);
   } catch (error) {
     console.error('Error loading items.json:', error);
     throw error;
   }
 }
 
-export function applyFilters(year: string, gps: string) {
+export function applyFilters(year: string, gps: string, media: string) {
   state.filters.year = year;
   state.filters.gps = gps;
+  state.filters.media = media;
 
   state.filteredPhotos = state.photos.filter((p) => {
     // Year filter
@@ -51,6 +53,10 @@ export function applyFilters(year: string, gps: string) {
     }
     // GPS filter
     if (gps !== 'all' && p.gps !== gps) {
+      return false;
+    }
+    // Media type filter
+    if (media !== 'all' && p.type !== media) {
       return false;
     }
     return true;

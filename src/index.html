@@ -15,10 +15,9 @@
     <div id="map"></div>
 
     <div class="stats-panel">
-      <h2>All Photos</h2>
-      <!-- Functions are now global window.browseAllPhotos etc. -->
+      <h2>Karttakuvat</h2>
       <div class="count" id="photo-count">0</div>
-      <p>photos found</p>
+      <p id="count-label">photos found</p>
       <p id="date-range"></p>
       <p style="margin-top: 10px; font-size: 11px; color: #999">
         Shift+drag to select area.
@@ -27,6 +26,12 @@
         <label for="year-select">Filter by year</label>
         <select id="year-select">
           <option value="all">All years</option>
+        </select>
+        <label for="media-select">Media type</label>
+        <select id="media-select">
+          <option value="all">All media</option>
+          <option value="photo">Photos only</option>
+          <option value="video">Videos only</option>
         </select>
         <label for="gps-select">Location precision</label>
         <select id="gps-select">

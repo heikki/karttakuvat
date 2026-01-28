@@ -221,10 +221,23 @@ function prevPhoto() {
 
 export function updateStats(filteredPhotos: Photo[]) {
   const countEl = document.getElementById('photo-count');
+  const countLabel = document.getElementById('count-label');
   const dateRangeEl = document.getElementById('date-range');
   if (countEl === null || dateRangeEl === null) return;
 
   countEl.textContent = filteredPhotos.length.toString();
+
+  if (countLabel !== null) {
+    const photoCount = filteredPhotos.filter((p) => !isVideo(p)).length;
+    const videoCount = filteredPhotos.filter((p) => isVideo(p)).length;
+    if (photoCount > 0 && videoCount > 0) {
+      countLabel.textContent = `${photoCount} photos, ${videoCount} videos`;
+    } else if (videoCount > 0) {
+      countLabel.textContent = 'videos found';
+    } else {
+      countLabel.textContent = 'photos found';
+    }
+  }
 
   const photosWithDates = filteredPhotos.filter((p) => p.date !== '');
   if (photosWithDates.length > 0) {

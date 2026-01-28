@@ -70,12 +70,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const yearSelect = document.getElementById('year-select');
     const gpsSelect = document.getElementById('gps-select');
+    const mediaSelect = document.getElementById('media-select');
 
     const handleFilterChange = () => {
-      if (yearSelect === null || gpsSelect === null) return;
+      if (yearSelect === null || gpsSelect === null || mediaSelect === null) {
+        return;
+      }
       const y = (yearSelect as HTMLSelectElement).value;
       const g = (gpsSelect as HTMLSelectElement).value;
-      applyFilters(y, g);
+      const m = (mediaSelect as HTMLSelectElement).value;
+      applyFilters(y, g, m);
     };
 
     if (yearSelect !== null) {
@@ -83,6 +87,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (gpsSelect !== null) {
       gpsSelect.addEventListener('change', handleFilterChange);
+    }
+    if (mediaSelect !== null) {
+      mediaSelect.addEventListener('change', handleFilterChange);
     }
 
     // Stats interactions
