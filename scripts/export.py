@@ -166,13 +166,21 @@ def check_ffmpeg():
 
 
 def extract_frame(video_path, output_path):
-    """Extract a frame from video at 1 second mark (or first frame)."""
+    """Extract a frame from video at 1 second mark (or first frame).
+
+    Uses scale filter to apply sample aspect ratio (SAR) so anamorphic
+    videos (e.g. 960x1080 with SAR 2:1) produce correct display resolution.
+    """
+    # Scale width by SAR to get display resolution, keep even dimensions
+    scale_filter = "scale=trunc(iw*sar/2)*2:ih"
+
     # Try to get frame at 1 second
     cmd = [
         "ffmpeg", "-y",
         "-ss", "1",
         "-i", str(video_path),
         "-vframes", "1",
+        "-vf", scale_filter,
         "-q:v", "2",
         str(output_path)
     ]
@@ -184,6 +192,7 @@ def extract_frame(video_path, output_path):
             "ffmpeg", "-y",
             "-i", str(video_path),
             "-vframes", "1",
+            "-vf", scale_filter,
             "-q:v", "2",
             str(output_path)
         ]
