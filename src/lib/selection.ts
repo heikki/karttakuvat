@@ -102,14 +102,25 @@ export function fitToSelectionWithPopup(
 ) {
   const map = getMapFn();
   setTimeout(() => {
+    // Guard against MapLibre crash when container has invalid dimensions
+    const container = map.getContainer();
+    if (container.clientWidth === 0 || container.clientHeight === 0) return;
+
+    // Stop any ongoing animation before fitting bounds
+    map.stop();
+
     const popup = getCurrentPopup();
     const popupEl = popup?.getElement();
     const popupHeight = popupEl === undefined ? 350 : popupEl.offsetHeight;
     const bounds = new maplibregl.LngLatBounds(sw, ne);
-    map.fitBounds(bounds, {
-      padding: { top: popupHeight + 20, bottom: 30, left: 20, right: 270 },
-      duration: 300
-    });
+    try {
+      map.fitBounds(bounds, {
+        padding: { top: popupHeight + 20, bottom: 30, left: 20, right: 270 },
+        duration: 300
+      });
+    } catch {
+      // Silently ignore MapLibre internal errors during bounds fitting
+    }
   }, 50);
 }
 

@@ -46,6 +46,11 @@ export function initMap() {
 
   map.addControl(new maplibregl.NavigationControl(), 'bottom-right');
 
+  // Handle MapLibre internal errors gracefully
+  map.on('error', () => {
+    // Silently ignore MapLibre internal errors
+  });
+
   // Expose map to window
   window.map = map;
 
@@ -61,7 +66,7 @@ export function initMap() {
 
     updateMapData();
     if (state.filteredPhotos.length > 0) {
-      fitToPhotos(false);
+      fitToPhotos();
     }
   });
 
@@ -75,16 +80,9 @@ export function initMap() {
 function updateMapData() {
   const source = map.getSource('photos');
   if (source === undefined) return;
+
   const geoSource = source as maplibregl.GeoJSONSource;
   geoSource.setData(createGeoJSON());
-
-  const mapBounds = map.getBounds();
-  const allVisible =
-    state.filteredPhotos.length === 0 ||
-    state.filteredPhotos.every((p) => mapBounds.contains([p.lon, p.lat]));
-  if (!allVisible) {
-    fitToPhotos();
-  }
 }
 
 export function changeMapStyle(styleKey: string) {
@@ -93,6 +91,8 @@ export function changeMapStyle(styleKey: string) {
     | undefined;
   if (style === undefined) return;
 
+  // Stop any ongoing animation to prevent MapLibre crash during style change
+  map.stop();
   map.setStyle(style);
   void map.once('idle', () => {
     addPhotoLayers();
@@ -252,48 +252,86 @@ function setupMarkerInteractions() {
   });
 }
 
+function calculatePanOffset(
+  mapRect: DOMRect,
+  popupRect: DOMRect
+): { panX: number; panY: number } {
+  const padding = { top: 10, right: 260, bottom: 120, left: 10 };
+  let panX = 0;
+  let panY = 0;
+
+  if (popupRect.top < mapRect.top + padding.top) {
+    panY = popupRect.top - mapRect.top - padding.top;
+  } else if (popupRect.bottom > mapRect.bottom - padding.bottom) {
+    panY = popupRect.bottom - mapRect.bottom + padding.bottom;
+  }
+
+  if (popupRect.left < mapRect.left + padding.left) {
+    panX = popupRect.left - mapRect.left - padding.left;
+  } else if (popupRect.right > mapRect.right - padding.right) {
+    panX = popupRect.right - mapRect.right + padding.right;
+  }
+
+  return { panX, panY };
+}
+
 function panToFitPopup(coords: [number, number]) {
   setTimeout(() => {
     const popup = getCurrentPopup();
     if (popup === null) return;
-    const popupEl = popup.getElement();
+
+    // Guard against MapLibre crash when container has invalid dimensions
     const mapContainer = map.getContainer();
+    if (mapContainer.clientWidth === 0 || mapContainer.clientHeight === 0) {
+      return;
+    }
+
+    // Stop any ongoing animation before panning
+    map.stop();
+
+    const popupEl = popup.getElement();
     const mapRect = mapContainer.getBoundingClientRect();
     const popupRect = popupEl.getBoundingClientRect();
-    const padding = { top: 10, right: 260, bottom: 120, left: 10 };
-
-    let panX = 0;
-    let panY = 0;
-
-    if (popupRect.top < mapRect.top + padding.top) {
-      panY = popupRect.top - mapRect.top - padding.top;
-    }
-    if (popupRect.bottom > mapRect.bottom - padding.bottom) {
-      panY = popupRect.bottom - mapRect.bottom + padding.bottom;
-    }
-    if (popupRect.left < mapRect.left + padding.left) {
-      panX = popupRect.left - mapRect.left - padding.left;
-    }
-    if (popupRect.right > mapRect.right - padding.right) {
-      panX = popupRect.right - mapRect.right + padding.right;
-    }
+    const { panX, panY } = calculatePanOffset(mapRect, popupRect);
 
     if (panX !== 0 || panY !== 0) {
-      map.panBy([panX, panY], { duration: 300 });
+      safeMapOperation(() => {
+        map.panBy([panX, panY], { duration: 300 });
+      });
     }
   }, 50);
 }
 
-export function fitToPhotos(animate = true) {
+function isSinglePointBounds(bounds: maplibregl.LngLatBounds): boolean {
+  const sw = bounds.getSouthWest();
+  const ne = bounds.getNorthEast();
+  return sw.lng === ne.lng && sw.lat === ne.lat;
+}
+
+function safeMapOperation(operation: () => void) {
+  try {
+    operation();
+  } catch {
+    // Silently ignore MapLibre internal errors
+  }
+}
+
+function fitToPhotos() {
   if (state.filteredPhotos.length === 0) return;
-  // Stop any in-progress animation to avoid MapLibre crashing
-  // when a new fitBounds is called mid-ease
-  map.stop();
+
   const bounds = new maplibregl.LngLatBounds();
   state.filteredPhotos.forEach((p) => bounds.extend([p.lon, p.lat]));
+
+  if (isSinglePointBounds(bounds)) {
+    const center = bounds.getCenter();
+    map.setCenter([center.lng, center.lat]);
+    return;
+  }
+
   map.fitBounds(bounds, {
     padding: { top: 20, bottom: 150, left: 20, right: 270 },
-    duration: animate ? undefined : 0
+    maxZoom: 18,
+    duration: 0
   });
 }
 
