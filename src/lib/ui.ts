@@ -271,6 +271,21 @@ export function populateYearFilter(years: string[]) {
   });
 }
 
+export function updatePendingEdits(count: number) {
+  const section = document.getElementById('edit-section');
+  const countEl = document.getElementById('pending-count');
+  if (section === null) return;
+
+  if (count > 0) {
+    section.style.display = 'block';
+    if (countEl !== null) {
+      countEl.textContent = count.toString();
+    }
+  } else {
+    section.style.display = 'none';
+  }
+}
+
 export function browseAllPhotos() {
   if (state.filteredPhotos.length === 0) return;
   showLightbox(0);

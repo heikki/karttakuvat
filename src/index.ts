@@ -1,11 +1,26 @@
-import { applyFilters, loadPhotos, state, subscribe } from './lib/data';
-import { changeMapStyle, initMap, selectGroupPhoto } from './lib/map';
+import {
+  applyFilters,
+  clearPendingEdits,
+  copyLocation,
+  getPendingEdits,
+  loadPhotos,
+  state,
+  subscribe,
+  subscribeEdits
+} from './lib/data';
+import {
+  changeMapStyle,
+  enterPlacementMode,
+  initMap,
+  selectGroupPhoto
+} from './lib/map';
 import {
   browseAllPhotos,
   initUI,
   populateYearFilter,
   showGroupLightbox,
   showLightbox,
+  updatePendingEdits,
   updateStats
 } from './lib/ui';
 import { getYear } from './lib/utils';
@@ -15,6 +30,8 @@ declare global {
     selectGroupPhoto: typeof selectGroupPhoto;
     showLightbox: typeof showLightbox;
     showGroupLightbox: typeof showGroupLightbox;
+    enterPlacementMode: typeof enterPlacementMode;
+    copyLocation: typeof copyLocation;
   }
 }
 
@@ -55,6 +72,8 @@ declare global {
 window.selectGroupPhoto = selectGroupPhoto;
 window.showLightbox = showLightbox;
 window.showGroupLightbox = showGroupLightbox;
+window.enterPlacementMode = enterPlacementMode;
+window.copyLocation = copyLocation;
 
 document.addEventListener('DOMContentLoaded', () => {
   void (async () => {
@@ -104,6 +123,52 @@ document.addEventListener('DOMContentLoaded', () => {
       countLabel.style.cursor = 'pointer';
     }
 
+    // Save/Discard edits
+    const saveBtn = document.getElementById('save-edits-btn');
+    const discardBtn = document.getElementById('discard-edits-btn');
+
+    if (saveBtn !== null) {
+      saveBtn.addEventListener('click', () => {
+        void (async () => {
+          const edits = getPendingEdits();
+          if (edits.length === 0) return;
+
+          saveBtn.setAttribute('disabled', '');
+          saveBtn.textContent = 'Saving...';
+
+          try {
+            const response = await fetch('/api/set-locations', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ edits })
+            });
+            if (!response.ok) {
+              const text = await response.text();
+              throw new Error(text);
+            }
+            // Reload photos first (with fresh data), then clear pending edits
+            await loadPhotos();
+            clearPendingEdits();
+          } catch (err) {
+            console.error('Failed to save edits:', err);
+            // eslint-disable-next-line no-alert -- user needs feedback on save failure
+            alert(
+              `Failed to save edits: ${err instanceof Error ? err.message : String(err)}`
+            );
+          } finally {
+            saveBtn.removeAttribute('disabled');
+            saveBtn.textContent = 'Save to Photos';
+          }
+        })();
+      });
+    }
+
+    if (discardBtn !== null) {
+      discardBtn.addEventListener('click', () => {
+        clearPendingEdits();
+      });
+    }
+
     // Load Data
     await loadPhotos();
 
@@ -123,4 +188,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 subscribe((filtered) => {
   updateStats(filtered);
+});
+
+subscribeEdits((count) => {
+  updatePendingEdits(count);
 });

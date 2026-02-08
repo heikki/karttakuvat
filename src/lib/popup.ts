@@ -85,6 +85,12 @@ export function showPopup(props: FeatureProps, coords: [number, number]) {
       : `<a class="photos-link" id="single-photos-link" href="#" style="display:none">${linkText}</a>`;
   const videoOverlay = isVid ? '<div class="video-indicator"></div>' : '';
 
+  const setLocationHtml = `<a class="photos-link" id="single-set-location" href="#" onclick="event.preventDefault(); window.enterPlacementMode(${index})">Set location</a>`;
+  const copyLocationHtml =
+    photo.lat !== null && photo.lon !== null
+      ? `<a class="photos-link" id="single-copy-location" href="#" onclick="event.preventDefault(); window.copyLocation(${photo.lat}, ${photo.lon})">Copy location</a>`
+      : '';
+
   const popupContent = `
         <div class="photo-popup">
             <div class="popup-image-wrap">
@@ -94,6 +100,8 @@ export function showPopup(props: FeatureProps, coords: [number, number]) {
             </div>
             <div class="info" id="single-info">${formatDate(photo.date)}${durationSpan(photo)}<br>${formatLocation(photo)}</div>
             ${photosLinkHtml}
+            ${setLocationHtml}
+            ${copyLocationHtml}
         </div>`;
 
   currentPopup = new maplibregl.Popup({
@@ -338,6 +346,31 @@ export function scrollToActiveThumbnail() {
   }
 }
 
+function updatePopupActions(index: number, photo: Photo) {
+  const setLocLink = document.getElementById('single-set-location');
+  if (setLocLink !== null) {
+    setLocLink.onclick = (ev) => {
+      ev.preventDefault();
+      window.enterPlacementMode(index);
+    };
+  }
+
+  const copyLocLink = document.getElementById('single-copy-location');
+  if (copyLocLink !== null) {
+    if (photo.lat !== null && photo.lon !== null) {
+      const lat = photo.lat;
+      const lon = photo.lon;
+      copyLocLink.onclick = (ev) => {
+        ev.preventDefault();
+        window.copyLocation(lat, lon);
+      };
+      copyLocLink.style.display = '';
+    } else {
+      copyLocLink.style.display = 'none';
+    }
+  }
+}
+
 export function navigateSinglePhoto(newIndex: number) {
   const photo = state.filteredPhotos[newIndex];
   if (photo === undefined || currentPopup === null) return;
@@ -360,8 +393,10 @@ export function navigateSinglePhoto(newIndex: number) {
   updatePhotosLink('single-photos-link', photo);
   updateVideoIndicator(photo);
 
-  if (photo.lon !== null && photo.lat !== null) {
-    currentPopup.setLngLat([photo.lon, photo.lat]);
-    panToFitPopupFn([photo.lon, photo.lat]);
-  }
+  updatePopupActions(newIndex, photo);
+
+  const lng = photo.lon ?? 0;
+  const lat = photo.lat ?? 0;
+  currentPopup.setLngLat([lng, lat]);
+  panToFitPopupFn([lng, lat]);
 }

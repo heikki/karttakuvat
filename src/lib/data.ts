@@ -8,7 +8,8 @@ export const state = {
     year: 'all',
     gps: 'all',
     media: 'all'
-  }
+  },
+  pendingEdits: new Map<string, { lat: number; lon: number }>()
 };
 
 type Listener = (filtered: Photo[]) => void;
@@ -30,7 +31,7 @@ function notify() {
 
 export async function loadPhotos() {
   try {
-    const response = await fetch('items.json');
+    const response = await fetch(`items.json?t=${Date.now()}`);
     const data = (await response.json()) as Photo[];
     data.sort(compareDates);
     state.photos = data;
@@ -39,6 +40,59 @@ export async function loadPhotos() {
     console.error('Error loading items.json:', error);
     throw error;
   }
+}
+
+// Edit listeners (separate from filter listeners)
+type EditListener = (count: number) => void;
+const editListeners: EditListener[] = [];
+
+export function subscribeEdits(fn: EditListener) {
+  editListeners.push(fn);
+  return () => {
+    const index = editListeners.indexOf(fn);
+    if (index > -1) editListeners.splice(index, 1);
+  };
+}
+
+function notifyEdits() {
+  editListeners.forEach((fn) => {
+    fn(state.pendingEdits.size);
+  });
+}
+
+export function addPendingEdit(uuid: string, lat: number, lon: number) {
+  state.pendingEdits.set(uuid, { lat, lon });
+  notifyEdits();
+  // Re-notify filter listeners so map updates marker positions
+  notify();
+}
+
+export function clearPendingEdits() {
+  state.pendingEdits.clear();
+  notifyEdits();
+  notify();
+}
+
+export function getPendingEdits(): Array<{
+  uuid: string;
+  lat: number;
+  lon: number;
+}> {
+  return Array.from(state.pendingEdits.entries()).map(([uuid, coords]) => ({
+    uuid,
+    ...coords
+  }));
+}
+
+// Copied location for paste
+let copiedLocation: { lat: number; lon: number } | null = null;
+
+export function copyLocation(lat: number, lon: number) {
+  copiedLocation = { lat, lon };
+}
+
+export function getCopiedLocation(): { lat: number; lon: number } | null {
+  return copiedLocation;
 }
 
 export function applyFilters(year: string, gps: string, media: string) {

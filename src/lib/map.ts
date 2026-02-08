@@ -3,7 +3,8 @@ import maplibregl from 'maplibre-gl';
 import type { FilterSpecification, StyleSpecification } from 'maplibre-gl';
 
 import { mapStyles } from './config';
-import { state, subscribe } from './data';
+import { addPendingEdit, getCopiedLocation, state, subscribe } from './data';
+import { formatDate, getThumbUrl } from './utils';
 import {
   getClusterPhotos,
   getCurrentPopup,
@@ -32,6 +33,91 @@ let map: maplibregl.Map;
 
 function getMap(): maplibregl.Map {
   return map;
+}
+
+// Placement mode state
+let placementPhotoIndex: number | null = null;
+
+function showPlacementPanel(photoIndex: number) {
+  const photo = state.filteredPhotos[photoIndex];
+  if (photo === undefined) return;
+
+  let panel = document.getElementById('placement-panel');
+  if (panel === null) {
+    panel = document.createElement('div');
+    panel.id = 'placement-panel';
+    document.body.appendChild(panel);
+  }
+
+  const copied = getCopiedLocation();
+  const pasteHtml =
+    copied === null
+      ? ''
+      : `<a class="placement-panel-paste" href="#" id="paste-location">Paste location<br><span>${copied.lat.toFixed(4)}°N, ${copied.lon.toFixed(4)}°E</span></a>`;
+
+  panel.innerHTML = `<img src="${getThumbUrl(photo)}" alt="" /><div class="placement-panel-info">${formatDate(photo.date)}</div><div class="placement-panel-hint">Click map to set location. Esc to cancel.</div>${pasteHtml}`;
+  panel.classList.add('active');
+
+  if (copied !== null) {
+    const pasteLink = document.getElementById('paste-location');
+    if (pasteLink !== null) {
+      pasteLink.onclick = (ev) => {
+        ev.preventDefault();
+        finishPlacement(photoIndex, copied.lat, copied.lon);
+      };
+    }
+  }
+}
+
+function hidePlacementPanel() {
+  const panel = document.getElementById('placement-panel');
+  if (panel !== null) {
+    panel.classList.remove('active');
+  }
+}
+
+const markerLayers = [
+  'photo-markers',
+  'photo-markers-highlight',
+  'photo-markers-highlight-ring'
+];
+
+function setMarkerVisibility(visible: boolean) {
+  const visibility = visible ? 'visible' : 'none';
+  for (const id of markerLayers) {
+    if (map.getLayer(id) !== undefined) {
+      map.setLayoutProperty(id, 'visibility', visibility);
+    }
+  }
+}
+
+function exitPlacementMode() {
+  placementPhotoIndex = null;
+  map.getCanvas().classList.remove('crosshair');
+  hidePlacementPanel();
+  setMarkerVisibility(true);
+}
+
+function finishPlacement(photoIndex: number, lat: number, lon: number) {
+  const photo = state.filteredPhotos[photoIndex];
+  if (photo === undefined) return;
+
+  addPendingEdit(photo.uuid, lat, lon);
+  exitPlacementMode();
+  showPopup({ index: photoIndex }, [lon, lat]);
+}
+
+export function enterPlacementMode(photoIndex: number) {
+  // Close any open popup
+  const popup = getCurrentPopup();
+  if (popup !== null) {
+    popup.remove();
+  }
+
+  placementPhotoIndex = photoIndex;
+  map.getCanvas().classList.add('crosshair');
+  showPlacementPanel(photoIndex);
+  setMarkerVisibility(false);
 }
 
 export function initMap() {
@@ -75,6 +161,26 @@ export function initMap() {
       updateMapData();
     }
   });
+
+  // Placement mode: click to set location
+  map.on('click', (e) => {
+    if (placementPhotoIndex === null) return;
+
+    if (state.filteredPhotos[placementPhotoIndex] === undefined) {
+      exitPlacementMode();
+      return;
+    }
+
+    e.preventDefault();
+    finishPlacement(placementPhotoIndex, e.lngLat.lat, e.lngLat.lng);
+  });
+
+  // Esc to cancel placement mode
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && placementPhotoIndex !== null) {
+      exitPlacementMode();
+    }
+  });
 }
 
 function updateMapData() {
@@ -105,17 +211,22 @@ export function changeMapStyle(styleKey: string) {
 function createGeoJSON(): FeatureCollection<Point> {
   return {
     type: 'FeatureCollection',
-    features: state.filteredPhotos.map((photo, index) => ({
-      type: 'Feature' as const,
-      geometry: {
-        type: 'Point' as const,
-        coordinates: [photo.lon ?? 0, photo.lat ?? 0]
-      },
-      properties: {
-        index,
-        lat: photo.lat ?? 0
-      }
-    }))
+    features: state.filteredPhotos.map((photo, index) => {
+      const pending = state.pendingEdits.get(photo.uuid);
+      const lon = pending === undefined ? (photo.lon ?? 0) : pending.lon;
+      const lat = pending === undefined ? (photo.lat ?? 0) : pending.lat;
+      return {
+        type: 'Feature' as const,
+        geometry: {
+          type: 'Point' as const,
+          coordinates: [lon, lat]
+        },
+        properties: {
+          index,
+          lat
+        }
+      };
+    })
   };
 }
 
@@ -197,6 +308,9 @@ function highlightMarker(index: number | null) {
 
 function setupMarkerInteractions() {
   map.on('click', 'photo-markers', (e) => {
+    // In placement mode, let the map-level click handler handle it
+    if (placementPhotoIndex !== null) return;
+
     e.preventDefault();
     e.originalEvent.stopPropagation();
 
@@ -230,13 +344,20 @@ function setupMarkerInteractions() {
   });
 
   map.on('mouseenter', 'photo-markers', () => {
-    map.getCanvas().style.cursor = 'pointer';
+    if (placementPhotoIndex === null) {
+      map.getCanvas().style.cursor = 'pointer';
+    }
   });
   map.on('mouseleave', 'photo-markers', () => {
-    map.getCanvas().style.cursor = '';
+    if (placementPhotoIndex === null) {
+      map.getCanvas().style.cursor = '';
+    }
   });
 
   map.on('click', (e) => {
+    // In placement mode, don't close popups on empty clicks
+    if (placementPhotoIndex !== null) return;
+
     const features = map.queryRenderedFeatures(e.point, {
       layers: ['photo-markers']
     });
@@ -320,9 +441,7 @@ function fitToPhotos() {
   if (state.filteredPhotos.length === 0) return;
 
   const bounds = new maplibregl.LngLatBounds();
-  state.filteredPhotos.forEach((p) =>
-    bounds.extend([p.lon ?? 0, p.lat ?? 0])
-  );
+  state.filteredPhotos.forEach((p) => bounds.extend([p.lon ?? 0, p.lat ?? 0]));
 
   if (isSinglePointBounds(bounds)) {
     const center = bounds.getCenter();
