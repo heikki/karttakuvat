@@ -410,7 +410,8 @@ function panToFitPopup(coords: [number, number]) {
     // Stop any ongoing animation before panning
     map.stop();
 
-    const popupEl = popup.getElement();
+    const popupEl = popup.getElement() as HTMLElement | undefined;
+    if (popupEl === undefined) return;
     const mapRect = mapContainer.getBoundingClientRect();
     const popupRect = popupEl.getBoundingClientRect();
     const { panX, panY } = calculatePanOffset(mapRect, popupRect);
