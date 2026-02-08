@@ -402,6 +402,28 @@ canvas.crosshair {
   cursor: not-allowed;
 }
 
+/* Time adjust buttons in popup */
+.time-adjust-buttons {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+.time-btn {
+  padding: 1px 5px;
+  font-size: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: #f5f5f5;
+  color: #666;
+  cursor: pointer;
+  line-height: 1.2;
+}
+.time-btn:hover {
+  background: #e0e0e0;
+  border-color: #bbb;
+}
+
 /* Duration text */
 .photo-popup .duration {
   margin-left: 6px;

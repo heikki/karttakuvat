@@ -9,7 +9,8 @@ export const state = {
     gps: 'all',
     media: 'all'
   },
-  pendingEdits: new Map<string, { lat: number; lon: number }>()
+  pendingEdits: new Map<string, { lat: number; lon: number }>(),
+  pendingTimeEdits: new Map<string, number>()
 };
 
 type Listener = (filtered: Photo[]) => void;
@@ -55,8 +56,9 @@ export function subscribeEdits(fn: EditListener) {
 }
 
 function notifyEdits() {
+  const count = state.pendingEdits.size + state.pendingTimeEdits.size;
   editListeners.forEach((fn) => {
-    fn(state.pendingEdits.size);
+    fn(count);
   });
 }
 
@@ -69,6 +71,7 @@ export function addPendingEdit(uuid: string, lat: number, lon: number) {
 
 export function clearPendingEdits() {
   state.pendingEdits.clear();
+  state.pendingTimeEdits.clear();
   notifyEdits();
   notify();
 }
@@ -93,6 +96,45 @@ export function copyLocation(lat: number, lon: number) {
 
 export function getCopiedLocation(): { lat: number; lon: number } | null {
   return copiedLocation;
+}
+
+export function addPendingTimeEdit(uuid: string, hours: number) {
+  const current = state.pendingTimeEdits.get(uuid) ?? 0;
+  const total = current + hours;
+  if (total === 0) {
+    state.pendingTimeEdits.delete(uuid);
+  } else {
+    state.pendingTimeEdits.set(uuid, total);
+  }
+  notifyEdits();
+}
+
+export function getPendingTimeEdits(): Array<{ uuid: string; hours: number }> {
+  return Array.from(state.pendingTimeEdits.entries()).map(([uuid, hours]) => ({
+    uuid,
+    hours
+  }));
+}
+
+const datePattern =
+  /^(?<yr>\d{4}):(?<mo>\d{2}):(?<dy>\d{2}) (?<hr>\d{2}):(?<mi>\d{2}):(?<sc>\d{2})$/v;
+
+export function applyHourOffset(dateStr: string, hours: number): string {
+  if (dateStr === '' || hours === 0) return dateStr;
+  const match = datePattern.exec(dateStr);
+  if (match?.groups === undefined) return dateStr;
+  const { yr, mo, dy, hr, mi, sc } = match.groups;
+  const d = new Date(
+    parseInt(yr!, 10),
+    parseInt(mo!, 10) - 1,
+    parseInt(dy!, 10),
+    parseInt(hr!, 10),
+    parseInt(mi!, 10),
+    parseInt(sc!, 10)
+  );
+  d.setHours(d.getHours() + hours);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}:${pad(d.getMonth() + 1)}:${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
 export function applyFilters(year: string, gps: string, media: string) {

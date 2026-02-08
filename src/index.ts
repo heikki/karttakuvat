@@ -3,6 +3,7 @@ import {
   clearPendingEdits,
   copyLocation,
   getPendingEdits,
+  getPendingTimeEdits,
   loadPhotos,
   state,
   subscribe,
@@ -14,6 +15,7 @@ import {
   initMap,
   selectGroupPhoto
 } from './lib/map';
+import { adjustTime } from './lib/popup';
 import {
   browseAllPhotos,
   initUI,
@@ -32,6 +34,7 @@ declare global {
     showGroupLightbox: typeof showGroupLightbox;
     enterPlacementMode: typeof enterPlacementMode;
     copyLocation: typeof copyLocation;
+    adjustTime: typeof adjustTime;
   }
 }
 
@@ -74,6 +77,7 @@ window.showLightbox = showLightbox;
 window.showGroupLightbox = showGroupLightbox;
 window.enterPlacementMode = enterPlacementMode;
 window.copyLocation = copyLocation;
+window.adjustTime = adjustTime;
 
 document.addEventListener('DOMContentLoaded', () => {
   void (async () => {
@@ -131,7 +135,8 @@ document.addEventListener('DOMContentLoaded', () => {
       saveBtn.addEventListener('click', () => {
         void (async () => {
           const edits = getPendingEdits();
-          if (edits.length === 0) return;
+          const timeEdits = getPendingTimeEdits();
+          if (edits.length === 0 && timeEdits.length === 0) return;
 
           saveBtn.setAttribute('disabled', '');
           saveBtn.textContent = 'Saving...';
@@ -140,7 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('/api/set-locations', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ edits })
+              body: JSON.stringify({ edits, timeEdits })
             });
             if (!response.ok) {
               const text = await response.text();

@@ -1,6 +1,6 @@
 import maplibregl from 'maplibre-gl';
 
-import { state } from './data';
+import { addPendingTimeEdit, applyHourOffset, state } from './data';
 import type { Photo } from './types';
 import { updateLightboxGroup } from './ui';
 import {
@@ -57,6 +57,16 @@ export function setCurrentSinglePhotoIndex(index: number | null) {
   currentSinglePhotoIndex = index;
 }
 
+function getEffectiveDate(photo: Photo): string {
+  const offset = state.pendingTimeEdits.get(photo.uuid) ?? 0;
+  if (offset === 0) return photo.date;
+  return applyHourOffset(photo.date, offset);
+}
+
+function timeButtonsHtml(uuid: string): string {
+  return `<span class="time-adjust-buttons"><button class="time-btn" onclick="event.preventDefault(); window.adjustTime('${uuid}', -1)">-1h</button><button class="time-btn" onclick="event.preventDefault(); window.adjustTime('${uuid}', 1)">+1h</button></span>`;
+}
+
 export interface FeatureProps {
   index: number;
 }
@@ -98,7 +108,7 @@ export function showPopup(props: FeatureProps, coords: [number, number]) {
                         onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22150%22><rect fill=%22%23f0f0f0%22 width=%22200%22 height=%22150%22/><text x=%22100%22 y=%2275%22 text-anchor=%22middle%22 fill=%22%23999%22>Preview unavailable</text></svg>'" />
                 ${videoOverlay}
             </div>
-            <div class="info" id="single-info">${formatDate(photo.date)}${durationSpan(photo)}<br>${formatLocation(photo)}</div>
+            <div class="info" id="single-info">${formatDate(getEffectiveDate(photo))}${durationSpan(photo)} ${timeButtonsHtml(photo.uuid)}<br>${formatLocation(photo)}</div>
             ${photosLinkHtml}
             ${setLocationHtml}
             ${copyLocationHtml}
@@ -195,7 +205,7 @@ function buildPopupContent(options: PopupContentOptions): string {
                     onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22150%22><rect fill=%22%23f0f0f0%22 width=%22200%22 height=%22150%22/><text x=%22100%22 y=%2275%22 text-anchor=%22middle%22 fill=%22%23999%22>Preview unavailable</text></svg>'" />
             ${videoOverlay}
             </div>
-            <div class="info" id="group-info">${formatDate(firstPhoto.date)}<br>${formatLocation(firstPhoto)}</div>
+            <div class="info" id="group-info">${formatDate(getEffectiveDate(firstPhoto))} ${timeButtonsHtml(firstPhoto.uuid)}<br>${formatLocation(firstPhoto)}</div>
             ${photosLinkHtml}
             <div class="thumb-strip">${thumbsHtml}</div>
         </div>`;
@@ -322,7 +332,7 @@ export function selectGroupPhoto(index: number) {
     };
   }
   if (info !== null) {
-    info.innerHTML = `${formatDate(photo.date)}<br>${formatLocation(photo)}`;
+    info.innerHTML = `${formatDate(getEffectiveDate(photo))} ${timeButtonsHtml(photo.uuid)}<br>${formatLocation(photo)}`;
   }
   updatePhotosLink('group-photos-link', photo);
   updateVideoIndicator(photo);
@@ -371,6 +381,25 @@ function updatePopupActions(index: number, photo: Photo) {
   }
 }
 
+export function adjustTime(uuid: string, hours: number) {
+  addPendingTimeEdit(uuid, hours);
+  // Update displayed time in whichever popup is open
+  const singleInfo = document.getElementById('single-info');
+  if (singleInfo !== null && currentSinglePhotoIndex !== null) {
+    const photo = state.filteredPhotos[currentSinglePhotoIndex];
+    if (photo?.uuid === uuid) {
+      singleInfo.innerHTML = `${formatDate(getEffectiveDate(photo))}${durationSpan(photo)} ${timeButtonsHtml(photo.uuid)}<br>${formatLocation(photo)}`;
+    }
+  }
+  const groupInfo = document.getElementById('group-info');
+  if (groupInfo !== null && clusterPhotos.length > 0) {
+    const photo = clusterPhotos[currentGroupIndex];
+    if (photo?.uuid === uuid) {
+      groupInfo.innerHTML = `${formatDate(getEffectiveDate(photo))} ${timeButtonsHtml(photo.uuid)}<br>${formatLocation(photo)}`;
+    }
+  }
+}
+
 export function navigateSinglePhoto(newIndex: number) {
   const photo = state.filteredPhotos[newIndex];
   if (photo === undefined || currentPopup === null) return;
@@ -388,7 +417,7 @@ export function navigateSinglePhoto(newIndex: number) {
     };
   }
   if (info !== null) {
-    info.innerHTML = `${formatDate(photo.date)}${durationSpan(photo)}<br>${formatLocation(photo)}`;
+    info.innerHTML = `${formatDate(getEffectiveDate(photo))}${durationSpan(photo)} ${timeButtonsHtml(photo.uuid)}<br>${formatLocation(photo)}`;
   }
   updatePhotosLink('single-photos-link', photo);
   updateVideoIndicator(photo);
