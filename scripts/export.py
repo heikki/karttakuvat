@@ -333,8 +333,8 @@ def query_gps_accuracy():
     """Read GPS horizontal accuracy from the Photos database.
 
     Returns a dict of {uuid: accuracy}. Apple Photos stores accuracy=10.0
-    for user-set locations, -1.0 for inferred, and real GPS accuracy for
-    EXIF GPS photos.
+    for user-set locations, 1.0 for programmatic (osxphotos batch-edit),
+    -1.0 for inferred, and real GPS accuracy for EXIF GPS photos.
     """
     db_path = Path.home() / "Pictures/Photos Library.photoslibrary/database/Photos.sqlite"
     if not db_path.exists():
@@ -355,12 +355,13 @@ def query_gps_accuracy():
 def determine_gps_source(photo, gps_accuracy):
     """Determine GPS source: 'user', 'exif', or 'inferred'.
 
-    - accuracy = 10.0 -> user manually set the location
+    - accuracy = 10.0 -> user manually set the location in Photos app
+    - accuracy = 1.0 -> location set programmatically (osxphotos batch-edit)
     - has EXIF GPS -> camera embedded GPS coordinates
     - otherwise -> Apple Photos inferred the location
     """
     acc = gps_accuracy.get(photo["uuid"])
-    if acc == 10.0:
+    if acc == 10.0 or acc == 1.0:
         return "user"
     exif_info = photo.get("exif_info") or {}
     if exif_info.get("latitude") is not None:
