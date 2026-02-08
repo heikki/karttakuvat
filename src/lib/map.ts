@@ -4,7 +4,6 @@ import type { FilterSpecification, StyleSpecification } from 'maplibre-gl';
 
 import { mapStyles } from './config';
 import { addPendingEdit, getCopiedLocation, state, subscribe } from './data';
-import { formatDate, getThumbUrl } from './utils';
 import {
   getClusterPhotos,
   getCurrentPopup,
@@ -19,6 +18,7 @@ import {
   setupRectangularSelection
 } from './selection';
 import type { MapStyles } from './types';
+import { formatDate, getThumbUrl } from './utils';
 
 // Declare window augmentation for map
 declare global {
