@@ -3,10 +3,10 @@ export interface Photo {
   type: 'photo' | 'video';
   full: string;
   thumb: string;
-  lat: number;
-  lon: number;
+  lat: number | null;
+  lon: number | null;
   date: string;
-  gps: string;
+  gps: string | null;
   albums: string[];
   photos_url?: string;
   duration?: string | null;

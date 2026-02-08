@@ -53,6 +53,13 @@ export function durationSpan(item: Photo): string {
   return '';
 }
 
+export function formatLocation(photo: Photo): string {
+  if (photo.lat !== null && photo.lon !== null) {
+    return `${photo.lat.toFixed(4)}°N, ${photo.lon.toFixed(4)}°E`;
+  }
+  return 'No location';
+}
+
 export function getThumbUrl(photo: Photo): string {
   if (photo.thumb === '') {
     return photo.filename ?? '';

@@ -1,6 +1,12 @@
 import { state } from './data';
 import type { Photo } from './types';
-import { durationSpan, formatDate, getFullUrl, isVideo } from './utils';
+import {
+  durationSpan,
+  formatDate,
+  formatLocation,
+  getFullUrl,
+  isVideo
+} from './utils';
 
 // --- Lightbox Elements ---
 let lightbox: HTMLElement | null = null;
@@ -156,7 +162,7 @@ function displayPhoto(photo: Photo, index: number, total: number) {
   const isVid = isVideo(photo);
   const countInfo = `<br>(${index} of ${total})`;
   if (lightboxInfo !== null) {
-    lightboxInfo.innerHTML = `${formatDate(photo.date)}${durationSpan(photo)}<br>${photo.lat.toFixed(4)}°N, ${photo.lon.toFixed(4)}°E${countInfo}`;
+    lightboxInfo.innerHTML = `${formatDate(photo.date)}${durationSpan(photo)}<br>${formatLocation(photo)}${countInfo}`;
   }
   if (lightbox !== null) {
     lightbox.classList.toggle('video', isVid);

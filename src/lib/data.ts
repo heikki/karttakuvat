@@ -52,7 +52,9 @@ export function applyFilters(year: string, gps: string, media: string) {
       return false;
     }
     // GPS filter
-    if (gps !== 'all' && p.gps !== gps) {
+    if (gps === 'none') {
+      if (p.gps !== null) return false;
+    } else if (gps !== 'all' && p.gps !== gps) {
       return false;
     }
     // Media type filter

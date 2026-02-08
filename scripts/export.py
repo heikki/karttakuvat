@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Export geotagged photos and videos from Apple Photos library.
+Export photos and videos from Apple Photos library.
 
 Usage:
     python export.py                    # Incremental update (only new items)
@@ -75,10 +75,9 @@ def get_output_dir():
 
 
 def query_photos():
-    """Query Apple Photos for geotagged photos using osxphotos CLI."""
+    """Query Apple Photos for photos using osxphotos CLI."""
     cmd = [
         "osxphotos", "query",
-        "--location",
         "--not-hidden",
         "--only-photos",
         "--json"
@@ -98,10 +97,9 @@ def query_photos():
 
 
 def query_videos():
-    """Query Apple Photos for geotagged videos using osxphotos CLI."""
+    """Query Apple Photos for videos using osxphotos CLI."""
     cmd = [
         "osxphotos", "query",
-        "--location",
         "--not-hidden",
         "--only-movies",
         "--json"
@@ -128,7 +126,6 @@ def batch_export(photos, full_dir):
     cmd = [
         "osxphotos", "export",
         str(full_dir),
-        "--location",  # Only photos with GPS
         "--not-hidden",
         "--only-photos",  # Exclude videos
         "--convert-to-jpeg",
@@ -348,7 +345,7 @@ def query_gps_accuracy():
         SELECT a.ZUUID, aa.ZGPSHORIZONTALACCURACY
         FROM ZASSET a
         JOIN ZADDITIONALASSETATTRIBUTES aa ON a.Z_PK = aa.ZASSET
-        WHERE a.ZLATITUDE IS NOT NULL
+        WHERE aa.ZGPSHORIZONTALACCURACY IS NOT NULL
     """)
     result = dict(cur.fetchall())
     db.close()
@@ -394,11 +391,7 @@ def build_items_json(photos, videos, full_dir, json_path):
         lat = photo.get("latitude")
         lon = photo.get("longitude")
 
-        if lat is None or lon is None:
-            progress.update(idx)
-            continue
-
-        gps_source = determine_gps_source(photo, gps_accuracy)
+        gps_source = determine_gps_source(photo, gps_accuracy) if lat is not None else None
 
         albums = photo.get("albums", [])
         album_info = photo.get("album_info", [])
@@ -439,11 +432,7 @@ def build_items_json(photos, videos, full_dir, json_path):
             lat = video.get("latitude")
             lon = video.get("longitude")
 
-            if lat is None or lon is None:
-                progress.update(idx)
-                continue
-
-            gps_source = determine_gps_source(video, gps_accuracy)
+            gps_source = determine_gps_source(video, gps_accuracy) if lat is not None else None
 
             albums = video.get("albums", [])
             album_info = video.get("album_info", [])
@@ -485,7 +474,6 @@ def query_edited_uuids():
     """Query UUIDs of photos that have been edited in Apple Photos."""
     cmd = [
         "osxphotos", "query",
-        "--location",
         "--not-hidden",
         "--only-photos",
         "--edited",
@@ -613,7 +601,7 @@ def verify(full_dir, thumb_dir, json_path):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Export geotagged photos and videos from Apple Photos")
+    parser = argparse.ArgumentParser(description="Export photos and videos from Apple Photos")
     parser.add_argument("--full", action="store_true", help="Full re-export (default is incremental update)")
     parser.add_argument("--refresh-edited", action="store_true", help="Re-export only photos that have been edited in Apple Photos")
     parser.add_argument("--verify", action="store_true", help="Check that all files match items.json")
@@ -638,12 +626,12 @@ def main():
 
     # Query Photos library
     photos = query_photos()
-    print(f"Found {len(photos)} geotagged photos in library")
+    print(f"Found {len(photos)} photos in library")
 
     if not photos:
-        print("No geotagged photos found. Make sure you have:")
+        print("No photos found. Make sure you have:")
         print("  1. Granted Full Disk Access to Terminal")
-        print("  2. Photos with GPS location data")
+        print("  2. Photos in your Apple Photos library")
         return
 
     if args.refresh_edited:
@@ -662,7 +650,7 @@ def main():
 
     # Query and export video frames
     videos = query_videos()
-    print(f"Found {len(videos)} geotagged videos in library")
+    print(f"Found {len(videos)} videos in library")
 
     if videos:
         has_ffmpeg = check_ffmpeg()

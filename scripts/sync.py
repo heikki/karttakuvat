@@ -2,7 +2,7 @@
 """
 Sync metadata from Apple Photos library without re-exporting images.
 
-Updates items.json with current metadata (location, date, albums, etc.)
+Updates items.json with current metadata (location, date, albums, GPS, etc.)
 for all items that already have exported images in full/.
 
 Usage:
@@ -124,25 +124,24 @@ def build_items_json(items, full_dir, json_path, old_items):
         lat = item.get("latitude")
         lon = item.get("longitude")
 
-        if lat is None or lon is None:
-            skipped_no_location += 1
-            continue
-
         # Check for location changes
         old_item = old_items.get(uuid)
-        location_changed = old_item and coords_changed(old_item.get("lat"), old_item.get("lon"), lat, lon)
+        if lat is not None and lon is not None:
+            location_changed = old_item and coords_changed(old_item.get("lat"), old_item.get("lon"), lat, lon)
 
-        if location_changed:
-            location_changes.append({
-                "uuid": uuid,
-                "old_lat": old_item.get("lat"),
-                "old_lon": old_item.get("lon"),
-                "new_lat": lat,
-                "new_lon": lon,
-                "albums": item.get("albums", [])
-            })
+            if location_changed:
+                location_changes.append({
+                    "uuid": uuid,
+                    "old_lat": old_item.get("lat"),
+                    "old_lon": old_item.get("lon"),
+                    "new_lat": lat,
+                    "new_lon": lon,
+                    "albums": item.get("albums", [])
+                })
+        else:
+            skipped_no_location += 1
 
-        gps_source = determine_gps_source(item, gps_accuracy)
+        gps_source = determine_gps_source(item, gps_accuracy) if lat is not None else None
 
         albums = item.get("albums", [])
         album_info = item.get("album_info", [])

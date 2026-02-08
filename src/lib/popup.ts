@@ -7,6 +7,7 @@ import {
   compareDates,
   durationSpan,
   formatDate,
+  formatLocation,
   getThumbUrl,
   isVideo
 } from './utils';
@@ -91,7 +92,7 @@ export function showPopup(props: FeatureProps, coords: [number, number]) {
                         onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22150%22><rect fill=%22%23f0f0f0%22 width=%22200%22 height=%22150%22/><text x=%22100%22 y=%2275%22 text-anchor=%22middle%22 fill=%22%23999%22>Preview unavailable</text></svg>'" />
                 ${videoOverlay}
             </div>
-            <div class="info" id="single-info">${formatDate(photo.date)}${durationSpan(photo)}<br>${photo.lat.toFixed(4)}°N, ${photo.lon.toFixed(4)}°E</div>
+            <div class="info" id="single-info">${formatDate(photo.date)}${durationSpan(photo)}<br>${formatLocation(photo)}</div>
             ${photosLinkHtml}
         </div>`;
 
@@ -186,7 +187,7 @@ function buildPopupContent(options: PopupContentOptions): string {
                     onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22150%22><rect fill=%22%23f0f0f0%22 width=%22200%22 height=%22150%22/><text x=%22100%22 y=%2275%22 text-anchor=%22middle%22 fill=%22%23999%22>Preview unavailable</text></svg>'" />
             ${videoOverlay}
             </div>
-            <div class="info" id="group-info">${formatDate(firstPhoto.date)}<br>${firstPhoto.lat.toFixed(4)}°N, ${firstPhoto.lon.toFixed(4)}°E</div>
+            <div class="info" id="group-info">${formatDate(firstPhoto.date)}<br>${formatLocation(firstPhoto)}</div>
             ${photosLinkHtml}
             <div class="thumb-strip">${thumbsHtml}</div>
         </div>`;
@@ -313,7 +314,7 @@ export function selectGroupPhoto(index: number) {
     };
   }
   if (info !== null) {
-    info.innerHTML = `${formatDate(photo.date)}<br>${photo.lat.toFixed(4)}°N, ${photo.lon.toFixed(4)}°E`;
+    info.innerHTML = `${formatDate(photo.date)}<br>${formatLocation(photo)}`;
   }
   updatePhotosLink('group-photos-link', photo);
   updateVideoIndicator(photo);
@@ -354,11 +355,13 @@ export function navigateSinglePhoto(newIndex: number) {
     };
   }
   if (info !== null) {
-    info.innerHTML = `${formatDate(photo.date)}${durationSpan(photo)}<br>${photo.lat.toFixed(4)}°N, ${photo.lon.toFixed(4)}°E`;
+    info.innerHTML = `${formatDate(photo.date)}${durationSpan(photo)}<br>${formatLocation(photo)}`;
   }
   updatePhotosLink('single-photos-link', photo);
   updateVideoIndicator(photo);
 
-  currentPopup.setLngLat([photo.lon, photo.lat]);
-  panToFitPopupFn([photo.lon, photo.lat]);
+  if (photo.lon !== null && photo.lat !== null) {
+    currentPopup.setLngLat([photo.lon, photo.lat]);
+    panToFitPopupFn([photo.lon, photo.lat]);
+  }
 }

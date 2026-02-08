@@ -106,14 +106,14 @@ function createGeoJSON(): FeatureCollection<Point> {
   return {
     type: 'FeatureCollection',
     features: state.filteredPhotos.map((photo, index) => ({
-      type: 'Feature',
+      type: 'Feature' as const,
       geometry: {
-        type: 'Point',
-        coordinates: [photo.lon, photo.lat]
+        type: 'Point' as const,
+        coordinates: [photo.lon ?? 0, photo.lat ?? 0]
       },
       properties: {
         index,
-        lat: photo.lat
+        lat: photo.lat ?? 0
       }
     }))
   };
@@ -320,7 +320,9 @@ function fitToPhotos() {
   if (state.filteredPhotos.length === 0) return;
 
   const bounds = new maplibregl.LngLatBounds();
-  state.filteredPhotos.forEach((p) => bounds.extend([p.lon, p.lat]));
+  state.filteredPhotos.forEach((p) =>
+    bounds.extend([p.lon ?? 0, p.lat ?? 0])
+  );
 
   if (isSinglePointBounds(bounds)) {
     const center = bounds.getCenter();
