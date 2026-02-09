@@ -460,8 +460,14 @@ export function fitToPhotos(animate = false, selectFirst = false) {
 
   if (isSinglePointBounds(bounds)) {
     const center = bounds.getCenter();
-    map.setCenter([center.lng, center.lat]);
-    showFirstPopup();
+    if (animate) {
+      map.flyTo({ center: [center.lng, center.lat], zoom: 14, duration: 500 });
+      void map.once('moveend', showFirstPopup);
+    } else {
+      map.setCenter([center.lng, center.lat]);
+      map.setZoom(14);
+      showFirstPopup();
+    }
     return;
   }
 
