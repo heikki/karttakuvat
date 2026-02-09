@@ -48,6 +48,7 @@ def main():
                     "timewarp",
                     "--time-delta", delta,
                     "--uuid", uuid,
+                    "--force",
                 ],
                 capture_output=True,
                 text=True,
