@@ -12,6 +12,7 @@ import {
 import {
   changeMapStyle,
   enterPlacementMode,
+  fitToPhotos,
   initMap,
   selectGroupPhoto
 } from './lib/map';
@@ -149,6 +150,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     setupFilterListeners();
+
+    // Fit to view button
+    const fitViewBtn = document.getElementById('fit-view-btn');
+    if (fitViewBtn !== null) {
+      fitViewBtn.addEventListener('click', () => {
+        fitToPhotos(true, true);
+      });
+    }
 
     // Stats interactions
     const countEl = document.getElementById('photo-count');

@@ -377,7 +377,7 @@ function calculatePanOffset(
   mapRect: DOMRect,
   popupRect: DOMRect
 ): { panX: number; panY: number } {
-  const padding = { top: 10, right: 260, bottom: 120, left: 10 };
+  const padding = { top: 10, right: 260, bottom: 10, left: 10 };
   let panX = 0;
   let panY = 0;
 
@@ -438,23 +438,40 @@ function safeMapOperation(operation: () => void) {
   }
 }
 
-function fitToPhotos() {
+export function fitToPhotos(animate = false, selectFirst = false) {
   if (state.filteredPhotos.length === 0) return;
 
   const bounds = new maplibregl.LngLatBounds();
   state.filteredPhotos.forEach((p) => bounds.extend([p.lon ?? 0, p.lat ?? 0]));
 
+  const showFirstPopup = () => {
+    if (!selectFirst) return;
+    const photo = state.filteredPhotos[0];
+    if (photo === undefined) return;
+    const pending = state.pendingEdits.get(photo.uuid);
+    const lon = pending === undefined ? (photo.lon ?? 0) : pending.lon;
+    const lat = pending === undefined ? (photo.lat ?? 0) : pending.lat;
+    showPopup({ index: 0 }, [lon, lat]);
+  };
+
   if (isSinglePointBounds(bounds)) {
     const center = bounds.getCenter();
     map.setCenter([center.lng, center.lat]);
+    showFirstPopup();
     return;
   }
 
   map.fitBounds(bounds, {
-    padding: { top: 20, bottom: 150, left: 20, right: 270 },
+    padding: { top: 350, bottom: 40, left: 50, right: 270 },
     maxZoom: 18,
-    duration: 0
+    duration: animate ? 500 : 0
   });
+
+  if (animate && selectFirst) {
+    void map.once('moveend', showFirstPopup);
+  } else {
+    showFirstPopup();
+  }
 }
 
 // Re-export for index.ts

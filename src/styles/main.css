@@ -360,6 +360,23 @@ canvas.crosshair {
   cursor: crosshair !important;
 }
 
+/* Fit to view button */
+.fit-view-btn {
+  margin-top: 10px;
+  padding: 5px 10px;
+  width: 100%;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #f5f5f5;
+  color: #333;
+  font-size: 12px;
+  cursor: pointer;
+}
+.fit-view-btn:hover {
+  background: #e8e8e8;
+  border-color: #ccc;
+}
+
 /* Edit section in stats panel */
 .edit-section {
   margin-top: 12px;
