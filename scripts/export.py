@@ -620,7 +620,7 @@ def verify(full_dir, thumb_dir, json_path):
 def main():
     parser = argparse.ArgumentParser(description="Export photos and videos from Apple Photos")
     parser.add_argument("--full", action="store_true", help="Full re-export (default is incremental update)")
-    parser.add_argument("--refresh-edited", action="store_true", help="Re-export only photos that have been edited in Apple Photos")
+    parser.add_argument("--skip-edited", action="store_true", help="Skip re-exporting edited photos (faster)")
     parser.add_argument("--verify", action="store_true", help="Check that all files match items.json")
     args = parser.parse_args()
 
@@ -651,19 +651,19 @@ def main():
         print("  2. Photos in your Apple Photos library")
         return
 
-    if args.refresh_edited:
-        # Targeted re-export of edited photos only (safe to interrupt)
-        refresh_edited(full_dir, thumb_dir)
-    else:
-        # Remove osxphotos database if doing full export
-        if args.full:
-            db_path = full_dir / ".osxphotos_export.db"
-            if db_path.exists():
-                db_path.unlink()
-                print("Cleared export database for full re-export")
+    # Remove osxphotos database if doing full export
+    if args.full:
+        db_path = full_dir / ".osxphotos_export.db"
+        if db_path.exists():
+            db_path.unlink()
+            print("Cleared export database for full re-export")
 
-        # Batch export all photos
-        batch_export(photos, full_dir)
+    # Batch export all photos
+    batch_export(photos, full_dir)
+
+    # Re-export edited photos to ensure crops/adjustments are applied
+    if not args.skip_edited:
+        refresh_edited(full_dir, thumb_dir)
 
     # Query and export video frames
     videos = query_videos()
