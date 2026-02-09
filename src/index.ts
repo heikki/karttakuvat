@@ -102,6 +102,40 @@ function setupFilterListeners() {
   }
 }
 
+async function saveEdits() {
+  const btn = document.getElementById('save-edits-btn');
+  if (btn === null) return;
+  const edits = getPendingEdits();
+  const timeEdits = getPendingTimeEdits();
+  if (edits.length === 0 && timeEdits.length === 0) return;
+
+  btn.setAttribute('disabled', '');
+  btn.textContent = 'Saving...';
+
+  try {
+    const response = await fetch('/api/set-locations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ edits, timeEdits })
+    });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text);
+    }
+    await loadPhotos();
+    clearPendingEdits();
+  } catch (err) {
+    console.error('Failed to save edits:', err);
+    // eslint-disable-next-line no-alert -- user needs feedback on save failure
+    alert(
+      `Failed to save edits: ${err instanceof Error ? err.message : String(err)}`
+    );
+  } finally {
+    btn.removeAttribute('disabled');
+    btn.textContent = 'Save to Photos';
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   void (async () => {
     initUI();
@@ -134,38 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (saveBtn !== null) {
       saveBtn.addEventListener('click', () => {
-        void (async () => {
-          const edits = getPendingEdits();
-          const timeEdits = getPendingTimeEdits();
-          if (edits.length === 0 && timeEdits.length === 0) return;
-
-          saveBtn.setAttribute('disabled', '');
-          saveBtn.textContent = 'Saving...';
-
-          try {
-            const response = await fetch('/api/set-locations', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ edits, timeEdits })
-            });
-            if (!response.ok) {
-              const text = await response.text();
-              throw new Error(text);
-            }
-            // Reload photos first (with fresh data), then clear pending edits
-            await loadPhotos();
-            clearPendingEdits();
-          } catch (err) {
-            console.error('Failed to save edits:', err);
-            // eslint-disable-next-line no-alert -- user needs feedback on save failure
-            alert(
-              `Failed to save edits: ${err instanceof Error ? err.message : String(err)}`
-            );
-          } finally {
-            saveBtn.removeAttribute('disabled');
-            saveBtn.textContent = 'Save to Photos';
-          }
-        })();
+        void saveEdits();
       });
     }
 

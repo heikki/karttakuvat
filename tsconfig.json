@@ -1,6 +1,7 @@
 {
   "extends": "@total-typescript/tsconfig/bundler",
   "compilerOptions": {
+    "target": "ES2024",
     "lib": ["ESNext", "DOM"],
     "types": ["bun"]
   }

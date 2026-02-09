@@ -131,7 +131,10 @@ async function handleSetLocations(req: Request): Promise<Response> {
 
     applyLocationEdits(items, locationEdits);
     applyTimeEdits(items, timeEdits);
-    items.sort((a, b) => (a.date ?? '').localeCompare(b.date ?? '') || a.uuid.localeCompare(b.uuid));
+    items.sort((a, b) => {
+      const d = a.date.localeCompare(b.date);
+      return d === 0 ? a.uuid.localeCompare(b.uuid) : d;
+    });
 
     await Bun.write('public/items.json', JSON.stringify(items, null, 2));
 
