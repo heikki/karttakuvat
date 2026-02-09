@@ -74,6 +74,7 @@ interface ItemRecord {
   lat: number | null;
   lon: number | null;
   gps: string | null;
+  gps_accuracy: number | null;
 }
 
 function applyLocationEdits(items: ItemRecord[], edits: LocationEdit[]) {
@@ -83,6 +84,7 @@ function applyLocationEdits(items: ItemRecord[], edits: LocationEdit[]) {
       item.lat = edit.lat;
       item.lon = edit.lon;
       item.gps = 'user';
+      item.gps_accuracy = 1;
     }
   }
 }
@@ -129,6 +131,7 @@ async function handleSetLocations(req: Request): Promise<Response> {
 
     applyLocationEdits(items, locationEdits);
     applyTimeEdits(items, timeEdits);
+    items.sort((a, b) => (a.date ?? '').localeCompare(b.date ?? '') || a.uuid.localeCompare(b.uuid));
 
     await Bun.write('public/items.json', JSON.stringify(items, null, 2));
 
