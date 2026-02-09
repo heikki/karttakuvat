@@ -7,7 +7,8 @@ export const state = {
   filters: {
     year: 'all',
     gps: 'all',
-    media: 'all'
+    media: 'all',
+    album: 'all'
   },
   pendingEdits: new Map<string, { lat: number; lon: number }>(),
   pendingTimeEdits: new Map<string, number>()
@@ -36,7 +37,7 @@ export async function loadPhotos() {
     const data = (await response.json()) as Photo[];
     data.sort(compareDates);
     state.photos = data;
-    applyFilters(state.filters.year, state.filters.gps, state.filters.media);
+    applyFilters(state.filters.year, state.filters.gps, state.filters.media, state.filters.album);
   } catch (error) {
     console.error('Error loading items.json:', error);
     throw error;
@@ -137,26 +138,22 @@ export function applyHourOffset(dateStr: string, hours: number): string {
   return `${d.getFullYear()}:${pad(d.getMonth() + 1)}:${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
-export function applyFilters(year: string, gps: string, media: string) {
+function matchesGps(p: Photo, gps: string): boolean {
+  if (gps === 'none') return p.gps === null;
+  return gps === 'all' || p.gps === gps;
+}
+
+export function applyFilters(year: string, gps: string, media: string, album = 'all') {
   state.filters.year = year;
   state.filters.gps = gps;
   state.filters.media = media;
+  state.filters.album = album;
 
   state.filteredPhotos = state.photos.filter((p) => {
-    // Year filter
-    if (year !== 'all' && getYear(p) !== year) {
-      return false;
-    }
-    // GPS filter
-    if (gps === 'none') {
-      if (p.gps !== null) return false;
-    } else if (gps !== 'all' && p.gps !== gps) {
-      return false;
-    }
-    // Media type filter
-    if (media !== 'all' && p.type !== media) {
-      return false;
-    }
+    if (year !== 'all' && getYear(p) !== year) return false;
+    if (!matchesGps(p, gps)) return false;
+    if (media !== 'all' && p.type !== media) return false;
+    if (album !== 'all' && !p.albums.includes(album)) return false;
     return true;
   });
 

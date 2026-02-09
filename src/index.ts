@@ -19,6 +19,7 @@ import { adjustTime } from './lib/popup';
 import {
   browseAllPhotos,
   initUI,
+  populateAlbumFilter,
   populateYearFilter,
   showGroupLightbox,
   showLightbox,
@@ -79,6 +80,28 @@ window.enterPlacementMode = enterPlacementMode;
 window.copyLocation = copyLocation;
 window.adjustTime = adjustTime;
 
+function setupFilterListeners() {
+  const yearSelect = document.getElementById('year-select');
+  const gpsSelect = document.getElementById('gps-select');
+  const mediaSelect = document.getElementById('media-select');
+  const albumSelect = document.getElementById('album-select');
+
+  const handleFilterChange = () => {
+    if (yearSelect === null || gpsSelect === null || mediaSelect === null || albumSelect === null) {
+      return;
+    }
+    const y = (yearSelect as HTMLSelectElement).value;
+    const g = (gpsSelect as HTMLSelectElement).value;
+    const m = (mediaSelect as HTMLSelectElement).value;
+    const a = (albumSelect as HTMLSelectElement).value;
+    applyFilters(y, g, m, a);
+  };
+
+  for (const el of [yearSelect, gpsSelect, mediaSelect, albumSelect]) {
+    el?.addEventListener('change', handleFilterChange);
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   void (async () => {
     initUI();
@@ -91,29 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    const yearSelect = document.getElementById('year-select');
-    const gpsSelect = document.getElementById('gps-select');
-    const mediaSelect = document.getElementById('media-select');
-
-    const handleFilterChange = () => {
-      if (yearSelect === null || gpsSelect === null || mediaSelect === null) {
-        return;
-      }
-      const y = (yearSelect as HTMLSelectElement).value;
-      const g = (gpsSelect as HTMLSelectElement).value;
-      const m = (mediaSelect as HTMLSelectElement).value;
-      applyFilters(y, g, m);
-    };
-
-    if (yearSelect !== null) {
-      yearSelect.addEventListener('change', handleFilterChange);
-    }
-    if (gpsSelect !== null) {
-      gpsSelect.addEventListener('change', handleFilterChange);
-    }
-    if (mediaSelect !== null) {
-      mediaSelect.addEventListener('change', handleFilterChange);
-    }
+    setupFilterListeners();
 
     // Stats interactions
     const countEl = document.getElementById('photo-count');
@@ -187,6 +188,12 @@ document.addEventListener('DOMContentLoaded', () => {
       )
     ].sort();
     populateYearFilter(years);
+
+    const albums = [
+      ...new Set(state.photos.flatMap((p) => p.albums))
+    ].sort();
+    populateAlbumFilter(albums);
+
     updateStats(state.filteredPhotos);
   })();
 });

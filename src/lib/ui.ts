@@ -271,6 +271,23 @@ export function populateYearFilter(years: string[]) {
   });
 }
 
+export function populateAlbumFilter(albums: string[]) {
+  const select = document.getElementById(
+    'album-select'
+  ) as HTMLSelectElement | null;
+  if (select === null) return;
+  while (select.options.length > 1) {
+    select.remove(1);
+  }
+
+  albums.forEach((album) => {
+    const option = document.createElement('option');
+    option.value = album;
+    option.textContent = album;
+    select.appendChild(option);
+  });
+}
+
 export function updatePendingEdits(count: number) {
   const section = document.getElementById('edit-section');
   const countEl = document.getElementById('pending-count');
