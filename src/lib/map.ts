@@ -159,6 +159,10 @@ export function initMap() {
   subscribe(() => {
     if (map.isStyleLoaded() === true) {
       updateMapData();
+      const popup = getCurrentPopup();
+      if (popup !== null) {
+        popup.remove();
+      }
     }
   });
 
