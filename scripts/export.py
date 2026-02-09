@@ -472,7 +472,7 @@ def build_items_json(photos, videos, full_dir, json_path):
     entries.sort(key=lambda p: (p.get("date") or "", p.get("uuid") or ""))
 
     with open(json_path, "w") as f:
-        json.dump(entries, f, indent=2)
+        json.dump(entries, f, indent=2, ensure_ascii=False)
 
     return entries
 

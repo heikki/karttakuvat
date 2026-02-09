@@ -164,14 +164,17 @@ def build_items_json(items, full_dir, json_path, old_items):
             "lat": lat,
             "lon": lon,
             "date": format_date(item.get("date")),
-            "gps": gps_source,
-            "gps_accuracy": round_accuracy(acc) if acc is not None else None,
-            "albums": albums,
-            "photos_url": photos_url
         }
 
         if item_is_video:
             entry["duration"] = format_duration(video_durations.get(uuid))
+
+        entry.update({
+            "gps": gps_source,
+            "gps_accuracy": round_accuracy(acc) if acc is not None else None,
+            "albums": albums,
+            "photos_url": photos_url
+        })
 
         entries.append(entry)
 
@@ -179,7 +182,7 @@ def build_items_json(items, full_dir, json_path, old_items):
     entries.sort(key=lambda p: (p.get("date") or "", p.get("uuid") or ""))
 
     with open(json_path, "w") as f:
-        json.dump(entries, f, indent=2)
+        json.dump(entries, f, indent=2, ensure_ascii=False)
 
     return entries, skipped_no_location, location_changes
 
