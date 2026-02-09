@@ -18,7 +18,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from export import determine_gps_source, format_duration, query_gps_accuracy, query_video_durations
+from export import determine_gps_source, format_duration, query_gps_accuracy, query_video_durations, round_accuracy
 
 
 def get_output_dir():
@@ -165,7 +165,7 @@ def build_items_json(items, full_dir, json_path, old_items):
             "lon": lon,
             "date": format_date(item.get("date")),
             "gps": gps_source,
-            "gps_accuracy": round(acc, 1) if acc is not None else None,
+            "gps_accuracy": round_accuracy(acc) if acc is not None else None,
             "albums": albums,
             "photos_url": photos_url
         }

@@ -329,6 +329,12 @@ def query_video_durations():
     return result
 
 
+def round_accuracy(val):
+    """Round to 1 decimal, but return int when there's no fractional part."""
+    r = round(val, 1)
+    return int(r) if r == int(r) else r
+
+
 def query_gps_accuracy():
     """Read GPS horizontal accuracy from the Photos database.
 
@@ -413,7 +419,7 @@ def build_items_json(photos, videos, full_dir, json_path):
             "lon": lon,
             "date": format_date(photo.get("date")),
             "gps": gps_source,
-            "gps_accuracy": round(acc, 1) if acc is not None else None,
+            "gps_accuracy": round_accuracy(acc) if acc is not None else None,
             "albums": albums,
             "photos_url": photos_url
         })
@@ -455,7 +461,7 @@ def build_items_json(photos, videos, full_dir, json_path):
                 "date": format_date(video.get("date")),
                 "duration": format_duration(video_durations.get(uuid)),
                 "gps": gps_source,
-                "gps_accuracy": round(acc, 1) if acc is not None else None,
+                "gps_accuracy": round_accuracy(acc) if acc is not None else None,
                 "albums": albums,
                 "photos_url": photos_url
             })
