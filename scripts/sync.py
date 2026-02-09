@@ -231,6 +231,26 @@ def main():
     if skipped:
         print(f"  Skipped (no location): {skipped}")
 
+    # Clean up orphan files (deleted from Apple Photos)
+    entry_uuids = {e["uuid"] for e in entries}
+    orphan_uuids = exported_uuids - entry_uuids
+    if orphan_uuids:
+        thumb_dir = public_dir / "thumb"
+        print(f"\n  Deleted from Photos: {len(orphan_uuids)}")
+        for uuid in sorted(orphan_uuids):
+            album_str = ""
+            old = old_items.get(uuid)
+            if old and old.get("albums"):
+                album_str = f" [{old['albums'][0]}]"
+            print(f"    {uuid}{album_str}")
+            for d in [full_dir, thumb_dir]:
+                f = d / f"{uuid}.jpg"
+                if f.exists():
+                    f.unlink()
+            mov = full_dir / f"{uuid}.mov"
+            if mov.exists():
+                mov.unlink()
+
     # Report location changes
     if location_changes:
         print(f"\n  Location changes detected: {len(location_changes)}")

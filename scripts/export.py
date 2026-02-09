@@ -590,25 +590,26 @@ def verify(full_dir, thumb_dir, json_path):
         for uuid in missing_thumb:
             print(f"  {uuid}")
 
-    if orphan_full:
+    orphans = orphan_full | orphan_thumb
+    if orphans:
         ok = False
-        print(f"\nOrphan full-size ({len(orphan_full)}):")
-        for uuid in orphan_full:
+        print(f"\nCleaning up {len(orphans)} orphan(s):")
+        for uuid in sorted(orphans):
             print(f"  {uuid}")
-
-    if orphan_thumb:
-        ok = False
-        print(f"\nOrphan thumbnails ({len(orphan_thumb)}):")
-        for uuid in orphan_thumb:
-            print(f"  {uuid}")
+            for d in [full_dir, thumb_dir]:
+                f = d / f"{uuid}.jpg"
+                if f.exists():
+                    f.unlink()
+            mov = full_dir / f"{uuid}.mov"
+            if mov.exists():
+                mov.unlink()
 
     if ok:
         print("\nAll OK")
     else:
-        print(f"\nIssues found: {len(missing_full)} missing full, "
-              f"{len(missing_thumb)} missing thumb, "
-              f"{len(orphan_full)} orphan full, {len(orphan_thumb)} orphan thumb")
-        sys.exit(1)
+        if missing_full or missing_thumb:
+            print(f"\nIssues: {len(missing_full)} missing full, {len(missing_thumb)} missing thumb")
+            sys.exit(1)
 
 
 def main():
