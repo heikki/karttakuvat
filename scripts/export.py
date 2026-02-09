@@ -146,6 +146,11 @@ def batch_export(photos, full_dir):
         uuid = f.stem.removesuffix("_edited")
         target = full_dir / f"{uuid}.jpg"
         f.rename(target)
+        # Remove the unedited original so it doesn't overwrite during normalization
+        for ext in [".jpeg", ".JPEG", ".JPG"]:
+            orig = full_dir / f"{uuid}{ext}"
+            if orig.exists():
+                orig.unlink()
 
     # Normalize extensions to .jpg
     for pattern in ["*.jpeg", "*.JPEG", "*.JPG"]:
