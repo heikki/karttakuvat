@@ -252,7 +252,11 @@ THUMB_SIZE = 400
 def create_thumbnails(full_dir, thumb_dir):
     """Create thumbnails for all full-size images."""
     full_images = list(full_dir.glob("*.jpg"))
-    to_create = [f for f in full_images if not (thumb_dir / f.name).exists()]
+    to_create = [
+        f for f in full_images
+        if not (thumb_dir / f.name).exists()
+        or f.stat().st_mtime > (thumb_dir / f.name).stat().st_mtime
+    ]
     print(f"Thumbnails: {len(full_images)} images, {len(to_create)} need creating")
 
     if not to_create:
