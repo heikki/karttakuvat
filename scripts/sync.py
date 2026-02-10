@@ -18,7 +18,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from export import determine_gps_source, extract_tz_offset, format_duration, query_gps_accuracy, query_video_durations, round_accuracy
+from export import date_to_utc, determine_gps_source, extract_tz_offset, format_duration, query_gps_accuracy, query_video_durations, round_accuracy
 
 
 def get_output_dir():
@@ -179,8 +179,8 @@ def build_items_json(items, full_dir, json_path, old_items):
 
         entries.append(entry)
 
-    # Sort by date, then UUID for deterministic order
-    entries.sort(key=lambda p: (p.get("date") or "", p.get("uuid") or ""))
+    # Sort by UTC time, then UUID for deterministic order
+    entries.sort(key=lambda p: (date_to_utc(p.get("date"), p.get("tz")), p.get("uuid") or ""))
 
     with open(json_path, "w") as f:
         json.dump(entries, f, indent=2, ensure_ascii=False)

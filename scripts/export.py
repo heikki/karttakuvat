@@ -330,6 +330,30 @@ def extract_tz_offset(date_str):
     return None
 
 
+def date_to_utc(date_str, tz_str):
+    """Convert local date + tz offset to UTC sortable string.
+
+    ("2008:07:09 17:53:13", "+03:00") -> "2008:07:09 14:53:13"
+    """
+    if not date_str:
+        return ""
+    if not tz_str:
+        return date_str
+    from datetime import datetime, timezone, timedelta
+    try:
+        # Parse "YYYY:MM:DD HH:MM:SS" to datetime
+        dt = datetime.strptime(date_str, "%Y:%m:%d %H:%M:%S")
+        # Parse tz offset
+        sign = 1 if tz_str[0] == "+" else -1
+        h, m = int(tz_str[1:3]), int(tz_str[4:6])
+        offset = timedelta(hours=h, minutes=m) * sign
+        # Attach tz and convert to UTC
+        dt = dt.replace(tzinfo=timezone(offset)).astimezone(timezone.utc)
+        return dt.strftime("%Y:%m:%d %H:%M:%S")
+    except Exception:
+        return date_str
+
+
 def format_duration(seconds):
     """Format duration in seconds to MM:SS or HH:MM:SS."""
     if not seconds:
@@ -501,8 +525,8 @@ def build_items_json(photos, videos, full_dir, json_path):
             progress.update(idx)
         progress.done(f"{len([e for e in entries if e['type'] == 'video'])} with files")
 
-    # Sort by date, then UUID for deterministic order
-    entries.sort(key=lambda p: (p.get("date") or "", p.get("uuid") or ""))
+    # Sort by UTC time, then UUID for deterministic order
+    entries.sort(key=lambda p: (date_to_utc(p.get("date"), p.get("tz")), p.get("uuid") or ""))
 
     with open(json_path, "w") as f:
         json.dump(entries, f, indent=2, ensure_ascii=False)
