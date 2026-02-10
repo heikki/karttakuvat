@@ -22,6 +22,7 @@ import {
 let currentPopup: maplibregl.Popup | null = null;
 let clusterPhotos: Photo[] = [];
 let currentSinglePhotoIndex: number | null = null;
+let currentPhotoUuid: string | null = null;
 let currentGroupIndex = 0;
 
 // Callbacks that will be set by map.ts
@@ -57,6 +58,10 @@ export function getCurrentGroupIndex(): number {
 
 export function getCurrentSinglePhotoIndex(): number | null {
   return currentSinglePhotoIndex;
+}
+
+export function getCurrentPhotoUuid(): string | null {
+  return currentPhotoUuid;
 }
 
 export function setCurrentSinglePhotoIndex(index: number | null) {
@@ -155,6 +160,7 @@ export function showPopup(props: FeatureProps, coords: [number, number]) {
   if (photo === undefined) return;
 
   currentSinglePhotoIndex = index;
+  currentPhotoUuid = photo.uuid;
   clusterPhotos = [];
   highlightMarkerFn(index);
 
@@ -173,6 +179,7 @@ export function showPopup(props: FeatureProps, coords: [number, number]) {
   currentPopup.on('close', () => {
     highlightMarkerFn(null);
     currentSinglePhotoIndex = null;
+    currentPhotoUuid = null;
   });
 
   panToFitPopupFn(coords);
@@ -461,6 +468,7 @@ export function navigateSinglePhoto(newIndex: number) {
   if (photo === undefined || currentPopup === null) return;
 
   currentSinglePhotoIndex = newIndex;
+  currentPhotoUuid = photo.uuid;
   highlightMarkerFn(newIndex);
 
   const img = document.getElementById('single-img') as HTMLImageElement | null;

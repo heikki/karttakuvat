@@ -6,6 +6,7 @@ import { mapStyles } from './config';
 import { addPendingEdit, state, subscribe } from './data';
 import {
   getClusterPhotos,
+  getCurrentPhotoUuid,
   getCurrentPopup,
   initPopupCallbacks,
   scrollToActiveThumbnail,
@@ -60,11 +61,7 @@ function hidePlacementPanel() {
   }
 }
 
-const markerLayers = [
-  'photo-markers',
-  'photo-markers-highlight',
-  'photo-markers-highlight-ring'
-];
+const markerLayers = ['photo-markers', 'photo-markers-highlight-ring'];
 
 function setMarkerVisibility(visible: boolean) {
   const visibility = visible ? 'visible' : 'none';
@@ -142,9 +139,21 @@ export function initMap() {
 
   subscribe(() => {
     if (map.isStyleLoaded() === true) {
+      const uuid = getCurrentPhotoUuid();
       updateMapData();
       const popup = getCurrentPopup();
       if (popup !== null) {
+        if (uuid !== null) {
+          const newIndex = state.filteredPhotos.findIndex((p) => p.uuid === uuid);
+          if (newIndex !== -1) {
+            const photo = state.filteredPhotos[newIndex]!;
+            const pending = state.pendingEdits.get(photo.uuid);
+            const lon = pending === undefined ? (photo.lon ?? 0) : pending.lon;
+            const lat = pending === undefined ? (photo.lat ?? 0) : pending.lat;
+            showPopup({ index: newIndex }, [lon, lat]);
+            return;
+          }
+        }
         popup.remove();
       }
     }
@@ -211,7 +220,8 @@ function createGeoJSON(): FeatureCollection<Point> {
         },
         properties: {
           index,
-          lat
+          lat,
+          gps: photo.gps ?? 'none'
         }
       };
     })
@@ -221,9 +231,6 @@ function createGeoJSON(): FeatureCollection<Point> {
 function addPhotoLayers() {
   if (map.getLayer('photo-markers-highlight-ring') !== undefined) {
     map.removeLayer('photo-markers-highlight-ring');
-  }
-  if (map.getLayer('photo-markers-highlight') !== undefined) {
-    map.removeLayer('photo-markers-highlight');
   }
   if (map.getLayer('photo-markers') !== undefined) {
     map.removeLayer('photo-markers');
@@ -259,25 +266,45 @@ function addPhotoLayers() {
       'circle-sort-key': ['*', -1, ['get', 'lat']]
     },
     paint: {
-      'circle-color': '#3b82f6',
+      'circle-color': [
+        'match',
+        ['get', 'gps'],
+        'exif', '#3b82f6',
+        'user', '#22c55e',
+        'inferred', '#f59e0b',
+        '#9ca3af'
+      ],
       'circle-radius': 8,
       'circle-stroke-width': 2,
       'circle-stroke-color': '#fff'
     }
   });
 
-  map.addLayer({
-    id: 'photo-markers-highlight',
-    type: 'circle',
-    source: 'photos',
-    paint: {
-      'circle-color': '#f59e0b',
-      'circle-radius': 10,
-      'circle-stroke-width': 3,
-      'circle-stroke-color': '#fff'
-    },
-    filter: ['==', ['get', 'index'], -1]
-  });
+}
+
+let pulseAnimationId: number | null = null;
+
+function startPulseAnimation() {
+  if (pulseAnimationId !== null) return;
+  const start = performance.now();
+  const animate = (now: number) => {
+    const t = ((now - start) % 1200) / 1200;
+    const radius = 12 + 8 * t;
+    const opacity = 0.8 - 0.8 * t;
+    if (map.getLayer('photo-markers-highlight-ring') !== undefined) {
+      map.setPaintProperty('photo-markers-highlight-ring', 'circle-radius', radius);
+      map.setPaintProperty('photo-markers-highlight-ring', 'circle-stroke-opacity', opacity);
+    }
+    pulseAnimationId = requestAnimationFrame(animate);
+  };
+  pulseAnimationId = requestAnimationFrame(animate);
+}
+
+function stopPulseAnimation() {
+  if (pulseAnimationId !== null) {
+    cancelAnimationFrame(pulseAnimationId);
+    pulseAnimationId = null;
+  }
 }
 
 function highlightMarker(index: number | null) {
@@ -286,11 +313,14 @@ function highlightMarker(index: number | null) {
       ? ['==', ['get', 'index'], -1]
       : ['==', ['get', 'index'], index];
 
-  if (map.getLayer('photo-markers-highlight') !== undefined) {
-    map.setFilter('photo-markers-highlight', filter);
-  }
   if (map.getLayer('photo-markers-highlight-ring') !== undefined) {
     map.setFilter('photo-markers-highlight-ring', filter);
+  }
+
+  if (index === null) {
+    stopPulseAnimation();
+  } else {
+    startPulseAnimation();
   }
 }
 
