@@ -112,6 +112,7 @@ export function initMap() {
   });
 
   map.addControl(new maplibregl.NavigationControl(), 'bottom-right');
+  map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-left');
 
   // Handle MapLibre internal errors gracefully
   map.on('error', () => {
