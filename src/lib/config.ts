@@ -11,7 +11,8 @@ export async function loadConfig() {
   mmlKey = config.mmlApiKey;
 }
 
-export const mapStyles: MapStyles = {
+export function mapStyles(): MapStyles {
+  return {
   opentopomap: {
     version: 8,
     sources: {
@@ -76,4 +77,5 @@ export const mapStyles: MapStyles = {
       { id: 'mml_ortokuva', type: 'raster', source: 'mml_ortokuva' }
     ]
   }
-};
+  };
+}

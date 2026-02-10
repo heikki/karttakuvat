@@ -104,7 +104,7 @@ export function enterPlacementMode(photoIndex: number) {
 export function initMap() {
   map = new maplibregl.Map({
     container: 'map',
-    style: mapStyles.opentopomap as StyleSpecification,
+    style: mapStyles().opentopomap as StyleSpecification,
     center: [29.52, 64.13],
     zoom: 10,
     boxZoom: false,
@@ -189,7 +189,7 @@ function updateMapData() {
 }
 
 export function changeMapStyle(styleKey: string) {
-  const style = mapStyles[styleKey as keyof MapStyles] as
+  const style = mapStyles()[styleKey as keyof MapStyles] as
     | StyleSpecification
     | undefined;
   if (style === undefined) return;
