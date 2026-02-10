@@ -13,13 +13,22 @@ let lightbox: HTMLElement | null = null;
 let lightboxImg: HTMLImageElement | null = null;
 let lightboxInfo: HTMLElement | null = null;
 let lightboxPhotosLink: HTMLAnchorElement | null = null;
-let lightboxPlay: HTMLElement | null = null;
 
 // --- State Tracking for Lightbox ---
 let currentPhotoIndex = 0;
 let currentGroupIndex = 0;
 let currentGroupPhotos: Photo[] = [];
 let lightboxMode: 'all' | 'group' | '' = '';
+
+// Callback for syncing lightbox navigation to map markers
+let onNavigateFn: ((mode: 'all' | 'group', index: number) => void) | null =
+  null;
+
+export function setLightboxNavigateCallback(
+  fn: (mode: 'all' | 'group', index: number) => void
+) {
+  onNavigateFn = fn;
+}
 
 export function initUI() {
   const lb = document.getElementById('lightbox');
@@ -33,7 +42,6 @@ export function initUI() {
   lightboxPhotosLink = document.getElementById(
     'lightbox-photos-link'
   ) as HTMLAnchorElement;
-  lightboxPlay = document.getElementById('lightbox-play');
 
   setupLightboxEvents();
 }
@@ -48,11 +56,20 @@ function addButtonListener(
   }
 }
 
+export function isLightboxActive(): boolean {
+  return lightbox?.classList.contains('active') === true;
+}
+
 function handleLightboxKeydown(e: KeyboardEvent): void {
-  if (lightbox?.classList.contains('active') !== true) {
+  if (!isLightboxActive()) {
     return;
   }
-  if (e.key === 'Escape') hideLightbox();
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    hideLightbox();
+    e.stopImmediatePropagation();
+    return;
+  }
   if (e.key === 'ArrowRight') nextPhoto();
   if (e.key === 'ArrowLeft') prevPhoto();
 }
@@ -69,7 +86,9 @@ function setupLightboxEvents() {
   });
 
   lightbox?.addEventListener('click', hideLightbox);
-  lightboxImg?.addEventListener('click', (e) => {
+
+  const imageWrap = document.getElementById('lightbox-image-wrap');
+  imageWrap?.addEventListener('click', (e) => {
     e.stopPropagation();
   });
 
@@ -80,10 +99,7 @@ function updateLightboxPhotosLink(photo: Photo) {
   if (lightboxPhotosLink === null) return;
   if (photo.photos_url !== undefined && photo.photos_url !== '') {
     lightboxPhotosLink.href = photo.photos_url;
-    lightboxPhotosLink.textContent = isVideo(photo)
-      ? 'Play in Photos'
-      : 'Open in Photos';
-    lightboxPhotosLink.style.display = 'block';
+    lightboxPhotosLink.style.display = '';
   } else {
     lightboxPhotosLink.style.display = 'none';
   }
@@ -167,17 +183,10 @@ function displayPhoto(photo: Photo, index: number, total: number) {
   if (lightbox !== null) {
     lightbox.classList.toggle('video', isVid);
   }
-  if (lightboxPlay !== null && isVid) {
-    lightboxPlay.onclick = () => {
-      if (photo.photos_url !== undefined && photo.photos_url !== '') {
-        window.open(photo.photos_url, '_blank');
-      }
-    };
-  }
   updateLightboxPhotosLink(photo);
 }
 
-function hideLightbox() {
+export function hideLightbox() {
   if (lightbox !== null) {
     lightbox.classList.remove('active');
     lightbox.classList.remove('video');
@@ -185,39 +194,43 @@ function hideLightbox() {
   lightboxMode = '';
 }
 
-function nextPhoto() {
+function navigateAndSync(newIndex: number) {
   if (lightboxMode === 'group') {
-    currentGroupIndex = (currentGroupIndex + 1) % currentGroupPhotos.length;
+    currentGroupIndex = newIndex;
     const photo = currentGroupPhotos[currentGroupIndex];
     if (photo !== undefined) {
       displayPhoto(photo, currentGroupIndex + 1, currentGroupPhotos.length);
+      onNavigateFn?.('group', currentGroupIndex);
     }
   } else {
-    currentPhotoIndex = (currentPhotoIndex + 1) % state.filteredPhotos.length;
+    currentPhotoIndex = newIndex;
     const photo = state.filteredPhotos[currentPhotoIndex];
     if (photo !== undefined) {
       displayPhoto(photo, currentPhotoIndex + 1, state.filteredPhotos.length);
+      onNavigateFn?.('all', currentPhotoIndex);
     }
+  }
+}
+
+function nextPhoto() {
+  if (lightboxMode === 'group') {
+    navigateAndSync((currentGroupIndex + 1) % currentGroupPhotos.length);
+  } else {
+    navigateAndSync((currentPhotoIndex + 1) % state.filteredPhotos.length);
   }
 }
 
 function prevPhoto() {
   if (lightboxMode === 'group') {
-    currentGroupIndex =
+    navigateAndSync(
       (currentGroupIndex - 1 + currentGroupPhotos.length) %
-      currentGroupPhotos.length;
-    const photo = currentGroupPhotos[currentGroupIndex];
-    if (photo !== undefined) {
-      displayPhoto(photo, currentGroupIndex + 1, currentGroupPhotos.length);
-    }
+        currentGroupPhotos.length
+    );
   } else {
-    currentPhotoIndex =
+    navigateAndSync(
       (currentPhotoIndex - 1 + state.filteredPhotos.length) %
-      state.filteredPhotos.length;
-    const photo = state.filteredPhotos[currentPhotoIndex];
-    if (photo !== undefined) {
-      displayPhoto(photo, currentPhotoIndex + 1, state.filteredPhotos.length);
-    }
+        state.filteredPhotos.length
+    );
   }
 }
 

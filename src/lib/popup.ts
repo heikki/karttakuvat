@@ -105,14 +105,21 @@ function buildPasteLocationHtml(photo: Photo): string {
   return `<a class="photos-link" id="single-paste-location" href="#">Paste location</a>`;
 }
 
+function buildPhotosOverlay(
+  id: string,
+  photo: Photo
+): string {
+  if (photo.photos_url !== undefined && photo.photos_url !== '') {
+    return `<a class="photos-overlay-btn" id="${id}" href="${photo.photos_url}" target="_blank" tabindex="-1" onclick="event.stopPropagation()"></a>`;
+  }
+  return `<a class="photos-overlay-btn" id="${id}" href="#" target="_blank" tabindex="-1" onclick="event.stopPropagation()" style="display:none"></a>`;
+}
+
 function buildSinglePopupHtml(photo: Photo, index: number): string {
-  const isVid = isVideo(photo);
-  const linkText = isVid ? 'Play in Photos' : 'Open in Photos';
-  const photosLinkHtml =
-    photo.photos_url !== undefined && photo.photos_url !== ''
-      ? `<a class="photos-link" id="single-photos-link" href="${photo.photos_url}">${linkText}</a>`
-      : `<a class="photos-link" id="single-photos-link" href="#" style="display:none">${linkText}</a>`;
-  const videoOverlay = isVid ? '<div class="video-indicator"></div>' : '';
+  const videoOverlay = isVideo(photo)
+    ? '<div class="video-indicator"></div>'
+    : '';
+  const photosOverlay = buildPhotosOverlay('single-photos-link', photo);
 
   const setLocationHtml = `<a class="photos-link" id="single-set-location" href="#" onclick="event.preventDefault(); window.enterPlacementMode(${index})">Set location</a>`;
   const loc = getEffectiveLocation(photo);
@@ -128,9 +135,9 @@ function buildSinglePopupHtml(photo: Photo, index: number): string {
                 <img id="single-img" src="${getThumbUrl(photo)}" alt="Photo" onclick="window.showLightbox(${index})"
                         onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22150%22><rect fill=%22%23f0f0f0%22 width=%22200%22 height=%22150%22/><text x=%22100%22 y=%2275%22 text-anchor=%22middle%22 fill=%22%23999%22>Preview unavailable</text></svg>'" />
                 ${videoOverlay}
+                ${photosOverlay}
             </div>
             <div class="info" id="single-info">${formatDate(getEffectiveDate(photo))}${durationSpan(photo)} ${timeButtonsHtml(photo.uuid)}<br>${formatLocation(photo)}</div>
-            ${photosLinkHtml}
             ${setLocationHtml}
             ${copyLocationHtml}
             ${pasteLocationHtml}
@@ -228,7 +235,6 @@ interface PopupContentOptions {
   firstPhoto: Photo;
   dateRangeStr: string;
   thumbsHtml: string;
-  photosLinkHtml: string;
 }
 
 function buildCountLabel(photos: Photo[]): string {
@@ -244,22 +250,23 @@ function buildCountLabel(photos: Photo[]): string {
 }
 
 function buildPopupContent(options: PopupContentOptions): string {
-  const { photos, firstPhoto, dateRangeStr, thumbsHtml, photosLinkHtml } =
-    options;
+  const { photos, firstPhoto, dateRangeStr, thumbsHtml } = options;
   const countLabel = buildCountLabel(photos);
-  const isVid = isVideo(firstPhoto);
-  const videoOverlay = isVid ? '<div class="video-indicator"></div>' : '';
+  const videoOverlay = isVideo(firstPhoto)
+    ? '<div class="video-indicator"></div>'
+    : '';
+  const photosOverlay = buildPhotosOverlay('group-photos-link', firstPhoto);
   return `
         <div class="photo-popup">
             <div class="photo-count">${countLabel}${dateRangeStr === '' ? '' : ` \u2022 ${dateRangeStr}`}</div>
             <div class="popup-image-wrap">
             <img class="main-image" id="group-main-img" src="${getThumbUrl(firstPhoto)}"
-                    onclick="window.showGroupLightbox(0)" 
+                    onclick="window.showGroupLightbox(0)"
                     onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22150%22><rect fill=%22%23f0f0f0%22 width=%22200%22 height=%22150%22/><text x=%22100%22 y=%2275%22 text-anchor=%22middle%22 fill=%22%23999%22>Preview unavailable</text></svg>'" />
             ${videoOverlay}
+            ${photosOverlay}
             </div>
             <div class="info" id="group-info">${formatDate(getEffectiveDate(firstPhoto))} ${timeButtonsHtml(firstPhoto.uuid)}<br>${formatLocation(firstPhoto)}</div>
-            ${photosLinkHtml}
             <div class="thumb-strip">${thumbsHtml}</div>
         </div>`;
 }
@@ -306,20 +313,11 @@ export function showMultiPhotoPopup(
   const dateRangeStr = buildDateRangeString(firstPhoto, lastPhoto);
   const thumbsHtml = buildThumbsHtml(clusterPhotos);
 
-  const groupLinkText = isVideo(firstPhoto)
-    ? 'Play in Photos'
-    : 'Open in Photos';
-  const photosLinkHtml =
-    firstPhoto.photos_url !== undefined && firstPhoto.photos_url !== ''
-      ? `<a class="photos-link" id="group-photos-link" href="${firstPhoto.photos_url}">${groupLinkText}</a>`
-      : '';
-
   const popupContent = buildPopupContent({
     photos: clusterPhotos,
     firstPhoto,
     dateRangeStr,
-    thumbsHtml,
-    photosLinkHtml
+    thumbsHtml
   });
 
   currentPopup = new maplibregl.Popup({
@@ -362,8 +360,7 @@ function updatePhotosLink(linkId: string, photo: Photo) {
   if (link === null) return;
   if (photo.photos_url !== undefined && photo.photos_url !== '') {
     link.href = photo.photos_url;
-    link.textContent = isVideo(photo) ? 'Play in Photos' : 'Open in Photos';
-    link.style.display = 'inline-block';
+    link.style.display = '';
   } else {
     link.style.display = 'none';
   }

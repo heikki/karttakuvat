@@ -17,12 +17,21 @@ import {
   initMap,
   selectGroupPhoto
 } from './lib/map';
-import { adjustTime } from './lib/popup';
+import {
+  adjustTime,
+  getCurrentGroupIndex,
+  getCurrentSinglePhotoIndex,
+  getClusterPhotos,
+  navigateSinglePhoto
+} from './lib/popup';
 import {
   browseAllPhotos,
+  hideLightbox,
   initUI,
+  isLightboxActive,
   populateAlbumFilter,
   populateYearFilter,
+  setLightboxNavigateCallback,
   showGroupLightbox,
   showLightbox,
   updatePendingEdits,
@@ -73,6 +82,43 @@ declare global {
 // I'll update map.ts next.
 
 // For now write index.ts assuming exports exist.
+
+// Space toggles between popup preview and lightbox (capture phase to intercept before focused elements)
+document.addEventListener(
+  'keydown',
+  (e) => {
+    if (e.key !== ' ') return;
+    if (isLightboxActive()) {
+      e.preventDefault();
+      e.stopPropagation();
+      hideLightbox();
+      return;
+    }
+    const cluster = getClusterPhotos();
+    if (cluster.length > 0) {
+      e.preventDefault();
+      e.stopPropagation();
+      showGroupLightbox(getCurrentGroupIndex());
+      return;
+    }
+    const idx = getCurrentSinglePhotoIndex();
+    if (idx !== null) {
+      e.preventDefault();
+      e.stopPropagation();
+      showLightbox(idx);
+    }
+  },
+  true
+);
+
+// Sync lightbox navigation to map marker selection
+setLightboxNavigateCallback((mode, index) => {
+  if (mode === 'group') {
+    selectGroupPhoto(index);
+  } else {
+    navigateSinglePhoto(index);
+  }
+});
 
 // Expose global functions for HTML access
 window.selectGroupPhoto = selectGroupPhoto;

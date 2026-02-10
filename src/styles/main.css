@@ -81,8 +81,8 @@ body {
   display: flex;
 }
 .lightbox img {
-  max-width: 95%;
-  max-height: 95%;
+  max-width: 95vw;
+  max-height: 95vh;
   object-fit: contain;
 }
 .lightbox .close {
@@ -196,20 +196,45 @@ body {
 .photo-popup .photos-link:hover {
   text-decoration: underline;
 }
-.lightbox .photos-link {
+
+/* Photos overlay button on popup and lightbox images */
+.photos-overlay-btn {
   position: absolute;
-  bottom: 70px;
-  left: 50%;
-  transform: translateX(-50%);
-  color: #007aff;
-  font-size: 14px;
-  text-decoration: none;
+  top: 6px;
+  right: 6px;
+  width: 28px;
+  height: 28px;
   background: rgba(0, 0, 0, 0.5);
-  padding: 6px 12px;
+  border: none;
+  outline: none;
   border-radius: 6px;
+  z-index: 5;
+  display: block;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6'/%3E%3Cpolyline points='15 3 21 3 21 9'/%3E%3Cline x1='10' y1='14' x2='21' y2='3'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 16px;
 }
-.lightbox .photos-link:hover {
-  text-decoration: underline;
+.photos-overlay-btn:hover {
+  background-color: rgba(0, 0, 0, 0.75);
+}
+
+/* Lightbox image wrapper */
+.lightbox-image-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 95%;
+  max-height: 95%;
+}
+.lightbox-image-wrap .photos-overlay-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  top: 10px;
+  right: 10px;
+  background-size: 20px;
 }
 
 /* Play overlay for video items in lightbox */
@@ -223,8 +248,7 @@ body {
   height: 80px;
   background: rgba(0, 0, 0, 0.5);
   border-radius: 50%;
-  cursor: pointer;
-  pointer-events: auto;
+  pointer-events: none;
   z-index: 10;
 }
 .play-overlay::after {
@@ -238,9 +262,6 @@ body {
   border-style: solid;
   border-width: 16px 0 16px 28px;
   border-color: transparent transparent transparent white;
-}
-.play-overlay:hover {
-  background: rgba(0, 0, 0, 0.7);
 }
 .lightbox.video .play-overlay {
   display: block;

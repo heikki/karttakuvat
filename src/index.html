@@ -67,11 +67,17 @@
       <span class="close">&times;</span>
       <span class="nav prev">&#10094;</span>
       <span class="nav next">&#10095;</span>
-      <img id="lightbox-img" src="" alt="" />
-      <div class="play-overlay" id="lightbox-play"></div>
-      <a id="lightbox-photos-link" class="photos-link" href="#" target="_blank"
-        >Open in Photos</a
-      >
+      <div class="lightbox-image-wrap" id="lightbox-image-wrap">
+        <img id="lightbox-img" src="" alt="" />
+        <div class="play-overlay" id="lightbox-play"></div>
+        <a
+          id="lightbox-photos-link"
+          class="photos-overlay-btn"
+          href="#"
+          target="_blank"
+          tabindex="-1"
+        ></a>
+      </div>
       <div class="info" id="lightbox-info"></div>
     </div>
 
