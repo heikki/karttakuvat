@@ -468,8 +468,9 @@ export function navigateSinglePhoto(newIndex: number) {
 
   updatePasteLink(newIndex);
 
-  const lng = photo.lon ?? 0;
-  const lat = photo.lat ?? 0;
+  const loc = getEffectiveLocation(photo);
+  const lng = loc?.lon ?? 0;
+  const lat = loc?.lat ?? 0;
   currentPopup.setLngLat([lng, lat]);
   panToFitPopupFn([lng, lat]);
 }
