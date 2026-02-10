@@ -308,6 +308,14 @@ def format_date(date_str):
     return date_str
 
 
+def _get_timezone_finder():
+    """Lazy singleton for TimezoneFinder (expensive to construct)."""
+    if not hasattr(_get_timezone_finder, "_instance"):
+        from timezonefinder import TimezoneFinder
+        _get_timezone_finder._instance = TimezoneFinder()
+    return _get_timezone_finder._instance
+
+
 def tz_offset_from_coords(lat, lon, date_str):
     """Get UTC offset string from coordinates and local date.
 
@@ -319,14 +327,11 @@ def tz_offset_from_coords(lat, lon, date_str):
     if lat is None or lon is None or not date_str:
         return None
     from datetime import datetime
-    from timezonefinder import TimezoneFinder
     from zoneinfo import ZoneInfo
     try:
-        tf = TimezoneFinder()
-        tz_name = tf.timezone_at(lat=lat, lng=lon)
+        tz_name = _get_timezone_finder().timezone_at(lat=lat, lng=lon)
         if tz_name is None:
             return None
-        # Parse our date format "YYYY:MM:DD HH:MM:SS"
         dt = datetime.strptime(date_str, "%Y:%m:%d %H:%M:%S")
         dt = dt.replace(tzinfo=ZoneInfo(tz_name))
         total_seconds = int(dt.utcoffset().total_seconds())
@@ -342,10 +347,8 @@ def tz_name_from_coords(lat, lon):
     """Get IANA timezone name from coordinates. Returns e.g. 'Europe/Helsinki'."""
     if lat is None or lon is None:
         return None
-    from timezonefinder import TimezoneFinder
     try:
-        tf = TimezoneFinder()
-        return tf.timezone_at(lat=lat, lng=lon)
+        return _get_timezone_finder().timezone_at(lat=lat, lng=lon)
     except Exception:
         return None
 
