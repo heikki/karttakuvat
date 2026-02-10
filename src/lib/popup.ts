@@ -4,6 +4,7 @@ import {
   addPendingEdit,
   addPendingTimeEdit,
   applyHourOffset,
+  copyLocation,
   getCopiedLocation,
   state
 } from './data';
@@ -102,9 +103,15 @@ function shouldShowPasteLink(photo: Photo): boolean {
   return loc === null || copied.lat !== loc.lat || copied.lon !== loc.lon;
 }
 
-function buildPasteLocationHtml(photo: Photo): string {
-  const visible = shouldShowPasteLink(photo);
-  return `<a class="photos-link" id="single-paste-location" href="#"${visible ? '' : ' style="display:none"'}>Paste location</a>`;
+function locationButtonsHtml(photo: Photo, index: number): string {
+  const loc = getEffectiveLocation(photo);
+  const copyBtn =
+    loc === null
+      ? ''
+      : `<button class="loc-btn" onclick="event.preventDefault(); window.copyLocationFromPopup(${loc.lat}, ${loc.lon})">copy</button>`;
+  const pasteVisible = shouldShowPasteLink(photo);
+  const pasteBtn = `<button class="loc-btn" id="single-paste-location" onclick="event.preventDefault(); window.pasteLocation(${index})"${pasteVisible ? '' : ' style="display:none"'}>paste</button>`;
+  return `<span class="loc-buttons"><button class="loc-btn" onclick="event.preventDefault(); window.enterPlacementMode(${index})">set</button>${copyBtn}${pasteBtn}</span>`;
 }
 
 function buildPhotosOverlay(id: string, photo: Photo): string {
@@ -114,19 +121,15 @@ function buildPhotosOverlay(id: string, photo: Photo): string {
   return `<a class="photos-overlay-btn" id="${id}" href="#" target="_blank" tabindex="-1" onclick="event.stopPropagation()" style="display:none"></a>`;
 }
 
+function singleInfoHtml(photo: Photo, index: number): string {
+  return `${formatDate(getEffectiveDate(photo))}${durationSpan(photo)} ${timeButtonsHtml(photo.uuid)}<br>${formatLocation(photo)} ${locationButtonsHtml(photo, index)}`;
+}
+
 function buildSinglePopupHtml(photo: Photo, index: number): string {
   const videoOverlay = isVideo(photo)
     ? '<div class="video-indicator"></div>'
     : '';
   const photosOverlay = buildPhotosOverlay('single-photos-link', photo);
-
-  const setLocationHtml = `<a class="photos-link" id="single-set-location" href="#" onclick="event.preventDefault(); window.enterPlacementMode(${index})">Set location</a>`;
-  const loc = getEffectiveLocation(photo);
-  const copyLocationHtml =
-    loc === null
-      ? ''
-      : `<a class="photos-link" id="single-copy-location" href="#" onclick="event.preventDefault(); window.copyLocation(${loc.lat}, ${loc.lon})">Copy location</a>`;
-  const pasteLocationHtml = buildPasteLocationHtml(photo);
 
   return `
         <div class="photo-popup">
@@ -136,10 +139,7 @@ function buildSinglePopupHtml(photo: Photo, index: number): string {
                 ${videoOverlay}
                 ${photosOverlay}
             </div>
-            <div class="info" id="single-info">${formatDate(getEffectiveDate(photo))}${durationSpan(photo)} ${timeButtonsHtml(photo.uuid)}<br>${formatLocation(photo)}</div>
-            ${setLocationHtml}
-            ${copyLocationHtml}
-            ${pasteLocationHtml}
+            <div class="info" id="single-info">${singleInfoHtml(photo, index)}</div>
         </div>`;
 }
 
@@ -407,32 +407,6 @@ export function scrollToActiveThumbnail() {
   }
 }
 
-function updatePopupActions(index: number, photo: Photo) {
-  const setLocLink = document.getElementById('single-set-location');
-  if (setLocLink !== null) {
-    setLocLink.onclick = (ev) => {
-      ev.preventDefault();
-      window.enterPlacementMode(index);
-    };
-  }
-
-  const copyLocLink = document.getElementById('single-copy-location');
-  if (copyLocLink !== null) {
-    const loc = getEffectiveLocation(photo);
-    if (loc === null) {
-      copyLocLink.style.display = 'none';
-    } else {
-      copyLocLink.onclick = (ev) => {
-        ev.preventDefault();
-        window.copyLocation(loc.lat, loc.lon);
-      };
-      copyLocLink.style.display = '';
-    }
-  }
-
-  updatePasteLink(index);
-}
-
 export function adjustTime(uuid: string, hours: number) {
   addPendingTimeEdit(uuid, hours);
   // Update displayed time in whichever popup is open
@@ -440,7 +414,8 @@ export function adjustTime(uuid: string, hours: number) {
   if (singleInfo !== null && currentSinglePhotoIndex !== null) {
     const photo = state.filteredPhotos[currentSinglePhotoIndex];
     if (photo?.uuid === uuid) {
-      singleInfo.innerHTML = `${formatDate(getEffectiveDate(photo))}${durationSpan(photo)} ${timeButtonsHtml(photo.uuid)}<br>${formatLocation(photo)}`;
+      singleInfo.innerHTML = singleInfoHtml(photo, currentSinglePhotoIndex);
+      updatePasteLink(currentSinglePhotoIndex);
     }
   }
   const groupInfo = document.getElementById('group-info');
@@ -449,6 +424,13 @@ export function adjustTime(uuid: string, hours: number) {
     if (photo?.uuid === uuid) {
       groupInfo.innerHTML = `${formatDate(getEffectiveDate(photo))} ${timeButtonsHtml(photo.uuid)}<br>${formatLocation(photo)}`;
     }
+  }
+}
+
+export function copyLocationFromPopup(lat: number, lon: number) {
+  copyLocation(lat, lon);
+  if (currentSinglePhotoIndex !== null) {
+    updatePasteLink(currentSinglePhotoIndex);
   }
 }
 
@@ -479,12 +461,12 @@ export function navigateSinglePhoto(newIndex: number) {
     };
   }
   if (info !== null) {
-    info.innerHTML = `${formatDate(getEffectiveDate(photo))}${durationSpan(photo)} ${timeButtonsHtml(photo.uuid)}<br>${formatLocation(photo)}`;
+    info.innerHTML = singleInfoHtml(photo, newIndex);
   }
   updatePhotosLink('single-photos-link', photo);
   updateVideoIndicator(photo);
 
-  updatePopupActions(newIndex, photo);
+  updatePasteLink(newIndex);
 
   const lng = photo.lon ?? 0;
   const lat = photo.lat ?? 0;

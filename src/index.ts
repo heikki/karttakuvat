@@ -18,10 +18,12 @@ import {
 } from './lib/map';
 import {
   adjustTime,
+  copyLocationFromPopup,
   getClusterPhotos,
   getCurrentGroupIndex,
   getCurrentSinglePhotoIndex,
-  navigateSinglePhoto
+  navigateSinglePhoto,
+  pasteLocation
 } from './lib/popup';
 import {
   browseAllPhotos,
@@ -45,7 +47,9 @@ declare global {
     showGroupLightbox: typeof showGroupLightbox;
     enterPlacementMode: typeof enterPlacementMode;
     copyLocation: typeof copyLocation;
+    copyLocationFromPopup: typeof copyLocationFromPopup;
     adjustTime: typeof adjustTime;
+    pasteLocation: typeof pasteLocation;
   }
 }
 
@@ -125,7 +129,9 @@ window.showLightbox = showLightbox;
 window.showGroupLightbox = showGroupLightbox;
 window.enterPlacementMode = enterPlacementMode;
 window.copyLocation = copyLocation;
+window.copyLocationFromPopup = copyLocationFromPopup;
 window.adjustTime = adjustTime;
+window.pasteLocation = pasteLocation;
 
 function setupFilterListeners() {
   const yearSelect = document.getElementById('year-select');

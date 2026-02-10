@@ -219,17 +219,6 @@ body {
   color: #999;
   margin-bottom: 6px;
 }
-.photo-popup .photos-link {
-  display: inline-block;
-  margin-top: 8px;
-  font-size: 11px;
-  color: #007aff;
-  text-decoration: none;
-}
-.photo-popup .photos-link:hover {
-  text-decoration: underline;
-}
-
 /* Photos overlay button on popup and lightbox images */
 .photos-overlay-btn {
   position: absolute;
@@ -473,6 +462,28 @@ canvas.crosshair {
   line-height: 1.2;
 }
 .time-btn:hover {
+  background: #e0e0e0;
+  border-color: #bbb;
+}
+
+/* Location action buttons in popup */
+.loc-buttons {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+.loc-btn {
+  padding: 1px 5px;
+  font-size: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: #f5f5f5;
+  color: #666;
+  cursor: pointer;
+  line-height: 1.2;
+}
+.loc-btn:hover {
   background: #e0e0e0;
   border-color: #bbb;
 }
