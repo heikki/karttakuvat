@@ -1,6 +1,12 @@
 import maplibregl from 'maplibre-gl';
 
-import { addPendingTimeEdit, applyHourOffset, state } from './data';
+import {
+  addPendingEdit,
+  addPendingTimeEdit,
+  applyHourOffset,
+  getCopiedLocation,
+  state
+} from './data';
 import type { Photo } from './types';
 import { updateLightboxGroup } from './ui';
 import {
@@ -71,6 +77,71 @@ export interface FeatureProps {
   index: number;
 }
 
+function getEffectiveLocation(
+  photo: Photo
+): { lat: number; lon: number } | null {
+  const pending = state.pendingEdits.get(photo.uuid);
+  if (pending !== undefined) {
+    return pending;
+  }
+  if (photo.lat !== null && photo.lon !== null) {
+    return { lat: photo.lat, lon: photo.lon };
+  }
+  return null;
+}
+
+function buildPasteLocationHtml(photo: Photo): string {
+  const copied = getCopiedLocation();
+  if (copied === null) return '';
+  const loc = getEffectiveLocation(photo);
+  if (loc !== null && copied.lat === loc.lat && copied.lon === loc.lon) {
+    return '';
+  }
+  return `<a class="photos-link" id="single-paste-location" href="#">Paste location</a>`;
+}
+
+function buildSinglePopupHtml(photo: Photo, index: number): string {
+  const isVid = isVideo(photo);
+  const linkText = isVid ? 'Play in Photos' : 'Open in Photos';
+  const photosLinkHtml =
+    photo.photos_url !== undefined && photo.photos_url !== ''
+      ? `<a class="photos-link" id="single-photos-link" href="${photo.photos_url}">${linkText}</a>`
+      : `<a class="photos-link" id="single-photos-link" href="#" style="display:none">${linkText}</a>`;
+  const videoOverlay = isVid ? '<div class="video-indicator"></div>' : '';
+
+  const setLocationHtml = `<a class="photos-link" id="single-set-location" href="#" onclick="event.preventDefault(); window.enterPlacementMode(${index})">Set location</a>`;
+  const loc = getEffectiveLocation(photo);
+  const copyLocationHtml =
+    loc === null
+      ? ''
+      : `<a class="photos-link" id="single-copy-location" href="#" onclick="event.preventDefault(); window.copyLocation(${loc.lat}, ${loc.lon})">Copy location</a>`;
+  const pasteLocationHtml = buildPasteLocationHtml(photo);
+
+  return `
+        <div class="photo-popup">
+            <div class="popup-image-wrap">
+                <img id="single-img" src="${getThumbUrl(photo)}" alt="Photo" onclick="window.showLightbox(${index})"
+                        onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22150%22><rect fill=%22%23f0f0f0%22 width=%22200%22 height=%22150%22/><text x=%22100%22 y=%2275%22 text-anchor=%22middle%22 fill=%22%23999%22>Preview unavailable</text></svg>'" />
+                ${videoOverlay}
+            </div>
+            <div class="info" id="single-info">${formatDate(getEffectiveDate(photo))}${durationSpan(photo)} ${timeButtonsHtml(photo.uuid)}<br>${formatLocation(photo)}</div>
+            ${photosLinkHtml}
+            ${setLocationHtml}
+            ${copyLocationHtml}
+            ${pasteLocationHtml}
+        </div>`;
+}
+
+function bindPasteLink(index: number) {
+  const pasteLink = document.getElementById('single-paste-location');
+  if (pasteLink !== null) {
+    pasteLink.onclick = (ev) => {
+      ev.preventDefault();
+      pasteLocation(index);
+    };
+  }
+}
+
 export function showPopup(props: FeatureProps, coords: [number, number]) {
   if (currentPopup !== null) {
     currentPopup.remove();
@@ -87,33 +158,6 @@ export function showPopup(props: FeatureProps, coords: [number, number]) {
   clusterPhotos = [];
   highlightMarkerFn(index);
 
-  const isVid = isVideo(photo);
-  const linkText = isVid ? 'Play in Photos' : 'Open in Photos';
-  const photosLinkHtml =
-    photo.photos_url !== undefined && photo.photos_url !== ''
-      ? `<a class="photos-link" id="single-photos-link" href="${photo.photos_url}">${linkText}</a>`
-      : `<a class="photos-link" id="single-photos-link" href="#" style="display:none">${linkText}</a>`;
-  const videoOverlay = isVid ? '<div class="video-indicator"></div>' : '';
-
-  const setLocationHtml = `<a class="photos-link" id="single-set-location" href="#" onclick="event.preventDefault(); window.enterPlacementMode(${index})">Set location</a>`;
-  const copyLocationHtml =
-    photo.lat !== null && photo.lon !== null
-      ? `<a class="photos-link" id="single-copy-location" href="#" onclick="event.preventDefault(); window.copyLocation(${photo.lat}, ${photo.lon})">Copy location</a>`
-      : '';
-
-  const popupContent = `
-        <div class="photo-popup">
-            <div class="popup-image-wrap">
-                <img id="single-img" src="${getThumbUrl(photo)}" alt="Photo" onclick="window.showLightbox(${index})"
-                        onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22150%22><rect fill=%22%23f0f0f0%22 width=%22200%22 height=%22150%22/><text x=%22100%22 y=%2275%22 text-anchor=%22middle%22 fill=%22%23999%22>Preview unavailable</text></svg>'" />
-                ${videoOverlay}
-            </div>
-            <div class="info" id="single-info">${formatDate(getEffectiveDate(photo))}${durationSpan(photo)} ${timeButtonsHtml(photo.uuid)}<br>${formatLocation(photo)}</div>
-            ${photosLinkHtml}
-            ${setLocationHtml}
-            ${copyLocationHtml}
-        </div>`;
-
   currentPopup = new maplibregl.Popup({
     closeButton: false,
     maxWidth: '320px',
@@ -121,8 +165,10 @@ export function showPopup(props: FeatureProps, coords: [number, number]) {
     offset: [0, -12]
   })
     .setLngLat(coords)
-    .setHTML(popupContent)
+    .setHTML(buildSinglePopupHtml(photo, index))
     .addTo(map);
+
+  bindPasteLink(index);
 
   currentPopup.on('close', () => {
     highlightMarkerFn(null);
@@ -367,18 +413,19 @@ function updatePopupActions(index: number, photo: Photo) {
 
   const copyLocLink = document.getElementById('single-copy-location');
   if (copyLocLink !== null) {
-    if (photo.lat !== null && photo.lon !== null) {
-      const lat = photo.lat;
-      const lon = photo.lon;
+    const loc = getEffectiveLocation(photo);
+    if (loc === null) {
+      copyLocLink.style.display = 'none';
+    } else {
       copyLocLink.onclick = (ev) => {
         ev.preventDefault();
-        window.copyLocation(lat, lon);
+        window.copyLocation(loc.lat, loc.lon);
       };
       copyLocLink.style.display = '';
-    } else {
-      copyLocLink.style.display = 'none';
     }
   }
+
+  bindPasteLink(index);
 }
 
 export function adjustTime(uuid: string, hours: number) {
@@ -398,6 +445,15 @@ export function adjustTime(uuid: string, hours: number) {
       groupInfo.innerHTML = `${formatDate(getEffectiveDate(photo))} ${timeButtonsHtml(photo.uuid)}<br>${formatLocation(photo)}`;
     }
   }
+}
+
+export function pasteLocation(photoIndex: number) {
+  const photo = state.filteredPhotos[photoIndex];
+  const copied = getCopiedLocation();
+  if (photo === undefined || copied === null) return;
+
+  addPendingEdit(photo.uuid, copied.lat, copied.lon);
+  showPopup({ index: photoIndex }, [copied.lon, copied.lat]);
 }
 
 export function navigateSinglePhoto(newIndex: number) {

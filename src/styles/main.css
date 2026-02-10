@@ -338,24 +338,6 @@ body {
   color: #999;
   margin-top: 4px;
 }
-.placement-panel-paste {
-  display: block;
-  margin-top: 6px;
-  padding: 6px;
-  background: #007aff;
-  color: white;
-  border-radius: 6px;
-  font-size: 12px;
-  text-decoration: none;
-  cursor: pointer;
-}
-.placement-panel-paste:hover {
-  opacity: 0.9;
-}
-.placement-panel-paste span {
-  font-size: 10px;
-  opacity: 0.8;
-}
 canvas.crosshair {
   cursor: crosshair !important;
 }

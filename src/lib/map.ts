@@ -3,7 +3,7 @@ import maplibregl from 'maplibre-gl';
 import type { FilterSpecification, StyleSpecification } from 'maplibre-gl';
 
 import { mapStyles } from './config';
-import { addPendingEdit, getCopiedLocation, state, subscribe } from './data';
+import { addPendingEdit, state, subscribe } from './data';
 import {
   getClusterPhotos,
   getCurrentPopup,
@@ -49,24 +49,8 @@ function showPlacementPanel(photoIndex: number) {
     document.body.appendChild(panel);
   }
 
-  const copied = getCopiedLocation();
-  const pasteHtml =
-    copied === null
-      ? ''
-      : `<a class="placement-panel-paste" href="#" id="paste-location">Paste location<br><span>${copied.lat.toFixed(4)}°N, ${copied.lon.toFixed(4)}°E</span></a>`;
-
-  panel.innerHTML = `<img src="${getThumbUrl(photo)}" alt="" /><div class="placement-panel-info">${formatDate(photo.date)}</div><div class="placement-panel-hint">Click map to set location. Esc to cancel.</div>${pasteHtml}`;
+  panel.innerHTML = `<img src="${getThumbUrl(photo)}" alt="" /><div class="placement-panel-info">${formatDate(photo.date)}</div><div class="placement-panel-hint">Click map to set location. Esc to cancel.</div>`;
   panel.classList.add('active');
-
-  if (copied !== null) {
-    const pasteLink = document.getElementById('paste-location');
-    if (pasteLink !== null) {
-      pasteLink.onclick = (ev) => {
-        ev.preventDefault();
-        finishPlacement(photoIndex, copied.lat, copied.lon);
-      };
-    }
-  }
 }
 
 function hidePlacementPanel() {
