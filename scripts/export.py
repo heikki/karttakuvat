@@ -308,6 +308,28 @@ def format_date(date_str):
     return date_str
 
 
+def extract_tz_offset(date_str):
+    """Extract timezone offset from osxphotos ISO date string.
+
+    "2013-09-20T13:56:27+03:00" -> "+03:00"
+    "2013-09-20T13:56:27-05:00" -> "-05:00"
+    """
+    if not date_str:
+        return None
+    from datetime import datetime
+    try:
+        dt = datetime.fromisoformat(date_str)
+        if dt.utcoffset() is not None:
+            total_seconds = int(dt.utcoffset().total_seconds())
+            sign = "+" if total_seconds >= 0 else "-"
+            total_seconds = abs(total_seconds)
+            hours, minutes = divmod(total_seconds // 60, 60)
+            return f"{sign}{hours:02d}:{minutes:02d}"
+    except Exception:
+        pass
+    return None
+
+
 def format_duration(seconds):
     """Format duration in seconds to MM:SS or HH:MM:SS."""
     if not seconds:
@@ -427,6 +449,7 @@ def build_items_json(photos, videos, full_dir, json_path):
             "lat": lat,
             "lon": lon,
             "date": format_date(photo.get("date")),
+            "tz": extract_tz_offset(photo.get("date")),
             "gps": gps_source,
             "gps_accuracy": round_accuracy(acc) if acc is not None else None,
             "albums": albums,
@@ -468,6 +491,7 @@ def build_items_json(photos, videos, full_dir, json_path):
                 "lat": lat,
                 "lon": lon,
                 "date": format_date(video.get("date")),
+                "tz": extract_tz_offset(video.get("date")),
                 "duration": format_duration(video_durations.get(uuid)),
                 "gps": gps_source,
                 "gps_accuracy": round_accuracy(acc) if acc is not None else None,
