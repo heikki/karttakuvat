@@ -235,22 +235,21 @@ function prevPhoto() {
 }
 
 export function updateStats(filteredPhotos: Photo[]) {
-  const countEl = document.getElementById('photo-count');
   const countLabel = document.getElementById('count-label');
   const dateRangeEl = document.getElementById('date-range');
-  if (countEl === null || dateRangeEl === null) return;
+  if (countLabel === null || dateRangeEl === null) return;
 
-  countEl.textContent = filteredPhotos.length.toString();
-
-  if (countLabel !== null) {
+  if (filteredPhotos.length === 0) {
+    countLabel.textContent = 'No results';
+  } else {
     const photoCount = filteredPhotos.filter((p) => !isVideo(p)).length;
     const videoCount = filteredPhotos.filter((p) => isVideo(p)).length;
     if (photoCount > 0 && videoCount > 0) {
       countLabel.textContent = `${photoCount} photos, ${videoCount} videos`;
     } else if (videoCount > 0) {
-      countLabel.textContent = 'videos found';
+      countLabel.textContent = `${videoCount} videos`;
     } else {
-      countLabel.textContent = 'photos found';
+      countLabel.textContent = `${photoCount} photos`;
     }
   }
 
@@ -316,7 +315,3 @@ export function updatePendingEdits(count: number) {
   }
 }
 
-export function browseAllPhotos() {
-  if (state.filteredPhotos.length === 0) return;
-  showLightbox(0);
-}

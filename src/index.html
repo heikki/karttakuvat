@@ -16,36 +16,30 @@
 
     <div class="stats-panel">
       <h2>Karttakuvat</h2>
-      <div class="count" id="photo-count">0</div>
-      <p id="count-label">photos found</p>
-      <p id="date-range"></p>
-      <p style="margin-top: 10px; font-size: 11px; color: #999">
-        Shift+drag to select area.
-      </p>
+      <p id="count-label">0 photos found</p>
+      <p id="date-range" style="font-size: 11px; color: #999"></p>
       <div class="filter-section">
-        <label for="year-select">Filter by year</label>
+        <label for="year-select">Year</label>
         <select id="year-select">
-          <option value="all">All years</option>
+          <option value="all">All</option>
         </select>
         <label for="album-select">Album</label>
         <select id="album-select">
-          <option value="all">All albums</option>
+          <option value="all">All</option>
         </select>
-        <label for="media-select">Media type</label>
-        <select id="media-select">
-          <option value="all">All media</option>
-          <option value="photo">Photos only</option>
-          <option value="video">Videos only</option>
-        </select>
-        <label for="gps-select">Location precision</label>
-        <select id="gps-select">
-          <option value="all">All locations</option>
-          <option value="exif">Precise GPS only</option>
-          <option value="inferred">Inferred only</option>
-          <option value="user">User modified</option>
-          <option value="none">No location</option>
-        </select>
-        <label>Map type</label>
+        <label>Media</label>
+        <div class="filter-buttons" id="media-buttons">
+          <button class="filter-btn active" data-value="photo">Photos</button>
+          <button class="filter-btn active" data-value="video">Videos</button>
+        </div>
+        <label>Location</label>
+        <div class="filter-buttons" id="gps-buttons">
+          <button class="filter-btn active" data-value="exif" style="--btn-color: #3b82f6">Exif</button>
+          <button class="filter-btn active" data-value="inferred" style="--btn-color: #f59e0b">Inferred</button>
+          <button class="filter-btn active" data-value="user" style="--btn-color: #22c55e">User</button>
+          <button class="filter-btn active" data-value="none" style="--btn-color: #9ca3af">None</button>
+        </div>
+        <label>Map</label>
         <div class="map-type-buttons" id="map-type-buttons">
           <button class="map-type-btn active" data-style="opentopomap">
             Topo

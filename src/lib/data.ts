@@ -6,8 +6,8 @@ export const state = {
   filteredPhotos: [] as Photo[],
   filters: {
     year: 'all',
-    gps: 'all',
-    media: 'all',
+    gps: ['exif', 'inferred', 'user', 'none'] as string[],
+    media: ['photo', 'video'] as string[],
     album: 'all'
   },
   pendingEdits: new Map<string, { lat: number; lon: number }>(),
@@ -143,15 +143,25 @@ export function applyHourOffset(dateStr: string, hours: number): string {
   return `${d.getFullYear()}:${pad(d.getMonth() + 1)}:${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
-function matchesGps(p: Photo, gps: string): boolean {
-  if (gps === 'none') return p.gps === null;
-  return gps === 'all' || p.gps === gps;
+function matchesGps(p: Photo, gps: string[]): boolean {
+  if (gps.length === 0) return false;
+  const allValues = ['exif', 'inferred', 'user', 'none'];
+  if (gps.length === allValues.length) return true;
+  if (p.gps === null) return gps.includes('none');
+  return gps.includes(p.gps);
+}
+
+function matchesMedia(p: Photo, media: string[]): boolean {
+  if (media.length === 0) return false;
+  const allValues = ['photo', 'video'];
+  if (media.length === allValues.length) return true;
+  return media.includes(p.type);
 }
 
 export function applyFilters(
   year: string,
-  gps: string,
-  media: string,
+  gps: string[],
+  media: string[],
   album = 'all'
 ) {
   state.filters.year = year;
@@ -162,7 +172,7 @@ export function applyFilters(
   state.filteredPhotos = state.photos.filter((p) => {
     if (year !== 'all' && getYear(p) !== year) return false;
     if (!matchesGps(p, gps)) return false;
-    if (media !== 'all' && p.type !== media) return false;
+    if (!matchesMedia(p, media)) return false;
     if (album !== 'all' && !p.albums.includes(album)) return false;
     return true;
   });

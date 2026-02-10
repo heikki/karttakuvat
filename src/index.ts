@@ -26,7 +26,6 @@ import {
   pasteLocation
 } from './lib/popup';
 import {
-  browseAllPhotos,
   hideLightbox,
   initUI,
   isLightboxActive,
@@ -135,28 +134,56 @@ window.pasteLocation = pasteLocation;
 
 function setupFilterListeners() {
   const yearSelect = document.getElementById('year-select');
-  const gpsSelect = document.getElementById('gps-select');
-  const mediaSelect = document.getElementById('media-select');
   const albumSelect = document.getElementById('album-select');
+  const mediaButtons = document.getElementById('media-buttons');
+  const gpsButtons = document.getElementById('gps-buttons');
 
   const handleFilterChange = () => {
-    if (
-      yearSelect === null ||
-      gpsSelect === null ||
-      mediaSelect === null ||
-      albumSelect === null
-    ) {
-      return;
-    }
-    const y = (yearSelect as HTMLSelectElement).value;
-    const g = (gpsSelect as HTMLSelectElement).value;
-    const m = (mediaSelect as HTMLSelectElement).value;
-    const a = (albumSelect as HTMLSelectElement).value;
+    const y = (yearSelect as HTMLSelectElement | null)?.value ?? 'all';
+    const a = (albumSelect as HTMLSelectElement | null)?.value ?? 'all';
+    const m = Array.from(
+      document.querySelectorAll('#media-buttons .filter-btn.active')
+    ).map((btn) => (btn as HTMLElement).dataset.value!);
+    const g = Array.from(
+      document.querySelectorAll('#gps-buttons .filter-btn.active')
+    ).map((btn) => (btn as HTMLElement).dataset.value!);
     applyFilters(y, g, m, a);
   };
 
-  for (const el of [yearSelect, gpsSelect, mediaSelect, albumSelect]) {
+  for (const el of [yearSelect, albumSelect]) {
     el?.addEventListener('change', handleFilterChange);
+  }
+
+  for (const container of [mediaButtons, gpsButtons]) {
+    let clickTimer: ReturnType<typeof setTimeout> | null = null;
+    container?.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLElement>(
+        '.filter-btn'
+      );
+      if (btn === null) return;
+      if (clickTimer !== null) return;
+      clickTimer = setTimeout(() => {
+        clickTimer = null;
+        btn.classList.toggle('active');
+        handleFilterChange();
+      }, 250);
+    });
+    container?.addEventListener('dblclick', (e) => {
+      if (clickTimer !== null) {
+        clearTimeout(clickTimer);
+        clickTimer = null;
+      }
+      const btn = (e.target as HTMLElement).closest<HTMLElement>(
+        '.filter-btn'
+      );
+      if (btn === null) return;
+      for (const b of Array.from(
+        container.querySelectorAll('.filter-btn')
+      )) {
+        b.classList.toggle('active', b === btn);
+      }
+      handleFilterChange();
+    });
   }
 }
 
@@ -202,9 +229,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const mapButtons = document.getElementById('map-type-buttons');
     if (mapButtons !== null) {
       mapButtons.addEventListener('click', (e) => {
-        const btn = (e.target as HTMLElement).closest(
+        const btn = (e.target as HTMLElement).closest<HTMLElement>(
           '.map-type-btn'
-        ) as HTMLElement | null;
+        );
         if (btn === null) return;
         const style = btn.dataset.style;
         if (style === undefined) return;
@@ -224,18 +251,6 @@ document.addEventListener('DOMContentLoaded', () => {
       fitViewBtn.addEventListener('click', () => {
         fitToPhotos(true, true);
       });
-    }
-
-    // Stats interactions
-    const countEl = document.getElementById('photo-count');
-    const countLabel = countEl?.nextElementSibling as HTMLElement | null;
-    if (countEl !== null) {
-      countEl.addEventListener('click', browseAllPhotos);
-      countEl.style.cursor = 'pointer';
-    }
-    if (countLabel !== null) {
-      countLabel.addEventListener('click', browseAllPhotos);
-      countLabel.style.cursor = 'pointer';
     }
 
     // Save/Discard edits
