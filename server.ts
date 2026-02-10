@@ -159,11 +159,8 @@ const server = serve({
     }
 
     // Serve MML API key from env
-    if (url.pathname === '/config.js') {
-      const key = Bun.env.MML_API_KEY ?? '';
-      return new Response(`window.__MML_API_KEY__=${JSON.stringify(key)};`, {
-        headers: { 'Content-Type': 'application/javascript' }
-      });
+    if (url.pathname === '/api/config') {
+      return Response.json({ mmlApiKey: Bun.env.MML_API_KEY ?? '' });
     }
 
     // Check public directory first

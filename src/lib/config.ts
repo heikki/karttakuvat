@@ -1,14 +1,15 @@
 import type { MapStyles } from './types';
 
-declare global {
-  interface Window {
-    __MML_API_KEY__?: string;
-  }
-}
+let mmlKey = '';
 
-const mmlKey = window.__MML_API_KEY__ ?? '';
 const mmlTile = (layer: string, ext: string) =>
   `https://avoin-karttakuva.maanmittauslaitos.fi/avoin/wmts/1.0.0/${layer}/default/WGS84_Pseudo-Mercator/{z}/{y}/{x}.${ext}?api-key=${mmlKey}`;
+
+export async function loadConfig() {
+  const res = await fetch('/api/config');
+  const config = (await res.json()) as { mmlApiKey: string };
+  mmlKey = config.mmlApiKey;
+}
 
 export const mapStyles: MapStyles = {
   opentopomap: {
