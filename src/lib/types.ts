@@ -24,6 +24,6 @@ export interface MapStyle {
 export interface MapStyles {
   opentopomap: MapStyle;
   satellite: MapStyle;
-  osm: MapStyle;
-  cyclosm: MapStyle;
+  mml_maastokartta: MapStyle;
+  mml_ortokuva: MapStyle;
 }

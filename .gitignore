@@ -7,3 +7,4 @@ dist
 .osxphotos_export.db
 __pycache__
 osxphotos_crash.log
+.env

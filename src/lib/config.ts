@@ -1,5 +1,15 @@
 import type { MapStyles } from './types';
 
+declare global {
+  interface Window {
+    __MML_API_KEY__?: string;
+  }
+}
+
+const mmlKey = window.__MML_API_KEY__ ?? '';
+const mmlTile = (layer: string, ext: string) =>
+  `https://avoin-karttakuva.maanmittauslaitos.fi/avoin/wmts/1.0.0/${layer}/default/WGS84_Pseudo-Mercator/{z}/{y}/{x}.${ext}?api-key=${mmlKey}`;
+
 export const mapStyles: MapStyles = {
   opentopomap: {
     version: 8,
@@ -31,36 +41,38 @@ export const mapStyles: MapStyles = {
     },
     layers: [{ id: 'esri-satellite', type: 'raster', source: 'esri-satellite' }]
   },
-  osm: {
+  mml_maastokartta: {
     version: 8,
     sources: {
-      osm: {
+      mml_maastokartta: {
         type: 'raster',
-        tiles: [
-          'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
-          'https://b.tile.openstreetmap.org/{z}/{x}/{y}.png',
-          'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png'
-        ],
+        tiles: [mmlTile('maastokartta', 'png')],
         tileSize: 256,
-        attribution: '© OpenStreetMap contributors'
+        maxzoom: 16,
+        attribution: '© Maanmittauslaitos'
       }
     },
-    layers: [{ id: 'osm', type: 'raster', source: 'osm' }]
+    layers: [
+      {
+        id: 'mml_maastokartta',
+        type: 'raster',
+        source: 'mml_maastokartta'
+      }
+    ]
   },
-  cyclosm: {
+  mml_ortokuva: {
     version: 8,
     sources: {
-      cyclosm: {
+      mml_ortokuva: {
         type: 'raster',
-        tiles: [
-          'https://a.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',
-          'https://b.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',
-          'https://c.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png'
-        ],
+        tiles: [mmlTile('ortokuva', 'jpg')],
         tileSize: 256,
-        attribution: '© CyclOSM, OpenStreetMap contributors'
+        maxzoom: 16,
+        attribution: '© Maanmittauslaitos'
       }
     },
-    layers: [{ id: 'cyclosm', type: 'raster', source: 'cyclosm' }]
+    layers: [
+      { id: 'mml_ortokuva', type: 'raster', source: 'mml_ortokuva' }
+    ]
   }
 };
