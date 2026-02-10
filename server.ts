@@ -158,11 +158,6 @@ const server = serve({
       return await handleSetLocations(req);
     }
 
-    // Serve MML API key from env
-    if (url.pathname === '/api/config') {
-      return Response.json({ mmlApiKey: Bun.env.MML_API_KEY ?? '' });
-    }
-
     // Check public directory first
     let file = Bun.file(`public${url.pathname}`);
     if (file.size > 0) return new Response(file);

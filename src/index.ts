@@ -1,4 +1,3 @@
-import { loadConfig } from './lib/config';
 import {
   applyFilters,
   clearPendingEdits,
@@ -249,8 +248,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    // Load config and data
-    await loadConfig();
+    // Load data
     await loadPhotos();
 
     // Init Map
