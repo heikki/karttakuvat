@@ -245,20 +245,6 @@ function addPhotoLayers() {
   });
 
   map.addLayer({
-    id: 'photo-markers-highlight-ring',
-    type: 'circle',
-    source: 'photos',
-    paint: {
-      'circle-color': 'transparent',
-      'circle-radius': 18,
-      'circle-stroke-width': 3,
-      'circle-stroke-color': '#007AFF',
-      'circle-stroke-opacity': 0.6
-    },
-    filter: ['==', ['get', 'index'], -1]
-  });
-
-  map.addLayer({
     id: 'photo-markers',
     type: 'circle',
     source: 'photos',
@@ -278,6 +264,20 @@ function addPhotoLayers() {
       'circle-stroke-width': 2,
       'circle-stroke-color': '#fff'
     }
+  });
+
+  map.addLayer({
+    id: 'photo-markers-highlight-ring',
+    type: 'circle',
+    source: 'photos',
+    paint: {
+      'circle-color': 'transparent',
+      'circle-radius': 18,
+      'circle-stroke-width': 3,
+      'circle-stroke-color': '#007AFF',
+      'circle-stroke-opacity': 0.6
+    },
+    filter: ['==', ['get', 'index'], -1]
   });
 
 }
