@@ -122,7 +122,7 @@ function buildPhotosOverlay(id: string, photo: Photo): string {
 }
 
 function singleInfoHtml(photo: Photo, index: number): string {
-  return `${formatDate(getEffectiveDate(photo))}${durationSpan(photo)} ${timeButtonsHtml(photo.uuid)}<br>${formatLocation(photo)} ${locationButtonsHtml(photo, index)}`;
+  return `${formatDate(getEffectiveDate(photo), photo.tz)}${durationSpan(photo)} ${timeButtonsHtml(photo.uuid)}<br>${formatLocation(photo)} ${locationButtonsHtml(photo, index)}`;
 }
 
 function buildSinglePopupHtml(photo: Photo, index: number): string {
@@ -206,12 +206,12 @@ function buildDateRangeString(
     firstPhoto.date !== '' &&
     lastPhoto.date !== ''
   ) {
-    const firstDate = formatDate(firstPhoto.date);
-    const lastDate = formatDate(lastPhoto.date);
+    const firstDate = formatDate(firstPhoto.date, firstPhoto.tz);
+    const lastDate = formatDate(lastPhoto.date, lastPhoto.tz);
     return firstDate === lastDate ? firstDate : `${firstDate} – ${lastDate}`;
   }
   if (firstPhoto.date !== '') {
-    return formatDate(firstPhoto.date);
+    return formatDate(firstPhoto.date, firstPhoto.tz);
   }
   return '';
 }
@@ -267,7 +267,7 @@ function buildPopupContent(options: PopupContentOptions): string {
             ${videoOverlay}
             ${photosOverlay}
             </div>
-            <div class="info" id="group-info">${formatDate(getEffectiveDate(firstPhoto))} ${timeButtonsHtml(firstPhoto.uuid)}<br>${formatLocation(firstPhoto)}</div>
+            <div class="info" id="group-info">${formatDate(getEffectiveDate(firstPhoto), firstPhoto.tz)} ${timeButtonsHtml(firstPhoto.uuid)}<br>${formatLocation(firstPhoto)}</div>
             <div class="thumb-strip">${thumbsHtml}</div>
         </div>`;
 }
@@ -383,7 +383,7 @@ export function selectGroupPhoto(index: number) {
     };
   }
   if (info !== null) {
-    info.innerHTML = `${formatDate(getEffectiveDate(photo))} ${timeButtonsHtml(photo.uuid)}<br>${formatLocation(photo)}`;
+    info.innerHTML = `${formatDate(getEffectiveDate(photo), photo.tz)} ${timeButtonsHtml(photo.uuid)}<br>${formatLocation(photo)}`;
   }
   updatePhotosLink('group-photos-link', photo);
   updateVideoIndicator(photo);
@@ -422,7 +422,7 @@ export function adjustTime(uuid: string, hours: number) {
   if (groupInfo !== null && clusterPhotos.length > 0) {
     const photo = clusterPhotos[currentGroupIndex];
     if (photo?.uuid === uuid) {
-      groupInfo.innerHTML = `${formatDate(getEffectiveDate(photo))} ${timeButtonsHtml(photo.uuid)}<br>${formatLocation(photo)}`;
+      groupInfo.innerHTML = `${formatDate(getEffectiveDate(photo), photo.tz)} ${timeButtonsHtml(photo.uuid)}<br>${formatLocation(photo)}`;
     }
   }
 }

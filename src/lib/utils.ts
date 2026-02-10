@@ -37,14 +37,27 @@ function parseDatePart(datePart: string): string | null {
   return `${parseInt(parts[2]!, 10)}.${parseInt(parts[1]!, 10)}.${parts[0]!}`;
 }
 
-export function formatDate(dateStr: string): string {
+function formatTz(tz: string): string {
+  // "+03:00" -> "+3", "-05:30" -> "-5:30", "+00:00" -> "UTC"
+  const match = tz.match(/^([+-])(\d{2}):(\d{2})$/);
+  if (!match) return tz;
+  const hours = parseInt(match[2]!, 10);
+  const minutes = match[3]!;
+  if (hours === 0 && minutes === '00') return 'UTC';
+  const short = `${match[1]}${hours}`;
+  return minutes !== '00' ? `${short}:${minutes}` : short;
+}
+
+export function formatDate(dateStr: string, tz?: string | null): string {
   if (dateStr === '') return 'Unknown date';
   // Input format: "YYYY:MM:DD HH:MM:SS" -> Output: "D.M.YYYY HH:MM"
   const [datePart, timePart] = dateStr.split(' ');
   if (datePart === undefined || datePart === '') return dateStr;
   const formattedDate = parseDatePart(datePart);
   if (formattedDate === null) return dateStr;
-  return formattedDate + parseTimePart(timePart);
+  const base = formattedDate + parseTimePart(timePart);
+  if (tz) return `${base} ${formatTz(tz)}`;
+  return base;
 }
 
 export function isVideo(item: Photo): boolean {

@@ -18,7 +18,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from export import date_to_utc, determine_gps_source, extract_tz_offset, format_duration, query_gps_accuracy, query_video_durations, round_accuracy
+from export import date_to_utc, determine_gps_source, format_duration, query_gps_accuracy, query_video_durations, round_accuracy, tz_offset_from_coords
 
 
 def get_output_dir():
@@ -164,7 +164,7 @@ def build_items_json(items, full_dir, json_path, old_items):
             "lat": lat,
             "lon": lon,
             "date": format_date(item.get("date")),
-            "tz": extract_tz_offset(item.get("date")),
+            "tz": tz_offset_from_coords(lat, lon, format_date(item.get("date"))),
         }
 
         if item_is_video:

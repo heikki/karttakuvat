@@ -178,7 +178,7 @@ function displayPhoto(photo: Photo, index: number, total: number) {
   const isVid = isVideo(photo);
   const countInfo = `<br>(${index} of ${total})`;
   if (lightboxInfo !== null) {
-    lightboxInfo.innerHTML = `${formatDate(photo.date)}${durationSpan(photo)}<br>${formatLocation(photo)}${countInfo}`;
+    lightboxInfo.innerHTML = `${formatDate(photo.date, photo.tz)}${durationSpan(photo)}<br>${formatLocation(photo)}${countInfo}`;
   }
   if (lightbox !== null) {
     lightbox.classList.toggle('video', isVid);
@@ -255,9 +255,10 @@ export function updateStats(filteredPhotos: Photo[]) {
 
   const photosWithDates = filteredPhotos.filter((p) => p.date !== '');
   if (photosWithDates.length > 0) {
-    const firstDate = formatDate(photosWithDates[0]!.date);
+    const firstDate = formatDate(photosWithDates[0]!.date, photosWithDates[0]!.tz);
     const lastDate = formatDate(
-      photosWithDates[photosWithDates.length - 1]!.date
+      photosWithDates[photosWithDates.length - 1]!.date,
+      photosWithDates[photosWithDates.length - 1]!.tz
     );
     dateRangeEl.textContent = `${firstDate} – ${lastDate}`;
   } else {

@@ -43,7 +43,7 @@ async function runScript(
   cmd: string[],
   input: string,
   label: string
-): Promise<Response | null> {
+): Promise<{ error: Response } | { stdout: string }> {
   const proc = spawn({
     cmd,
     stdin: new Blob([input]),
@@ -63,21 +63,33 @@ async function runScript(
   }
 
   if (exitCode !== 0) {
-    return new Response(`${label} failed: ${stderr}`, { status: 500 });
+    return { error: new Response(`${label} failed: ${stderr}`, { status: 500 }) };
   }
-  return null;
+  return { stdout };
 }
 
 interface ItemRecord {
   uuid: string;
   date: string;
+  tz: string | null;
   lat: number | null;
   lon: number | null;
   gps: string | null;
   gps_accuracy: number | null;
 }
 
-function applyLocationEdits(items: ItemRecord[], edits: LocationEdit[]) {
+interface ScriptResult {
+  uuid: string;
+  ok: boolean;
+  tz?: string | null;
+  error?: string;
+}
+
+function applyLocationEdits(
+  items: ItemRecord[],
+  edits: LocationEdit[],
+  tzResults: Map<string, string | null>
+) {
   for (const edit of edits) {
     const item = items.find((i) => i.uuid === edit.uuid);
     if (item !== undefined) {
@@ -85,6 +97,10 @@ function applyLocationEdits(items: ItemRecord[], edits: LocationEdit[]) {
       item.lon = edit.lon;
       item.gps = 'user';
       item.gps_accuracy = 1;
+      const tz = tzResults.get(edit.uuid);
+      if (tz !== undefined) {
+        item.tz = tz;
+      }
     }
   }
 }
@@ -108,28 +124,50 @@ async function handleSetLocations(req: Request): Promise<Response> {
       return new Response('No edits provided', { status: 400 });
     }
 
+    // Load items to get dates for timezone lookup
+    const itemsFile = Bun.file('public/items.json');
+    const items = (await itemsFile.json()) as ItemRecord[];
+    const itemsByUuid = new Map(items.map((i) => [i.uuid, i]));
+
+    let tzResults = new Map<string, string | null>();
+
     if (locationEdits.length > 0) {
-      const err = await runScript(
+      // Enrich edits with dates for timezone computation
+      const editsWithDates = locationEdits.map((e) => ({
+        ...e,
+        date: itemsByUuid.get(e.uuid)?.date ?? ''
+      }));
+
+      const result = await runScript(
         ['python3', 'scripts/set_locations.py'],
-        JSON.stringify(locationEdits),
+        JSON.stringify(editsWithDates),
         'set_locations.py'
       );
-      if (err !== null) return err;
+      if ('error' in result) return result.error;
+
+      // Parse tz values from script output
+      try {
+        const scriptResults = JSON.parse(result.stdout) as ScriptResult[];
+        for (const r of scriptResults) {
+          if (r.ok && r.tz !== undefined) {
+            tzResults.set(r.uuid, r.tz);
+          }
+        }
+      } catch {
+        // tz update in items.json will be skipped
+      }
     }
 
     if (timeEdits.length > 0) {
-      const err = await runScript(
+      const result = await runScript(
         ['python3', 'scripts/set_times.py'],
         JSON.stringify(timeEdits),
         'set_times.py'
       );
-      if (err !== null) return err;
+      if ('error' in result) return result.error;
     }
 
-    const itemsFile = Bun.file('public/items.json');
-    const items = (await itemsFile.json()) as ItemRecord[];
-
-    applyLocationEdits(items, locationEdits);
+    applyLocationEdits(items, locationEdits, tzResults);
     applyTimeEdits(items, timeEdits);
     items.sort((a, b) => {
       const d = a.date.localeCompare(b.date);

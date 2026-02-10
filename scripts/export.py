@@ -308,26 +308,46 @@ def format_date(date_str):
     return date_str
 
 
-def extract_tz_offset(date_str):
-    """Extract timezone offset from osxphotos ISO date string.
+def tz_offset_from_coords(lat, lon, date_str):
+    """Get UTC offset string from coordinates and local date.
 
-    "2013-09-20T13:56:27+03:00" -> "+03:00"
-    "2013-09-20T13:56:27-05:00" -> "-05:00"
+    Uses timezonefinder to look up IANA timezone, then computes offset
+    accounting for DST at the given date.
+
+    Returns e.g. "+03:00", "-05:00", or None if lookup fails.
     """
-    if not date_str:
+    if lat is None or lon is None or not date_str:
         return None
     from datetime import datetime
+    from timezonefinder import TimezoneFinder
+    from zoneinfo import ZoneInfo
     try:
-        dt = datetime.fromisoformat(date_str)
-        if dt.utcoffset() is not None:
-            total_seconds = int(dt.utcoffset().total_seconds())
-            sign = "+" if total_seconds >= 0 else "-"
-            total_seconds = abs(total_seconds)
-            hours, minutes = divmod(total_seconds // 60, 60)
-            return f"{sign}{hours:02d}:{minutes:02d}"
+        tf = TimezoneFinder()
+        tz_name = tf.timezone_at(lat=lat, lng=lon)
+        if tz_name is None:
+            return None
+        # Parse our date format "YYYY:MM:DD HH:MM:SS"
+        dt = datetime.strptime(date_str, "%Y:%m:%d %H:%M:%S")
+        dt = dt.replace(tzinfo=ZoneInfo(tz_name))
+        total_seconds = int(dt.utcoffset().total_seconds())
+        sign = "+" if total_seconds >= 0 else "-"
+        total_seconds = abs(total_seconds)
+        hours, minutes = divmod(total_seconds // 60, 60)
+        return f"{sign}{hours:02d}:{minutes:02d}"
     except Exception:
-        pass
-    return None
+        return None
+
+
+def tz_name_from_coords(lat, lon):
+    """Get IANA timezone name from coordinates. Returns e.g. 'Europe/Helsinki'."""
+    if lat is None or lon is None:
+        return None
+    from timezonefinder import TimezoneFinder
+    try:
+        tf = TimezoneFinder()
+        return tf.timezone_at(lat=lat, lng=lon)
+    except Exception:
+        return None
 
 
 def date_to_utc(date_str, tz_str):
@@ -473,7 +493,7 @@ def build_items_json(photos, videos, full_dir, json_path):
             "lat": lat,
             "lon": lon,
             "date": format_date(photo.get("date")),
-            "tz": extract_tz_offset(photo.get("date")),
+            "tz": tz_offset_from_coords(lat, lon, format_date(photo.get("date"))),
             "gps": gps_source,
             "gps_accuracy": round_accuracy(acc) if acc is not None else None,
             "albums": albums,
@@ -515,7 +535,7 @@ def build_items_json(photos, videos, full_dir, json_path):
                 "lat": lat,
                 "lon": lon,
                 "date": format_date(video.get("date")),
-                "tz": extract_tz_offset(video.get("date")),
+                "tz": tz_offset_from_coords(lat, lon, format_date(video.get("date"))),
                 "duration": format_duration(video_durations.get(uuid)),
                 "gps": gps_source,
                 "gps_accuracy": round_accuracy(acc) if acc is not None else None,

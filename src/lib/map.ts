@@ -50,7 +50,7 @@ function showPlacementPanel(photoIndex: number) {
     document.body.appendChild(panel);
   }
 
-  panel.innerHTML = `<img src="${getThumbUrl(photo)}" alt="" /><div class="placement-panel-info">${formatDate(photo.date)}</div><div class="placement-panel-hint">Click map to set location. Esc to cancel.</div>`;
+  panel.innerHTML = `<img src="${getThumbUrl(photo)}" alt="" /><div class="placement-panel-info">${formatDate(photo.date, photo.tz)}</div><div class="placement-panel-hint">Click map to set location. Esc to cancel.</div>`;
   panel.classList.add('active');
 }
 
