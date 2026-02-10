@@ -45,13 +45,17 @@
           <option value="user">User modified</option>
           <option value="none">No location</option>
         </select>
-        <label for="map-select">Map type</label>
-        <select id="map-select">
-          <option value="opentopomap">OpenTopoMap</option>
-          <option value="satellite">Satellite</option>
-          <option value="mml_maastokartta">MML Maastokartta</option>
-          <option value="mml_ortokuva">MML Ortokuva</option>
-        </select>
+        <label>Map type</label>
+        <div class="map-type-buttons" id="map-type-buttons">
+          <button class="map-type-btn active" data-style="opentopomap">
+            Topo
+          </button>
+          <button class="map-type-btn" data-style="satellite">Satellite</button>
+          <button class="map-type-btn" data-style="mml_maastokartta">
+            Maasto
+          </button>
+          <button class="map-type-btn" data-style="mml_ortokuva">Orto</button>
+        </div>
       </div>
       <button class="fit-view-btn" id="fit-view-btn">Fit to view</button>
       <div class="edit-section" id="edit-section" style="display: none">

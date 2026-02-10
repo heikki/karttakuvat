@@ -61,7 +61,11 @@ function hidePlacementPanel() {
   }
 }
 
-const markerLayers = ['photo-markers', 'photo-markers-selected', 'photo-markers-highlight-ring'];
+const markerLayers = [
+  'photo-markers',
+  'photo-markers-selected',
+  'photo-markers-highlight-ring'
+];
 
 function setMarkerVisibility(visible: boolean) {
   const visibility = visible ? 'visible' : 'none';
@@ -112,7 +116,10 @@ export function initMap() {
   });
 
   map.addControl(new maplibregl.NavigationControl(), 'bottom-right');
-  map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-left');
+  map.addControl(
+    new maplibregl.ScaleControl({ unit: 'metric' }),
+    'bottom-left'
+  );
 
   // Handle MapLibre internal errors gracefully
   map.on('error', () => {
@@ -145,7 +152,9 @@ export function initMap() {
       const popup = getCurrentPopup();
       if (popup !== null) {
         if (uuid !== null) {
-          const newIndex = state.filteredPhotos.findIndex((p) => p.uuid === uuid);
+          const newIndex = state.filteredPhotos.findIndex(
+            (p) => p.uuid === uuid
+          );
           if (newIndex !== -1) {
             const photo = state.filteredPhotos[newIndex]!;
             const pending = state.pendingEdits.get(photo.uuid);
@@ -253,15 +262,22 @@ function addPhotoLayers() {
     type: 'circle',
     source: 'photos',
     layout: {
-      'circle-sort-key': ['-', ['*', -1000000, ['get', 'lat']], ['get', 'index']]
+      'circle-sort-key': [
+        '-',
+        ['*', -1000000, ['get', 'lat']],
+        ['get', 'index']
+      ]
     },
     paint: {
       'circle-color': [
         'match',
         ['get', 'gps'],
-        'exif', '#3b82f6',
-        'user', '#22c55e',
-        'inferred', '#f59e0b',
+        'exif',
+        '#3b82f6',
+        'user',
+        '#22c55e',
+        'inferred',
+        '#f59e0b',
         '#9ca3af'
       ],
       'circle-radius': 8,
@@ -278,9 +294,12 @@ function addPhotoLayers() {
       'circle-color': [
         'match',
         ['get', 'gps'],
-        'exif', '#3b82f6',
-        'user', '#22c55e',
-        'inferred', '#f59e0b',
+        'exif',
+        '#3b82f6',
+        'user',
+        '#22c55e',
+        'inferred',
+        '#f59e0b',
         '#9ca3af'
       ],
       'circle-radius': 8,
@@ -303,7 +322,6 @@ function addPhotoLayers() {
     },
     filter: ['==', ['get', 'index'], -1]
   });
-
 }
 
 let pulseAnimationId: number | null = null;
@@ -316,8 +334,16 @@ function startPulseAnimation() {
     const radius = 12 + 8 * t;
     const opacity = 0.8 - 0.8 * t;
     if (map.getLayer('photo-markers-highlight-ring') !== undefined) {
-      map.setPaintProperty('photo-markers-highlight-ring', 'circle-radius', radius);
-      map.setPaintProperty('photo-markers-highlight-ring', 'circle-stroke-opacity', opacity);
+      map.setPaintProperty(
+        'photo-markers-highlight-ring',
+        'circle-radius',
+        radius
+      );
+      map.setPaintProperty(
+        'photo-markers-highlight-ring',
+        'circle-stroke-opacity',
+        opacity
+      );
     }
     pulseAnimationId = requestAnimationFrame(animate);
   };

@@ -13,69 +13,69 @@ export async function loadConfig() {
 
 export function mapStyles(): MapStyles {
   return {
-  opentopomap: {
-    version: 8,
-    sources: {
-      opentopomap: {
-        type: 'raster',
-        tiles: [
-          'https://a.tile.opentopomap.org/{z}/{x}/{y}.png',
-          'https://b.tile.opentopomap.org/{z}/{x}/{y}.png',
-          'https://c.tile.opentopomap.org/{z}/{x}/{y}.png'
-        ],
-        tileSize: 256,
-        attribution: '© OpenTopoMap (CC-BY-SA)'
-      }
+    opentopomap: {
+      version: 8,
+      sources: {
+        opentopomap: {
+          type: 'raster',
+          tiles: [
+            'https://a.tile.opentopomap.org/{z}/{x}/{y}.png',
+            'https://b.tile.opentopomap.org/{z}/{x}/{y}.png',
+            'https://c.tile.opentopomap.org/{z}/{x}/{y}.png'
+          ],
+          tileSize: 256,
+          attribution: '© OpenTopoMap (CC-BY-SA)'
+        }
+      },
+      layers: [{ id: 'opentopomap', type: 'raster', source: 'opentopomap' }]
     },
-    layers: [{ id: 'opentopomap', type: 'raster', source: 'opentopomap' }]
-  },
-  satellite: {
-    version: 8,
-    sources: {
-      'esri-satellite': {
-        type: 'raster',
-        tiles: [
-          'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-        ],
-        tileSize: 256,
-        attribution: '© Esri'
-      }
+    satellite: {
+      version: 8,
+      sources: {
+        'esri-satellite': {
+          type: 'raster',
+          tiles: [
+            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+          ],
+          tileSize: 256,
+          attribution: '© Esri'
+        }
+      },
+      layers: [
+        { id: 'esri-satellite', type: 'raster', source: 'esri-satellite' }
+      ]
     },
-    layers: [{ id: 'esri-satellite', type: 'raster', source: 'esri-satellite' }]
-  },
-  mml_maastokartta: {
-    version: 8,
-    sources: {
-      mml_maastokartta: {
-        type: 'raster',
-        tiles: [mmlTile('maastokartta', 'png')],
-        tileSize: 256,
-        maxzoom: 16,
-        attribution: '© Maanmittauslaitos'
-      }
+    mml_maastokartta: {
+      version: 8,
+      sources: {
+        mml_maastokartta: {
+          type: 'raster',
+          tiles: [mmlTile('maastokartta', 'png')],
+          tileSize: 256,
+          maxzoom: 16,
+          attribution: '© Maanmittauslaitos'
+        }
+      },
+      layers: [
+        {
+          id: 'mml_maastokartta',
+          type: 'raster',
+          source: 'mml_maastokartta'
+        }
+      ]
     },
-    layers: [
-      {
-        id: 'mml_maastokartta',
-        type: 'raster',
-        source: 'mml_maastokartta'
-      }
-    ]
-  },
-  mml_ortokuva: {
-    version: 8,
-    sources: {
-      mml_ortokuva: {
-        type: 'raster',
-        tiles: [mmlTile('ortokuva', 'jpg')],
-        tileSize: 256,
-        maxzoom: 16,
-        attribution: '© Maanmittauslaitos'
-      }
-    },
-    layers: [
-      { id: 'mml_ortokuva', type: 'raster', source: 'mml_ortokuva' }
-    ]
-  }
+    mml_ortokuva: {
+      version: 8,
+      sources: {
+        mml_ortokuva: {
+          type: 'raster',
+          tiles: [mmlTile('ortokuva', 'jpg')],
+          tileSize: 256,
+          maxzoom: 16,
+          attribution: '© Maanmittauslaitos'
+        }
+      },
+      layers: [{ id: 'mml_ortokuva', type: 'raster', source: 'mml_ortokuva' }]
+    }
   };
 }

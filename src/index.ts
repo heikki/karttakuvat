@@ -19,9 +19,9 @@ import {
 } from './lib/map';
 import {
   adjustTime,
+  getClusterPhotos,
   getCurrentGroupIndex,
   getCurrentSinglePhotoIndex,
-  getClusterPhotos,
   navigateSinglePhoto
 } from './lib/popup';
 import {
@@ -135,7 +135,12 @@ function setupFilterListeners() {
   const albumSelect = document.getElementById('album-select');
 
   const handleFilterChange = () => {
-    if (yearSelect === null || gpsSelect === null || mediaSelect === null || albumSelect === null) {
+    if (
+      yearSelect === null ||
+      gpsSelect === null ||
+      mediaSelect === null ||
+      albumSelect === null
+    ) {
       return;
     }
     const y = (yearSelect as HTMLSelectElement).value;
@@ -189,10 +194,20 @@ document.addEventListener('DOMContentLoaded', () => {
     initUI();
 
     // Event Listeners
-    const mapSelect = document.getElementById('map-select');
-    if (mapSelect !== null) {
-      mapSelect.addEventListener('change', (e) => {
-        changeMapStyle((e.target as HTMLSelectElement).value);
+    const mapButtons = document.getElementById('map-type-buttons');
+    if (mapButtons !== null) {
+      mapButtons.addEventListener('click', (e) => {
+        const btn = (e.target as HTMLElement).closest(
+          '.map-type-btn'
+        ) as HTMLElement | null;
+        if (btn === null) return;
+        const style = btn.dataset.style;
+        if (style === undefined) return;
+        mapButtons
+          .querySelector('.map-type-btn.active')
+          ?.classList.remove('active');
+        btn.classList.add('active');
+        changeMapStyle(style);
       });
     }
 
@@ -249,9 +264,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ].sort();
     populateYearFilter(years);
 
-    const albums = [
-      ...new Set(state.photos.flatMap((p) => p.albums))
-    ].sort();
+    const albums = [...new Set(state.photos.flatMap((p) => p.albums))].sort();
     populateAlbumFilter(albums);
 
     updateStats(state.filteredPhotos);

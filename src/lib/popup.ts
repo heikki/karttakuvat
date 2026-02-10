@@ -107,10 +107,7 @@ function buildPasteLocationHtml(photo: Photo): string {
   return `<a class="photos-link" id="single-paste-location" href="#"${visible ? '' : ' style="display:none"'}>Paste location</a>`;
 }
 
-function buildPhotosOverlay(
-  id: string,
-  photo: Photo
-): string {
+function buildPhotosOverlay(id: string, photo: Photo): string {
   if (photo.photos_url !== undefined && photo.photos_url !== '') {
     return `<a class="photos-overlay-btn" id="${id}" href="${photo.photos_url}" target="_blank" tabindex="-1" onclick="event.stopPropagation()"></a>`;
   }

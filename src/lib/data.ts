@@ -37,7 +37,12 @@ export async function loadPhotos() {
     const data = (await response.json()) as Photo[];
     data.sort(compareDates);
     state.photos = data;
-    applyFilters(state.filters.year, state.filters.gps, state.filters.media, state.filters.album);
+    applyFilters(
+      state.filters.year,
+      state.filters.gps,
+      state.filters.media,
+      state.filters.album
+    );
   } catch (error) {
     console.error('Error loading items.json:', error);
     throw error;
@@ -143,7 +148,12 @@ function matchesGps(p: Photo, gps: string): boolean {
   return gps === 'all' || p.gps === gps;
 }
 
-export function applyFilters(year: string, gps: string, media: string, album = 'all') {
+export function applyFilters(
+  year: string,
+  gps: string,
+  media: string,
+  album = 'all'
+) {
   state.filters.year = year;
   state.filters.gps = gps;
   state.filters.media = media;
