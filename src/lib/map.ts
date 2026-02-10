@@ -61,7 +61,7 @@ function hidePlacementPanel() {
   }
 }
 
-const markerLayers = ['photo-markers', 'photo-markers-highlight-ring'];
+const markerLayers = ['photo-markers', 'photo-markers-selected', 'photo-markers-highlight-ring'];
 
 function setMarkerVisibility(visible: boolean) {
   const visibility = visible ? 'visible' : 'none';
@@ -232,6 +232,9 @@ function addPhotoLayers() {
   if (map.getLayer('photo-markers-highlight-ring') !== undefined) {
     map.removeLayer('photo-markers-highlight-ring');
   }
+  if (map.getLayer('photo-markers-selected') !== undefined) {
+    map.removeLayer('photo-markers-selected');
+  }
   if (map.getLayer('photo-markers') !== undefined) {
     map.removeLayer('photo-markers');
   }
@@ -249,7 +252,7 @@ function addPhotoLayers() {
     type: 'circle',
     source: 'photos',
     layout: {
-      'circle-sort-key': ['*', -1, ['get', 'lat']]
+      'circle-sort-key': ['-', ['*', -1000000, ['get', 'lat']], ['get', 'index']]
     },
     paint: {
       'circle-color': [
@@ -264,6 +267,26 @@ function addPhotoLayers() {
       'circle-stroke-width': 2,
       'circle-stroke-color': '#fff'
     }
+  });
+
+  map.addLayer({
+    id: 'photo-markers-selected',
+    type: 'circle',
+    source: 'photos',
+    paint: {
+      'circle-color': [
+        'match',
+        ['get', 'gps'],
+        'exif', '#3b82f6',
+        'user', '#22c55e',
+        'inferred', '#f59e0b',
+        '#9ca3af'
+      ],
+      'circle-radius': 8,
+      'circle-stroke-width': 2,
+      'circle-stroke-color': '#fff'
+    },
+    filter: ['==', ['get', 'index'], -1]
   });
 
   map.addLayer({
@@ -313,6 +336,9 @@ function highlightMarker(index: number | null) {
       ? ['==', ['get', 'index'], -1]
       : ['==', ['get', 'index'], index];
 
+  if (map.getLayer('photo-markers-selected') !== undefined) {
+    map.setFilter('photo-markers-selected', filter);
+  }
   if (map.getLayer('photo-markers-highlight-ring') !== undefined) {
     map.setFilter('photo-markers-highlight-ring', filter);
   }
