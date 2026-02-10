@@ -95,14 +95,16 @@ function getEffectiveLocation(
   return null;
 }
 
-function buildPasteLocationHtml(photo: Photo): string {
+function shouldShowPasteLink(photo: Photo): boolean {
   const copied = getCopiedLocation();
-  if (copied === null) return '';
+  if (copied === null) return false;
   const loc = getEffectiveLocation(photo);
-  if (loc !== null && copied.lat === loc.lat && copied.lon === loc.lon) {
-    return '';
-  }
-  return `<a class="photos-link" id="single-paste-location" href="#">Paste location</a>`;
+  return loc === null || copied.lat !== loc.lat || copied.lon !== loc.lon;
+}
+
+function buildPasteLocationHtml(photo: Photo): string {
+  const visible = shouldShowPasteLink(photo);
+  return `<a class="photos-link" id="single-paste-location" href="#"${visible ? '' : ' style="display:none"'}>Paste location</a>`;
 }
 
 function buildPhotosOverlay(
@@ -144,14 +146,16 @@ function buildSinglePopupHtml(photo: Photo, index: number): string {
         </div>`;
 }
 
-function bindPasteLink(index: number) {
+function updatePasteLink(index: number) {
   const pasteLink = document.getElementById('single-paste-location');
-  if (pasteLink !== null) {
-    pasteLink.onclick = (ev) => {
-      ev.preventDefault();
-      pasteLocation(index);
-    };
-  }
+  if (pasteLink === null) return;
+  const photo = state.filteredPhotos[index];
+  if (photo === undefined) return;
+  pasteLink.style.display = shouldShowPasteLink(photo) ? '' : 'none';
+  pasteLink.onclick = (ev) => {
+    ev.preventDefault();
+    pasteLocation(index);
+  };
 }
 
 export function showPopup(props: FeatureProps, coords: [number, number]) {
@@ -181,7 +185,7 @@ export function showPopup(props: FeatureProps, coords: [number, number]) {
     .setHTML(buildSinglePopupHtml(photo, index))
     .addTo(map);
 
-  bindPasteLink(index);
+  updatePasteLink(index);
 
   currentPopup.on('close', () => {
     highlightMarkerFn(null);
@@ -429,7 +433,7 @@ function updatePopupActions(index: number, photo: Photo) {
     }
   }
 
-  bindPasteLink(index);
+  updatePasteLink(index);
 }
 
 export function adjustTime(uuid: string, hours: number) {
