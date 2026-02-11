@@ -22,6 +22,7 @@ import {
   formatLocation,
   getThumbUrl,
   isVideo,
+  parseExifDate,
   parseUserDatetime
 } from './utils';
 
@@ -101,8 +102,7 @@ function shouldShowDatePaste(photo: Photo): boolean {
   if (copied === null) return false;
   const effectiveDate = getEffectiveDate(photo);
   if (effectiveDate === '') return false;
-  const dayPart = effectiveDate.split(' ')[0];
-  return dayPart !== copied;
+  return effectiveDate !== copied;
 }
 
 function dateNormalButtonsHtml(photo: Photo): string {
@@ -132,7 +132,7 @@ function dateLineHtml(photo: Photo): string {
   const duration = durationSpan(photo);
   if (dateEditMode) {
     const inputVal = editableDateStr(getEffectiveDate(photo));
-    return `${dateText}${duration} ${dateEditButtonsHtml(photo.uuid)}<div class="date-edit-row"><input class="date-input" type="text" value="${inputVal}" placeholder="25.3. 14:30" id="date-input" onkeydown="window.handleDateInputKey(event)" /><button class="time-btn" onclick="event.preventDefault(); window.applyManualDate()">OK</button></div>`;
+    return `${dateText}${duration} ${dateEditButtonsHtml(photo.uuid)}<div class="date-edit-row"><input class="date-input" type="text" value="${inputVal}" id="date-input" onkeydown="window.handleDateInputKey(event)" /><button class="time-btn" onclick="event.preventDefault(); window.applyManualDate()">OK</button></div>`;
   }
   return `${dateText}${duration} ${dateNormalButtonsHtml(photo)}`;
 }
@@ -535,9 +535,7 @@ export function copyDateFromPopup() {
   if (photo === undefined) return;
   const effectiveDate = getEffectiveDate(photo);
   if (effectiveDate === '') return;
-  const dayPart = effectiveDate.split(' ')[0];
-  if (dayPart === undefined) return;
-  copyDate(dayPart);
+  copyDate(effectiveDate);
   refreshDateRow();
 }
 
@@ -546,7 +544,9 @@ export function pasteDateToPhoto() {
   if (photo === undefined) return;
   const copied = getCopiedDate();
   if (copied === null) return;
-  const offset = computeDateOffsetHours(photo.date, copied);
+  const copiedDate = parseExifDate(copied);
+  if (copiedDate === null) return;
+  const offset = computeFullDatetimeOffsetHours(photo.date, copiedDate);
   if (offset === null) return;
   setPendingTimeEdit(photo.uuid, offset);
   refreshDateRow();
