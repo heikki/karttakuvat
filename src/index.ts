@@ -23,6 +23,7 @@ import {
   copyLocationFromPopup,
   getClusterPhotos,
   getCurrentGroupIndex,
+  getCurrentPhotoUuid,
   getCurrentPopup,
   getCurrentSinglePhotoIndex,
   handleDateInputKey,
@@ -30,6 +31,7 @@ import {
   navigateSinglePhoto,
   pasteDateToPhoto,
   pasteLocation,
+  showPopup,
   toggleDateEdit
 } from './lib/popup';
 import {
@@ -229,9 +231,21 @@ async function saveEdits() {
       const text = await response.text();
       throw new Error(text);
     }
+    const reopenUuid = getCurrentPhotoUuid();
     getCurrentPopup()?.remove();
     await loadPhotos();
     clearPendingEdits();
+
+    // Reopen popup on the same photo
+    if (reopenUuid !== null) {
+      const newIndex = state.filteredPhotos.findIndex(
+        (p) => p.uuid === reopenUuid
+      );
+      if (newIndex !== -1) {
+        const photo = state.filteredPhotos[newIndex]!;
+        showPopup({ index: newIndex }, [photo.lon, photo.lat]);
+      }
+    }
   } catch (err) {
     console.error('Failed to save edits:', err);
     // eslint-disable-next-line no-alert -- user needs feedback on save failure
