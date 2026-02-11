@@ -73,9 +73,18 @@ export function durationSpan(item: Photo): string {
   return '';
 }
 
+function toDMS(decimal: number): string {
+  const abs = Math.abs(decimal);
+  const deg = Math.floor(abs);
+  const min = (abs - deg) * 60;
+  return `${deg}°${min.toFixed(1)}'`;
+}
+
 export function formatLocation(photo: Photo): string {
   if (photo.lat !== null && photo.lon !== null) {
-    return `${photo.lat.toFixed(4)}°N, ${photo.lon.toFixed(4)}°E`;
+    const ns = photo.lat >= 0 ? 'N' : 'S';
+    const ew = photo.lon >= 0 ? 'E' : 'W';
+    return `${toDMS(photo.lat)}${ns}, ${toDMS(photo.lon)}${ew}`;
   }
   return 'No location';
 }
