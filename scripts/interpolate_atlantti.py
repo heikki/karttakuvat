@@ -104,13 +104,18 @@ def build_waypoints():
     W.append((utc_dt(2015, 3, 19), *ST_MAARTEN))
     W.append((utc_dt(2015, 3, 20, 19, 0), *ST_MAARTEN))  # depart 15:00 UTC-4
 
-    # Transit to Anguilla (~2.5h)
+    # Transit to Anguilla — west of Anguilla, then around south coast
+    W.append((utc_dt(2015, 3, 20, 20, 0), 18.15, -63.197))   # 18°09.0'N, 63°11.8'W
+    W.append((utc_dt(2015, 3, 20, 20, 45), 18.203, -63.138))  # 18°12.2'N, 63°08.3'W
     W.append((utc_dt(2015, 3, 20, 21, 30), *ANGUILLA))  # arrive ~17:30 UTC-4
     W.append((utc_dt(2015, 3, 21, 11, 0), *ANGUILLA))  # depart 07:00 UTC-4
 
     # Transit to Prickly Pear (~45min)
     W.append((utc_dt(2015, 3, 21, 11, 45), *PRICKLY_PEAR))  # arrive ~07:45 UTC-4
     W.append((utc_dt(2015, 3, 21, 17, 45), *PRICKLY_PEAR))  # depart 13:45 UTC-4
+
+    # Clear west of Anguilla before heading north
+    W.append((utc_dt(2015, 3, 21, 18, 30), 18.268, -63.197))  # 18°16.1'N, 63°11.8'W
 
     # Noon positions at sea (Leg 1)
     for month, day, lat, lon in NOON:
@@ -209,11 +214,26 @@ def main():
     print(f"Found {len(edits)} photos to update across {len(by_date)} dates:\n")
     for date_key in sorted(by_date):
         group = by_date[date_key]
+        # Group photos within 1 minute of each other
+        clusters = []
         for e in group:
+            t = datetime.strptime(e["date"], "%Y:%m:%d %H:%M:%S")
+            if clusters and (t - clusters[-1][-1][1]).total_seconds() <= 60:
+                clusters[-1].append((e, t))
+            else:
+                clusters.append([(e, t)])
+        for cluster in clusters:
+            first = cluster[0][0]
+            last = cluster[-1][0]
+            n = len(cluster)
+            time_range = first["date"][11:16]
+            if n > 1 and first["date"][11:16] != last["date"][11:16]:
+                time_range += f"–{last['date'][11:16]}"
+            count = f" x{n}" if n > 1 else ""
             print(
-                f"  {e['date']}  "
-                f"({e['old_lat']:.3f}, {e['old_lon']:.3f}) → "
-                f"({e['lat']:.3f}, {e['lon']:.3f})"
+                f"  {first['date'][:10]} {time_range}{count}  "
+                f"({first['old_lat']:.3f}, {first['old_lon']:.3f}) → "
+                f"({first['lat']:.3f}, {first['lon']:.3f})"
             )
 
     if not apply:
