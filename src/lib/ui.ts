@@ -255,7 +255,10 @@ export function updateStats(filteredPhotos: Photo[]) {
 
   const photosWithDates = filteredPhotos.filter((p) => p.date !== '');
   if (photosWithDates.length > 0) {
-    const firstDate = formatDate(photosWithDates[0]!.date, photosWithDates[0]!.tz);
+    const firstDate = formatDate(
+      photosWithDates[0]!.date,
+      photosWithDates[0]!.tz
+    );
     const lastDate = formatDate(
       photosWithDates[photosWithDates.length - 1]!.date,
       photosWithDates[photosWithDates.length - 1]!.tz
@@ -315,4 +318,3 @@ export function updatePendingEdits(count: number) {
     section.style.display = 'none';
   }
 }
-

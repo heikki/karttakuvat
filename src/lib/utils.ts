@@ -6,7 +6,9 @@ export function getYear(photo: Photo): string | null {
 }
 
 function toUtcSortKey(date: string, tz: string | null): string {
-  const iso = date.replace(/^(\d{4}):(\d{2}):(\d{2})/, '$1-$2-$3').replace(' ', 'T');
+  const iso = date
+    .replace(/^(\d{4}):(\d{2}):(\d{2})/, '$1-$2-$3')
+    .replace(' ', 'T');
   return new Date(iso + (tz ?? 'Z')).toISOString();
 }
 

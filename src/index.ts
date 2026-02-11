@@ -157,9 +157,7 @@ function setupFilterListeners() {
   for (const container of [mediaButtons, gpsButtons]) {
     let clickTimer: ReturnType<typeof setTimeout> | null = null;
     container?.addEventListener('click', (e) => {
-      const btn = (e.target as HTMLElement).closest<HTMLElement>(
-        '.filter-btn'
-      );
+      const btn = (e.target as HTMLElement).closest<HTMLElement>('.filter-btn');
       if (btn === null) return;
       if (clickTimer !== null) return;
       clickTimer = setTimeout(() => {
@@ -173,13 +171,9 @@ function setupFilterListeners() {
         clearTimeout(clickTimer);
         clickTimer = null;
       }
-      const btn = (e.target as HTMLElement).closest<HTMLElement>(
-        '.filter-btn'
-      );
+      const btn = (e.target as HTMLElement).closest<HTMLElement>('.filter-btn');
       if (btn === null) return;
-      for (const b of Array.from(
-        container.querySelectorAll('.filter-btn')
-      )) {
+      for (const b of Array.from(container.querySelectorAll('.filter-btn'))) {
         b.classList.toggle('active', b === btn);
       }
       handleFilterChange();

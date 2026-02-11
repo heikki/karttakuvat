@@ -63,7 +63,9 @@ async function runScript(
   }
 
   if (exitCode !== 0) {
-    return { error: new Response(`${label} failed: ${stderr}`, { status: 500 }) };
+    return {
+      error: new Response(`${label} failed: ${stderr}`, { status: 500 })
+    };
   }
   return { stdout };
 }
