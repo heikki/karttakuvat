@@ -243,6 +243,12 @@ function handleArrowNavigation(key: string) {
 
 function handleKeyDown(e: KeyboardEvent) {
   if (document.querySelector('.lightbox.active') !== null) return;
+  if (
+    e.target instanceof HTMLInputElement ||
+    e.target instanceof HTMLTextAreaElement
+  ) {
+    return;
+  }
 
   const popup = getCurrentPopup();
   if (popup === null) return;
