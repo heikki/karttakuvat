@@ -23,8 +23,6 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 ITEMS_PATH = Path(__file__).parent.parent / "public" / "items.json"
-THRESHOLD = 0.005  # ~500m — finer than daily assignment
-
 
 def utc_dt(year, month, day, hour=0, minute=0):
     """Create a UTC datetime."""
@@ -170,39 +168,56 @@ def interpolate(waypoints, t):
     return (round(lat, 3), round(lon, 3))
 
 
+CLUSTER_GAP = 300  # seconds — photos within 5 min of each other share position
+
+
 def main():
     apply = "--apply" in sys.argv
     waypoints = build_waypoints()
 
     items = json.loads(ITEMS_PATH.read_text())
 
-    edits = []
+    # Collect Atlantti photos with UTC times
+    photos = []
     for item in items:
         if "2015 Atlantti" not in item.get("albums", []):
             continue
-
         tz_str = item.get("tz")
         if not tz_str:
             continue
-
         t = photo_utc(item["date"], tz_str)
-        result = interpolate(waypoints, t)
+        photos.append((t, item))
+
+    # Sort by UTC time and cluster: photos within CLUSTER_GAP of their
+    # neighbour share the same interpolated position
+    photos.sort(key=lambda p: p[0])
+    clusters = []
+    for t, item in photos:
+        if clusters and (t - clusters[-1][-1][0]).total_seconds() <= CLUSTER_GAP:
+            clusters[-1].append((t, item))
+        else:
+            clusters.append([(t, item)])
+
+    # Interpolate once per cluster using median timestamp
+    edits = []
+    for cluster in clusters:
+        times = [t for t, _ in cluster]
+        median_t = times[len(times) // 2]
+        result = interpolate(waypoints, median_t)
         if result is None:
             continue
 
         target_lat, target_lon = result
-        dlat = abs(item["lat"] - target_lat)
-        dlon = abs(item["lon"] - target_lon)
-
-        if dlat > THRESHOLD or dlon > THRESHOLD:
-            edits.append({
-                "uuid": item["uuid"],
-                "lat": target_lat,
-                "lon": target_lon,
-                "date": item["date"],
-                "old_lat": item["lat"],
-                "old_lon": item["lon"],
-            })
+        for _, item in cluster:
+            if round(item["lat"], 3) != target_lat or round(item["lon"], 3) != target_lon:
+                edits.append({
+                    "uuid": item["uuid"],
+                    "lat": target_lat,
+                    "lon": target_lon,
+                    "date": item["date"],
+                    "old_lat": item["lat"],
+                    "old_lon": item["lon"],
+                })
 
     # Summary
     from collections import defaultdict
@@ -218,7 +233,7 @@ def main():
         clusters = []
         for e in group:
             t = datetime.strptime(e["date"], "%Y:%m:%d %H:%M:%S")
-            if clusters and (t - clusters[-1][-1][1]).total_seconds() <= 60:
+            if clusters and (t - clusters[-1][-1][1]).total_seconds() <= 300:
                 clusters[-1].append((e, t))
             else:
                 clusters.append([(e, t)])
