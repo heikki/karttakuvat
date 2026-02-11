@@ -61,6 +61,26 @@ Alus: kuunari Helena (rak. 1992), pituus 39 m. Kapteeni Pertsa, perämies Jusa, 
 | 21.4. | 51°53.3'N, 05°51.3'W | I     | Irlannin rannikko, vastatuulta. Upea auringonnousu. Delfiinit.                        |
 | 22.4. | 53°17.9'N, 06°8.3'W  | IV    | **DUBLIN!** "Ylitettiin muuten Atlantti. Perussettii."                                |
 
+## Ankkuripaikat ja siirtymäajat
+
+Paikallisia aikoja, kuvista tarkistettu.
+
+| Tapahtuma                       | Aika             | Koordinaatit         |
+| ------------------------------- | ---------------- | -------------------- |
+| St. Maarten                     | 18.–20.3.        | 18°04.1'N, 63°05.1'W |
+| Lähtö St. Maarten               | 20.3. klo 15:00  |                      |
+| Anguilla (ankkurointi)          | 20.3. ilta       | 18°12.1'N, 63°05.8'W |
+| Lähtö Anguilla → Prickly Pear   | 21.3. klo 07:00  |                      |
+| Prickly Pear Cay                | 21.3. aamu       | 18°15.8'N, 63°10.8'W |
+| Lähtö Prickly Pear → pohjoiseen | 21.3. klo 13:45  |                      |
+| Saapuminen Flores               | 4.4. klo 16:15   | 39°22.7'N, 31°10.2'W |
+| Lähtö Flores → Velas            | 6.4. klo 16:00   |                      |
+| Saapuminen Velas                | 7.4. klo 08:00   | 38°40.8'N, 28°12.2'W |
+| Lähtö Velas → Horta             | 8.4. klo 15:22   |                      |
+| Saapuminen Horta                | 8.4. klo 19:45   | 38°32.0'N, 28°37.0'W |
+| Lähtö Horta                     | 13.4. klo 12:45  |                      |
+| Saapuminen Dublin               | 22.4. klo ~10:00 | 53°17.9'N, 06°08.3'W |
+
 ## Kohokohtia
 
 - **260 nm/vrk** — Helenan ja kapteeni Pertsan ennätys (27.–28.3.)
