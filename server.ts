@@ -168,7 +168,8 @@ async function handleSetLocations(req: Request): Promise<Response> {
           if (item === undefined) return undefined;
           const target = applyHourOffset(item.date, edit.hours);
           const [datePart, timePart] = target.split(' ');
-          if (datePart === undefined || timePart === undefined) return undefined;
+          if (datePart === undefined || timePart === undefined)
+            return undefined;
           return {
             uuid: edit.uuid,
             date: datePart.replaceAll(':', '-'),

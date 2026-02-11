@@ -14,29 +14,29 @@ Alus: kuunari Helena (rak. 1992), pituus 39 m. Kapteeni Pertsa, perämies Jusa, 
 | III   | Veera, Ville, Matti, Ilkka         |
 | IV    | Timo, Pauliina, Kaisa, Auli        |
 
-| Pvm   | Sijainti             | Vahti | Tapahtumia                                                   |
-| ----- | -------------------- | ----- | ------------------------------------------------------------ |
-| 21.3. | St. Maarten          |       | Miehistö laivaan klo 12, purjeet ylös iltapäivällä. Yöankkurointi Anguillassa. |
+| Pvm   | Sijainti             | Vahti | Tapahtumia                                                                                      |
+| ----- | -------------------- | ----- | ----------------------------------------------------------------------------------------------- |
+| 21.3. | St. Maarten          |       | Miehistö laivaan klo 12, purjeet ylös iltapäivällä. Yöankkurointi Anguillassa.                  |
 | 22.3. | 20°28'N, 63°39'W     | IV    | Prickly Pear Cays, snorklailua. Ensimmäinen yöpurjehdus pohjoiseen. Etelänristi, tähdenlentoja. |
-| 23.3. | 22°28.8'N, 63°40.2'W | III   | ~580 nm Bermudasta etelään. Tyyntä, koneajo. Uintitauko.     |
-| 24.3. | (25°03'N, 64°12'W)   | II    | Kravun kääntöpiirin ylitys klo 23. Valashavainto klo 18.     |
-| 25.3. | (26°49'N, 64°44'W)   | I     | Trooppiset sadekuurot, purjeharjoituksia.                    |
-| 26.3. | 30°11.9'N, 65°15.9'W | IV    | ~135 nm Bermudasta etelään. Vastatuulta. Lentokaloja kannella. |
-| 27.3. | 33°05.9'N, 61°42.0'W | III   | ~160 nm Bermudasta itään. Päätös ohittaa Bermuda! Kova vauhti, 15 kn huiput. |
-| 28.3. | 34°14'N, 57°04'W     | II    | Ennätys: 260 nm/vrk. Jusan 360. meripäivä Helenalla. Ensimmäinen makeavesisuihku. |
-| 29.3. | 33°34'N, 53°14'W     | I     | Vauhti 220 nm/vrk. Floresille 1100 nm. Radioliikennettä muiden alusten kanssa. |
-| 30.3. | 36°12.5'N, 48°10.1'W | IV    | Puolimatkan krouvi (Bermuda–Horta). Fosforiplankton, tähtitaivas. |
-| 31.3. | 36°40'N, 45°01'W     | III   | ~700 nm Floresista. Kylmä rintama, 22 m/s. Jiippi — kallistus vaihtui toiselle kyljelle. |
-| 1.4.  | 37°18'N, 41°56'W     | II    | ~513 nm Floresista. Aprillipila: "Picon tulivuori purkautunut". |
-| 2.4.  | (38°15'N, 38°10'W)   | I     | Sivuutettu torstai ilman hernekeittoa.                       |
-| 3.4.  | 39°13'N, 34°23'W     | IV    | Vajaa vrk Floresille. Pääsiäispäivällinen: lammasta punaviinikastikkeessa. Pakastin rikkoutui. |
-| 4.4.  | 39°22'N, 31°10'W     | III   | **Saapuminen Lajes das Flores**, Azorit! Tuuli 18–24 m/s. Rommit sitloodassa. |
-| 5.4.  | Flores               | II    | Saaren kierros tilatakseilla. Seitsemän kraaterijärveä. Saaren ainoa suomalainen Tino. |
-| 6.4.  | Flores → merelle     |       | Huoltopäivä. Lähtö klo 16, purjeet ylös 10 m/s tuuleen, kohti São Jorgea. |
-| 7.4.  | 38°40.8'N, 28°12.2'W | IV    | **Velas, São Jorge**. Yön purjehdus 144 nm. Flores→Velas 16 h. |
-| 8.4.  | 38°32'N, 28°37'W     |       | **Saapuminen Hortaan**, Faial. Legin päätesatama.            |
-| 9.4.  | Horta / Pico         | IV    | Picon tulivuoren huipulle 2351 m. Päätösjuhla Peter Cafessa. |
-| 10.4. | Horta                | IV    | Todistukset: 3215 merimailia. Kapteeni vaihtui.              |
+| 23.3. | 22°28.8'N, 63°40.2'W | III   | ~580 nm Bermudasta etelään. Tyyntä, koneajo. Uintitauko.                                        |
+| 24.3. | (25°03'N, 64°12'W)   | II    | Kravun kääntöpiirin ylitys klo 23. Valashavainto klo 18.                                        |
+| 25.3. | (26°49'N, 64°44'W)   | I     | Trooppiset sadekuurot, purjeharjoituksia.                                                       |
+| 26.3. | 30°11.9'N, 65°15.9'W | IV    | ~135 nm Bermudasta etelään. Vastatuulta. Lentokaloja kannella.                                  |
+| 27.3. | 33°05.9'N, 61°42.0'W | III   | ~160 nm Bermudasta itään. Päätös ohittaa Bermuda! Kova vauhti, 15 kn huiput.                    |
+| 28.3. | 34°14'N, 57°04'W     | II    | Ennätys: 260 nm/vrk. Jusan 360. meripäivä Helenalla. Ensimmäinen makeavesisuihku.               |
+| 29.3. | 33°34'N, 53°14'W     | I     | Vauhti 220 nm/vrk. Floresille 1100 nm. Radioliikennettä muiden alusten kanssa.                  |
+| 30.3. | 36°12.5'N, 48°10.1'W | IV    | Puolimatkan krouvi (Bermuda–Horta). Fosforiplankton, tähtitaivas.                               |
+| 31.3. | 36°40'N, 45°01'W     | III   | ~700 nm Floresista. Kylmä rintama, 22 m/s. Jiippi — kallistus vaihtui toiselle kyljelle.        |
+| 1.4.  | 37°18'N, 41°56'W     | II    | ~513 nm Floresista. Aprillipila: "Picon tulivuori purkautunut".                                 |
+| 2.4.  | (38°15'N, 38°10'W)   | I     | Sivuutettu torstai ilman hernekeittoa.                                                          |
+| 3.4.  | 39°13'N, 34°23'W     | IV    | Vajaa vrk Floresille. Pääsiäispäivällinen: lammasta punaviinikastikkeessa. Pakastin rikkoutui.  |
+| 4.4.  | 39°22'N, 31°10'W     | III   | **Saapuminen Lajes das Flores**, Azorit! Tuuli 18–24 m/s. Rommit sitloodassa.                   |
+| 5.4.  | Flores               | II    | Saaren kierros tilatakseilla. Seitsemän kraaterijärveä. Saaren ainoa suomalainen Tino.          |
+| 6.4.  | Flores → merelle     |       | Huoltopäivä. Lähtö klo 16, purjeet ylös 10 m/s tuuleen, kohti São Jorgea.                       |
+| 7.4.  | 38°40.8'N, 28°12.2'W | IV    | **Velas, São Jorge**. Yön purjehdus 144 nm. Flores→Velas 16 h.                                  |
+| 8.4.  | 38°32'N, 28°37'W     |       | **Saapuminen Hortaan**, Faial. Legin päätesatama.                                               |
+| 9.4.  | Horta / Pico         | IV    | Picon tulivuoren huipulle 2351 m. Päätösjuhla Peter Cafessa.                                    |
+| 10.4. | Horta                | IV    | Todistukset: 3215 merimailia. Kapteeni vaihtui.                                                 |
 
 ## Legi 2: Horta — Dublin (S1260)
 
