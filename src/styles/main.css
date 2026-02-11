@@ -516,6 +516,26 @@ canvas.crosshair {
   border-color: #bbb;
 }
 
+/* Date edit row in popup */
+.date-edit-row {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+  align-items: center;
+}
+.date-input {
+  flex: 1;
+  padding: 2px 6px;
+  font-size: 11px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  min-width: 0;
+}
+.date-input:focus {
+  outline: none;
+  border-color: #007aff;
+}
+
 /* Duration text */
 .photo-popup .duration {
   margin-left: 6px;

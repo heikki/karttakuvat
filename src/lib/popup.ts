@@ -4,19 +4,25 @@ import {
   addPendingEdit,
   addPendingTimeEdit,
   applyHourOffset,
+  copyDate,
   copyLocation,
+  getCopiedDate,
   getCopiedLocation,
+  setPendingTimeEdit,
   state
 } from './data';
 import type { Photo } from './types';
 import { updateLightboxGroup } from './ui';
 import {
   compareDates,
+  computeDateOffsetHours,
+  computeFullDatetimeOffsetHours,
   durationSpan,
   formatDate,
   formatLocation,
   getThumbUrl,
-  isVideo
+  isVideo,
+  parseUserDatetime
 } from './utils';
 
 // State
@@ -25,6 +31,7 @@ let clusterPhotos: Photo[] = [];
 let currentSinglePhotoIndex: number | null = null;
 let currentPhotoUuid: string | null = null;
 let currentGroupIndex = 0;
+let dateEditMode = false;
 
 // Callbacks that will be set by map.ts
 let highlightMarkerFn: (index: number | null) => void = () => {
@@ -75,8 +82,59 @@ function getEffectiveDate(photo: Photo): string {
   return applyHourOffset(photo.date, offset);
 }
 
-function timeButtonsHtml(uuid: string): string {
-  return `<span class="time-adjust-buttons"><button class="time-btn" onclick="event.preventDefault(); window.adjustTime('${uuid}', -1)">-1h</button><button class="time-btn" onclick="event.preventDefault(); window.adjustTime('${uuid}', 1)">+1h</button></span>`;
+export function isDateEditMode(): boolean {
+  return dateEditMode;
+}
+
+function getCurrentPhoto(): Photo | undefined {
+  if (currentSinglePhotoIndex !== null) {
+    return state.filteredPhotos[currentSinglePhotoIndex];
+  }
+  if (clusterPhotos.length > 0) {
+    return clusterPhotos[currentGroupIndex];
+  }
+  return undefined;
+}
+
+function shouldShowDatePaste(photo: Photo): boolean {
+  const copied = getCopiedDate();
+  if (copied === null) return false;
+  const effectiveDate = getEffectiveDate(photo);
+  if (effectiveDate === '') return false;
+  const dayPart = effectiveDate.split(' ')[0];
+  return dayPart !== copied;
+}
+
+function dateNormalButtonsHtml(photo: Photo): string {
+  const pasteVisible = shouldShowDatePaste(photo);
+  return `<span class="time-adjust-buttons"><button class="time-btn" onclick="event.preventDefault(); window.copyDateFromPopup()">copy</button><button class="time-btn" id="date-paste" onclick="event.preventDefault(); window.pasteDateToPhoto()"${pasteVisible ? '' : ' style="display:none"'}>paste</button><button class="time-btn" onclick="event.preventDefault(); window.toggleDateEdit()">edit</button></span>`;
+}
+
+function dateEditButtonsHtml(uuid: string): string {
+  return `<span class="time-adjust-buttons"><button class="time-btn" onclick="event.preventDefault(); window.adjustTime('${uuid}', -24)">-1d</button><button class="time-btn" onclick="event.preventDefault(); window.adjustTime('${uuid}', 24)">+1d</button><button class="time-btn" onclick="event.preventDefault(); window.adjustTime('${uuid}', -1)">-1h</button><button class="time-btn" onclick="event.preventDefault(); window.adjustTime('${uuid}', 1)">+1h</button><button class="time-btn" onclick="event.preventDefault(); window.toggleDateEdit()">done</button></span>`;
+}
+
+function editableDateStr(exifDate: string): string {
+  if (exifDate === '') return '';
+  const [datePart, timePart] = exifDate.split(' ');
+  if (datePart === undefined) return '';
+  const parts = datePart.split(':');
+  if (parts.length < 3) return '';
+  const d = `${parseInt(parts[2]!, 10)}.${parseInt(parts[1]!, 10)}.${parts[0]!}`;
+  if (timePart === undefined) return d;
+  const [h, m] = timePart.split(':');
+  if (h === undefined || m === undefined) return d;
+  return `${d} ${h}:${m}`;
+}
+
+function dateLineHtml(photo: Photo): string {
+  const dateText = formatDate(getEffectiveDate(photo), photo.tz);
+  const duration = durationSpan(photo);
+  if (dateEditMode) {
+    const inputVal = editableDateStr(getEffectiveDate(photo));
+    return `${dateText}${duration} ${dateEditButtonsHtml(photo.uuid)}<div class="date-edit-row"><input class="date-input" type="text" value="${inputVal}" placeholder="25.3. 14:30" id="date-input" onkeydown="window.handleDateInputKey(event)" /><button class="time-btn" onclick="event.preventDefault(); window.applyManualDate()">OK</button></div>`;
+  }
+  return `${dateText}${duration} ${dateNormalButtonsHtml(photo)}`;
 }
 
 export interface FeatureProps {
@@ -122,7 +180,11 @@ function buildPhotosOverlay(id: string, photo: Photo): string {
 }
 
 function singleInfoHtml(photo: Photo, index: number): string {
-  return `${formatDate(getEffectiveDate(photo), photo.tz)}${durationSpan(photo)} ${timeButtonsHtml(photo.uuid)}<br>${formatLocation(photo)} ${locationButtonsHtml(photo, index)}`;
+  return `${dateLineHtml(photo)}<br>${formatLocation(photo)} ${locationButtonsHtml(photo, index)}`;
+}
+
+function groupInfoHtml(photo: Photo): string {
+  return `${dateLineHtml(photo)}<br>${formatLocation(photo)}`;
 }
 
 function buildSinglePopupHtml(photo: Photo, index: number): string {
@@ -167,6 +229,7 @@ export function showPopup(props: FeatureProps, coords: [number, number]) {
   const photo = state.filteredPhotos[index];
   if (photo === undefined) return;
 
+  dateEditMode = false;
   currentSinglePhotoIndex = index;
   currentPhotoUuid = photo.uuid;
   clusterPhotos = [];
@@ -185,6 +248,7 @@ export function showPopup(props: FeatureProps, coords: [number, number]) {
   updatePasteLink(index);
 
   currentPopup.on('close', () => {
+    dateEditMode = false;
     highlightMarkerFn(null);
     currentSinglePhotoIndex = null;
     currentPhotoUuid = null;
@@ -267,7 +331,7 @@ function buildPopupContent(options: PopupContentOptions): string {
             ${videoOverlay}
             ${photosOverlay}
             </div>
-            <div class="info" id="group-info">${formatDate(getEffectiveDate(firstPhoto), firstPhoto.tz)} ${timeButtonsHtml(firstPhoto.uuid)}<br>${formatLocation(firstPhoto)}</div>
+            <div class="info" id="group-info">${groupInfoHtml(firstPhoto)}</div>
             <div class="thumb-strip">${thumbsHtml}</div>
         </div>`;
 }
@@ -281,6 +345,7 @@ export function showMultiPhotoPopup(
   if (currentPopup !== null) {
     currentPopup.remove();
   }
+  dateEditMode = false;
   currentSinglePhotoIndex = null;
 
   const map = getMapFn();
@@ -333,6 +398,7 @@ export function showMultiPhotoPopup(
     .addTo(map);
 
   currentPopup.on('close', () => {
+    dateEditMode = false;
     clearSelectionFn();
     highlightMarkerFn(null);
     clusterPhotos = [];
@@ -371,6 +437,8 @@ export function selectGroupPhoto(index: number) {
   const photo = clusterPhotos[index];
   if (photo === undefined) return;
 
+  dateEditMode = false;
+
   const mainImg = document.getElementById(
     'group-main-img'
   ) as HTMLImageElement | null;
@@ -383,7 +451,7 @@ export function selectGroupPhoto(index: number) {
     };
   }
   if (info !== null) {
-    info.innerHTML = `${formatDate(getEffectiveDate(photo), photo.tz)} ${timeButtonsHtml(photo.uuid)}<br>${formatLocation(photo)}`;
+    info.innerHTML = groupInfoHtml(photo);
   }
   updatePhotosLink('group-photos-link', photo);
   updateVideoIndicator(photo);
@@ -422,7 +490,7 @@ export function adjustTime(uuid: string, hours: number) {
   if (groupInfo !== null && clusterPhotos.length > 0) {
     const photo = clusterPhotos[currentGroupIndex];
     if (photo?.uuid === uuid) {
-      groupInfo.innerHTML = `${formatDate(getEffectiveDate(photo), photo.tz)} ${timeButtonsHtml(photo.uuid)}<br>${formatLocation(photo)}`;
+      groupInfo.innerHTML = groupInfoHtml(photo);
     }
   }
 }
@@ -443,10 +511,114 @@ export function pasteLocation(photoIndex: number) {
   showPopup({ index: photoIndex }, [copied.lon, copied.lat]);
 }
 
+function refreshDateRow() {
+  if (currentSinglePhotoIndex !== null) {
+    const photo = state.filteredPhotos[currentSinglePhotoIndex];
+    if (photo === undefined) return;
+    const singleInfo = document.getElementById('single-info');
+    if (singleInfo !== null) {
+      singleInfo.innerHTML = singleInfoHtml(photo, currentSinglePhotoIndex);
+      updatePasteLink(currentSinglePhotoIndex);
+    }
+  } else if (clusterPhotos.length > 0) {
+    const photo = clusterPhotos[currentGroupIndex];
+    if (photo === undefined) return;
+    const groupInfo = document.getElementById('group-info');
+    if (groupInfo !== null) {
+      groupInfo.innerHTML = groupInfoHtml(photo);
+    }
+  }
+}
+
+export function copyDateFromPopup() {
+  const photo = getCurrentPhoto();
+  if (photo === undefined) return;
+  const effectiveDate = getEffectiveDate(photo);
+  if (effectiveDate === '') return;
+  const dayPart = effectiveDate.split(' ')[0];
+  if (dayPart === undefined) return;
+  copyDate(dayPart);
+  refreshDateRow();
+}
+
+export function pasteDateToPhoto() {
+  const photo = getCurrentPhoto();
+  if (photo === undefined) return;
+  const copied = getCopiedDate();
+  if (copied === null) return;
+  const offset = computeDateOffsetHours(photo.date, copied);
+  if (offset === null) return;
+  setPendingTimeEdit(photo.uuid, offset);
+  refreshDateRow();
+}
+
+export function toggleDateEdit() {
+  dateEditMode = !dateEditMode;
+  refreshDateRow();
+  if (dateEditMode) {
+    const input = document.getElementById(
+      'date-input'
+    ) as HTMLInputElement | null;
+    input?.focus();
+  }
+}
+
+function computeManualDateOffset(
+  originalDate: string,
+  parsed: { day: string; time: string | null }
+): number | null {
+  if (parsed.time === null) {
+    return computeDateOffsetHours(originalDate, parsed.day);
+  }
+  const timeParts = parsed.time.split(':').map(Number);
+  const dayParts = parsed.day.split(':');
+  const target = new Date(
+    parseInt(dayParts[0]!, 10),
+    parseInt(dayParts[1]!, 10) - 1,
+    parseInt(dayParts[2]!, 10),
+    timeParts[0] ?? 0,
+    timeParts[1] ?? 0,
+    0
+  );
+  return computeFullDatetimeOffsetHours(originalDate, target);
+}
+
+export function applyManualDate() {
+  const photo = getCurrentPhoto();
+  if (photo === undefined) return;
+  const input = document.getElementById(
+    'date-input'
+  ) as HTMLInputElement | null;
+  if (input === null || input.value.trim() === '') return;
+  const yearStr = photo.date.split(':')[0];
+  const fallbackYear =
+    yearStr !== undefined && yearStr !== ''
+      ? parseInt(yearStr, 10)
+      : new Date().getFullYear();
+  const parsed = parseUserDatetime(input.value, fallbackYear);
+  if (parsed === null) return;
+  const offset = computeManualDateOffset(photo.date, parsed);
+  if (offset === null) return;
+  setPendingTimeEdit(photo.uuid, offset);
+  dateEditMode = false;
+  refreshDateRow();
+}
+
+export function handleDateInputKey(e: KeyboardEvent) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    applyManualDate();
+  } else if (e.key === 'Escape') {
+    e.preventDefault();
+    toggleDateEdit();
+  }
+}
+
 export function navigateSinglePhoto(newIndex: number) {
   const photo = state.filteredPhotos[newIndex];
   if (photo === undefined || currentPopup === null) return;
 
+  dateEditMode = false;
   currentSinglePhotoIndex = newIndex;
   currentPhotoUuid = photo.uuid;
   highlightMarkerFn(newIndex);

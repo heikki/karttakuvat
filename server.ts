@@ -34,7 +34,7 @@ function applyHourOffset(dateStr: string, hours: number): string {
     parseInt(mi!, 10),
     parseInt(sc!, 10)
   );
-  d.setHours(d.getHours() + hours);
+  d.setTime(d.getTime() + Math.round(hours * 3600000));
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}:${pad(d.getMonth() + 1)}:${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
@@ -161,9 +161,25 @@ async function handleSetLocations(req: Request): Promise<Response> {
     }
 
     if (timeEdits.length > 0) {
+      // Compute target dates and send absolute date/time to script
+      const timeEditsWithTarget = timeEdits
+        .map((edit) => {
+          const item = itemsByUuid.get(edit.uuid);
+          if (item === undefined) return undefined;
+          const target = applyHourOffset(item.date, edit.hours);
+          const [datePart, timePart] = target.split(' ');
+          if (datePart === undefined || timePart === undefined) return undefined;
+          return {
+            uuid: edit.uuid,
+            date: datePart.replaceAll(':', '-'),
+            time: timePart
+          };
+        })
+        .filter((e) => e !== undefined);
+
       const result = await runScript(
         ['python3', 'scripts/set_times.py'],
-        JSON.stringify(timeEdits),
+        JSON.stringify(timeEditsWithTarget),
         'set_times.py'
       );
       if ('error' in result) return result.error;

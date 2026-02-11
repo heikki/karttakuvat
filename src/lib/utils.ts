@@ -93,3 +93,72 @@ export function getFullUrl(photo: Photo): string {
   }
   return photo.full;
 }
+
+const exifDatePattern =
+  /^(?<yr>\d{4}):(?<mo>\d{2}):(?<dy>\d{2}) (?<hr>\d{2}):(?<mi>\d{2}):(?<sc>\d{2})$/v;
+
+export function parseExifDate(dateStr: string): Date | null {
+  const match = exifDatePattern.exec(dateStr);
+  if (match?.groups === undefined) return null;
+  const { yr, mo, dy, hr, mi, sc } = match.groups;
+  return new Date(
+    parseInt(yr!, 10),
+    parseInt(mo!, 10) - 1,
+    parseInt(dy!, 10),
+    parseInt(hr!, 10),
+    parseInt(mi!, 10),
+    parseInt(sc!, 10)
+  );
+}
+
+export function computeDateOffsetHours(
+  originalDateStr: string,
+  targetDatePart: string
+): number | null {
+  const orig = parseExifDate(originalDateStr);
+  if (orig === null) return null;
+  const parts = targetDatePart.split(':');
+  if (parts.length < 3) return null;
+  const target = new Date(
+    parseInt(parts[0]!, 10),
+    parseInt(parts[1]!, 10) - 1,
+    parseInt(parts[2]!, 10),
+    orig.getHours(),
+    orig.getMinutes(),
+    orig.getSeconds()
+  );
+  return (target.getTime() - orig.getTime()) / 3600000;
+}
+
+export function computeFullDatetimeOffsetHours(
+  originalDateStr: string,
+  targetDatetime: Date
+): number | null {
+  const orig = parseExifDate(originalDateStr);
+  if (orig === null) return null;
+  return (targetDatetime.getTime() - orig.getTime()) / 3600000;
+}
+
+const userDatePattern =
+  /^(?<dy>\d{1,2})\.(?<mo>\d{1,2})\.(?<yr>\d{4})?\s*(?<tm>\d{1,2}:\d{2})?$/v;
+
+export function parseUserDatetime(
+  input: string,
+  fallbackYear: number
+): { day: string; time: string | null } | null {
+  const trimmed = input.trim();
+  const match = userDatePattern.exec(trimmed);
+  if (match?.groups === undefined) return null;
+  const day = parseInt(match.groups.dy!, 10);
+  const month = parseInt(match.groups.mo!, 10);
+  const year =
+    match.groups.yr !== undefined && match.groups.yr !== ''
+      ? parseInt(match.groups.yr, 10)
+      : fallbackYear;
+  const time =
+    match.groups.tm !== undefined && match.groups.tm !== ''
+      ? match.groups.tm
+      : null;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return { day: `${year}:${pad(month)}:${pad(day)}`, time };
+}

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Adjust photo times in Apple Photos using osxphotos timewarp.
+Set photo dates in Apple Photos using osxphotos timewarp.
 
 Reads JSON array of edits from stdin:
-    [{"uuid": "...", "hours": 1}, ...]
+    [{"uuid": "...", "date": "YYYY-MM-DD", "time": "HH:MM:SS"}, ...]
 
-Shifts each photo's time by the given number of hours (positive or negative).
+Sets each photo's date and time to the specified values.
 
 Requirements:
     - osxphotos: pipx install osxphotos
@@ -34,19 +34,16 @@ def main():
     results = []
     for edit in edits:
         uuid = edit["uuid"]
-        hours = edit["hours"]
-
-        # Format as ±HH:MM:SS for osxphotos timewarp --time-delta
-        sign = "+" if hours >= 0 else "-"
-        abs_hours = abs(hours)
-        delta = f"{sign}{abs_hours:02d}:00:00"
+        date = edit["date"]
+        time = edit["time"]
 
         try:
             result = subprocess.run(
                 [
                     OSXPHOTOS,
                     "timewarp",
-                    "--time-delta", delta,
+                    "--date", date,
+                    "--time", time,
                     "--uuid", uuid,
                     "--force",
                 ],

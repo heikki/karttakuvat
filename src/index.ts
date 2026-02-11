@@ -18,12 +18,19 @@ import {
 } from './lib/map';
 import {
   adjustTime,
+  applyManualDate,
+  copyDateFromPopup,
   copyLocationFromPopup,
   getClusterPhotos,
   getCurrentGroupIndex,
+  getCurrentPopup,
   getCurrentSinglePhotoIndex,
+  handleDateInputKey,
+  isDateEditMode,
   navigateSinglePhoto,
-  pasteLocation
+  pasteDateToPhoto,
+  pasteLocation,
+  toggleDateEdit
 } from './lib/popup';
 import {
   hideLightbox,
@@ -49,6 +56,11 @@ declare global {
     copyLocationFromPopup: typeof copyLocationFromPopup;
     adjustTime: typeof adjustTime;
     pasteLocation: typeof pasteLocation;
+    copyDateFromPopup: typeof copyDateFromPopup;
+    pasteDateToPhoto: typeof pasteDateToPhoto;
+    toggleDateEdit: typeof toggleDateEdit;
+    applyManualDate: typeof applyManualDate;
+    handleDateInputKey: typeof handleDateInputKey;
   }
 }
 
@@ -85,11 +97,22 @@ declare global {
 
 // For now write index.ts assuming exports exist.
 
-// Space toggles between popup preview and lightbox (capture phase to intercept before focused elements)
+// Keyboard shortcuts (capture phase to intercept before focused elements)
 document.addEventListener(
   'keydown',
   (e) => {
+    if (e.key === 'Escape' && isDateEditMode()) {
+      e.preventDefault();
+      toggleDateEdit();
+      return;
+    }
     if (e.key !== ' ') return;
+    if (
+      e.target instanceof HTMLInputElement ||
+      e.target instanceof HTMLTextAreaElement
+    ) {
+      return;
+    }
     if (isLightboxActive()) {
       e.preventDefault();
       e.stopPropagation();
@@ -131,6 +154,11 @@ window.copyLocation = copyLocation;
 window.copyLocationFromPopup = copyLocationFromPopup;
 window.adjustTime = adjustTime;
 window.pasteLocation = pasteLocation;
+window.copyDateFromPopup = copyDateFromPopup;
+window.pasteDateToPhoto = pasteDateToPhoto;
+window.toggleDateEdit = toggleDateEdit;
+window.applyManualDate = applyManualDate;
+window.handleDateInputKey = handleDateInputKey;
 
 function setupFilterListeners() {
   const yearSelect = document.getElementById('year-select');
@@ -201,6 +229,7 @@ async function saveEdits() {
       const text = await response.text();
       throw new Error(text);
     }
+    getCurrentPopup()?.remove();
     await loadPhotos();
     clearPendingEdits();
   } catch (err) {

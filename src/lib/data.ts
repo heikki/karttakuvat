@@ -104,6 +104,17 @@ export function getCopiedLocation(): { lat: number; lon: number } | null {
   return copiedLocation;
 }
 
+// Copied date for paste (day part only, e.g. "2008:07:09")
+let copiedDate: string | null = null;
+
+export function copyDate(datePart: string) {
+  copiedDate = datePart;
+}
+
+export function getCopiedDate(): string | null {
+  return copiedDate;
+}
+
 export function addPendingTimeEdit(uuid: string, hours: number) {
   const current = state.pendingTimeEdits.get(uuid) ?? 0;
   const total = current + hours;
@@ -122,6 +133,15 @@ export function getPendingTimeEdits(): Array<{ uuid: string; hours: number }> {
   }));
 }
 
+export function setPendingTimeEdit(uuid: string, totalHours: number) {
+  if (totalHours === 0) {
+    state.pendingTimeEdits.delete(uuid);
+  } else {
+    state.pendingTimeEdits.set(uuid, totalHours);
+  }
+  notifyEdits();
+}
+
 const datePattern =
   /^(?<yr>\d{4}):(?<mo>\d{2}):(?<dy>\d{2}) (?<hr>\d{2}):(?<mi>\d{2}):(?<sc>\d{2})$/v;
 
@@ -138,7 +158,7 @@ export function applyHourOffset(dateStr: string, hours: number): string {
     parseInt(mi!, 10),
     parseInt(sc!, 10)
   );
-  d.setHours(d.getHours() + hours);
+  d.setTime(d.getTime() + Math.round(hours * 3600000));
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}:${pad(d.getMonth() + 1)}:${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
