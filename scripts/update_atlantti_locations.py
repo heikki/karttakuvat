@@ -41,7 +41,7 @@ TIMELINE_DMS = {
     "2015:03:21": (dms(18, 4.14),  dms(-63, 5.1)),    # St. Maarten
     "2015:03:22": (dms(20, 28),    dms(-63, 39)),      # 20°28'N, 63°39'W
     "2015:03:23": (dms(22, 28.8),  dms(-63, 40.2)),    # 22°28.8'N, 63°40.2'W
-    "2015:03:24": (dms(23, 26),    None),               # ~23°26'N, lon unknown
+    # Mar 24 omitted — fully interpolated (logbook 23°26'N is the 23:00 Tropic crossing, not noon)
     "2015:03:26": (dms(30, 11.9),  dms(-65, 15.9)),    # 30°11.9'N, 65°15.9'W
     "2015:03:27": (dms(33, 5.9),   dms(-61, 42)),      # 33°05.9'N, 61°42'W
     "2015:03:28": (dms(34, 14),    dms(-57, 4)),        # 34°14'N, 57°04'W
@@ -70,12 +70,12 @@ TIMELINE = {}
 for date, (lat, lon) in TIMELINE_DMS.items():
     TIMELINE[date] = (round(lat, 3), round(lon, 3) if lon is not None else None)
 
-# Mar 24: lat from timeline, lon interpolated between Mar 23 and Mar 26
-lat_24 = TIMELINE["2015:03:24"][0]
+# Mar 24: fully interpolated (1/3 from Mar 23 to Mar 26)
+lat_24 = interp(TIMELINE["2015:03:23"][0], TIMELINE["2015:03:26"][0], 1/3)
 lon_24 = interp(TIMELINE["2015:03:23"][1], TIMELINE["2015:03:26"][1], 1/3)
 TIMELINE["2015:03:24"] = (lat_24, lon_24)
 
-# Mar 25: fully interpolated between Mar 24 and Mar 26
+# Mar 25: interpolated halfway between Mar 24 and Mar 26
 lat_25 = interp(TIMELINE["2015:03:24"][0], TIMELINE["2015:03:26"][0], 1/2)
 lon_25 = interp(TIMELINE["2015:03:24"][1], TIMELINE["2015:03:26"][1], 1/2)
 TIMELINE["2015:03:25"] = (lat_25, lon_25)
