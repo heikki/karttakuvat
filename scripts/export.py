@@ -134,6 +134,9 @@ def batch_export(photos, full_dir, album=None):
         "--only-photos",  # Exclude videos
         "--convert-to-jpeg",
         "--jpeg-quality", "0.9",
+        "--jpeg-ext", "jpg",  # Use .jpg not .jpeg (keeps export DB in sync)
+        "--skip-original-if-edited",  # Export only the edited version
+        "--edited-suffix", "",  # No _edited suffix — just UUID.jpg
         "--filename", "{uuid}",
         "--download-missing",
         "--update"  # Only export new/changed files
@@ -146,22 +149,6 @@ def batch_export(photos, full_dir, album=None):
 
     if result.returncode != 0:
         print("Warning: Some photos may have failed to export")
-
-    # Replace originals with edited versions (e.g. rotation edits)
-    for f in full_dir.glob("*_edited.*"):
-        uuid = f.stem.removesuffix("_edited")
-        target = full_dir / f"{uuid}.jpg"
-        f.rename(target)
-        # Remove the unedited original so it doesn't overwrite during normalization
-        for ext in [".jpeg", ".JPEG", ".JPG"]:
-            orig = full_dir / f"{uuid}{ext}"
-            if orig.exists():
-                orig.unlink()
-
-    # Normalize extensions to .jpg
-    for pattern in ["*.jpeg", "*.JPEG", "*.JPG"]:
-        for f in full_dir.glob(pattern):
-            f.rename(f.with_suffix(".jpg"))
 
 
 def check_ffmpeg():
@@ -639,6 +626,7 @@ def refresh_edited(full_dir, thumb_dir):
             str(tmp_path),
             "--convert-to-jpeg",
             "--jpeg-quality", "0.9",
+            "--jpeg-ext", "jpg",
             "--filename", "{uuid}",
             "--download-missing",
         ]
