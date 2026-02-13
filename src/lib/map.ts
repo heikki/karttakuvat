@@ -142,7 +142,13 @@ function addNightLayer() {
 
 let nightAnimationId: number | null = null;
 
-export function updateSunPosition(dateStr: string, tz: string | null) {
+let nightLayerAlbums: string[] = [];
+
+export function updateSunPosition(
+  dateStr: string,
+  tz: string | null,
+  albums?: string[]
+) {
   if (dateStr === '') return;
   const targetDate = new Date(toUtcSortKey(dateStr, tz));
   if (isNaN(targetDate.getTime())) return;
@@ -152,6 +158,9 @@ export function updateSunPosition(dateStr: string, tz: string | null) {
     nightAnimationId = null;
   }
 
+  const prevAlbums = nightLayerAlbums;
+  nightLayerAlbums = albums ?? [];
+
   const currentDate = nightLayerDate;
   if (currentDate === null) {
     nightLayerDate = targetDate;
@@ -160,7 +169,15 @@ export function updateSunPosition(dateStr: string, tz: string | null) {
     return;
   }
 
-  const startTime = currentDate.getTime();
+  // Full transition if photos share an album, otherwise just time-of-day
+  const sharesAlbum = prevAlbums.some((a) => nightLayerAlbums.includes(a));
+  const startTime = sharesAlbum
+    ? currentDate.getTime()
+    : new Date(targetDate).setHours(
+        currentDate.getHours(),
+        currentDate.getMinutes(),
+        currentDate.getSeconds()
+      );
   const endTime = targetDate.getTime();
   const duration = 400;
   const animStart = performance.now();
