@@ -158,6 +158,21 @@ export function initMap() {
     }
   });
 
+  // Re-show popup when projection changes so it repositions correctly
+  map.on('projectiontransition', () => {
+    const popup = getCurrentPopup();
+    if (popup === null) return;
+    const uuid = getCurrentPhotoUuid();
+    if (uuid === null) return;
+    const index = state.filteredPhotos.findIndex((p) => p.uuid === uuid);
+    if (index === -1) return;
+    const photo = state.filteredPhotos[index]!;
+    const pending = state.pendingEdits.get(photo.uuid);
+    const lon = pending === undefined ? (photo.lon ?? 0) : pending.lon;
+    const lat = pending === undefined ? (photo.lat ?? 0) : pending.lat;
+    showPopup({ index }, [lon, lat]);
+  });
+
   subscribe(() => {
     if (map.isStyleLoaded() === true) {
       const uuid = getCurrentPhotoUuid();
@@ -486,11 +501,7 @@ function panToFitPopup(coords: [number, number]) {
 
     if (panX !== 0 || panY !== 0) {
       try {
-        map.easeTo({
-          center: coords,
-          offset: [-125, popupRect.height / 2],
-          duration: 300
-        });
+        map.panBy([panX, panY], { duration: 300 });
       } catch {
         // Silently ignore MapLibre internal errors
       }
@@ -529,8 +540,14 @@ export function fitToPhotos(animate = false, selectFirst = false) {
     return;
   }
 
+  const isGlobe = map.getProjection().type === 'globe';
   map.fitBounds(bounds, {
-    padding: { top: 350, bottom: 40, left: 50, right: 270 },
+    padding: {
+      top: isGlobe ? 50 : 350,
+      bottom: 40,
+      left: 50,
+      right: 270
+    },
     maxZoom: 18,
     duration: animate ? 500 : 0
   });
