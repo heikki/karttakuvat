@@ -110,29 +110,33 @@ function withGlobe(style: StyleSpecification): StyleSpecification {
   return {
     ...style,
     projection: { type: 'globe' },
-    sky: {
-      'sky-color': '#000000',
-      'horizon-color': '#000000',
-      'atmosphere-blend': 0.3
-    }
+    light: { anchor: 'viewport', color: '#ffffff', intensity: 0 }
   };
 }
 
-const nightLayer = new NightLayer({
-  date: null,
-  opacity: 0.8,
-  color: [0, 0, 0, 255],
-  daytimeColor: [0, 0, 0, 0],
-  twilightSteps: 0,
-  updateInterval: 0
-});
+function createNightLayer(date: Date | null = null): NightLayer {
+  return new NightLayer({
+    date,
+    opacity: 0.8,
+    color: [0, 0, 0, 255],
+    daytimeColor: [0, 0, 0, 0],
+    twilightSteps: 0,
+    updateInterval: 0
+  });
+}
+
+let nightLayer = createNightLayer();
+let nightLayerDate: Date | null = null;
 
 function addNightLayer() {
-  if (map.getLayer(nightLayer.id) !== undefined) return;
-  map.addLayer(nightLayer);
-  // Place above regular markers but below selected/highlight markers
+  if (map.getLayer(nightLayer.id) !== undefined) {
+    map.removeLayer(nightLayer.id);
+  }
+  nightLayer = createNightLayer(nightLayerDate);
   if (map.getLayer('photo-markers-selected') !== undefined) {
-    map.moveLayer(nightLayer.id, 'photo-markers-selected');
+    map.addLayer(nightLayer, 'photo-markers-selected');
+  } else {
+    map.addLayer(nightLayer);
   }
 }
 
@@ -148,8 +152,9 @@ export function updateSunPosition(dateStr: string, tz: string | null) {
     nightAnimationId = null;
   }
 
-  const currentDate = nightLayer.getDate();
+  const currentDate = nightLayerDate;
   if (currentDate === null) {
+    nightLayerDate = targetDate;
     nightLayer.setDate(targetDate);
     map.triggerRepaint();
     return;
@@ -164,7 +169,9 @@ export function updateSunPosition(dateStr: string, tz: string | null) {
     const t = Math.min(1, (now - animStart) / duration);
     const eased = t * (2 - t); // ease-out
     const interpolated = startTime + (endTime - startTime) * eased;
-    nightLayer.setDate(new Date(interpolated));
+    const d = new Date(interpolated);
+    nightLayerDate = d;
+    nightLayer.setDate(d);
     map.triggerRepaint();
     if (t < 1) {
       nightAnimationId = requestAnimationFrame(animate);
@@ -206,9 +213,9 @@ export function initMap() {
 
   map.on('load', () => {
     addPhotoLayers();
-    addNightLayer();
     addSelectionLayer();
     setupMarkerInteractions();
+    addNightLayer();
     setupRectangularSelection();
 
     updateMapData();
@@ -294,12 +301,12 @@ export function changeMapStyle(styleKey: string) {
   // Stop any ongoing animation to prevent MapLibre crash during style change
   map.stop();
   map.setStyle(withGlobe(style));
-  void map.once('idle', () => {
+  void map.once('style.load', () => {
     addPhotoLayers();
-    addNightLayer();
     addSelectionLayer();
     setupMarkerInteractions();
     updateMapData();
+    addNightLayer();
   });
 }
 
