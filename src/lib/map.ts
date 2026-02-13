@@ -279,7 +279,8 @@ function addPhotoLayers() {
     ],
     'circle-radius': 8,
     'circle-stroke-width': 2,
-    'circle-stroke-color': '#fff'
+    'circle-stroke-color': '#fff',
+    'circle-pitch-alignment': 'map'
   };
 
   map.addLayer({
