@@ -364,6 +364,23 @@ body {
   font-size: 11px;
 }
 
+.metadata-body .copy-btn {
+  margin-left: 6px;
+  padding: 2px;
+  background: none;
+  color: #98989d;
+  border: none;
+  cursor: pointer;
+  vertical-align: middle;
+  line-height: 1;
+}
+.metadata-body .copy-btn:hover {
+  color: #0a84ff;
+}
+.metadata-body .copy-btn.copied {
+  color: #30d158;
+}
+
 /* Lightbox image wrapper */
 .lightbox-image-wrap {
   position: relative;

@@ -256,7 +256,11 @@ function renderMetadataTable(data: Record<string, unknown>): string {
     ) {
       continue;
     }
-    html += `<tr><td>${label}</td><td>${formatMetadataValue(val)}</td></tr>`;
+    if (key === 'uuid') {
+      html += `<tr><td>${label}</td><td>${formatMetadataValue(val)} <button class="copy-btn" onclick="navigator.clipboard.writeText('${String(val)}').then(()=>{this.classList.add('copied');setTimeout(()=>this.classList.remove('copied'),1000)})" title="Copy UUID"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 010 1.5h-1.5a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-1.5a.75.75 0 011.5 0v1.5A1.75 1.75 0 019.25 16h-7.5A1.75 1.75 0 010 14.25z"/><path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0114.25 11h-7.5A1.75 1.75 0 015 9.25zm1.75-.25a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-7.5a.25.25 0 00-.25-.25z"/></svg></button></td></tr>`;
+    } else {
+      html += `<tr><td>${label}</td><td>${formatMetadataValue(val)}</td></tr>`;
+    }
   }
   html += '</table>';
   return html;
