@@ -62,6 +62,7 @@ declare global {
     toggleDateEdit: typeof toggleDateEdit;
     applyManualDate: typeof applyManualDate;
     handleDateInputKey: typeof handleDateInputKey;
+    showMetadata: (uuid: string) => void;
   }
 }
 
@@ -160,6 +161,158 @@ window.pasteDateToPhoto = pasteDateToPhoto;
 window.toggleDateEdit = toggleDateEdit;
 window.applyManualDate = applyManualDate;
 window.handleDateInputKey = handleDateInputKey;
+window.showMetadata = showMetadata;
+
+// --- Metadata modal ---
+function escapeHtml(s: string): string {
+  return s.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function formatSimpleValue(value: boolean | string | number): string {
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+  if (typeof value === 'string') {
+    return value === '' ? '<em>—</em>' : escapeHtml(value);
+  }
+  return String(value);
+}
+
+function formatMetadataValue(value: unknown): string {
+  if (value === null || value === undefined) return '<em>—</em>';
+  if (
+    typeof value === 'boolean' ||
+    typeof value === 'string' ||
+    typeof value === 'number'
+  ) {
+    return formatSimpleValue(value);
+  }
+  if (Array.isArray(value)) {
+    if (value.length === 0) return '<em>—</em>';
+    return value
+      .map((v: unknown) => (typeof v === 'string' ? v : JSON.stringify(v)))
+      .join(', ');
+  }
+  if (typeof value === 'object') {
+    const json = JSON.stringify(value, null, 2);
+    return `<details><summary>object</summary><pre style="font-size:11px;white-space:pre-wrap">${escapeHtml(json)}</pre></details>`;
+  }
+  // Unreachable for known input types, but satisfies exhaustive return
+  return '';
+}
+
+const METADATA_FIELDS: Array<[string, string]> = [
+  ['filename', 'Filename'],
+  ['original_filename', 'Original filename'],
+  ['date', 'Date'],
+  ['date_added', 'Date added'],
+  ['date_modified', 'Date modified'],
+  ['title', 'Title'],
+  ['description', 'Description'],
+  ['keywords', 'Keywords'],
+  ['albums', 'Albums'],
+  ['persons', 'Persons'],
+  ['labels', 'Labels'],
+  ['ai_caption', 'AI caption'],
+  ['width', 'Width'],
+  ['height', 'Height'],
+  ['original_filesize', 'File size'],
+  ['uti', 'UTI'],
+  ['latitude', 'Latitude'],
+  ['longitude', 'Longitude'],
+  ['place', 'Place'],
+  ['favorite', 'Favorite'],
+  ['hidden', 'Hidden'],
+  ['ismovie', 'Video'],
+  ['live_photo', 'Live Photo'],
+  ['hdr', 'HDR'],
+  ['panorama', 'Panorama'],
+  ['selfie', 'Selfie'],
+  ['portrait', 'Portrait'],
+  ['burst', 'Burst'],
+  ['screenshot', 'Screenshot'],
+  ['slow_mo', 'Slow-mo'],
+  ['time_lapse', 'Time-lapse'],
+  ['hasadjustments', 'Has adjustments'],
+  ['shared', 'Shared'],
+  ['orientation', 'Orientation'],
+  ['path', 'Path'],
+  ['exif_info', 'EXIF'],
+  ['score', 'Score'],
+  ['search_info', 'Search info'],
+  ['cloud_guid', 'Cloud GUID'],
+  ['uuid', 'UUID']
+];
+
+function renderMetadataTable(data: Record<string, unknown>): string {
+  let html = '<table>';
+  for (const [key, label] of METADATA_FIELDS) {
+    if (!(key in data)) continue;
+    const val = data[key];
+    if (
+      val === null ||
+      val === undefined ||
+      val === '' ||
+      val === false ||
+      (Array.isArray(val) && val.length === 0)
+    ) {
+      continue;
+    }
+    html += `<tr><td>${label}</td><td>${formatMetadataValue(val)}</td></tr>`;
+  }
+  html += '</table>';
+  return html;
+}
+
+function showMetadata(uuid: string) {
+  const modal = document.getElementById('metadata-modal');
+  const body = document.getElementById('metadata-body');
+  if (modal === null || body === null) return;
+
+  body.innerHTML = '<div class="loading">Loading...</div>';
+  modal.classList.add('active');
+
+  void fetch(`/api/metadata/${uuid}`)
+    .then((r) => {
+      if (!r.ok) throw new Error(`${r.status}`);
+      return r.json() as Promise<Record<string, unknown>>;
+    })
+    .then((data) => {
+      body.innerHTML = renderMetadataTable(data);
+    })
+    .catch((err: unknown) => {
+      body.innerHTML = `<div class="loading">Failed to load metadata: ${err instanceof Error ? err.message : String(err)}</div>`;
+    });
+}
+
+function initMetadataModal() {
+  const modal = document.getElementById('metadata-modal');
+  const closeBtn = document.getElementById('metadata-close');
+
+  closeBtn?.addEventListener('click', () => {
+    modal?.classList.remove('active');
+  });
+  modal?.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.classList.remove('active');
+    }
+  });
+  // Capture phase — intercept all keys when metadata modal is open
+  document.addEventListener(
+    'keydown',
+    (e) => {
+      if (modal?.classList.contains('active') !== true) return;
+      // Only allow Escape through (to close), block everything else
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        modal.classList.remove('active');
+        return;
+      }
+      // Stop arrow keys etc. from reaching lightbox/popup handlers
+      e.stopImmediatePropagation();
+    },
+    true
+  );
+}
 
 function cascadeAndApply() {
   const y =
@@ -285,6 +438,7 @@ async function saveEdits() {
 document.addEventListener('DOMContentLoaded', () => {
   void (async () => {
     initUI();
+    initMetadataModal();
 
     // Event Listeners
     const mapButtons = document.getElementById('map-type-buttons');

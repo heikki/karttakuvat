@@ -94,11 +94,16 @@ function locationButtonsHtml(photo: Photo, index: number): string {
   return `<span class="loc-buttons"><button class="loc-btn" onclick="event.preventDefault(); window.enterPlacementMode(${index})">set</button>${copyBtn}${pasteBtn}</span>`;
 }
 
-export function buildPhotosOverlay(id: string, photo: Photo): string {
-  if (photo.photos_url !== undefined && photo.photos_url !== '') {
-    return `<a class="photos-overlay-btn" id="${id}" href="${photo.photos_url}" target="_blank" tabindex="-1" onclick="event.stopPropagation()"></a>`;
-  }
-  return `<a class="photos-overlay-btn" id="${id}" href="#" target="_blank" tabindex="-1" onclick="event.stopPropagation()" style="display:none"></a>`;
+export function buildOverlayButtons(
+  photosLinkId: string,
+  photo: Photo
+): string {
+  const photosBtn =
+    photo.photos_url !== undefined && photo.photos_url !== ''
+      ? `<a class="overlay-btn photos-btn" id="${photosLinkId}" href="${photo.photos_url}" target="_blank" tabindex="-1" onclick="event.stopPropagation()"></a>`
+      : `<a class="overlay-btn photos-btn" id="${photosLinkId}" href="#" target="_blank" tabindex="-1" onclick="event.stopPropagation()" style="display:none"></a>`;
+  const infoBtn = `<button class="overlay-btn info-btn" onclick="event.stopPropagation(); window.showMetadata('${photo.uuid}')" tabindex="-1"></button>`;
+  return `<div class="overlay-buttons">${infoBtn}${photosBtn}</div>`;
 }
 
 export function singleInfoHtml(
@@ -124,14 +129,14 @@ export function buildSinglePopupHtml(
   const videoOverlay = isVideo(photo)
     ? '<div class="video-indicator"></div>'
     : '';
-  const photosOverlay = buildPhotosOverlay('single-photos-link', photo);
+  const overlayButtons = buildOverlayButtons('single-photos-link', photo);
   return `
         <div class="photo-popup">
             <div class="popup-image-wrap">
                 <img id="single-img" src="${getThumbUrl(photo)}" alt="Photo" onclick="window.showLightbox(${index})"
                         onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22150%22><rect fill=%22%23f0f0f0%22 width=%22200%22 height=%22150%22/><text x=%22100%22 y=%2275%22 text-anchor=%22middle%22 fill=%22%23999%22>Preview unavailable</text></svg>'" />
                 ${videoOverlay}
-                ${photosOverlay}
+                ${overlayButtons}
             </div>
             <div class="info" id="single-info">${singleInfoHtml(photo, index, isEditMode)}</div>
         </div>`;
@@ -193,7 +198,7 @@ export function buildPopupContent(
   const videoOverlay = isVideo(firstPhoto)
     ? '<div class="video-indicator"></div>'
     : '';
-  const photosOverlay = buildPhotosOverlay('group-photos-link', firstPhoto);
+  const overlayButtons = buildOverlayButtons('group-photos-link', firstPhoto);
   return `
         <div class="photo-popup">
             <div class="photo-count">${countLabel}${dateRangeStr === '' ? '' : ` \u2022 ${dateRangeStr}`}</div>
@@ -202,7 +207,7 @@ export function buildPopupContent(
                     onclick="window.showGroupLightbox(0)"
                     onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22150%22><rect fill=%22%23f0f0f0%22 width=%22200%22 height=%22150%22/><text x=%22100%22 y=%2275%22 text-anchor=%22middle%22 fill=%22%23999%22>Preview unavailable</text></svg>'" />
             ${videoOverlay}
-            ${photosOverlay}
+            ${overlayButtons}
             </div>
             <div class="info" id="group-info">${groupInfoHtml(firstPhoto, false)}</div>
             <div class="thumb-strip">${thumbsHtml}</div>
@@ -220,6 +225,17 @@ export function updateVideoIndicator(photo: Photo) {
   } else if (!isVideo(photo) && existing !== null) {
     existing.remove();
   }
+}
+
+export function updateInfoOverlay(photo: Photo) {
+  const btn = document.querySelector<HTMLButtonElement>(
+    '.popup-image-wrap .info-btn'
+  );
+  if (btn === null) return;
+  btn.onclick = (e) => {
+    e.stopPropagation();
+    window.showMetadata(photo.uuid);
+  };
 }
 
 export function updatePhotosLink(linkId: string, photo: Photo) {

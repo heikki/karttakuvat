@@ -180,6 +180,32 @@ async function processTimeEdits(
   return null;
 }
 
+async function handleGetMetadata(uuid: string): Promise<Response> {
+  try {
+    const result = await runScript(
+      [
+        `${process.env.HOME}/.local/bin/osxphotos`,
+        'query',
+        '--uuid',
+        uuid,
+        '--json'
+      ],
+      '',
+      'osxphotos query'
+    );
+    if ('error' in result) return result.error;
+
+    const photos = JSON.parse(result.stdout) as Array<Record<string, unknown>>;
+    if (photos.length === 0) {
+      return new Response('Not found', { status: 404 });
+    }
+
+    return Response.json(photos[0]);
+  } catch (err) {
+    return new Response(`Error: ${String(err)}`, { status: 500 });
+  }
+}
+
 async function handleSetLocations(req: Request): Promise<Response> {
   try {
     const body = (await req.json()) as SetLocationsBody;
@@ -228,6 +254,12 @@ const server = serve({
     // API routes
     if (url.pathname === '/api/set-locations' && req.method === 'POST') {
       return await handleSetLocations(req);
+    }
+
+    const metadataMatch =
+      /^\/api\/metadata\/(?<id>[A-F0-9-]+)$/i.exec(url.pathname);
+    if (metadataMatch?.groups !== undefined && req.method === 'GET') {
+      return await handleGetMetadata(metadataMatch.groups.id!);
     }
 
     // Check public directory first

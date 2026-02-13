@@ -14,6 +14,7 @@ let lightboxImg: HTMLImageElement | null = null;
 let lightboxInfo: HTMLElement | null = null;
 let lightboxPhotosLink: HTMLAnchorElement | null = null;
 let lightboxCamera: HTMLElement | null = null;
+let lightboxInfoBtn: HTMLButtonElement | null = null;
 
 // --- State Tracking for Lightbox ---
 let currentPhotoIndex = 0;
@@ -44,6 +45,9 @@ export function initUI() {
     'lightbox-photos-link'
   ) as HTMLAnchorElement;
   lightboxCamera = document.getElementById('lightbox-camera');
+  lightboxInfoBtn = document.getElementById(
+    'lightbox-info-btn'
+  ) as HTMLButtonElement | null;
 
   setupLightboxEvents();
 }
@@ -186,6 +190,12 @@ function displayPhoto(photo: Photo, index: number, total: number) {
     lightbox.classList.toggle('video', isVid);
   }
   updateLightboxPhotosLink(photo);
+  if (lightboxInfoBtn !== null) {
+    lightboxInfoBtn.onclick = (e) => {
+      e.stopPropagation();
+      window.showMetadata(photo.uuid);
+    };
+  }
   if (lightboxCamera !== null) {
     if (photo.camera === null) {
       lightboxCamera.classList.remove('visible');

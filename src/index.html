@@ -97,15 +97,32 @@
         <img id="lightbox-img" src="" alt="" />
         <div class="camera-overlay" id="lightbox-camera"></div>
         <div class="play-overlay" id="lightbox-play"></div>
-        <a
-          id="lightbox-photos-link"
-          class="photos-overlay-btn"
-          href="#"
-          target="_blank"
-          tabindex="-1"
-        ></a>
+        <div class="overlay-buttons">
+          <button
+            id="lightbox-info-btn"
+            class="overlay-btn info-btn"
+            tabindex="-1"
+          ></button>
+          <a
+            id="lightbox-photos-link"
+            class="overlay-btn photos-btn"
+            href="#"
+            target="_blank"
+            tabindex="-1"
+          ></a>
+        </div>
       </div>
       <div class="info" id="lightbox-info"></div>
+    </div>
+
+    <div class="metadata-modal" id="metadata-modal">
+      <div class="metadata-content">
+        <div class="metadata-header">
+          <span>Metadata</span>
+          <span class="metadata-close" id="metadata-close">&times;</span>
+        </div>
+        <div class="metadata-body" id="metadata-body"></div>
+      </div>
     </div>
 
     <!-- Bundled Script -->

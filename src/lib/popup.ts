@@ -20,6 +20,7 @@ import {
   getEffectiveLocation,
   groupInfoHtml,
   singleInfoHtml,
+  updateInfoOverlay,
   updatePhotosLink,
   updateVideoIndicator
 } from './popup-html';
@@ -260,6 +261,7 @@ export function selectGroupPhoto(index: number) {
   }
   updatePhotosLink('group-photos-link', photo);
   updateVideoIndicator(photo);
+  updateInfoOverlay(photo);
 
   document.querySelectorAll('.photo-popup .thumb').forEach((thumb, i) => {
     thumb.classList.toggle('active', i === index);
