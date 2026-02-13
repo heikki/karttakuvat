@@ -136,12 +136,43 @@ function addNightLayer() {
   }
 }
 
+let nightAnimationId: number | null = null;
+
 export function updateSunPosition(dateStr: string, tz: string | null) {
   if (dateStr === '') return;
-  const utcDate = new Date(toUtcSortKey(dateStr, tz));
-  if (isNaN(utcDate.getTime())) return;
-  nightLayer.setDate(utcDate);
-  map.triggerRepaint();
+  const targetDate = new Date(toUtcSortKey(dateStr, tz));
+  if (isNaN(targetDate.getTime())) return;
+
+  if (nightAnimationId !== null) {
+    cancelAnimationFrame(nightAnimationId);
+    nightAnimationId = null;
+  }
+
+  const currentDate = nightLayer.getDate();
+  if (currentDate === null) {
+    nightLayer.setDate(targetDate);
+    map.triggerRepaint();
+    return;
+  }
+
+  const startTime = currentDate.getTime();
+  const endTime = targetDate.getTime();
+  const duration = 400;
+  const animStart = performance.now();
+
+  const animate = (now: number) => {
+    const t = Math.min(1, (now - animStart) / duration);
+    const eased = t * (2 - t); // ease-out
+    const interpolated = startTime + (endTime - startTime) * eased;
+    nightLayer.setDate(new Date(interpolated));
+    map.triggerRepaint();
+    if (t < 1) {
+      nightAnimationId = requestAnimationFrame(animate);
+    } else {
+      nightAnimationId = null;
+    }
+  };
+  nightAnimationId = requestAnimationFrame(animate);
 }
 
 export function initMap() {
