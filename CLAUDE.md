@@ -13,24 +13,25 @@ Geolocation photo visualization web app displaying geotagged photographs on an i
 
 ```
 ├── src/
-│   ├── index.ts           # Entry point, wiring
+│   ├── index.ts           # Entry point, wiring, metadata modal, filter cascading
 │   ├── index.html         # Shell HTML
 │   ├── styles/main.css    # All styles
 │   └── lib/
 │       ├── types.ts       # Photo, MapStyle interfaces
 │       ├── config.ts      # Map tile source definitions
-│       ├── data.ts        # State, data loading, filtering, pub/sub
-│       ├── utils.ts       # Date formatting, URL helpers
-│       ├── map.ts         # MapLibre init, layers, marker interactions
-│       ├── popup.ts       # Single and multi-photo map popups
-│       ├── selection.ts   # Shift+drag rectangular selection
-│       └── ui.ts          # Lightbox, stats panel, year filter
+│       ├── data.ts        # State, data loading, filtering, pub/sub, pending edits
+│       ├── utils.ts       # Date formatting, URL helpers, date parsing
+│       ├── map.ts         # MapLibre init, layers, marker interactions, placement mode
+│       ├── popup.ts       # Popup state, navigation, date/location editing logic
+│       ├── popup-html.ts  # Popup HTML generation, overlay buttons
+│       ├── selection.ts   # Shift+drag rectangular selection, arrow key navigation
+│       └── ui.ts          # Lightbox, stats panel, filter UI helpers
 ├── public/                # Static assets (served at root)
-│   ├── photos.json        # Photo metadata
-│   ├── full/              # Full-size photos
+│   ├── items.json         # Photo/video metadata
+│   ├── full/              # Full-size photos/videos
 │   └── thumb/             # Thumbnails
-├── scripts/               # Python data export scripts
-├── server.ts              # Bun dev server
+├── scripts/               # Python scripts for Photos.app integration
+├── server.ts              # Bun dev server with API endpoints
 ├── docs/                  # Specs and plans
 ├── eslint.config.js
 ├── prettier.config.js
@@ -46,19 +47,24 @@ Geolocation photo visualization web app displaying geotagged photographs on an i
 
 ## Data Format
 
-`public/photos.json` entries:
+`public/items.json` entries:
 
 ```json
 {
   "uuid": "...",
+  "type": "photo|video",
   "full": "full/ID.jpg",
   "thumb": "thumb/ID.jpg",
   "lat": 69.04,
   "lon": 20.8,
   "date": "2008:07:09 17:53:13",
-  "gps": "inferred|exif|user",
-  "albums": ["Name"],
-  "photos_url": "photos:albums?..."
+  "tz": "+03:00",
+  "camera": "Canon PowerShot A720 IS",
+  "gps": "exif|inferred|user",
+  "gps_accuracy": 1,
+  "albums": ["2008 Halti"],
+  "photos_url": "photos:albums?...",
+  "duration": "0:30"
 }
 ```
 
@@ -67,9 +73,19 @@ Geolocation photo visualization web app displaying geotagged photographs on an i
 Requires `osxphotos` (`pipx install osxphotos`), `Pillow`.
 
 ```bash
-python3 scripts/export_photos.py    # Full export to public/
-python3 scripts/sync_metadata.py    # Sync metadata in photos.json
+python3 scripts/export.py           # Full export from Photos.app to public/
+python3 scripts/sync.py             # Sync metadata in items.json from Photos.app
+python3 scripts/set_locations.py    # Set photo locations (called by server)
+python3 scripts/set_times.py        # Set photo dates (called by server)
+python3 scripts/sync_timezones.py   # Sync timezone data
 ```
+
+## Server API
+
+The dev server (`server.ts`) exposes:
+
+- `POST /api/set-locations` — Save pending location and time edits to Photos.app
+- `GET /api/metadata/:uuid` — Fetch full osxphotos metadata for a photo
 
 ## Docs
 

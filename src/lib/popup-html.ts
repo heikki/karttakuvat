@@ -69,10 +69,7 @@ function dateEditButtonsHtml(uuid: string): string {
   return `<span class="time-adjust-buttons"><button class="time-btn" onclick="event.preventDefault(); window.adjustTime('${uuid}', -24)">-1d</button><button class="time-btn" onclick="event.preventDefault(); window.adjustTime('${uuid}', 24)">+1d</button><button class="time-btn" onclick="event.preventDefault(); window.adjustTime('${uuid}', -1)">-1h</button><button class="time-btn" onclick="event.preventDefault(); window.adjustTime('${uuid}', 1)">+1h</button><button class="time-btn" onclick="event.preventDefault(); window.toggleDateEdit()">done</button></span>`;
 }
 
-export function dateLineHtml(
-  photo: Photo,
-  isEditMode: boolean
-): string {
+export function dateLineHtml(photo: Photo, isEditMode: boolean): string {
   const effectiveDate = getEffectiveDate(photo);
   const dateText = formatDate(effectiveDate, photo.tz);
   const duration = durationSpan(photo);
@@ -114,10 +111,7 @@ export function singleInfoHtml(
   return `${dateLineHtml(photo, isEditMode)}<br>${formatLocation(photo)} ${locationButtonsHtml(photo, index)}`;
 }
 
-export function groupInfoHtml(
-  photo: Photo,
-  isEditMode: boolean
-): string {
+export function groupInfoHtml(photo: Photo, isEditMode: boolean): string {
   return `${dateLineHtml(photo, isEditMode)}<br>${formatLocation(photo)}`;
 }
 

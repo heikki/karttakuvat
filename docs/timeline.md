@@ -6,11 +6,16 @@ Add an interactive timeline UI that allows users to visualize and filter photos 
 
 ## Current State
 
-- Photos have `date` field in format `"YYYY:MM:DD HH:MM:SS"`
-- Year filter dropdown already exists
-- Photos are sorted by date in `photos.json`
+- Items have `date` field in format `"YYYY:MM:DD HH:MM:SS"` with optional `tz` timezone offset
+- Filters: year/album/camera dropdowns (cascading), media/GPS toggle buttons
+- Items sorted by date in `items.json` (photos and videos)
 - Date range shown in stats panel
-- `formatDate()` function already parses dates
+- `formatDate()` handles dates with timezone display
+- `compareDates()` sorts by UTC using timezone offsets
+- Albums already in data, used for album filter
+- Camera info already in data, used for camera filter
+- Date/time editing already works (copy/paste/adjust/manual entry via popups)
+- Location editing already works (placement mode, copy/paste)
 
 ---
 
@@ -58,14 +63,17 @@ Trips are user-defined collections (matching Apple Photos albums like "2018 Kuhm
 
 Trips come from Apple Photos albums, exported via `osxphotos`:
 
-```javascript
-// In photos.json, each photo includes its albums
+```json
+// In items.json, each item includes albums, camera, type, timezone
 {
   "uuid": "ABC123",
+  "type": "photo",
   "albums": ["2018 Kuhmo", "Favorites"],
+  "camera": "iPhone 12",
   "lat": 64.13,
   "lon": 29.52,
-  "date": "2018:07:15 09:00:00"
+  "date": "2018:07:15 09:00:00",
+  "tz": "+03:00"
 }
 ```
 
@@ -252,62 +260,26 @@ map.addLayer({
 
 ### Export Scripts
 
-Two scripts for different use cases:
+Two scripts already exist:
 
-**`export_photos.py`** (existing, slow)
+**`scripts/export.py`** (full export, slow)
 
-- Exports full images and thumbnails
-- Also includes album metadata (from osxphotos query)
+- Exports full images/videos and thumbnails to `public/`
+- Builds `items.json` with all metadata (albums, camera, type, timezone, etc.)
 - Run when adding new photos
 - Takes minutes to run
 
-**`sync_metadata.py`** (new, fast)
+**`scripts/sync.py`** (metadata sync, fast)
 
-- Updates metadata in photos.json without re-exporting images
-- Reads existing photos.json, queries Photos library by UUID
-- Syncs any changed fields: albums, location, date, title
+- Updates metadata in `items.json` without re-exporting images
+- Queries Photos library for current metadata
 - Run after editing metadata in Photos
 - Takes seconds to run
 
-```python
-# sync_metadata.py - Quick metadata sync
-def sync_metadata():
-    # Load existing photos.json
-    with open("photos.json") as f:
-        photos = json.load(f)
+Additional server-side scripts called by APIs:
 
-    uuids = [p["uuid"] for p in photos]
-
-    # Query Photos library for current metadata
-    metadata = query_photos_by_uuid(uuids)  # UUID -> {lat, lon, date, albums, ...}
-
-    # Update each photo's metadata
-    for photo in photos:
-        data = metadata.get(photo["uuid"])
-        if data:
-            photo["lat"] = data["lat"]
-            photo["lon"] = data["lon"]
-            photo["date"] = data["date"]
-            photo["albums"] = data.get("albums", [])
-
-    # Save updated photos.json
-    with open("photos.json", "w") as f:
-        json.dump(photos, f, indent=2)
-```
-
-```python
-# In export_photos.py build_photos_json(), add albums:
-entries.append({
-    "uuid": uuid,
-    "full": f"full/{uuid}.jpg",
-    "thumb": f"thumb/{uuid}.jpg",
-    "lat": lat,
-    "lon": lon,
-    "date": format_date(photo.get("date")),
-    "albums": photo.get("albums", []),  # Include albums
-    "photos_url": f"photos://asset?id={uuid}"
-})
-```
+- **`scripts/set_locations.py`** — sets photo locations in Photos.app (called by `/api/set-locations`)
+- **`scripts/set_times.py`** — sets photo dates in Photos.app (called by `/api/set-locations`)
 
 ### Route Generation Function
 
@@ -393,12 +365,7 @@ function generateRouteGeoJSON(photos) {
 
 ## Files to Modify
 
-- `index.html` - Add all HTML, CSS, and JavaScript (single file app)
-- `sync_metadata.py` - New script for fast metadata sync (albums, location, date)
-
-## Estimated Complexity
-
-- Timeline bar: ~200 lines JS + 60 lines CSS
-- Route visualization: ~150 lines JS + 20 lines CSS
-- Playback animation: ~120 lines JS
-- Total: ~550 lines of code
+- `src/lib/` — new module(s) for timeline and route logic
+- `src/index.ts` — wire up new UI components
+- `src/index.html` — add timeline container and trip UI elements
+- `src/styles/main.css` — timeline and route styles

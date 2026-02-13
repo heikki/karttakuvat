@@ -258,8 +258,9 @@ const server = serve({
       return await handleSetLocations(req);
     }
 
-    const metadataMatch =
-      /^\/api\/metadata\/(?<id>[A-F0-9-]+)$/i.exec(url.pathname);
+    const metadataMatch = /^\/api\/metadata\/(?<id>[A-F0-9-]+)$/i.exec(
+      url.pathname
+    );
     if (metadataMatch?.groups !== undefined && req.method === 'GET') {
       return await handleGetMetadata(metadataMatch.groups.id!);
     }

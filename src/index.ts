@@ -325,9 +325,7 @@ function cascadeAndApply() {
 
   // Cascade: Year → Album options
   const yearPhotos =
-    y === 'all'
-      ? state.photos
-      : state.photos.filter((p) => getYear(p) === y);
+    y === 'all' ? state.photos : state.photos.filter((p) => getYear(p) === y);
   repopulateSelect(
     'album-select',
     [...new Set(yearPhotos.flatMap((p) => p.albums))].sort()
