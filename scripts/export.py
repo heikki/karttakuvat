@@ -741,7 +741,7 @@ def main():
     parser.add_argument("--full", action="store_true", help="Full re-export (default is incremental update)")
     parser.add_argument("--skip-edited", action="store_true", help="Skip re-exporting edited photos (faster)")
     parser.add_argument("--verify", action="store_true", help="Check that all files match items.json")
-    parser.add_argument("--album", type=str, help="Only export photos/videos from this album")
+    parser.add_argument("--album", type=str, help="Only export photos/videos from this album (use folder/album path, e.g. 'Reissut/2015 Atlantti')")
     args = parser.parse_args()
 
     output_dir = get_output_dir()
@@ -802,13 +802,16 @@ def main():
     # Create thumbnails (covers both photos and video frames)
     create_thumbnails(full_dir, thumb_dir)
 
-    # Build unified items.json
-    entries = build_items_json(photos, videos, full_dir, json_path)
+    # Build unified items.json (skip when --album, run full export afterward)
+    if args.album:
+        print(f"\nAlbum export done. Run without --album to rebuild items.json.")
+    else:
+        entries = build_items_json(photos, videos, full_dir, json_path)
 
-    photo_count = sum(1 for e in entries if e["type"] == "photo")
-    video_count = sum(1 for e in entries if e["type"] == "video")
-    print(f"\nExported {len(entries)} items ({photo_count} photos, {video_count} videos)")
-    print(f"Items JSON: {json_path}")
+        photo_count = sum(1 for e in entries if e["type"] == "photo")
+        video_count = sum(1 for e in entries if e["type"] == "video")
+        print(f"\nExported {len(entries)} items ({photo_count} photos, {video_count} videos)")
+        print(f"Items JSON: {json_path}")
 
 
 if __name__ == "__main__":
