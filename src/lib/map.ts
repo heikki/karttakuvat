@@ -105,10 +105,22 @@ export function enterPlacementMode(photoIndex: number) {
   setMarkerVisibility(false);
 }
 
+function withGlobe(style: StyleSpecification): StyleSpecification {
+  return {
+    ...style,
+    projection: { type: 'globe' },
+    sky: {
+      'sky-color': '#191A22',
+      'horizon-color': '#2D2F3E',
+      'atmosphere-blend': 0.5
+    }
+  };
+}
+
 export function initMap() {
   map = new maplibregl.Map({
     container: 'map',
-    style: mapStyles().opentopomap as StyleSpecification,
+    style: withGlobe(mapStyles().opentopomap as StyleSpecification),
     center: [29.52, 64.13],
     zoom: 10,
     boxZoom: false,
@@ -134,12 +146,6 @@ export function initMap() {
   initSelectionCallbacks(getMap);
 
   map.on('load', () => {
-    map.setProjection({ type: 'globe' });
-    map.setSky({
-      'sky-color': '#191A22',
-      'horizon-color': '#2D2F3E',
-      'atmosphere-blend': 0.5
-    });
     addPhotoLayers();
     addSelectionLayer();
     setupMarkerInteractions();
@@ -212,7 +218,7 @@ export function changeMapStyle(styleKey: string) {
 
   // Stop any ongoing animation to prevent MapLibre crash during style change
   map.stop();
-  map.setStyle(style);
+  map.setStyle(withGlobe(style));
   void map.once('idle', () => {
     addPhotoLayers();
     addSelectionLayer();
