@@ -432,7 +432,8 @@ function addPhotoLayers() {
       'circle-radius': 18,
       'circle-stroke-width': 3,
       'circle-stroke-color': '#007AFF',
-      'circle-stroke-opacity': 0.6
+      'circle-stroke-opacity': 0.6,
+      'circle-pitch-alignment': 'map'
     },
     filter: ['==', ['get', 'index'], -1]
   });
