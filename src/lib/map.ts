@@ -138,6 +138,13 @@ function addNightLayer() {
   } else {
     map.addLayer(nightLayer);
   }
+  updateNightLayerVisibility();
+}
+
+function updateNightLayerVisibility() {
+  if (map.getLayer(nightLayer.id) === undefined) return;
+  const visible = map.getProjection().type === 'globe';
+  nightLayer.setOpacity(visible ? 0.8 : 0);
 }
 
 let nightAnimationId: number | null = null;
@@ -251,8 +258,9 @@ export function initMap() {
     }
   });
 
-  // Re-show popup when projection changes so it repositions correctly
+  // Toggle night layer and re-show popup when projection changes
   map.on('projectiontransition', () => {
+    updateNightLayerVisibility();
     const popup = getCurrentPopup();
     if (popup === null) return;
     const uuid = getCurrentPhotoUuid();
