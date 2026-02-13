@@ -237,6 +237,14 @@ function setupFilterListeners() {
   }
 }
 
+function reopenPopup(uuid: string | null) {
+  if (uuid === null) return;
+  const newIndex = state.filteredPhotos.findIndex((p) => p.uuid === uuid);
+  if (newIndex === -1) return;
+  const photo = state.filteredPhotos[newIndex]!;
+  showPopup({ index: newIndex }, [photo.lon ?? 0, photo.lat ?? 0]);
+}
+
 async function saveEdits() {
   const btn = document.getElementById('save-edits-btn');
   if (btn === null) return;
@@ -261,17 +269,7 @@ async function saveEdits() {
     getCurrentPopup()?.remove();
     await loadPhotos();
     clearPendingEdits();
-
-    // Reopen popup on the same photo
-    if (reopenUuid !== null) {
-      const newIndex = state.filteredPhotos.findIndex(
-        (p) => p.uuid === reopenUuid
-      );
-      if (newIndex !== -1) {
-        const photo = state.filteredPhotos[newIndex]!;
-        showPopup({ index: newIndex }, [photo.lon, photo.lat]);
-      }
-    }
+    reopenPopup(reopenUuid);
   } catch (err) {
     console.error('Failed to save edits:', err);
     // eslint-disable-next-line no-alert -- user needs feedback on save failure

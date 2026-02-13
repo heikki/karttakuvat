@@ -436,6 +436,10 @@ def format_camera(exif_info):
     if "NIKON" in make.upper():
         make = "Nikon"
 
+    # Samsung inconsistent casing
+    if "SAMSUNG" in make.upper():
+        make = "Samsung"
+
     if not model:
         return make
     return f"{make} {model}"

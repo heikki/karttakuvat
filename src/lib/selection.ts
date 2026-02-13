@@ -31,7 +31,7 @@ export function initSelectionCallbacks(getMap: () => maplibregl.Map) {
 
 export function addSelectionLayer() {
   const map = getMapFn();
-  if (map.getSource('selection')) return;
+  if (map.getSource('selection') !== undefined) return;
   map.addSource('selection', {
     type: 'geojson',
     data: { type: 'FeatureCollection', features: [] }

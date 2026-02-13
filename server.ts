@@ -116,6 +116,70 @@ function applyTimeEdits(items: ItemRecord[], edits: TimeEdit[]) {
   }
 }
 
+async function processLocationEdits(
+  edits: LocationEdit[],
+  itemsByUuid: Map<string, ItemRecord>
+): Promise<{ error?: Response; tzResults: Map<string, string | null> }> {
+  const tzResults = new Map<string, string | null>();
+  if (edits.length === 0) return { tzResults };
+
+  const editsWithDates = edits.map((e) => ({
+    ...e,
+    date: itemsByUuid.get(e.uuid)?.date ?? ''
+  }));
+
+  const result = await runScript(
+    ['python3', 'scripts/set_locations.py'],
+    JSON.stringify(editsWithDates),
+    'set_locations.py'
+  );
+  if ('error' in result) return { error: result.error, tzResults };
+
+  try {
+    const scriptResults = JSON.parse(result.stdout) as ScriptResult[];
+    for (const r of scriptResults) {
+      if (r.ok && r.tz !== undefined) {
+        tzResults.set(r.uuid, r.tz);
+      }
+    }
+  } catch {
+    // tz update in items.json will be skipped
+  }
+  return { tzResults };
+}
+
+async function processTimeEdits(
+  edits: TimeEdit[],
+  itemsByUuid: Map<string, ItemRecord>
+): Promise<Response | null> {
+  if (edits.length === 0) return null;
+
+  const timeEditsWithTarget = edits
+    .map((edit) => {
+      const item = itemsByUuid.get(edit.uuid);
+      if (item === undefined) return undefined;
+      const target = applyHourOffset(item.date, edit.hours);
+      const [datePart, timePart] = target.split(' ');
+      if (datePart === undefined || timePart === undefined) {
+        return undefined;
+      }
+      return {
+        uuid: edit.uuid,
+        date: datePart.replaceAll(':', '-'),
+        time: timePart
+      };
+    })
+    .filter((e) => e !== undefined);
+
+  const result = await runScript(
+    ['python3', 'scripts/set_times.py'],
+    JSON.stringify(timeEditsWithTarget),
+    'set_times.py'
+  );
+  if ('error' in result) return result.error;
+  return null;
+}
+
 async function handleSetLocations(req: Request): Promise<Response> {
   try {
     const body = (await req.json()) as SetLocationsBody;
@@ -131,62 +195,13 @@ async function handleSetLocations(req: Request): Promise<Response> {
     const items = (await itemsFile.json()) as ItemRecord[];
     const itemsByUuid = new Map(items.map((i) => [i.uuid, i]));
 
-    let tzResults = new Map<string, string | null>();
+    const locResult = await processLocationEdits(locationEdits, itemsByUuid);
+    if (locResult.error !== undefined) return locResult.error;
 
-    if (locationEdits.length > 0) {
-      // Enrich edits with dates for timezone computation
-      const editsWithDates = locationEdits.map((e) => ({
-        ...e,
-        date: itemsByUuid.get(e.uuid)?.date ?? ''
-      }));
+    const timeError = await processTimeEdits(timeEdits, itemsByUuid);
+    if (timeError !== null) return timeError;
 
-      const result = await runScript(
-        ['python3', 'scripts/set_locations.py'],
-        JSON.stringify(editsWithDates),
-        'set_locations.py'
-      );
-      if ('error' in result) return result.error;
-
-      // Parse tz values from script output
-      try {
-        const scriptResults = JSON.parse(result.stdout) as ScriptResult[];
-        for (const r of scriptResults) {
-          if (r.ok && r.tz !== undefined) {
-            tzResults.set(r.uuid, r.tz);
-          }
-        }
-      } catch {
-        // tz update in items.json will be skipped
-      }
-    }
-
-    if (timeEdits.length > 0) {
-      // Compute target dates and send absolute date/time to script
-      const timeEditsWithTarget = timeEdits
-        .map((edit) => {
-          const item = itemsByUuid.get(edit.uuid);
-          if (item === undefined) return undefined;
-          const target = applyHourOffset(item.date, edit.hours);
-          const [datePart, timePart] = target.split(' ');
-          if (datePart === undefined || timePart === undefined)
-            return undefined;
-          return {
-            uuid: edit.uuid,
-            date: datePart.replaceAll(':', '-'),
-            time: timePart
-          };
-        })
-        .filter((e) => e !== undefined);
-
-      const result = await runScript(
-        ['python3', 'scripts/set_times.py'],
-        JSON.stringify(timeEditsWithTarget),
-        'set_times.py'
-      );
-      if ('error' in result) return result.error;
-    }
-
-    applyLocationEdits(items, locationEdits, tzResults);
+    applyLocationEdits(items, locationEdits, locResult.tzResults);
     applyTimeEdits(items, timeEdits);
     items.sort((a, b) => {
       const d = a.date.localeCompare(b.date);

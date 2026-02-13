@@ -239,23 +239,36 @@ function createGeoJSON(): FeatureCollection<Point> {
 }
 
 function addPhotoLayers() {
-  if (map.getLayer('photo-markers-highlight-ring') !== undefined) {
-    map.removeLayer('photo-markers-highlight-ring');
+  for (const id of [
+    'photo-markers-highlight-ring',
+    'photo-markers-selected',
+    'photo-markers'
+  ]) {
+    if (map.getLayer(id) !== undefined) map.removeLayer(id);
   }
-  if (map.getLayer('photo-markers-selected') !== undefined) {
-    map.removeLayer('photo-markers-selected');
-  }
-  if (map.getLayer('photo-markers') !== undefined) {
-    map.removeLayer('photo-markers');
-  }
-  if (map.getSource('photos') !== undefined) {
-    map.removeSource('photos');
-  }
+  if (map.getSource('photos') !== undefined) map.removeSource('photos');
 
   map.addSource('photos', {
     type: 'geojson',
     data: createGeoJSON()
   });
+
+  const markerPaint: maplibregl.CircleLayerSpecification['paint'] = {
+    'circle-color': [
+      'match',
+      ['get', 'gps'],
+      'exif',
+      '#3b82f6',
+      'user',
+      '#22c55e',
+      'inferred',
+      '#f59e0b',
+      '#9ca3af'
+    ],
+    'circle-radius': 8,
+    'circle-stroke-width': 2,
+    'circle-stroke-color': '#fff'
+  };
 
   map.addLayer({
     id: 'photo-markers',
@@ -268,44 +281,14 @@ function addPhotoLayers() {
         ['get', 'index']
       ]
     },
-    paint: {
-      'circle-color': [
-        'match',
-        ['get', 'gps'],
-        'exif',
-        '#3b82f6',
-        'user',
-        '#22c55e',
-        'inferred',
-        '#f59e0b',
-        '#9ca3af'
-      ],
-      'circle-radius': 8,
-      'circle-stroke-width': 2,
-      'circle-stroke-color': '#fff'
-    }
+    paint: markerPaint
   });
 
   map.addLayer({
     id: 'photo-markers-selected',
     type: 'circle',
     source: 'photos',
-    paint: {
-      'circle-color': [
-        'match',
-        ['get', 'gps'],
-        'exif',
-        '#3b82f6',
-        'user',
-        '#22c55e',
-        'inferred',
-        '#f59e0b',
-        '#9ca3af'
-      ],
-      'circle-radius': 8,
-      'circle-stroke-width': 2,
-      'circle-stroke-color': '#fff'
-    },
+    paint: markerPaint,
     filter: ['==', ['get', 'index'], -1]
   });
 
@@ -488,25 +471,13 @@ function panToFitPopup(coords: [number, number]) {
     const { panX, panY } = calculatePanOffset(mapRect, popupRect);
 
     if (panX !== 0 || panY !== 0) {
-      safeMapOperation(() => {
+      try {
         map.panBy([panX, panY], { duration: 300 });
-      });
+      } catch {
+        // Silently ignore MapLibre internal errors
+      }
     }
   }, 50);
-}
-
-function isSinglePointBounds(bounds: maplibregl.LngLatBounds): boolean {
-  const sw = bounds.getSouthWest();
-  const ne = bounds.getNorthEast();
-  return sw.lng === ne.lng && sw.lat === ne.lat;
-}
-
-function safeMapOperation(operation: () => void) {
-  try {
-    operation();
-  } catch {
-    // Silently ignore MapLibre internal errors
-  }
 }
 
 export function fitToPhotos(animate = false, selectFirst = false) {
@@ -525,7 +496,9 @@ export function fitToPhotos(animate = false, selectFirst = false) {
     showPopup({ index: 0 }, [lon, lat]);
   };
 
-  if (isSinglePointBounds(bounds)) {
+  const sw = bounds.getSouthWest();
+  const ne = bounds.getNorthEast();
+  if (sw.lng === ne.lng && sw.lat === ne.lat) {
     const center = bounds.getCenter();
     if (animate) {
       map.flyTo({ center: [center.lng, center.lat], zoom: 14, duration: 500 });

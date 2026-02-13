@@ -16,7 +16,8 @@ export default [
       '@typescript-eslint/prefer-destructuring': 'off',
       '@typescript-eslint/promise-function-async': 'off',
       'no-console': 'off',
-      'no-plusplus': 'off'
+      'no-plusplus': 'off',
+      'require-unicode-regexp': 'off'
     }
   }
 ];

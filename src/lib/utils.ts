@@ -7,7 +7,7 @@ export function getYear(photo: Photo): string | null {
 
 function toUtcSortKey(date: string, tz: string | null): string {
   const iso = date
-    .replace(/^(\d{4}):(\d{2}):(\d{2})/, '$1-$2-$3')
+    .replace(/^(?<y>\d{4}):(?<m>\d{2}):(?<d>\d{2})/v, '$1-$2-$3')
     .replace(' ', 'T');
   return new Date(iso + (tz ?? 'Z')).toISOString();
 }
@@ -39,15 +39,18 @@ function parseDatePart(datePart: string): string | null {
   return `${parseInt(parts[2]!, 10)}.${parseInt(parts[1]!, 10)}.${parts[0]!}`;
 }
 
+const tzPattern = /^(?<sign>[+-])(?<h>\d{2}):(?<m>\d{2})$/;
+
 function formatTz(tz: string): string {
   // "+03:00" -> "+3", "-05:30" -> "-5:30", "+00:00" -> "UTC"
-  const match = tz.match(/^([+-])(\d{2}):(\d{2})$/);
-  if (!match) return tz;
-  const hours = parseInt(match[2]!, 10);
-  const minutes = match[3]!;
+  const match = tzPattern.exec(tz);
+  if (match === null) return tz;
+  const hours = parseInt(match.groups!.h!, 10);
+  const minutes = match.groups!.m!;
   if (hours === 0 && minutes === '00') return 'UTC';
-  const short = `${match[1]}${hours}`;
-  return minutes !== '00' ? `${short}:${minutes}` : short;
+  const short = `${match.groups!.sign!}${hours}`;
+  if (minutes === '00') return short;
+  return `${short}:${minutes}`;
 }
 
 export function formatDate(dateStr: string, tz?: string | null): string {
@@ -58,7 +61,9 @@ export function formatDate(dateStr: string, tz?: string | null): string {
   const formattedDate = parseDatePart(datePart);
   if (formattedDate === null) return dateStr;
   const base = formattedDate + parseTimePart(timePart);
-  if (tz) return `${base} ${formatTz(tz)}`;
+  if (tz !== undefined && tz !== null && tz !== '') {
+    return `${base} ${formatTz(tz)}`;
+  }
   return base;
 }
 
@@ -104,7 +109,7 @@ export function getFullUrl(photo: Photo): string {
 }
 
 const exifDatePattern =
-  /^(?<yr>\d{4}):(?<mo>\d{2}):(?<dy>\d{2}) (?<hr>\d{2}):(?<mi>\d{2}):(?<sc>\d{2})$/v;
+  /^(?<yr>\d{4}):(?<mo>\d{2}):(?<dy>\d{2}) (?<hr>\d{2}):(?<mi>\d{2}):(?<sc>\d{2})$/;
 
 export function parseExifDate(dateStr: string): Date | null {
   const match = exifDatePattern.exec(dateStr);
@@ -149,7 +154,7 @@ export function computeFullDatetimeOffsetHours(
 }
 
 const userDatePattern =
-  /^(?<dy>\d{1,2})\.(?<mo>\d{1,2})\.(?<yr>\d{4})?\s*(?<tm>\d{1,2}:\d{2})?$/v;
+  /^(?<dy>\d{1,2})\.(?<mo>\d{1,2})\.(?<yr>\d{4})?\s*(?<tm>\d{1,2}:\d{2})?$/;
 
 export function parseUserDatetime(
   input: string,
