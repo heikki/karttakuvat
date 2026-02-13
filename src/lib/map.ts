@@ -170,12 +170,18 @@ export function updateSunPosition(
     return;
   }
 
-  // Full transition only for sequential nav within same album
+  // Only animate for sequential nav (arrow keys, cluster prev/next)
+  if (sequential !== true) {
+    nightLayerDate = targetDate;
+    nightLayer.setDate(targetDate);
+    map.triggerRepaint();
+    return;
+  }
+
   const sharesAlbum = prevAlbums.some((a) => nightLayerAlbums.includes(a));
-  const fullTransition = sequential === true && sharesAlbum;
   const fullDiffMs = Math.abs(targetDate.getTime() - currentDate.getTime());
-  const isLongJump = !fullTransition || fullDiffMs > 86400000;
-  const startTime = fullTransition
+  const isLongJump = fullDiffMs > 86400000;
+  const startTime = sharesAlbum
     ? currentDate.getTime()
     : new Date(targetDate).setHours(
         currentDate.getHours(),
@@ -183,11 +189,9 @@ export function updateSunPosition(
         currentDate.getSeconds()
       );
   const endTime = targetDate.getTime();
-  const days = fullDiffMs / 86400000;
-  const duration = isLongJump ? Math.min(400 + days * 20, 1000) : 400;
+  const duration = isLongJump ? 2000 : 400;
   const animStart = performance.now();
 
-  const NIGHT_OPACITY = 0.8;
   const animate = (now: number) => {
     const t = Math.min(1, (now - animStart) / duration);
     const eased = t < 0.5 ? 2 * t * t : 1 - 2 * (1 - t) * (1 - t); // ease-in-out
@@ -195,13 +199,6 @@ export function updateSunPosition(
     const d = new Date(interpolated);
     nightLayerDate = d;
     nightLayer.setDate(d);
-    // Darken daytime during long jumps, more for longer gaps
-    if (isLongJump) {
-      const days = fullDiffMs / 86400000;
-      const strength = Math.min(days / 30, 1); // 0 at 1 day, 1 at 30+ days
-      const mid = Math.sin(t * Math.PI);
-      nightLayer.setDaytimeColor([0, 0, 0, Math.round(mid * strength * 200)]);
-    }
     map.triggerRepaint();
     if (t < 1) {
       nightAnimationId = requestAnimationFrame(animate);
