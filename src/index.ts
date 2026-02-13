@@ -38,9 +38,7 @@ import {
   hideLightbox,
   initUI,
   isLightboxActive,
-  populateAlbumFilter,
-  populateCameraFilter,
-  populateYearFilter,
+  repopulateSelect,
   setLightboxNavigateCallback,
   showGroupLightbox,
   showLightbox,
@@ -163,6 +161,44 @@ window.toggleDateEdit = toggleDateEdit;
 window.applyManualDate = applyManualDate;
 window.handleDateInputKey = handleDateInputKey;
 
+function cascadeAndApply() {
+  const y =
+    (document.getElementById('year-select') as HTMLSelectElement | null)
+      ?.value ?? 'all';
+
+  // Cascade: Year → Album options
+  const yearPhotos =
+    y === 'all'
+      ? state.photos
+      : state.photos.filter((p) => getYear(p) === y);
+  repopulateSelect(
+    'album-select',
+    [...new Set(yearPhotos.flatMap((p) => p.albums))].sort()
+  );
+  const a =
+    (document.getElementById('album-select') as HTMLSelectElement | null)
+      ?.value ?? 'all';
+
+  // Cascade: Year + Album → Camera options
+  const albumPhotos =
+    a === 'all' ? yearPhotos : yearPhotos.filter((p) => p.albums.includes(a));
+  repopulateSelect(
+    'camera-select',
+    [...new Set(albumPhotos.map((p) => p.camera ?? '(unknown)'))].sort()
+  );
+  const c =
+    (document.getElementById('camera-select') as HTMLSelectElement | null)
+      ?.value ?? 'all';
+
+  const m = Array.from(
+    document.querySelectorAll('#media-buttons .filter-btn.active')
+  ).map((btn) => (btn as HTMLElement).dataset.value!);
+  const g = Array.from(
+    document.querySelectorAll('#gps-buttons .filter-btn.active')
+  ).map((btn) => (btn as HTMLElement).dataset.value!);
+  applyFilters({ year: y, gps: g, media: m, album: a, camera: c });
+}
+
 function setupFilterListeners() {
   const yearSelect = document.getElementById('year-select');
   const albumSelect = document.getElementById('album-select');
@@ -170,21 +206,8 @@ function setupFilterListeners() {
   const mediaButtons = document.getElementById('media-buttons');
   const gpsButtons = document.getElementById('gps-buttons');
 
-  const handleFilterChange = () => {
-    const y = (yearSelect as HTMLSelectElement | null)?.value ?? 'all';
-    const a = (albumSelect as HTMLSelectElement | null)?.value ?? 'all';
-    const c = (cameraSelect as HTMLSelectElement | null)?.value ?? 'all';
-    const m = Array.from(
-      document.querySelectorAll('#media-buttons .filter-btn.active')
-    ).map((btn) => (btn as HTMLElement).dataset.value!);
-    const g = Array.from(
-      document.querySelectorAll('#gps-buttons .filter-btn.active')
-    ).map((btn) => (btn as HTMLElement).dataset.value!);
-    applyFilters({ year: y, gps: g, media: m, album: a, camera: c });
-  };
-
   for (const el of [yearSelect, albumSelect, cameraSelect]) {
-    el?.addEventListener('change', handleFilterChange);
+    el?.addEventListener('change', cascadeAndApply);
   }
 
   for (const container of [mediaButtons, gpsButtons]) {
@@ -196,7 +219,7 @@ function setupFilterListeners() {
       clickTimer = setTimeout(() => {
         clickTimer = null;
         btn.classList.toggle('active');
-        handleFilterChange();
+        cascadeAndApply();
       }, 250);
     });
     container?.addEventListener('dblclick', (e) => {
@@ -209,7 +232,7 @@ function setupFilterListeners() {
       for (const b of Array.from(container.querySelectorAll('.filter-btn'))) {
         b.classList.toggle('active', b === btn);
       }
-      handleFilterChange();
+      cascadeAndApply();
     });
   }
 }
@@ -315,23 +338,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Init Map
     initMap();
 
-    // Populate UI
+    // Populate UI — year is static, album/camera cascade from year
     const years = [
       ...new Set(
         state.photos.map(getYear).filter((y): y is string => y !== null)
       )
     ].sort();
-    populateYearFilter(years);
-
-    const albums = [...new Set(state.photos.flatMap((p) => p.albums))].sort();
-    populateAlbumFilter(albums);
-
-    const cameras = [
-      ...new Set(
-        state.photos.map((p) => p.camera ?? '(unknown)')
-      )
-    ].sort();
-    populateCameraFilter(cameras);
+    repopulateSelect('year-select', years);
+    cascadeAndApply();
 
     updateStats(state.filteredPhotos);
   })();

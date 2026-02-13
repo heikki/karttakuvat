@@ -187,11 +187,11 @@ function displayPhoto(photo: Photo, index: number, total: number) {
   }
   updateLightboxPhotosLink(photo);
   if (lightboxCamera !== null) {
-    if (photo.camera !== null) {
+    if (photo.camera === null) {
+      lightboxCamera.classList.remove('visible');
+    } else {
       lightboxCamera.textContent = photo.camera;
       lightboxCamera.classList.add('visible');
-    } else {
-      lightboxCamera.classList.remove('visible');
     }
   }
 }
@@ -279,56 +279,21 @@ export function updateStats(filteredPhotos: Photo[]) {
   }
 }
 
-export function populateYearFilter(years: string[]) {
-  const select = document.getElementById(
-    'year-select'
-  ) as HTMLSelectElement | null;
+export function repopulateSelect(id: string, options: string[]) {
+  const select = document.getElementById(id) as HTMLSelectElement | null;
   if (select === null) return;
-  // Clear existing options except first
+  const prev = select.value;
   while (select.options.length > 1) {
     select.remove(1);
   }
-
-  years.forEach((year) => {
-    const option = document.createElement('option');
-    option.value = year;
-    option.textContent = year;
-    select.appendChild(option);
-  });
-}
-
-export function populateAlbumFilter(albums: string[]) {
-  const select = document.getElementById(
-    'album-select'
-  ) as HTMLSelectElement | null;
-  if (select === null) return;
-  while (select.options.length > 1) {
-    select.remove(1);
+  for (const opt of options) {
+    const el = document.createElement('option');
+    el.value = opt;
+    el.textContent = opt;
+    select.appendChild(el);
   }
-
-  albums.forEach((album) => {
-    const option = document.createElement('option');
-    option.value = album;
-    option.textContent = album;
-    select.appendChild(option);
-  });
-}
-
-export function populateCameraFilter(cameras: string[]) {
-  const select = document.getElementById(
-    'camera-select'
-  ) as HTMLSelectElement | null;
-  if (select === null) return;
-  while (select.options.length > 1) {
-    select.remove(1);
-  }
-
-  cameras.forEach((camera) => {
-    const option = document.createElement('option');
-    option.value = camera;
-    option.textContent = camera;
-    select.appendChild(option);
-  });
+  select.value = prev;
+  if (select.value !== prev) select.value = 'all';
 }
 
 export function updatePendingEdits(count: number) {
