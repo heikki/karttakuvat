@@ -13,6 +13,7 @@ let lightbox: HTMLElement | null = null;
 let lightboxImg: HTMLImageElement | null = null;
 let lightboxInfo: HTMLElement | null = null;
 let lightboxPhotosLink: HTMLAnchorElement | null = null;
+let lightboxCamera: HTMLElement | null = null;
 
 // --- State Tracking for Lightbox ---
 let currentPhotoIndex = 0;
@@ -42,6 +43,7 @@ export function initUI() {
   lightboxPhotosLink = document.getElementById(
     'lightbox-photos-link'
   ) as HTMLAnchorElement;
+  lightboxCamera = document.getElementById('lightbox-camera');
 
   setupLightboxEvents();
 }
@@ -184,6 +186,14 @@ function displayPhoto(photo: Photo, index: number, total: number) {
     lightbox.classList.toggle('video', isVid);
   }
   updateLightboxPhotosLink(photo);
+  if (lightboxCamera !== null) {
+    if (photo.camera !== null) {
+      lightboxCamera.textContent = photo.camera;
+      lightboxCamera.classList.add('visible');
+    } else {
+      lightboxCamera.classList.remove('visible');
+    }
+  }
 }
 
 export function hideLightbox() {
@@ -300,6 +310,23 @@ export function populateAlbumFilter(albums: string[]) {
     const option = document.createElement('option');
     option.value = album;
     option.textContent = album;
+    select.appendChild(option);
+  });
+}
+
+export function populateCameraFilter(cameras: string[]) {
+  const select = document.getElementById(
+    'camera-select'
+  ) as HTMLSelectElement | null;
+  if (select === null) return;
+  while (select.options.length > 1) {
+    select.remove(1);
+  }
+
+  cameras.forEach((camera) => {
+    const option = document.createElement('option');
+    option.value = camera;
+    option.textContent = camera;
     select.appendChild(option);
   });
 }

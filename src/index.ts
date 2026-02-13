@@ -39,6 +39,7 @@ import {
   initUI,
   isLightboxActive,
   populateAlbumFilter,
+  populateCameraFilter,
   populateYearFilter,
   setLightboxNavigateCallback,
   showGroupLightbox,
@@ -165,22 +166,24 @@ window.handleDateInputKey = handleDateInputKey;
 function setupFilterListeners() {
   const yearSelect = document.getElementById('year-select');
   const albumSelect = document.getElementById('album-select');
+  const cameraSelect = document.getElementById('camera-select');
   const mediaButtons = document.getElementById('media-buttons');
   const gpsButtons = document.getElementById('gps-buttons');
 
   const handleFilterChange = () => {
     const y = (yearSelect as HTMLSelectElement | null)?.value ?? 'all';
     const a = (albumSelect as HTMLSelectElement | null)?.value ?? 'all';
+    const c = (cameraSelect as HTMLSelectElement | null)?.value ?? 'all';
     const m = Array.from(
       document.querySelectorAll('#media-buttons .filter-btn.active')
     ).map((btn) => (btn as HTMLElement).dataset.value!);
     const g = Array.from(
       document.querySelectorAll('#gps-buttons .filter-btn.active')
     ).map((btn) => (btn as HTMLElement).dataset.value!);
-    applyFilters(y, g, m, a);
+    applyFilters({ year: y, gps: g, media: m, album: a, camera: c });
   };
 
-  for (const el of [yearSelect, albumSelect]) {
+  for (const el of [yearSelect, albumSelect, cameraSelect]) {
     el?.addEventListener('change', handleFilterChange);
   }
 
@@ -322,6 +325,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const albums = [...new Set(state.photos.flatMap((p) => p.albums))].sort();
     populateAlbumFilter(albums);
+
+    const cameras = [
+      ...new Set(
+        state.photos.map((p) => p.camera ?? '(unknown)')
+      )
+    ].sort();
+    populateCameraFilter(cameras);
 
     updateStats(state.filteredPhotos);
   })();

@@ -27,6 +27,10 @@
         <select id="album-select">
           <option value="all">All</option>
         </select>
+        <label for="camera-select">Camera</label>
+        <select id="camera-select">
+          <option value="all">All</option>
+        </select>
         <label>Media</label>
         <div class="filter-buttons" id="media-buttons">
           <button class="filter-btn active" data-value="photo">Photos</button>
@@ -91,6 +95,7 @@
       <span class="nav next">&#10095;</span>
       <div class="lightbox-image-wrap" id="lightbox-image-wrap">
         <img id="lightbox-img" src="" alt="" />
+        <div class="camera-overlay" id="lightbox-camera"></div>
         <div class="play-overlay" id="lightbox-play"></div>
         <a
           id="lightbox-photos-link"

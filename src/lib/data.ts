@@ -8,7 +8,8 @@ export const state = {
     year: 'all',
     gps: ['exif', 'inferred', 'user', 'none'] as string[],
     media: ['photo', 'video'] as string[],
-    album: 'all'
+    album: 'all',
+    camera: 'all'
   },
   pendingEdits: new Map<string, { lat: number; lon: number }>(),
   pendingTimeEdits: new Map<string, number>()
@@ -37,12 +38,13 @@ export async function loadPhotos() {
     const data = (await response.json()) as Photo[];
     data.sort(compareDates);
     state.photos = data;
-    applyFilters(
-      state.filters.year,
-      state.filters.gps,
-      state.filters.media,
-      state.filters.album
-    );
+    applyFilters({
+      year: state.filters.year,
+      gps: state.filters.gps,
+      media: state.filters.media,
+      album: state.filters.album,
+      camera: state.filters.camera
+    });
   } catch (error) {
     console.error('Error loading items.json:', error);
     throw error;
@@ -178,22 +180,30 @@ function matchesMedia(p: Photo, media: string[]): boolean {
   return media.includes(p.type);
 }
 
-export function applyFilters(
-  year: string,
-  gps: string[],
-  media: string[],
-  album = 'all'
-) {
-  state.filters.year = year;
-  state.filters.gps = gps;
-  state.filters.media = media;
-  state.filters.album = album;
+export function applyFilters(filters: {
+  year: string;
+  gps: string[];
+  media: string[];
+  album?: string;
+  camera?: string;
+}) {
+  state.filters.year = filters.year;
+  state.filters.gps = filters.gps;
+  state.filters.media = filters.media;
+  state.filters.album = filters.album ?? 'all';
+  state.filters.camera = filters.camera ?? 'all';
+
+  const { year, album, camera } = state.filters;
 
   state.filteredPhotos = state.photos.filter((p) => {
     if (year !== 'all' && getYear(p) !== year) return false;
-    if (!matchesGps(p, gps)) return false;
-    if (!matchesMedia(p, media)) return false;
+    if (!matchesGps(p, state.filters.gps)) return false;
+    if (!matchesMedia(p, state.filters.media)) return false;
     if (album !== 'all' && !p.albums.includes(album)) return false;
+    if (camera !== 'all') {
+      const pc = p.camera ?? '(unknown)';
+      if (pc !== camera) return false;
+    }
     return true;
   });
 

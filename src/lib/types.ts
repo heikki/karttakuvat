@@ -7,6 +7,7 @@ export interface Photo {
   lon: number | null;
   date: string;
   tz: string | null;
+  camera: string | null;
   gps: string | null;
   albums: string[];
   photos_url?: string;

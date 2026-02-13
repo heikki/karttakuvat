@@ -407,6 +407,40 @@ def query_video_durations():
     return result
 
 
+def format_camera(exif_info):
+    """Build a clean camera display name from EXIF make/model.
+
+    Returns None for unknown/missing cameras.
+    """
+    make = (exif_info.get("camera_make") or "").strip()
+    model = (exif_info.get("camera_model") or "").strip()
+    if not make and not model:
+        return None
+    if make.lower() in ("unknown",) and model.lower() in ("unknown", ""):
+        return None
+
+    # Drop "Apple" prefix — just use device name
+    if make == "Apple":
+        return model or None
+
+    # Canon duplicates brand in model ("Canon PowerShot A400")
+    if model.lower().startswith(make.lower()):
+        return model
+
+    # Olympus verbose make
+    if "OLYMPUS" in make.upper():
+        make = "Olympus"
+        model = model.replace(",", "/")
+
+    # Nikon verbose make
+    if "NIKON" in make.upper():
+        make = "Nikon"
+
+    if not model:
+        return make
+    return f"{make} {model}"
+
+
 def round_accuracy(val):
     """Round to 1 decimal, but return int when there's no fractional part."""
     r = round(val, 1)
@@ -488,6 +522,7 @@ def build_items_json(photos, videos, full_dir, json_path):
         photos_url = f"photos:albums?albumUuid={album_uuid}&assetUuid={uuid}"
 
         acc = gps_accuracy.get(uuid)
+        camera = format_camera(photo.get("exif_info") or {})
         entries.append({
             "uuid": uuid,
             "type": "photo",
@@ -497,6 +532,7 @@ def build_items_json(photos, videos, full_dir, json_path):
             "lon": lon,
             "date": format_date(photo.get("date")),
             "tz": tz_offset_from_coords(lat, lon, format_date(photo.get("date"))),
+            "camera": camera,
             "gps": gps_source,
             "gps_accuracy": round_accuracy(acc) if acc is not None else None,
             "albums": albums,
@@ -530,6 +566,7 @@ def build_items_json(photos, videos, full_dir, json_path):
             photos_url = f"photos:albums?albumUuid={album_uuid}&assetUuid={uuid}"
 
             acc = gps_accuracy.get(uuid)
+            camera = format_camera(video.get("exif_info") or {})
             entries.append({
                 "uuid": uuid,
                 "type": "video",
@@ -539,6 +576,7 @@ def build_items_json(photos, videos, full_dir, json_path):
                 "lon": lon,
                 "date": format_date(video.get("date")),
                 "tz": tz_offset_from_coords(lat, lon, format_date(video.get("date"))),
+                "camera": camera,
                 "duration": format_duration(video_durations.get(uuid)),
                 "gps": gps_source,
                 "gps_accuracy": round_accuracy(acc) if acc is not None else None,
