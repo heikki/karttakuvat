@@ -485,7 +485,11 @@ function panToFitPopup(coords: [number, number]) {
 
     if (panX !== 0 || panY !== 0) {
       try {
-        map.panBy([panX, panY], { duration: 300 });
+        map.easeTo({
+          center: coords,
+          offset: [-125, popupRect.height / 2],
+          duration: 300
+        });
       } catch {
         // Silently ignore MapLibre internal errors
       }
