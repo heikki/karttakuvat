@@ -50,15 +50,20 @@ let panToFitPopupFn: (coords: [number, number]) => void = () => {
   /* noop */
 };
 let getMapFn: () => maplibregl.Map | undefined = () => undefined;
+let updateSunPositionFn: (dateStr: string, tz: string | null) => void = () => {
+  /* noop */
+};
 
 export function initPopupCallbacks(
   highlightMarker: (index: number | null) => void,
   panToFitPopup: (coords: [number, number]) => void,
-  getMap: () => maplibregl.Map
+  getMap: () => maplibregl.Map,
+  updateSunPosition: (dateStr: string, tz: string | null) => void
 ) {
   highlightMarkerFn = highlightMarker;
   panToFitPopupFn = panToFitPopup;
   getMapFn = getMap;
+  updateSunPositionFn = updateSunPosition;
 }
 
 export function getCurrentPopup(): maplibregl.Popup | null {
@@ -140,6 +145,7 @@ export function showPopup(props: FeatureProps, coords: [number, number]) {
   currentPhotoUuid = photo.uuid;
   clusterPhotos = [];
   highlightMarkerFn(index);
+  updateSunPositionFn(photo.date, photo.tz ?? null);
 
   currentPopup = new maplibregl.Popup({
     closeButton: false,
@@ -268,6 +274,7 @@ export function selectGroupPhoto(index: number) {
   });
 
   highlightMarkerFn(photo._index ?? null);
+  updateSunPositionFn(photo.date, photo.tz ?? null);
   currentGroupIndex = index;
 }
 
@@ -416,6 +423,7 @@ export function navigateSinglePhoto(newIndex: number) {
   currentSinglePhotoIndex = newIndex;
   currentPhotoUuid = photo.uuid;
   highlightMarkerFn(newIndex);
+  updateSunPositionFn(photo.date, photo.tz ?? null);
 
   const img = document.getElementById('single-img') as HTMLImageElement | null;
   const info = document.getElementById('single-info');

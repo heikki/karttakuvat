@@ -24,6 +24,8 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "maplibre-gl": "^5.16.0"
+    "@kikuchan/decimal": "^0.1.0-alpha.7",
+    "maplibre-gl": "^5.16.0",
+    "maplibre-gl-nightlayer": "^1.0.0-alpha.14"
   }
 }

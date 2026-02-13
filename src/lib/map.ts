@@ -1,6 +1,7 @@
 import type { FeatureCollection, Point } from 'geojson';
 import maplibregl from 'maplibre-gl';
 import type { FilterSpecification, StyleSpecification } from 'maplibre-gl';
+import { NightLayer } from 'maplibre-gl-nightlayer';
 
 import { mapStyles } from './config';
 import { addPendingEdit, state, subscribe } from './data';
@@ -19,7 +20,7 @@ import {
   setupRectangularSelection
 } from './selection';
 import type { MapStyles } from './types';
-import { formatDate, getThumbUrl } from './utils';
+import { formatDate, getThumbUrl, toUtcSortKey } from './utils';
 
 // Declare window augmentation for map
 declare global {
@@ -110,11 +111,37 @@ function withGlobe(style: StyleSpecification): StyleSpecification {
     ...style,
     projection: { type: 'globe' },
     sky: {
-      'sky-color': '#191A22',
-      'horizon-color': '#2D2F3E',
-      'atmosphere-blend': 0.5
+      'sky-color': '#000000',
+      'horizon-color': '#000000',
+      'atmosphere-blend': 0.3
     }
   };
+}
+
+const nightLayer = new NightLayer({
+  date: null,
+  opacity: 0.8,
+  color: [0, 0, 0, 255],
+  daytimeColor: [0, 0, 0, 0],
+  twilightSteps: 0,
+  updateInterval: 0
+});
+
+function addNightLayer() {
+  if (map.getLayer(nightLayer.id) !== undefined) return;
+  map.addLayer(nightLayer);
+  // Place above regular markers but below selected/highlight markers
+  if (map.getLayer('photo-markers-selected') !== undefined) {
+    map.moveLayer(nightLayer.id, 'photo-markers-selected');
+  }
+}
+
+export function updateSunPosition(dateStr: string, tz: string | null) {
+  if (dateStr === '') return;
+  const utcDate = new Date(toUtcSortKey(dateStr, tz));
+  if (isNaN(utcDate.getTime())) return;
+  nightLayer.setDate(utcDate);
+  map.triggerRepaint();
 }
 
 export function initMap() {
@@ -143,11 +170,12 @@ export function initMap() {
   window.map = map;
 
   // Initialize callbacks for other modules
-  initPopupCallbacks(highlightMarker, panToFitPopup, getMap);
+  initPopupCallbacks(highlightMarker, panToFitPopup, getMap, updateSunPosition);
   initSelectionCallbacks(getMap);
 
   map.on('load', () => {
     addPhotoLayers();
+    addNightLayer();
     addSelectionLayer();
     setupMarkerInteractions();
     setupRectangularSelection();
@@ -237,6 +265,7 @@ export function changeMapStyle(styleKey: string) {
   map.setStyle(withGlobe(style));
   void map.once('idle', () => {
     addPhotoLayers();
+    addNightLayer();
     addSelectionLayer();
     setupMarkerInteractions();
     updateMapData();
