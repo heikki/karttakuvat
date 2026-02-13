@@ -135,6 +135,11 @@ export function initMap() {
 
   map.on('load', () => {
     map.setProjection({ type: 'globe' });
+    map.setSky({
+      'sky-color': '#191A22',
+      'horizon-color': '#2D2F3E',
+      'atmosphere-blend': 0.5
+    });
     addPhotoLayers();
     addSelectionLayer();
     setupMarkerInteractions();
