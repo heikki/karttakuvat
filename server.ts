@@ -42,7 +42,8 @@ function applyHourOffset(dateStr: string, hours: number): string {
 async function runScript(
   cmd: string[],
   input: string,
-  label: string
+  label: string,
+  { quiet = false } = {}
 ): Promise<{ error: Response } | { stdout: string }> {
   const proc = spawn({
     cmd,
@@ -55,10 +56,10 @@ async function runScript(
   const stdout = await new Response(proc.stdout).text();
   const stderr = await new Response(proc.stderr).text();
 
-  if (stderr !== '') {
+  if (!quiet && stderr !== '') {
     console.error(`${label} stderr:`, stderr);
   }
-  if (stdout !== '') {
+  if (!quiet && stdout !== '') {
     console.log(`${label} stdout:`, stdout);
   }
 
@@ -191,7 +192,8 @@ async function handleGetMetadata(uuid: string): Promise<Response> {
         '--json'
       ],
       '',
-      'osxphotos query'
+      'osxphotos query',
+      { quiet: true }
     );
     if ('error' in result) return result.error;
 
