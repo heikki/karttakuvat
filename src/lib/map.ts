@@ -134,6 +134,7 @@ export function initMap() {
   initSelectionCallbacks(getMap);
 
   map.on('load', () => {
+    map.setProjection({ type: 'globe' });
     addPhotoLayers();
     addSelectionLayer();
     setupMarkerInteractions();
