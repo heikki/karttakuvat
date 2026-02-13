@@ -702,7 +702,7 @@ def verify(full_dir, thumb_dir, json_path):
         for uuid in missing_thumb:
             print(f"  {uuid}")
 
-    orphans = orphan_full | orphan_thumb
+    orphans = set(orphan_full) | set(orphan_thumb)
     if orphans:
         ok = False
         print(f"\nCleaning up {len(orphans)} orphan(s):")
