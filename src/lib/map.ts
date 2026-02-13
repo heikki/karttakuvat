@@ -128,6 +128,7 @@ export function initMap() {
   });
 
   map.addControl(new maplibregl.NavigationControl(), 'bottom-right');
+  map.addControl(new maplibregl.GlobeControl(), 'bottom-right');
   map.addControl(
     new maplibregl.ScaleControl({ unit: 'metric' }),
     'bottom-left'
