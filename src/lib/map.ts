@@ -133,10 +133,10 @@ function addNightLayer() {
     map.removeLayer(nightLayer.id);
   }
   nightLayer = createNightLayer(nightLayerDate);
-  if (map.getLayer('photo-markers-selected') !== undefined) {
-    map.addLayer(nightLayer, 'photo-markers-selected');
-  } else {
+  if (map.getLayer('photo-markers-selected') === undefined) {
     map.addLayer(nightLayer);
+  } else {
+    map.addLayer(nightLayer, 'photo-markers-selected');
   }
   updateNightLayerVisibility();
 }
