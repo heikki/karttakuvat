@@ -177,8 +177,9 @@ export function updateSunPosition(
     return;
   }
 
-  // Only animate for sequential nav (arrow keys, cluster prev/next)
-  if (sequential !== true) {
+  const fullDiffMs = Math.abs(targetDate.getTime() - currentDate.getTime());
+  // Snap instantly for non-sequential nav, or close zoom with long time jumps
+  if (sequential !== true || (map.getZoom() > 5 && fullDiffMs > 86400000)) {
     nightLayerDate = targetDate;
     nightLayer.setDate(targetDate);
     map.triggerRepaint();
@@ -186,7 +187,6 @@ export function updateSunPosition(
   }
 
   const sharesAlbum = prevAlbums.some((a) => nightLayerAlbums.includes(a));
-  const fullDiffMs = Math.abs(targetDate.getTime() - currentDate.getTime());
   const isLongJump = fullDiffMs > 86400000;
   const startTime = sharesAlbum
     ? currentDate.getTime()
