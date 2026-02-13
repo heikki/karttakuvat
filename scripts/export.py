@@ -74,7 +74,7 @@ def get_output_dir():
 
 
 
-def query_photos():
+def query_photos(album=None):
     """Query Apple Photos for photos using osxphotos CLI."""
     cmd = [
         "osxphotos", "query",
@@ -82,6 +82,8 @@ def query_photos():
         "--only-photos",
         "--json"
     ]
+    if album:
+        cmd.extend(["--album", album])
 
     print("Querying Photos library for photos...")
     result = subprocess.run(cmd, capture_output=True, text=True)
@@ -96,7 +98,7 @@ def query_photos():
     return json.loads(result.stdout)
 
 
-def query_videos():
+def query_videos(album=None):
     """Query Apple Photos for videos using osxphotos CLI."""
     cmd = [
         "osxphotos", "query",
@@ -104,6 +106,8 @@ def query_videos():
         "--only-movies",
         "--json"
     ]
+    if album:
+        cmd.extend(["--album", album])
 
     print("Querying Photos library for videos...")
     result = subprocess.run(cmd, capture_output=True, text=True)
@@ -118,7 +122,7 @@ def query_videos():
     return json.loads(result.stdout)
 
 
-def batch_export(photos, full_dir):
+def batch_export(photos, full_dir, album=None):
     """Export all photos in a single osxphotos command (much faster)."""
     print(f"Exporting {len(photos)} photos to {full_dir}...")
 
@@ -134,6 +138,8 @@ def batch_export(photos, full_dir):
         "--download-missing",
         "--update"  # Only export new/changed files
     ]
+    if album:
+        cmd.extend(["--album", album])
 
     # Run export (this will show progress)
     result = subprocess.run(cmd)
@@ -735,6 +741,7 @@ def main():
     parser.add_argument("--full", action="store_true", help="Full re-export (default is incremental update)")
     parser.add_argument("--skip-edited", action="store_true", help="Skip re-exporting edited photos (faster)")
     parser.add_argument("--verify", action="store_true", help="Check that all files match items.json")
+    parser.add_argument("--album", type=str, help="Only export photos/videos from this album")
     args = parser.parse_args()
 
     output_dir = get_output_dir()
@@ -755,10 +762,10 @@ def main():
     thumb_dir.mkdir(exist_ok=True)
 
     # Query Photos library
-    photos = query_photos()
+    photos = query_photos(album=args.album)
     print(f"Found {len(photos)} photos in library")
 
-    if not photos:
+    if not photos and not args.album:
         print("No photos found. Make sure you have:")
         print("  1. Granted Full Disk Access to Terminal")
         print("  2. Photos in your Apple Photos library")
@@ -772,14 +779,15 @@ def main():
             print("Cleared export database for full re-export")
 
     # Batch export all photos
-    batch_export(photos, full_dir)
+    if photos:
+        batch_export(photos, full_dir, album=args.album)
 
     # Re-export edited photos to ensure crops/adjustments are applied
-    if not args.skip_edited:
+    if not args.skip_edited and not args.album:
         refresh_edited(full_dir, thumb_dir)
 
     # Query and export video frames
-    videos = query_videos()
+    videos = query_videos(album=args.album)
     print(f"Found {len(videos)} videos in library")
 
     if videos:
