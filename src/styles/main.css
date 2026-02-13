@@ -12,31 +12,28 @@ body {
   width: 100%;
 }
 .maplibregl-canvas {
-  background: #191A22;
+  background: #191a22;
 }
 
 .maplibregl-popup-content {
   padding: 0;
   border-radius: 12px;
   overflow: hidden;
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.12);
 }
 .photo-popup {
   text-align: center;
   min-width: 280px;
-  padding: 12px;
 }
 .photo-popup img {
-  max-width: 260px;
-  max-height: 200px;
-  border-radius: 8px;
+  max-width: 100%;
+  max-height: 220px;
   cursor: pointer;
-  transition: transform 0.2s;
-}
-.photo-popup img:hover {
-  transform: scale(1.02);
 }
 .photo-popup .info {
-  margin-top: 8px;
+  margin: 8px 12px;
   font-size: 12px;
   color: #666;
 }
@@ -45,20 +42,21 @@ body {
   position: absolute;
   top: 10px;
   right: 10px;
-  background: white;
+  background: #2c2c2e;
   padding: 15px;
   border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
   z-index: 1000;
   width: 220px;
 }
 .stats-panel h2 {
   font-size: 16px;
   margin-bottom: 10px;
+  color: #e5e5e7;
 }
 .stats-panel p {
   font-size: 13px;
-  color: #666;
+  color: #98989d;
   margin: 4px 0;
 }
 
@@ -122,18 +120,20 @@ body {
 .filter-section {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid #eee;
+  border-top: 1px solid #3a3a3c;
 }
 .filter-section label {
   font-size: 12px;
-  color: #666;
+  color: #98989d;
   display: block;
   margin-bottom: 4px;
 }
 .filter-section select {
   width: 100%;
   padding: 6px 8px;
-  border: 1px solid #ddd;
+  background: #3a3a3c;
+  color: #e5e5e7;
+  border: 1px solid #48484a;
   border-radius: 6px;
   font-size: 13px;
   cursor: pointer;
@@ -147,15 +147,15 @@ body {
   margin-bottom: 8px;
   border-radius: 6px;
   overflow: hidden;
-  border: 1px solid #ddd;
+  border: 1px solid #48484a;
 }
 .map-type-btn {
   flex: 1;
   padding: 5px 0;
   border: none;
-  border-right: 1px solid #ddd;
-  background: #f5f5f5;
-  color: #555;
+  border-right: 1px solid #48484a;
+  background: #3a3a3c;
+  color: #98989d;
   font-size: 11px;
   cursor: pointer;
   transition:
@@ -166,7 +166,7 @@ body {
   border-right: none;
 }
 .map-type-btn:hover {
-  background: #e8e8e8;
+  background: #48484a;
 }
 .map-type-btn.active {
   background: #007aff;
@@ -180,15 +180,15 @@ body {
   margin-bottom: 8px;
   border-radius: 6px;
   overflow: hidden;
-  border: 1px solid #ddd;
+  border: 1px solid #48484a;
 }
 .filter-btn {
   flex: 1;
   padding: 5px 0;
   border: none;
-  border-right: 1px solid #ddd;
-  background: #f5f5f5;
-  color: #555;
+  border-right: 1px solid #48484a;
+  background: #3a3a3c;
+  color: #98989d;
   font-size: 11px;
   cursor: pointer;
   transition:
@@ -199,7 +199,7 @@ body {
   border-right: none;
 }
 .filter-btn:hover {
-  background: #e8e8e8;
+  background: #48484a;
 }
 .filter-btn.active {
   background: var(--btn-color, #007aff);
@@ -210,9 +210,10 @@ body {
   display: flex;
   gap: 6px;
   overflow-x: auto;
-  padding: 8px 0;
-  margin-top: 8px;
+  padding: 8px 12px;
+  margin-top: 0;
   scrollbar-width: thin;
+  scrollbar-color: #ccc transparent;
 }
 .photo-popup .thumb-strip::-webkit-scrollbar {
   height: 6px;
@@ -236,19 +237,14 @@ body {
   border-color: #007aff;
 }
 .photo-popup .main-image {
-  max-width: 320px;
+  max-width: 100%;
   max-height: 220px;
-  border-radius: 8px;
   cursor: pointer;
-  transition: transform 0.2s;
-}
-.photo-popup .main-image:hover {
-  transform: scale(1.02);
 }
 .photo-popup .photo-count {
   font-size: 11px;
   color: #999;
-  margin-bottom: 6px;
+  padding: 8px 12px 0;
 }
 /* Overlay button container on popup and lightbox images */
 .overlay-buttons {
@@ -455,7 +451,11 @@ body {
 /* Video indicator on popup images */
 .popup-image-wrap {
   position: relative;
-  display: inline-block;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #111;
+  min-height: 160px;
 }
 .video-indicator {
   position: absolute;
@@ -516,9 +516,9 @@ body {
   position: fixed;
   top: 12px;
   left: 12px;
-  background: white;
+  background: #2c2c2e;
   border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
   padding: 8px;
   z-index: 1500;
   max-width: 160px;
@@ -536,12 +536,12 @@ body {
 }
 .placement-panel-info {
   font-size: 11px;
-  color: #666;
+  color: #98989d;
   margin-top: 4px;
 }
 .placement-panel-hint {
   font-size: 11px;
-  color: #999;
+  color: #666;
   margin-top: 4px;
 }
 canvas.crosshair {
@@ -553,25 +553,25 @@ canvas.crosshair {
   margin-top: 10px;
   padding: 5px 10px;
   width: 100%;
-  border: 1px solid #ddd;
+  border: 1px solid #48484a;
   border-radius: 6px;
-  background: #f5f5f5;
-  color: #333;
+  background: #3a3a3c;
+  color: #e5e5e7;
   font-size: 12px;
   cursor: pointer;
 }
 .fit-view-btn:hover {
-  background: #e8e8e8;
-  border-color: #ccc;
+  background: #48484a;
+  border-color: #48484a;
 }
 
 /* Edit section in stats panel */
 .edit-section {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid #eee;
+  border-top: 1px solid #3a3a3c;
   font-size: 13px;
-  color: #333;
+  color: #e5e5e7;
 }
 .edit-section #pending-count {
   font-weight: bold;
@@ -596,11 +596,11 @@ canvas.crosshair {
   opacity: 0.9;
 }
 .edit-buttons button.secondary {
-  background: #e5e7eb;
-  color: #333;
+  background: #3a3a3c;
+  color: #e5e5e7;
 }
 .edit-buttons button.secondary:hover {
-  background: #d1d5db;
+  background: #48484a;
 }
 .edit-buttons button:disabled {
   opacity: 0.5;
