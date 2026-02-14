@@ -571,6 +571,28 @@ canvas.crosshair {
   background: #48484a;
   border-color: #48484a;
 }
+.view-btn.active {
+  background: #007aff;
+  color: white;
+  border-color: #007aff;
+}
+
+/* Measure distance overlay */
+.measure-overlay {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(44, 44, 46, 0.92);
+  color: #e5e5e7;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  z-index: 1500;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
 
 /* Edit section in stats panel */
 .edit-section {

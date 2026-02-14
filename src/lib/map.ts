@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- map module handles all map layer setup and interactions */
 import type { FeatureCollection, Point } from 'geojson';
 import maplibregl from 'maplibre-gl';
 import type { FilterSpecification, StyleSpecification } from 'maplibre-gl';
@@ -5,6 +6,7 @@ import type { FilterSpecification, StyleSpecification } from 'maplibre-gl';
 import { mapStyles } from './config';
 import { addPendingEdit, getEffectiveCoords, state, subscribe } from './data';
 import { mapViewFromUrl, mapViewToUrl } from './filter-url';
+import { addMeasureLayers, initMeasure } from './measure';
 import {
   addNightLayer,
   onProjectionChange,
@@ -151,10 +153,12 @@ export function initMap() {
   };
   initPopupCallbacks(highlightMarker, panToFitPopup, getMap, updateSun);
   initSelectionCallbacks(getMap);
+  initMeasure(getMap);
 
   map.on('load', () => {
     addPhotoLayers();
     addSelectionLayer();
+    addMeasureLayers();
     setupMarkerInteractions();
     addNightLayer(map);
     setupRectangularSelection();
@@ -239,6 +243,7 @@ export function changeMapStyle(styleKey: string) {
   const applyLayers = () => {
     addPhotoLayers();
     addSelectionLayer();
+    addMeasureLayers();
     setupMarkerInteractions();
     updateMapData();
     addNightLayer(map);

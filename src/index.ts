@@ -27,6 +27,11 @@ import {
   initMap,
   selectGroupPhoto
 } from './lib/map';
+import {
+  exitMeasureMode,
+  isMeasureMode,
+  toggleMeasureMode
+} from './lib/measure';
 import { initMetadataModal, showMetadata } from './lib/metadata';
 import { resetNightLayer } from './lib/night';
 import {
@@ -314,6 +319,7 @@ async function saveEdits() {
 function handleReset() {
   getCurrentPopup()?.remove();
   clearSelection();
+  if (isMeasureMode()) exitMeasureMode();
   resetNightLayer(getMap());
   setSelectValue('year-select', 'all');
   setButtonGroupActive('gps-buttons', ['exif', 'inferred', 'user', 'none']);
@@ -409,6 +415,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const resetBtn = document.getElementById('reset-btn');
     if (resetBtn !== null) {
       resetBtn.addEventListener('click', handleReset);
+    }
+
+    const measureBtn = document.getElementById('measure-btn');
+    if (measureBtn !== null) {
+      measureBtn.addEventListener('click', () => {
+        toggleMeasureMode();
+        measureBtn.classList.toggle('active', isMeasureMode());
+      });
     }
 
     const saveBtn = document.getElementById('save-edits-btn');
