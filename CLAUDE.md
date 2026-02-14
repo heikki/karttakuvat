@@ -21,9 +21,13 @@ Geolocation photo visualization web app displaying geotagged photographs on an i
 │       ├── config.ts      # Map tile source definitions
 │       ├── data.ts        # State, data loading, filtering, pub/sub, pending edits
 │       ├── utils.ts       # Date formatting, URL helpers, date parsing
+│       ├── filter-url.ts  # URL state persistence (filters, map view, style, photo)
 │       ├── map.ts         # MapLibre init, layers, marker interactions, placement mode
+│       ├── night.ts       # Day/night shadow layer (globe projection)
+│       ├── pan.ts         # Auto-pan map to keep popup visible
 │       ├── popup.ts       # Popup state, navigation, date/location editing logic
 │       ├── popup-html.ts  # Popup HTML generation, overlay buttons
+│       ├── metadata.ts    # Metadata modal (osxphotos detail view)
 │       ├── selection.ts   # Shift+drag rectangular selection, arrow key navigation
 │       └── ui.ts          # Lightbox, stats panel, filter UI helpers
 ├── public/                # Static assets (served at root)

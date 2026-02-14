@@ -6,12 +6,13 @@ Karttakuvat displays geotagged photographs and videos on an interactive map. Ite
 
 1. Cache lightbox DOM elements, wire up metadata modal
 2. Set up filter listeners (year, album, camera dropdowns + media/GPS toggle buttons + map type buttons)
-3. Set up "Fit to view" and save/discard edit buttons
-4. Fetch `items.json`, sort by date, apply default filters
-5. Create map with OpenTopoMap style, register filter subscriber
-6. On map load: add photo layers, add selection layer, set up marker interactions, set up rectangular selection, load data, fit to all photos
+3. Set up "Fit", "Reset", and save/discard edit buttons
+4. Fetch `items.json`, sort by date, restore filters from URL or apply defaults
+5. Restore map style from URL, create map with globe projection, register filter subscriber
+6. On map load: add photo layers, add selection layer, set up marker interactions, add night layer, set up rectangular selection, load data, fit to all photos (skipped if map view restored from URL)
 7. Populate year dropdown from data, cascade to album and camera dropdowns, apply filters
-8. Stats update via subscriber
+8. Restore selected photo from URL (reopen popup)
+9. Stats update via subscriber
 
 ## Filters
 
@@ -30,7 +31,7 @@ Five filters that apply together, with cascading dependencies:
 
 Changing any filter recomputes the filtered set and notifies:
 
-1. Stats — updates count and date range
+1. Stats — updates count
 2. Map — updates markers (only if style is fully loaded; changes during style transitions are silently dropped)
 
 ## Map
@@ -42,11 +43,16 @@ MapLibre GL JS with raster tile sources. Style switching via buttons:
 - **Maasto**: MML Maastokartta (requires API key)
 - **Orto**: MML Ortokuva (requires API key)
 
-Style switching tears down and re-adds all layers after the new style is idle.
+Selected map style is persisted in URL params (default Topo is omitted from URL). Style switching tears down and re-adds all layers after the new style is idle.
+
+### Projection
+
+The map uses globe projection by default. A globe control (bottom-right) lets the user toggle between globe and mercator projections. When switching projection, the current popup is re-rendered at its position.
 
 ### Controls
 
 - Navigation control (zoom +/-, compass) at bottom-right
+- Globe control (projection toggle) at bottom-right
 - Scale bar (metric) at bottom-left
 
 ### Layers
@@ -64,15 +70,21 @@ Three circle layers on a single GeoJSON source:
 
 - **Highlight ring** (`photo-markers-highlight-ring`): Pulsing animation — blue stroke ring that grows from radius 12 to 20 while fading from 0.8 to 0 opacity over 1.2s, repeating. Shown via filter on index.
 
+- **Night layer**: Day/night shadow overlay using `maplibre-gl-nightlayer`. Visible only in globe projection (opacity 0 in mercator). When navigating photos, the night layer animates to match the photo's date/time — fast transition (400ms) within an album, slower (2s) across large time gaps. Reset button clears the night layer to current time.
+
 Default center: Kuhmo, Finland (29.52, 64.13). Zoom 10. Box zoom and keyboard navigation disabled.
 
 ### Map Fitting
 
-- **Initial load**: unconditional fit to all photos
-- **"Fit to view" button**: fits to all filtered photos with animation, then opens popup on first photo
-- **Padding**: top 350, bottom 40, left 50, right 270 (accounts for stats panel and popup height)
+- **Initial load**: fit to all photos (skipped if map view is restored from URL)
+- **"Fit" button**: fits to all filtered photos with animation, then opens popup on first photo
+- **Padding**: top dynamic (350 in mercator; in globe: popup height + 60 or 50 if no popup), bottom 40, left 50, right 270 (accounts for stats panel)
 - **Max zoom**: 18
 - **Single point**: centers at zoom 14 instead of fitting bounds
+
+### Auto-Pan
+
+When a popup opens or navigates to a new photo, the map automatically pans to keep the popup fully visible within the viewport (with padding for the stats panel on the right).
 
 ### Marker Click
 
@@ -194,10 +206,21 @@ Fixed top-right (220px wide). Shows:
 
 - Title "Karttakuvat"
 - Item count (photos and/or videos)
-- Date range of filtered items
 - Filter section: Year, Album, Camera dropdowns; Media and GPS toggle buttons; Map type buttons
-- "Fit to view" button
+- "Fit" button — fits map to filtered photos and opens popup on first photo
+- "Reset" button — closes popup, clears selection, resets night layer, resets all filters to defaults, clears URL params, fits to all photos
 - Pending edits section (hidden when no edits): count + Save/Discard buttons
+
+## URL State
+
+App state is persisted in URL query parameters:
+
+- **Filters**: `year`, `album`, `camera`, `gps` (comma-separated), `media` (comma-separated). Default values are omitted.
+- **Photo**: `id` (UUID of currently viewed photo)
+- **Map view**: `lat`, `lon`, `z` (zoom) — updated on every map move
+- **Map style**: `style` (e.g. `satellite`, `mml_maastokartta`). Default `opentopomap` is omitted.
+
+On startup, saved URL state is restored: filters are applied, map view is positioned, map style is set, and the selected photo popup is reopened. The Reset button clears all URL params.
 
 ## Keyboard Shortcuts
 

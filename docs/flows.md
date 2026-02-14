@@ -2,7 +2,9 @@
 
 ## Browse the collection
 
-User opens the app and sees all photos and videos on the map, zoomed to fit. The stats panel shows the total count and date range. Clicking "Fit to view" re-fits the map and opens a popup on the oldest item.
+User opens the app and sees all photos and videos on the map, zoomed to fit. The stats panel shows the total count. Clicking "Fit" re-fits the map and opens a popup on the oldest item.
+
+If the user previously had a URL with filters or a selected photo, the app restores that state on load — the same filters, map position, map style, and open popup are restored.
 
 ## Find a specific photo on the map
 
@@ -31,7 +33,7 @@ Close with Escape, Space, or clicking outside the image. Info and "Open in Photo
 
 ## Filter by year
 
-The user picks a year from the dropdown. The album and camera dropdowns are repopulated to show only options available within that year. The map updates to show only matching items. The stats panel updates the count and date range.
+The user picks a year from the dropdown. The album and camera dropdowns are repopulated to show only options available within that year. The map updates to show only matching items. The stats panel updates the count. All filter changes are persisted in the URL.
 
 ## Filter by album
 
@@ -51,7 +53,15 @@ The user clicks GPS precision toggle buttons (Exif, Inferred, User, None). Same 
 
 ## Switch map style
 
-The user clicks one of the map style buttons (Topo, Satellite, Maasto, Orto). The active button gets highlighted. Map tiles change while keeping the same view position. Photo markers reappear after the new tiles load.
+The user clicks one of the map style buttons (Topo, Satellite, Maasto, Orto). The active button gets highlighted. Map tiles change while keeping the same view position. Photo markers reappear after the new tiles load. The selected style is saved in the URL.
+
+## Switch map projection
+
+The user clicks the globe control (bottom-right) to toggle between globe and flat (mercator) projections. In globe mode, a day/night shadow overlay is visible, showing the sun position corresponding to the currently viewed photo's date and time. The shadow animates smoothly when navigating between photos.
+
+## Reset the app
+
+The user clicks the "Reset" button next to "Fit". This closes any open popup, clears the selection, resets the night layer to the current time, resets all filters to their defaults (all years, all media types, all GPS types), clears the URL, and fits the map to all photos.
 
 ## Set a photo's location
 
