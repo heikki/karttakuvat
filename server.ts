@@ -238,6 +238,11 @@ async function handleSetLocations(req: Request): Promise<Response> {
 
     await Bun.write('public/items.json', JSON.stringify(items, null, 2));
 
+    const prettier = await import('prettier');
+    const raw = await Bun.file('public/items.json').text();
+    const formatted = await prettier.format(raw, { parser: 'json' });
+    await Bun.write('public/items.json', formatted);
+
     return Response.json({ ok: true });
   } catch (err) {
     console.error('handleSetLocations error:', err);
