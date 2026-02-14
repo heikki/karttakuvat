@@ -3,7 +3,7 @@ import maplibregl from 'maplibre-gl';
 import type { FilterSpecification, StyleSpecification } from 'maplibre-gl';
 
 import { mapStyles } from './config';
-import { addPendingEdit, state, subscribe } from './data';
+import { addPendingEdit, getEffectiveCoords, state, subscribe } from './data';
 import { mapViewFromUrl, mapViewToUrl } from './filter-url';
 import {
   addNightLayer,
@@ -63,10 +63,7 @@ function showPlacementPanel(photoIndex: number) {
 }
 
 function hidePlacementPanel() {
-  const panel = document.getElementById('placement-panel');
-  if (panel !== null) {
-    panel.classList.remove('active');
-  }
+  document.getElementById('placement-panel')?.classList.remove('active');
 }
 
 const markerLayers = [
@@ -95,7 +92,6 @@ function exitPlacementMode() {
 function finishPlacement(photoIndex: number, lat: number, lon: number) {
   const photo = state.filteredPhotos[photoIndex];
   if (photo === undefined) return;
-
   addPendingEdit(photo.uuid, lat, lon);
   exitPlacementMode();
   showPopup({ index: photoIndex }, [lon, lat]);
@@ -144,15 +140,13 @@ export function initMap() {
     mapViewToUrl({ lat: c.lat, lon: c.lng, zoom: map.getZoom() });
   });
 
-  map.on('error', () => { /* ignore */ });
+  map.on('error', () => {
+    /* ignore */
+  });
   window.map = map;
 
   const panToFitPopup = createPanToFitPopup(map);
-  const updateSun = (
-    dateStr: string,
-    tz: string | null,
-    albums?: string[]
-  ) => {
+  const updateSun = (dateStr: string, tz: string | null, albums?: string[]) => {
     updateSunPosition({ map, dateStr, tz, albums });
   };
   initPopupCallbacks(highlightMarker, panToFitPopup, getMap, updateSun);
@@ -180,9 +174,7 @@ export function initMap() {
     const index = state.filteredPhotos.findIndex((p) => p.uuid === uuid);
     if (index === -1) return;
     const photo = state.filteredPhotos[index]!;
-    const pending = state.pendingEdits.get(photo.uuid);
-    const lon = pending === undefined ? (photo.lon ?? 0) : pending.lon;
-    const lat = pending === undefined ? (photo.lat ?? 0) : pending.lat;
+    const { lon, lat } = getEffectiveCoords(photo);
     showPopup({ index }, [lon, lat]);
   });
 
@@ -193,14 +185,10 @@ export function initMap() {
     const popup = getCurrentPopup();
     if (popup !== null) {
       if (uuid !== null) {
-        const newIndex = state.filteredPhotos.findIndex(
-          (p) => p.uuid === uuid
-        );
+        const newIndex = state.filteredPhotos.findIndex((p) => p.uuid === uuid);
         if (newIndex !== -1) {
           const photo = state.filteredPhotos[newIndex]!;
-          const pending = state.pendingEdits.get(photo.uuid);
-          const lon = pending === undefined ? (photo.lon ?? 0) : pending.lon;
-          const lat = pending === undefined ? (photo.lat ?? 0) : pending.lat;
+          const { lon, lat } = getEffectiveCoords(photo);
           showPopup({ index: newIndex }, [lon, lat]);
           return;
         }
@@ -256,7 +244,7 @@ export function changeMapStyle(styleKey: string) {
     addNightLayer(map);
   };
 
-  if (!map.isStyleLoaded()) {
+  if (map.isStyleLoaded() !== true) {
     // Previous style still loading — wait for it before switching
     void map.once('style.load', () => {
       void map.once('style.load', applyLayers);
@@ -273,9 +261,7 @@ function createGeoJSON(): FeatureCollection<Point> {
   return {
     type: 'FeatureCollection',
     features: state.filteredPhotos.map((photo, index) => {
-      const pending = state.pendingEdits.get(photo.uuid);
-      const lon = pending === undefined ? (photo.lon ?? 0) : pending.lon;
-      const lat = pending === undefined ? (photo.lat ?? 0) : pending.lat;
+      const { lon, lat } = getEffectiveCoords(photo);
       return {
         type: 'Feature' as const,
         geometry: {
@@ -402,13 +388,9 @@ function highlightMarker(index: number | null) {
       ? ['==', ['get', 'index'], -1]
       : ['==', ['get', 'index'], index];
 
-  if (map.getLayer('photo-markers-selected') !== undefined) {
-    map.setFilter('photo-markers-selected', filter);
+  for (const id of ['photo-markers-selected', 'photo-markers-highlight-ring']) {
+    if (map.getLayer(id) !== undefined) map.setFilter(id, filter);
   }
-  if (map.getLayer('photo-markers-highlight-ring') !== undefined) {
-    map.setFilter('photo-markers-highlight-ring', filter);
-  }
-
   if (index === null) {
     stopPulseAnimation();
   } else {
@@ -486,9 +468,7 @@ function setupMarkerInteractions() {
 function showFirstPopup() {
   const photo = state.filteredPhotos[0];
   if (photo === undefined) return;
-  const pending = state.pendingEdits.get(photo.uuid);
-  const lon = pending === undefined ? (photo.lon ?? 0) : pending.lon;
-  const lat = pending === undefined ? (photo.lat ?? 0) : pending.lat;
+  const { lon, lat } = getEffectiveCoords(photo);
   showPopup({ index: 0 }, [lon, lat]);
 }
 
@@ -499,9 +479,10 @@ function computePhotoBounds(): maplibregl.LngLatBounds {
 }
 
 function isSinglePointBounds(bounds: maplibregl.LngLatBounds): boolean {
-  const sw = bounds.getSouthWest();
-  const ne = bounds.getNorthEast();
-  return sw.lng === ne.lng && sw.lat === ne.lat;
+  return (
+    bounds.getSouthWest().lng === bounds.getNorthEast().lng &&
+    bounds.getSouthWest().lat === bounds.getNorthEast().lat
+  );
 }
 
 function applyFitCallback(animate: boolean, selectFirst: boolean) {

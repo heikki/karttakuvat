@@ -2,6 +2,7 @@ import {
   applyHourOffset,
   getCopiedDate,
   getCopiedLocation,
+  getEffectiveCoords,
   state
 } from './data';
 import type { Photo } from './types';
@@ -24,12 +25,15 @@ export function getEffectiveDate(photo: Photo): string {
 export function getEffectiveLocation(
   photo: Photo
 ): { lat: number; lon: number } | null {
-  const pending = state.pendingEdits.get(photo.uuid);
-  if (pending !== undefined) return pending;
-  if (photo.lat !== null && photo.lon !== null) {
-    return { lat: photo.lat, lon: photo.lon };
+  const coords = getEffectiveCoords(photo);
+  if (
+    photo.lat === null &&
+    photo.lon === null &&
+    !state.pendingEdits.has(photo.uuid)
+  ) {
+    return null;
   }
-  return null;
+  return coords;
 }
 
 function shouldShowDatePaste(photo: Photo): boolean {

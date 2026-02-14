@@ -10,6 +10,16 @@ import {
   subscribeEdits
 } from './lib/data';
 import {
+  filtersFromUrl,
+  filtersToUrl,
+  mapStyleFromUrl,
+  mapStyleToUrl,
+  photoFromUrl,
+  photoToUrl,
+  setButtonGroupActive,
+  setSelectValue
+} from './lib/filter-url';
+import {
   changeMapStyle,
   enterPlacementMode,
   fitToPhotos,
@@ -17,6 +27,8 @@ import {
   initMap,
   selectGroupPhoto
 } from './lib/map';
+import { initMetadataModal, showMetadata } from './lib/metadata';
+import { resetNightLayer } from './lib/night';
 import {
   adjustTime,
   applyManualDate,
@@ -36,6 +48,8 @@ import {
   showPopup,
   toggleDateEdit
 } from './lib/popup';
+import { getEffectiveLocation } from './lib/popup-html';
+import { clearSelection } from './lib/selection';
 import {
   hideLightbox,
   initUI,
@@ -48,20 +62,6 @@ import {
   updateStats
 } from './lib/ui';
 import { getYear } from './lib/utils';
-import {
-  filtersFromUrl,
-  filtersToUrl,
-  mapStyleFromUrl,
-  mapStyleToUrl,
-  photoFromUrl,
-  photoToUrl,
-  setButtonGroupActive,
-  setSelectValue
-} from './lib/filter-url';
-import { initMetadataModal, showMetadata } from './lib/metadata';
-import { clearSelection } from './lib/selection';
-import { resetNightLayer } from './lib/night';
-import { getEffectiveLocation } from './lib/popup-html';
 
 function getSelectedPhotoLocation(): { lat: number; lon: number } | undefined {
   const uuid = getCurrentPhotoUuid();
@@ -311,6 +311,39 @@ async function saveEdits() {
   }
 }
 
+function handleReset() {
+  getCurrentPopup()?.remove();
+  clearSelection();
+  resetNightLayer(getMap());
+  setSelectValue('year-select', 'all');
+  setButtonGroupActive('gps-buttons', ['exif', 'inferred', 'user', 'none']);
+  setButtonGroupActive('media-buttons', ['photo', 'video']);
+  const albums = [...new Set(state.photos.flatMap((p) => p.albums))].sort();
+  const cameras = [
+    ...new Set(state.photos.map((p) => p.camera ?? '(unknown)'))
+  ].sort();
+  repopulateSelect('album-select', albums);
+  repopulateSelect('camera-select', cameras);
+  setSelectValue('album-select', 'all');
+  setSelectValue('camera-select', 'all');
+  applyFilters({
+    year: 'all',
+    gps: ['exif', 'inferred', 'user', 'none'],
+    media: ['photo', 'video'],
+    album: 'all',
+    camera: 'all'
+  });
+  filtersToUrl({
+    year: 'all',
+    album: 'all',
+    camera: 'all',
+    gps: ['exif', 'inferred', 'user', 'none'],
+    media: ['photo', 'video']
+  });
+  history.replaceState(null, '', location.pathname);
+  fitToPhotos(true);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   void (async () => {
     initUI();
@@ -349,11 +382,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const map = getMap();
         const center = map.getCenter();
         const zoom = Math.round(map.getZoom());
-        const photo = getSelectedPhotoLocation();
+        const loc = getSelectedPhotoLocation();
         const url =
-          photo !== undefined
-            ? `maps://?ll=${photo.lat},${photo.lon}&q=${photo.lat},${photo.lon}&z=${zoom}&t=k`
-            : `maps://?ll=${center.lat},${center.lng}&z=${zoom}&t=k`;
+          loc === undefined
+            ? `maps://?ll=${center.lat},${center.lng}&z=${zoom}&t=k`
+            : `maps://?ll=${loc.lat},${loc.lon}&q=${loc.lat},${loc.lon}&z=${zoom}&t=k`;
         window.open(url, '_blank');
       });
     }
@@ -364,61 +397,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const map = getMap();
         const center = map.getCenter();
         const zoom = Math.round(map.getZoom());
-        const photo = getSelectedPhotoLocation();
+        const loc = getSelectedPhotoLocation();
         const url =
-          photo !== undefined
-            ? `https://www.google.com/maps?q=${photo.lat},${photo.lon}&z=${zoom}`
-            : `https://www.google.com/maps/@${center.lat},${center.lng},${zoom}z`;
+          loc === undefined
+            ? `https://www.google.com/maps/@${center.lat},${center.lng},${zoom}z`
+            : `https://www.google.com/maps?q=${loc.lat},${loc.lon}&z=${zoom}`;
         window.open(url, '_blank');
       });
     }
 
     const resetBtn = document.getElementById('reset-btn');
     if (resetBtn !== null) {
-      resetBtn.addEventListener('click', () => {
-        getCurrentPopup()?.remove();
-        clearSelection();
-        resetNightLayer(getMap());
-        // Reset all filters to defaults
-        setSelectValue('year-select', 'all');
-        setButtonGroupActive('gps-buttons', [
-          'exif',
-          'inferred',
-          'user',
-          'none'
-        ]);
-        setButtonGroupActive('media-buttons', ['photo', 'video']);
-        repopulateSelect(
-          'album-select',
-          [...new Set(state.photos.flatMap((p) => p.albums))].sort()
-        );
-        repopulateSelect(
-          'camera-select',
-          [
-            ...new Set(state.photos.map((p) => p.camera ?? '(unknown)'))
-          ].sort()
-        );
-        // repopulateSelect preserves previous value; force to "all"
-        setSelectValue('album-select', 'all');
-        setSelectValue('camera-select', 'all');
-        applyFilters({
-          year: 'all',
-          gps: ['exif', 'inferred', 'user', 'none'],
-          media: ['photo', 'video'],
-          album: 'all',
-          camera: 'all'
-        });
-        filtersToUrl({
-          year: 'all',
-          album: 'all',
-          camera: 'all',
-          gps: ['exif', 'inferred', 'user', 'none'],
-          media: ['photo', 'video']
-        });
-        // Clear URL and fit to all photos
-        history.replaceState(null, '', location.pathname);
-        fitToPhotos(true);
-      });
+      resetBtn.addEventListener('click', handleReset);
     }
 
     const saveBtn = document.getElementById('save-edits-btn');

@@ -23,7 +23,7 @@ const datePattern =
 
 function dateToUtc(dateStr: string, tz: string | null): string {
   if (dateStr === '' || tz === null || tz === '') return dateStr;
-  const sign = tz[0] === '+' ? 1 : -1;
+  const sign = tz.startsWith('+') ? 1 : -1;
   const h = parseInt(tz.slice(1, 3), 10);
   const m = parseInt(tz.slice(4, 6), 10);
   const offsetHours = sign * (h + m / 60);
@@ -241,9 +241,7 @@ async function handleSetLocations(req: Request): Promise<Response> {
     applyLocationEdits(items, locationEdits, locResult.tzResults);
     applyTimeEdits(items, timeEdits);
     items.sort((a, b) => {
-      const d = dateToUtc(a.date, a.tz).localeCompare(
-        dateToUtc(b.date, b.tz)
-      );
+      const d = dateToUtc(a.date, a.tz).localeCompare(dateToUtc(b.date, b.tz));
       return d === 0 ? a.uuid.localeCompare(b.uuid) : d;
     });
 

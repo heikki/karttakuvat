@@ -84,6 +84,12 @@ export function clearPendingEdits() {
   notify();
 }
 
+export function getEffectiveCoords(photo: Photo): { lat: number; lon: number } {
+  const pending = state.pendingEdits.get(photo.uuid);
+  if (pending !== undefined) return pending;
+  return { lat: photo.lat ?? 0, lon: photo.lon ?? 0 };
+}
+
 export function getPendingEdits(): Array<{
   uuid: string;
   lat: number;
