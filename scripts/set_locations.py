@@ -67,7 +67,6 @@ def main():
                         OSXPHOTOS,
                         "timewarp",
                         "--timezone", tz_name,
-                        "--match-time",
                         "--uuid", uuid,
                         "--force",
                     ],
