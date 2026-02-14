@@ -334,6 +334,19 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
+    const appleMapsBtn = document.getElementById('apple-maps-btn');
+    if (appleMapsBtn !== null) {
+      appleMapsBtn.addEventListener('click', () => {
+        const map = getMap();
+        const center = map.getCenter();
+        const zoom = Math.round(map.getZoom());
+        window.open(
+          `maps://?ll=${center.lat},${center.lng}&z=${zoom}&t=k`,
+          '_blank'
+        );
+      });
+    }
+
     const resetBtn = document.getElementById('reset-btn');
     if (resetBtn !== null) {
       resetBtn.addEventListener('click', () => {
