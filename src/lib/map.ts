@@ -5,7 +5,12 @@ import type { FilterSpecification, StyleSpecification } from 'maplibre-gl';
 import { mapStyles } from './config';
 import { addPendingEdit, state, subscribe } from './data';
 import { mapViewFromUrl, mapViewToUrl } from './filter-url';
-import { addNightLayer, onProjectionChange, updateSunPosition } from './night';
+import {
+  addNightLayer,
+  onProjectionChange,
+  setNightLayerHidden,
+  updateSunPosition
+} from './night';
 import { createPanToFitPopup } from './pan';
 import {
   getClusterPhotos,
@@ -84,6 +89,7 @@ function exitPlacementMode() {
   map.getCanvas().classList.remove('crosshair');
   hidePlacementPanel();
   setMarkerVisibility(true);
+  setNightLayerHidden(false);
 }
 
 function finishPlacement(photoIndex: number, lat: number, lon: number) {
@@ -101,6 +107,7 @@ export function enterPlacementMode(photoIndex: number) {
   map.getCanvas().classList.add('crosshair');
   showPlacementPanel(photoIndex);
   setMarkerVisibility(false);
+  setNightLayerHidden(true);
 }
 
 function withGlobe(style: StyleSpecification): StyleSpecification {

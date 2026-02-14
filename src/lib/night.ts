@@ -7,6 +7,7 @@ let nightLayer = createNightLayer();
 let nightLayerDate: Date | null = null;
 let nightAnimationId: number | null = null;
 let nightLayerAlbums: string[] = [];
+let nightLayerHidden = false;
 
 function createNightLayer(date: Date | null = null): NightLayer {
   return new NightLayer({
@@ -21,7 +22,7 @@ function createNightLayer(date: Date | null = null): NightLayer {
 
 function updateNightLayerVisibility(map: maplibregl.Map) {
   if (map.getLayer(nightLayer.id) === undefined) return;
-  const visible = map.getProjection().type === 'globe';
+  const visible = map.getProjection().type === 'globe' && !nightLayerHidden;
   nightLayer.setOpacity(visible ? 0.8 : 0);
 }
 
@@ -40,6 +41,11 @@ export function addNightLayer(map: maplibregl.Map) {
 
 export function onProjectionChange(map: maplibregl.Map) {
   updateNightLayerVisibility(map);
+}
+
+export function setNightLayerHidden(hidden: boolean) {
+  nightLayerHidden = hidden;
+  nightLayer.setOpacity(hidden ? 0 : 0.8);
 }
 
 export function resetNightLayer(map: maplibregl.Map) {
