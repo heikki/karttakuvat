@@ -21,6 +21,15 @@ interface SetLocationsBody {
 const datePattern =
   /^(?<yr>\d{4}):(?<mo>\d{2}):(?<dy>\d{2}) (?<hr>\d{2}):(?<mi>\d{2}):(?<sc>\d{2})$/v;
 
+function dateToUtc(dateStr: string, tz: string | null): string {
+  if (dateStr === '' || tz === null || tz === '') return dateStr;
+  const sign = tz[0] === '+' ? 1 : -1;
+  const h = parseInt(tz.slice(1, 3), 10);
+  const m = parseInt(tz.slice(4, 6), 10);
+  const offsetHours = sign * (h + m / 60);
+  return applyHourOffset(dateStr, -offsetHours);
+}
+
 function applyHourOffset(dateStr: string, hours: number): string {
   if (dateStr === '' || hours === 0) return dateStr;
   const match = datePattern.exec(dateStr);
@@ -232,7 +241,9 @@ async function handleSetLocations(req: Request): Promise<Response> {
     applyLocationEdits(items, locationEdits, locResult.tzResults);
     applyTimeEdits(items, timeEdits);
     items.sort((a, b) => {
-      const d = a.date.localeCompare(b.date);
+      const d = dateToUtc(a.date, a.tz).localeCompare(
+        dateToUtc(b.date, b.tz)
+      );
       return d === 0 ? a.uuid.localeCompare(b.uuid) : d;
     });
 
