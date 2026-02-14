@@ -145,10 +145,9 @@ export function initMap() {
   const updateSun = (
     dateStr: string,
     tz: string | null,
-    albums?: string[],
-    sequential?: boolean
+    albums?: string[]
   ) => {
-    updateSunPosition({ map, dateStr, tz, albums, sequential });
+    updateSunPosition({ map, dateStr, tz, albums });
   };
   initPopupCallbacks(highlightMarker, panToFitPopup, getMap, updateSun);
   initSelectionCallbacks(getMap);

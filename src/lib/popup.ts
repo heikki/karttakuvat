@@ -53,8 +53,7 @@ let getMapFn: () => maplibregl.Map | undefined = () => undefined;
 let updateSunPositionFn: (
   dateStr: string,
   tz: string | null,
-  albums?: string[],
-  sequential?: boolean
+  albums?: string[]
 ) => void = () => {
   /* noop */
 };
@@ -66,8 +65,7 @@ export function initPopupCallbacks(
   updateSunPosition: (
     dateStr: string,
     tz: string | null,
-    albums?: string[],
-    sequential?: boolean
+    albums?: string[]
   ) => void
 ) {
   highlightMarkerFn = highlightMarker;
@@ -284,7 +282,7 @@ export function selectGroupPhoto(index: number) {
   });
 
   highlightMarkerFn(photo._index ?? null);
-  updateSunPositionFn(photo.date, photo.tz ?? null, photo.albums, true);
+  updateSunPositionFn(photo.date, photo.tz ?? null, photo.albums);
   currentGroupIndex = index;
 }
 
@@ -433,7 +431,7 @@ export function navigateSinglePhoto(newIndex: number) {
   currentSinglePhotoIndex = newIndex;
   currentPhotoUuid = photo.uuid;
   highlightMarkerFn(newIndex);
-  updateSunPositionFn(photo.date, photo.tz ?? null, photo.albums, true);
+  updateSunPositionFn(photo.date, photo.tz ?? null, photo.albums);
 
   const img = document.getElementById('single-img') as HTMLImageElement | null;
   const info = document.getElementById('single-info');

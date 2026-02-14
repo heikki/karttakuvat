@@ -42,15 +42,6 @@ export function onProjectionChange(map: maplibregl.Map) {
   updateNightLayerVisibility(map);
 }
 
-function shouldSnapInstantly(
-  map: maplibregl.Map,
-  sequential: boolean | undefined,
-  diffMs: number
-): boolean {
-  if (sequential !== true) return true;
-  return map.getZoom() > 5 && diffMs > 86400000;
-}
-
 function animateNightTransition(
   map: maplibregl.Map,
   startTime: number,
@@ -81,11 +72,10 @@ interface SunPositionOptions {
   dateStr: string;
   tz: string | null;
   albums?: string[];
-  sequential?: boolean;
 }
 
 export function updateSunPosition(options: SunPositionOptions) {
-  const { map, dateStr, tz, albums, sequential } = options;
+  const { map, dateStr, tz, albums } = options;
   if (dateStr === '') return;
   const targetDate = new Date(toUtcSortKey(dateStr, tz));
   if (isNaN(targetDate.getTime())) return;
@@ -107,24 +97,28 @@ export function updateSunPosition(options: SunPositionOptions) {
   }
 
   const fullDiffMs = Math.abs(targetDate.getTime() - currentDate.getTime());
-  if (shouldSnapInstantly(map, sequential, fullDiffMs)) {
-    nightLayerDate = targetDate;
-    nightLayer.setDate(targetDate);
-    map.triggerRepaint();
-    return;
-  }
-
   const sharesAlbum = prevAlbums.some((a) => nightLayerAlbums.includes(a));
-  const isLongJump = fullDiffMs > 86400000;
+  const endTime = targetDate.getTime();
   const startTime = sharesAlbum
     ? currentDate.getTime()
-    : new Date(targetDate).setHours(
-        currentDate.getHours(),
-        currentDate.getMinutes(),
-        currentDate.getSeconds()
-      );
-  const endTime = targetDate.getTime();
-  const duration = isLongJump ? 2000 : 400;
+    : (() => {
+        let t = new Date(targetDate).setHours(
+          currentDate.getHours(),
+          currentDate.getMinutes(),
+          currentDate.getSeconds()
+        );
+        // Ensure shortened animation goes in the same direction as the real transition
+        const realDirection = endTime - currentDate.getTime();
+        const shortDirection = endTime - t;
+        if (realDirection > 0 && shortDirection <= 0) {
+          t -= 86400000;
+        } else if (realDirection < 0 && shortDirection >= 0) {
+          t += 86400000;
+        }
+        return t;
+      })();
+
+  const duration = fullDiffMs > 86400000 ? 2000 : 400;
 
   animateNightTransition(map, startTime, endTime, duration);
 }
