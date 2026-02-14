@@ -38,7 +38,7 @@ Changing any filter recomputes the filtered set and notifies:
 
 MapLibre GL JS with raster tile sources. Style switching via buttons:
 
-- **Topo** (default, `outdoors`): Thunderforest Outdoors (requires API key)
+- **Outdoors** (default): Thunderforest Outdoors (requires API key)
 - **Satellite**: Google Satellite
 - **Maasto**: MML Maastokartta over Thunderforest Outdoors (requires API keys)
 - **Orto**: MML Ortokuva over Google Satellite (requires API key)
