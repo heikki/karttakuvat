@@ -99,12 +99,19 @@ The user clicks the info button (on a popup image or in the lightbox). A modal a
 
 Single-photo popup, multi-photo popup, and the lightbox all show a Photos.app link button (visible when the photo has a `photos_url`). Clicking it opens Apple Photos at that specific photo.
 
+## Measure distances on the map
+
+The user clicks the "Measure" button in the stats panel. The button highlights blue and the cursor becomes a crosshair. Each click on the map adds a point, connected by a dashed red line to previous points. A floating overlay at the top of the screen shows the cumulative distance.
+
+To remove a point, the user clicks on it. To finish, the user presses Escape or clicks the "Measure" button again — all points and the line are cleared.
+
 ## Dismiss things
 
 - **Popup**: click map background or press Escape
 - **Lightbox**: click outside the image, press Escape, or press Space
 - **Selection rectangle**: dismissed automatically when its popup closes
 - **Metadata modal**: click backdrop, press Escape, or click X
+- **Measurement mode**: press Escape or click "Measure" button
 - **Placement mode**: press Escape
 - **Date edit mode**: press Escape or click "done"
-- Priority order: metadata modal > date edit > placement > lightbox > popup
+- Priority order: metadata modal > date edit > placement > measurement > lightbox > popup

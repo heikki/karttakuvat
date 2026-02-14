@@ -27,6 +27,7 @@ Geolocation photo visualization web app displaying geotagged photographs on an i
 │       ├── pan.ts         # Auto-pan map to keep popup visible
 │       ├── popup.ts       # Popup state, navigation, date/location editing logic
 │       ├── popup-html.ts  # Popup HTML generation, overlay buttons
+│       ├── measure.ts     # Distance measurement tool
 │       ├── metadata.ts    # Metadata modal (osxphotos detail view)
 │       ├── selection.ts   # Shift+drag rectangular selection, arrow key navigation
 │       └── ui.ts          # Lightbox, stats panel, filter UI helpers

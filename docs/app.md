@@ -200,6 +200,20 @@ Full-screen overlay showing detailed photo metadata from Photos.app (via osxphot
 - Close with X button, backdrop click, or Escape
 - Blocks all keyboard events except Escape while open
 
+## Measurement Mode
+
+Interactive distance measurement tool for measuring distances on the map.
+
+1. Activated via "Measure" button in the stats panel view-buttons row
+2. Cursor changes to crosshair
+3. Click on map: adds a point, connected to previous points by a dashed red line
+4. Distance overlay appears at top-center showing cumulative distance (meters below 1 km, kilometers with 2 decimals otherwise)
+5. Click an existing measurement point: removes it from the path
+6. Escape or click "Measure" button again: exits measurement mode and clears all points
+7. "Reset" button also exits measurement mode
+
+Measurement layers (points + line) are re-added after map style changes to persist across tile source switches.
+
 ## Stats Panel
 
 Fixed top-right (220px wide). Shows:
@@ -208,7 +222,8 @@ Fixed top-right (220px wide). Shows:
 - Item count (photos and/or videos)
 - Filter section: Year, Album, Camera dropdowns; Media and GPS toggle buttons; Map type buttons
 - "Fit" button — fits map to filtered photos and opens popup on first photo
-- "Reset" button — closes popup, clears selection, resets night layer, resets all filters to defaults, clears URL params, fits to all photos
+- "Reset" button — closes popup, clears selection, exits measure mode, resets night layer, resets all filters to defaults, clears URL params, fits to all photos
+- "Measure" button — toggles distance measurement mode (highlighted blue when active)
 - Pending edits section (hidden when no edits): count + Save/Discard buttons
 
 ## URL State
@@ -228,6 +243,7 @@ On startup, saved URL state is restored: filters are applied, map view is positi
 | ---------- | ------------------- | ------------------------------- |
 | Escape     | Metadata modal open | Close metadata modal            |
 | Escape     | Date edit mode      | Exit date edit mode             |
+| Escape     | Measure mode        | Exit measurement mode           |
 | Escape     | Placement mode      | Cancel placement mode           |
 | Escape     | Lightbox open       | Close lightbox                  |
 | Escape     | Popup open          | Close popup and clear selection |
