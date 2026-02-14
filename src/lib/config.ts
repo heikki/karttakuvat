@@ -27,18 +27,21 @@ export function mapStyles(): MapStyles {
     satellite: {
       version: 8,
       sources: {
-        'esri-satellite': {
+        'google-satellite': {
           type: 'raster',
           tiles: [
-            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+            'https://mt0.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+            'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+            'https://mt2.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+            'https://mt3.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'
           ],
           tileSize: 256,
-          maxzoom: 19,
-          attribution: '© Esri'
+          maxzoom: 20,
+          attribution: '© Google'
         }
       },
       layers: [
-        { id: 'esri-satellite', type: 'raster', source: 'esri-satellite' }
+        { id: 'google-satellite', type: 'raster', source: 'google-satellite' }
       ]
     },
     mml_maastokartta: {
@@ -76,14 +79,17 @@ export function mapStyles(): MapStyles {
     mml_ortokuva: {
       version: 8,
       sources: {
-        'esri-satellite': {
+        'google-satellite': {
           type: 'raster',
           tiles: [
-            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+            'https://mt0.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+            'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+            'https://mt2.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+            'https://mt3.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'
           ],
           tileSize: 256,
-          maxzoom: 19,
-          attribution: '© Esri'
+          maxzoom: 20,
+          attribution: '© Google'
         },
         'mml_ortokuva': {
           type: 'raster',
@@ -95,7 +101,7 @@ export function mapStyles(): MapStyles {
         }
       },
       layers: [
-        { id: 'esri-satellite', type: 'raster', source: 'esri-satellite' },
+        { id: 'google-satellite', type: 'raster', source: 'google-satellite' },
         { id: 'mml_ortokuva', type: 'raster', source: 'mml_ortokuva' }
       ]
     }
