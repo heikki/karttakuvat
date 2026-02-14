@@ -61,6 +61,15 @@ import {
 import { initMetadataModal, showMetadata } from './lib/metadata';
 import { clearSelection } from './lib/selection';
 import { resetNightLayer } from './lib/night';
+import { getEffectiveLocation } from './lib/popup-html';
+
+function getSelectedPhotoLocation(): { lat: number; lon: number } | undefined {
+  const uuid = getCurrentPhotoUuid();
+  if (uuid === null) return undefined;
+  const photo = state.filteredPhotos.find((p) => p.uuid === uuid);
+  if (photo === undefined) return undefined;
+  return getEffectiveLocation(photo) ?? undefined;
+}
 
 declare global {
   interface Window {
@@ -340,10 +349,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const map = getMap();
         const center = map.getCenter();
         const zoom = Math.round(map.getZoom());
-        window.open(
-          `maps://?ll=${center.lat},${center.lng}&z=${zoom}&t=k`,
-          '_blank'
-        );
+        const photo = getSelectedPhotoLocation();
+        const url =
+          photo !== undefined
+            ? `maps://?ll=${photo.lat},${photo.lon}&q=${photo.lat},${photo.lon}&z=${zoom}&t=k`
+            : `maps://?ll=${center.lat},${center.lng}&z=${zoom}&t=k`;
+        window.open(url, '_blank');
       });
     }
 
@@ -353,10 +364,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const map = getMap();
         const center = map.getCenter();
         const zoom = Math.round(map.getZoom());
-        window.open(
-          `https://www.google.com/maps/@${center.lat},${center.lng},${zoom}z`,
-          '_blank'
-        );
+        const photo = getSelectedPhotoLocation();
+        const url =
+          photo !== undefined
+            ? `https://www.google.com/maps?q=${photo.lat},${photo.lon}&z=${zoom}`
+            : `https://www.google.com/maps/@${center.lat},${center.lng},${zoom}z`;
+        window.open(url, '_blank');
       });
     }
 
