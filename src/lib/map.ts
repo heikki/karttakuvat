@@ -1,10 +1,11 @@
 import type { FeatureCollection, Point } from 'geojson';
 import maplibregl from 'maplibre-gl';
 import type { FilterSpecification, StyleSpecification } from 'maplibre-gl';
-import { NightLayer } from 'maplibre-gl-nightlayer';
 
 import { mapStyles } from './config';
 import { addPendingEdit, state, subscribe } from './data';
+import { addNightLayer, onProjectionChange, updateSunPosition } from './night';
+import { createPanToFitPopup } from './pan';
 import {
   getClusterPhotos,
   getCurrentPhotoUuid,
@@ -20,7 +21,7 @@ import {
   setupRectangularSelection
 } from './selection';
 import type { MapStyles } from './types';
-import { formatDate, getThumbUrl, toUtcSortKey } from './utils';
+import { formatDate, getThumbUrl } from './utils';
 
 // Declare window augmentation for map
 declare global {
@@ -114,108 +115,6 @@ function withGlobe(style: StyleSpecification): StyleSpecification {
   };
 }
 
-function createNightLayer(date: Date | null = null): NightLayer {
-  return new NightLayer({
-    date,
-    opacity: 0.8,
-    color: [0, 0, 0, 255],
-    daytimeColor: [0, 0, 0, 0],
-    twilightSteps: 0,
-    updateInterval: 0
-  });
-}
-
-let nightLayer = createNightLayer();
-let nightLayerDate: Date | null = null;
-
-function addNightLayer() {
-  if (map.getLayer(nightLayer.id) !== undefined) {
-    map.removeLayer(nightLayer.id);
-  }
-  nightLayer = createNightLayer(nightLayerDate);
-  if (map.getLayer('photo-markers-selected') === undefined) {
-    map.addLayer(nightLayer);
-  } else {
-    map.addLayer(nightLayer, 'photo-markers-selected');
-  }
-  updateNightLayerVisibility();
-}
-
-function updateNightLayerVisibility() {
-  if (map.getLayer(nightLayer.id) === undefined) return;
-  const visible = map.getProjection().type === 'globe';
-  nightLayer.setOpacity(visible ? 0.8 : 0);
-}
-
-let nightAnimationId: number | null = null;
-
-let nightLayerAlbums: string[] = [];
-
-export function updateSunPosition(
-  dateStr: string,
-  tz: string | null,
-  albums?: string[],
-  sequential?: boolean
-) {
-  if (dateStr === '') return;
-  const targetDate = new Date(toUtcSortKey(dateStr, tz));
-  if (isNaN(targetDate.getTime())) return;
-
-  if (nightAnimationId !== null) {
-    cancelAnimationFrame(nightAnimationId);
-    nightAnimationId = null;
-  }
-
-  const prevAlbums = nightLayerAlbums;
-  nightLayerAlbums = albums ?? [];
-
-  const currentDate = nightLayerDate;
-  if (currentDate === null) {
-    nightLayerDate = targetDate;
-    nightLayer.setDate(targetDate);
-    map.triggerRepaint();
-    return;
-  }
-
-  const fullDiffMs = Math.abs(targetDate.getTime() - currentDate.getTime());
-  // Snap instantly for non-sequential nav, or close zoom with long time jumps
-  if (sequential !== true || (map.getZoom() > 5 && fullDiffMs > 86400000)) {
-    nightLayerDate = targetDate;
-    nightLayer.setDate(targetDate);
-    map.triggerRepaint();
-    return;
-  }
-
-  const sharesAlbum = prevAlbums.some((a) => nightLayerAlbums.includes(a));
-  const isLongJump = fullDiffMs > 86400000;
-  const startTime = sharesAlbum
-    ? currentDate.getTime()
-    : new Date(targetDate).setHours(
-        currentDate.getHours(),
-        currentDate.getMinutes(),
-        currentDate.getSeconds()
-      );
-  const endTime = targetDate.getTime();
-  const duration = isLongJump ? 2000 : 400;
-  const animStart = performance.now();
-
-  const animate = (now: number) => {
-    const t = Math.min(1, (now - animStart) / duration);
-    const eased = t < 0.5 ? 2 * t * t : 1 - 2 * (1 - t) * (1 - t); // ease-in-out
-    const interpolated = startTime + (endTime - startTime) * eased;
-    const d = new Date(interpolated);
-    nightLayerDate = d;
-    nightLayer.setDate(d);
-    map.triggerRepaint();
-    if (t < 1) {
-      nightAnimationId = requestAnimationFrame(animate);
-    } else {
-      nightAnimationId = null;
-    }
-  };
-  nightAnimationId = requestAnimationFrame(animate);
-}
-
 export function initMap() {
   map = new maplibregl.Map({
     container: 'map',
@@ -242,14 +141,23 @@ export function initMap() {
   window.map = map;
 
   // Initialize callbacks for other modules
-  initPopupCallbacks(highlightMarker, panToFitPopup, getMap, updateSunPosition);
+  const panToFitPopup = createPanToFitPopup(map);
+  const updateSun = (
+    dateStr: string,
+    tz: string | null,
+    albums?: string[],
+    sequential?: boolean
+  ) => {
+    updateSunPosition({ map, dateStr, tz, albums, sequential });
+  };
+  initPopupCallbacks(highlightMarker, panToFitPopup, getMap, updateSun);
   initSelectionCallbacks(getMap);
 
   map.on('load', () => {
     addPhotoLayers();
     addSelectionLayer();
     setupMarkerInteractions();
-    addNightLayer();
+    addNightLayer(map);
     setupRectangularSelection();
 
     updateMapData();
@@ -260,7 +168,7 @@ export function initMap() {
 
   // Toggle night layer and re-show popup when projection changes
   map.on('projectiontransition', () => {
-    updateNightLayerVisibility();
+    onProjectionChange(map);
     const popup = getCurrentPopup();
     if (popup === null) return;
     const uuid = getCurrentPhotoUuid();
@@ -341,7 +249,7 @@ export function changeMapStyle(styleKey: string) {
     addSelectionLayer();
     setupMarkerInteractions();
     updateMapData();
-    addNightLayer();
+    addNightLayer(map);
   });
 }
 
@@ -559,107 +467,54 @@ function setupMarkerInteractions() {
   });
 }
 
-function calculatePanOffset(
-  mapRect: DOMRect,
-  popupRect: DOMRect
-): { panX: number; panY: number } {
-  const padding = { top: 10, right: 260, bottom: 10, left: 10 };
-  let panX = 0;
-  let panY = 0;
-
-  if (popupRect.top < mapRect.top + padding.top) {
-    panY = popupRect.top - mapRect.top - padding.top;
-  } else if (popupRect.bottom > mapRect.bottom - padding.bottom) {
-    panY = popupRect.bottom - mapRect.bottom + padding.bottom;
-  }
-
-  if (popupRect.left < mapRect.left + padding.left) {
-    panX = popupRect.left - mapRect.left - padding.left;
-  } else if (popupRect.right > mapRect.right - padding.right) {
-    panX = popupRect.right - mapRect.right + padding.right;
-  }
-
-  return { panX, panY };
+function showFirstPopup() {
+  const photo = state.filteredPhotos[0];
+  if (photo === undefined) return;
+  const pending = state.pendingEdits.get(photo.uuid);
+  const lon = pending === undefined ? (photo.lon ?? 0) : pending.lon;
+  const lat = pending === undefined ? (photo.lat ?? 0) : pending.lat;
+  showPopup({ index: 0 }, [lon, lat]);
 }
 
-function panToFitPopup(coords: [number, number]) {
-  setTimeout(() => {
-    const popup = getCurrentPopup();
-    if (popup === null) return;
+function computePhotoBounds(): maplibregl.LngLatBounds {
+  const bounds = new maplibregl.LngLatBounds();
+  state.filteredPhotos.forEach((p) => bounds.extend([p.lon ?? 0, p.lat ?? 0]));
+  return bounds;
+}
 
-    // Guard against MapLibre crash when container has invalid dimensions
-    const mapContainer = map.getContainer();
-    if (mapContainer.clientWidth === 0 || mapContainer.clientHeight === 0) {
-      return;
-    }
+function isSinglePointBounds(bounds: maplibregl.LngLatBounds): boolean {
+  const sw = bounds.getSouthWest();
+  const ne = bounds.getNorthEast();
+  return sw.lng === ne.lng && sw.lat === ne.lat;
+}
 
-    // Stop any ongoing animation before panning
-    map.stop();
-
-    const popupEl = popup.getElement() as HTMLElement | undefined;
-    if (popupEl === undefined) return;
-    const mapRect = mapContainer.getBoundingClientRect();
-    const popupRect = popupEl.getBoundingClientRect();
-    const { panX, panY } = calculatePanOffset(mapRect, popupRect);
-
-    if (panX !== 0 || panY !== 0) {
-      try {
-        map.panBy([panX, panY], { duration: 300 });
-      } catch {
-        // Silently ignore MapLibre internal errors
-      }
-    }
-  }, 50);
+function applyFitCallback(animate: boolean, selectFirst: boolean) {
+  if (animate && selectFirst) {
+    void map.once('moveend', showFirstPopup);
+  } else if (selectFirst) {
+    showFirstPopup();
+  }
 }
 
 export function fitToPhotos(animate = false, selectFirst = false) {
   if (state.filteredPhotos.length === 0) return;
+  const bounds = computePhotoBounds();
+  const duration = animate ? 500 : 0;
 
-  const bounds = new maplibregl.LngLatBounds();
-  state.filteredPhotos.forEach((p) => bounds.extend([p.lon ?? 0, p.lat ?? 0]));
-
-  const showFirstPopup = () => {
-    if (!selectFirst) return;
-    const photo = state.filteredPhotos[0];
-    if (photo === undefined) return;
-    const pending = state.pendingEdits.get(photo.uuid);
-    const lon = pending === undefined ? (photo.lon ?? 0) : pending.lon;
-    const lat = pending === undefined ? (photo.lat ?? 0) : pending.lat;
-    showPopup({ index: 0 }, [lon, lat]);
-  };
-
-  const sw = bounds.getSouthWest();
-  const ne = bounds.getNorthEast();
-  if (sw.lng === ne.lng && sw.lat === ne.lat) {
+  if (isSinglePointBounds(bounds)) {
     const center = bounds.getCenter();
-    if (animate) {
-      map.flyTo({ center: [center.lng, center.lat], zoom: 14, duration: 500 });
-      void map.once('moveend', showFirstPopup);
-    } else {
-      map.setCenter([center.lng, center.lat]);
-      map.setZoom(14);
-      showFirstPopup();
-    }
+    map.flyTo({ center: [center.lng, center.lat], zoom: 14, duration });
+    applyFitCallback(animate, selectFirst);
     return;
   }
 
-  const isGlobe = map.getProjection().type === 'globe';
+  const topPad = map.getProjection().type === 'globe' ? 50 : 350;
   map.fitBounds(bounds, {
-    padding: {
-      top: isGlobe ? 50 : 350,
-      bottom: 40,
-      left: 50,
-      right: 270
-    },
+    padding: { top: topPad, bottom: 40, left: 50, right: 270 },
     maxZoom: 18,
-    duration: animate ? 500 : 0
+    duration
   });
-
-  if (animate && selectFirst) {
-    void map.once('moveend', showFirstPopup);
-  } else {
-    showFirstPopup();
-  }
+  applyFitCallback(animate, selectFirst);
 }
 
 // Re-export for index.ts
