@@ -247,14 +247,25 @@ export function changeMapStyle(styleKey: string) {
 
   // Stop any ongoing animation to prevent MapLibre crash during style change
   map.stop();
-  // Register listener before setStyle to avoid missing synchronous style.load
-  void map.once('style.load', () => {
+
+  const applyLayers = () => {
     addPhotoLayers();
     addSelectionLayer();
     setupMarkerInteractions();
     updateMapData();
     addNightLayer(map);
-  });
+  };
+
+  if (!map.isStyleLoaded()) {
+    // Previous style still loading — wait for it before switching
+    void map.once('style.load', () => {
+      void map.once('style.load', applyLayers);
+      map.setStyle(withGlobe(style));
+    });
+    return;
+  }
+
+  void map.once('style.load', applyLayers);
   map.setStyle(withGlobe(style));
 }
 
