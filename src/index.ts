@@ -51,6 +51,8 @@ import { getYear } from './lib/utils';
 import {
   filtersFromUrl,
   filtersToUrl,
+  mapStyleFromUrl,
+  mapStyleToUrl,
   photoFromUrl,
   photoToUrl,
   setButtonGroupActive,
@@ -240,6 +242,21 @@ function setupFilterListeners() {
   }
 }
 
+function restoreMapStyle(mapButtons: HTMLElement | null) {
+  const savedStyle = mapStyleFromUrl();
+  if (savedStyle === null) return;
+  changeMapStyle(savedStyle);
+  const activeBtn = mapButtons?.querySelector(
+    `.map-type-btn[data-style="${savedStyle}"]`
+  );
+  if (activeBtn !== null && activeBtn !== undefined) {
+    mapButtons
+      ?.querySelector('.map-type-btn.active')
+      ?.classList.remove('active');
+    activeBtn.classList.add('active');
+  }
+}
+
 function reopenPopup(uuid: string | null) {
   if (uuid === null) return;
   const newIndex = state.filteredPhotos.findIndex((p) => p.uuid === uuid);
@@ -304,6 +321,7 @@ document.addEventListener('DOMContentLoaded', () => {
           ?.classList.remove('active');
         btn.classList.add('active');
         changeMapStyle(style);
+        mapStyleToUrl(style);
       });
     }
 
@@ -355,6 +373,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     await loadPhotos();
     initMap();
+
+    restoreMapStyle(mapButtons);
+
     const years = [
       ...new Set(
         state.photos.map(getYear).filter((y): y is string => y !== null)

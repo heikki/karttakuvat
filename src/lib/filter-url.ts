@@ -117,6 +117,20 @@ export function mapViewFromUrl(): MapView | null {
   return parsed;
 }
 
+export function mapStyleToUrl(style: string): void {
+  const params = currentParams();
+  if (style === 'opentopomap') {
+    params.delete('style');
+  } else {
+    params.set('style', style);
+  }
+  updateUrl(params);
+}
+
+export function mapStyleFromUrl(): string | null {
+  return new URLSearchParams(location.search).get('style');
+}
+
 export function setSelectValue(id: string, value: string): void {
   const el = document.getElementById(id) as HTMLSelectElement | null;
   if (el === null) return;
