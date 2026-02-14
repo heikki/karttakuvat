@@ -18,7 +18,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from export import date_to_utc, determine_gps_source, format_camera, format_duration, query_gps_accuracy, query_video_durations, round_accuracy, tz_offset_from_coords
+from export import date_to_utc, determine_gps_source, format_camera, format_duration, query_gps_accuracy, query_video_durations, round_accuracy, tz_offset_from_coords, tz_offset_from_tz_name
 
 
 def get_output_dir():
@@ -166,7 +166,8 @@ def build_items_json(items, full_dir, json_path, old_items):
             "lat": lat,
             "lon": lon,
             "date": format_date(item.get("date")),
-            "tz": tz_offset_from_coords(lat, lon, format_date(item.get("date"))),
+            "tz": tz_offset_from_coords(lat, lon, format_date(item.get("date")))
+                  or tz_offset_from_tz_name("Europe/Helsinki", format_date(item.get("date"))),
             "camera": camera,
         }
 
@@ -187,6 +188,10 @@ def build_items_json(items, full_dir, json_path, old_items):
 
     with open(json_path, "w") as f:
         json.dump(entries, f, indent=2, ensure_ascii=False)
+        f.write("\n")
+
+    # Format with prettier for consistent diffs
+    subprocess.run(["npx", "prettier", "--write", str(json_path)], capture_output=True)
 
     return entries, skipped_no_location, location_changes
 

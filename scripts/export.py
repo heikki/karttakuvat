@@ -309,6 +309,27 @@ def _get_timezone_finder():
     return _get_timezone_finder._instance
 
 
+def tz_offset_from_tz_name(tz_name, date_str):
+    """Get UTC offset string from IANA timezone name and local date.
+
+    Returns e.g. "+03:00", "-05:00", or None if computation fails.
+    """
+    if not tz_name or not date_str:
+        return None
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    try:
+        dt = datetime.strptime(date_str, "%Y:%m:%d %H:%M:%S")
+        dt = dt.replace(tzinfo=ZoneInfo(tz_name))
+        total_seconds = int(dt.utcoffset().total_seconds())
+        sign = "+" if total_seconds >= 0 else "-"
+        total_seconds = abs(total_seconds)
+        hours, minutes = divmod(total_seconds // 60, 60)
+        return f"{sign}{hours:02d}:{minutes:02d}"
+    except Exception:
+        return None
+
+
 def tz_offset_from_coords(lat, lon, date_str):
     """Get UTC offset string from coordinates and local date.
 
@@ -319,19 +340,9 @@ def tz_offset_from_coords(lat, lon, date_str):
     """
     if lat is None or lon is None or not date_str:
         return None
-    from datetime import datetime
-    from zoneinfo import ZoneInfo
     try:
         tz_name = _get_timezone_finder().timezone_at(lat=lat, lng=lon)
-        if tz_name is None:
-            return None
-        dt = datetime.strptime(date_str, "%Y:%m:%d %H:%M:%S")
-        dt = dt.replace(tzinfo=ZoneInfo(tz_name))
-        total_seconds = int(dt.utcoffset().total_seconds())
-        sign = "+" if total_seconds >= 0 else "-"
-        total_seconds = abs(total_seconds)
-        hours, minutes = divmod(total_seconds // 60, 60)
-        return f"{sign}{hours:02d}:{minutes:02d}"
+        return tz_offset_from_tz_name(tz_name, date_str)
     except Exception:
         return None
 
@@ -528,7 +539,8 @@ def build_items_json(photos, videos, full_dir, json_path):
             "lat": lat,
             "lon": lon,
             "date": format_date(photo.get("date")),
-            "tz": tz_offset_from_coords(lat, lon, format_date(photo.get("date"))),
+            "tz": tz_offset_from_coords(lat, lon, format_date(photo.get("date")))
+                  or tz_offset_from_tz_name("Europe/Helsinki", format_date(photo.get("date"))),
             "camera": camera,
             "gps": gps_source,
             "gps_accuracy": round_accuracy(acc) if acc is not None else None,
@@ -572,7 +584,8 @@ def build_items_json(photos, videos, full_dir, json_path):
                 "lat": lat,
                 "lon": lon,
                 "date": format_date(video.get("date")),
-                "tz": tz_offset_from_coords(lat, lon, format_date(video.get("date"))),
+                "tz": tz_offset_from_coords(lat, lon, format_date(video.get("date")))
+                      or tz_offset_from_tz_name("Europe/Helsinki", format_date(video.get("date"))),
                 "camera": camera,
                 "duration": format_duration(video_durations.get(uuid)),
                 "gps": gps_source,
@@ -588,6 +601,10 @@ def build_items_json(photos, videos, full_dir, json_path):
 
     with open(json_path, "w") as f:
         json.dump(entries, f, indent=2, ensure_ascii=False)
+        f.write("\n")
+
+    # Format with prettier for consistent diffs
+    subprocess.run(["npx", "prettier", "--write", str(json_path)], capture_output=True)
 
     return entries
 
