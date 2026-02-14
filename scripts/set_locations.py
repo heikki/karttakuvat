@@ -85,7 +85,7 @@ def main():
     # Cmd+Z in Photos won't accidentally revert these edits
     subprocess.run(["osascript", "-e", 'tell application "Photos" to quit'], capture_output=True)
     subprocess.run(["sleep", "2"])
-    subprocess.Popen(["open", "-a", "Photos"])
+    subprocess.Popen(["open", "-g", "-a", "Photos"])
 
     print(json.dumps(results))
 
