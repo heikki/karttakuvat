@@ -96,12 +96,7 @@ function finishPlacement(photoIndex: number, lat: number, lon: number) {
 }
 
 export function enterPlacementMode(photoIndex: number) {
-  // Close any open popup
-  const popup = getCurrentPopup();
-  if (popup !== null) {
-    popup.remove();
-  }
-
+  getCurrentPopup()?.remove();
   placementPhotoIndex = photoIndex;
   map.getCanvas().classList.add('crosshair');
   showPlacementPanel(photoIndex);
@@ -142,15 +137,9 @@ export function initMap() {
     mapViewToUrl({ lat: c.lat, lon: c.lng, zoom: map.getZoom() });
   });
 
-  // Handle MapLibre internal errors gracefully
-  map.on('error', () => {
-    // Silently ignore MapLibre internal errors
-  });
-
-  // Expose map to window
+  map.on('error', () => { /* ignore */ });
   window.map = map;
 
-  // Initialize callbacks for other modules
   const panToFitPopup = createPanToFitPopup(map);
   const updateSun = (
     dateStr: string,
@@ -175,7 +164,6 @@ export function initMap() {
     }
   });
 
-  // Toggle night layer and re-show popup when projection changes
   map.on('projectiontransition', () => {
     onProjectionChange(map);
     const popup = getCurrentPopup();
@@ -506,6 +494,13 @@ function applyFitCallback(animate: boolean, selectFirst: boolean) {
   }
 }
 
+function computeTopPadding(): number {
+  if (map.getProjection().type !== 'globe') return 350;
+  const popupEl = getCurrentPopup()?.getElement();
+  if (popupEl === undefined) return 50;
+  return Math.max(50, popupEl.getBoundingClientRect().height + 60);
+}
+
 export function fitToPhotos(animate = false, selectFirst = false) {
   if (state.filteredPhotos.length === 0) return;
   const bounds = computePhotoBounds();
@@ -518,14 +513,12 @@ export function fitToPhotos(animate = false, selectFirst = false) {
     return;
   }
 
-  const topPad = map.getProjection().type === 'globe' ? 50 : 350;
   map.fitBounds(bounds, {
-    padding: { top: topPad, bottom: 40, left: 50, right: 270 },
+    padding: { top: computeTopPadding(), bottom: 40, left: 50, right: 270 },
     maxZoom: 18,
     duration
   });
   applyFitCallback(animate, selectFirst);
 }
 
-// Re-export for index.ts
 export { selectGroupPhotoFromPopup as selectGroupPhoto };
