@@ -60,8 +60,6 @@ def main():
     # Restart Photos.app to clear the undo stack so that
     # Cmd+Z in Photos won't accidentally revert these edits
     subprocess.run(["osascript", "-e", 'tell application "Photos" to quit'], capture_output=True)
-    subprocess.run(["sleep", "2"])
-    subprocess.Popen(["open", "-g", "-a", "Photos"])
 
     print(json.dumps(results))
 
