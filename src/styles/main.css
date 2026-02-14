@@ -548,11 +548,17 @@ canvas.crosshair {
   cursor: crosshair !important;
 }
 
-/* Fit to view button */
-.fit-view-btn {
-  margin-top: 10px;
+/* View buttons (Fit / Reset) */
+.view-buttons {
+  display: flex;
+  gap: 6px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #3a3a3c;
+}
+.view-btn {
+  flex: 1;
   padding: 5px 10px;
-  width: 100%;
   border: 1px solid #48484a;
   border-radius: 6px;
   background: #3a3a3c;
@@ -560,7 +566,7 @@ canvas.crosshair {
   font-size: 12px;
   cursor: pointer;
 }
-.fit-view-btn:hover {
+.view-btn:hover {
   background: #48484a;
   border-color: #48484a;
 }

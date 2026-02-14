@@ -35,7 +35,7 @@ declare global {
 // eslint-disable-next-line @typescript-eslint/init-declarations -- map is initialized in initMap() which is called before any other usage
 let map: maplibregl.Map;
 
-function getMap(): maplibregl.Map {
+export function getMap(): maplibregl.Map {
   return map;
 }
 

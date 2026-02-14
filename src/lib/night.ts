@@ -42,6 +42,17 @@ export function onProjectionChange(map: maplibregl.Map) {
   updateNightLayerVisibility(map);
 }
 
+export function resetNightLayer(map: maplibregl.Map) {
+  if (nightAnimationId !== null) {
+    cancelAnimationFrame(nightAnimationId);
+    nightAnimationId = null;
+  }
+  nightLayerDate = null;
+  nightLayerAlbums = [];
+  nightLayer.setDate(new Date());
+  map.triggerRepaint();
+}
+
 function animateNightTransition(
   map: maplibregl.Map,
   startTime: number,

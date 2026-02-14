@@ -13,6 +13,7 @@ import {
   changeMapStyle,
   enterPlacementMode,
   fitToPhotos,
+  getMap,
   initMap,
   selectGroupPhoto
 } from './lib/map';
@@ -56,6 +57,8 @@ import {
   setSelectValue
 } from './lib/filter-url';
 import { initMetadataModal, showMetadata } from './lib/metadata';
+import { clearSelection } from './lib/selection';
+import { resetNightLayer } from './lib/night';
 
 declare global {
   interface Window {
@@ -310,6 +313,28 @@ document.addEventListener('DOMContentLoaded', () => {
     if (fitViewBtn !== null) {
       fitViewBtn.addEventListener('click', () => {
         fitToPhotos(true, true);
+      });
+    }
+
+    const resetBtn = document.getElementById('reset-btn');
+    if (resetBtn !== null) {
+      resetBtn.addEventListener('click', () => {
+        getCurrentPopup()?.remove();
+        clearSelection();
+        resetNightLayer(getMap());
+        // Reset filters to defaults
+        setSelectValue('year-select', 'all');
+        setButtonGroupActive('gps-buttons', [
+          'exif',
+          'inferred',
+          'user',
+          'none'
+        ]);
+        setButtonGroupActive('media-buttons', ['photo', 'video']);
+        cascadeAndApply();
+        // Clear URL and fit to all photos
+        history.replaceState(null, '', location.pathname);
+        fitToPhotos(true);
       });
     }
 
