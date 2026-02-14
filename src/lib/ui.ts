@@ -256,8 +256,7 @@ function prevPhoto() {
 
 export function updateStats(filteredPhotos: Photo[]) {
   const countLabel = document.getElementById('count-label');
-  const dateRangeEl = document.getElementById('date-range');
-  if (countLabel === null || dateRangeEl === null) return;
+  if (countLabel === null) return;
 
   if (filteredPhotos.length === 0) {
     countLabel.textContent = 'No results';
@@ -271,21 +270,6 @@ export function updateStats(filteredPhotos: Photo[]) {
     } else {
       countLabel.textContent = `${photoCount} photos`;
     }
-  }
-
-  const photosWithDates = filteredPhotos.filter((p) => p.date !== '');
-  if (photosWithDates.length > 0) {
-    const firstDate = formatDate(
-      photosWithDates[0]!.date,
-      photosWithDates[0]!.tz
-    );
-    const lastDate = formatDate(
-      photosWithDates[photosWithDates.length - 1]!.date,
-      photosWithDates[photosWithDates.length - 1]!.tz
-    );
-    dateRangeEl.textContent = `${firstDate} – ${lastDate}`;
-  } else {
-    dateRangeEl.textContent = '';
   }
 }
 
