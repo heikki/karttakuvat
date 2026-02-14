@@ -4,6 +4,7 @@ import type { FilterSpecification, StyleSpecification } from 'maplibre-gl';
 
 import { mapStyles } from './config';
 import { addPendingEdit, state, subscribe } from './data';
+import { mapViewFromUrl, mapViewToUrl } from './filter-url';
 import { addNightLayer, onProjectionChange, updateSunPosition } from './night';
 import { createPanToFitPopup } from './pan';
 import {
@@ -116,11 +117,15 @@ function withGlobe(style: StyleSpecification): StyleSpecification {
 }
 
 export function initMap() {
+  const savedView = mapViewFromUrl();
+  const center: [number, number] =
+    savedView === null ? [29.52, 64.13] : [savedView.lon, savedView.lat];
+  const zoom = savedView === null ? 10 : savedView.zoom;
   map = new maplibregl.Map({
     container: 'map',
     style: withGlobe(mapStyles().opentopomap as StyleSpecification),
-    center: [29.52, 64.13],
-    zoom: 10,
+    center,
+    zoom,
     boxZoom: false,
     keyboard: false
   });
@@ -131,6 +136,11 @@ export function initMap() {
     new maplibregl.ScaleControl({ unit: 'metric' }),
     'bottom-left'
   );
+
+  map.on('moveend', () => {
+    const c = map.getCenter();
+    mapViewToUrl({ lat: c.lat, lon: c.lng, zoom: map.getZoom() });
+  });
 
   // Handle MapLibre internal errors gracefully
   map.on('error', () => {
@@ -160,7 +170,7 @@ export function initMap() {
     setupRectangularSelection();
 
     updateMapData();
-    if (state.filteredPhotos.length > 0) {
+    if (savedView === null && state.filteredPhotos.length > 0) {
       fitToPhotos();
     }
   });

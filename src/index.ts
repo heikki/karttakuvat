@@ -31,6 +31,7 @@ import {
   navigateSinglePhoto,
   pasteDateToPhoto,
   pasteLocation,
+  setOnPhotoChange,
   showPopup,
   toggleDateEdit
 } from './lib/popup';
@@ -46,6 +47,15 @@ import {
   updateStats
 } from './lib/ui';
 import { getYear } from './lib/utils';
+import {
+  filtersFromUrl,
+  filtersToUrl,
+  photoFromUrl,
+  photoToUrl,
+  setButtonGroupActive,
+  setSelectValue
+} from './lib/filter-url';
+import { initMetadataModal, showMetadata } from './lib/metadata';
 
 declare global {
   interface Window {
@@ -65,39 +75,6 @@ declare global {
     showMetadata: (uuid: string) => void;
   }
 }
-
-// Note: map.ts might need to call updateLightboxGroup.
-// Ideally map.ts is updated to import updateLightboxGroup and call it in showMultiPhotoPopup.
-// I will just monkey-patch it here or update map.ts in next step if needed.
-// BUT WAIT: map.ts logic is already written.
-// map.ts generates HTML onclick="window.showGroupLightbox(0)".
-// map.ts has `clusterPhotos` local variable.
-// ui.ts has `currentGroupPhotos` local variable.
-// I need to sync them.
-// I should have updated map.ts to call `updateLightboxGroup` when creating the popup.
-// I cannot easily edit map.ts again inside this thought block.
-// Alternative: `window.showGroupLightbox` wrapper in index.ts that pulls from map?
-// No, map does not expose `clusterPhotos`.
-
-// Correct fix: Update `map.ts` to export `getClusterPhotos`.
-// Then in `index.ts`:
-// (window as any).showGroupLightbox = (index) => {
-//    updateLightboxGroup(getClusterPhotos());
-//    showGroupLightbox(index);
-// }
-
-// Let's modify map.ts to export getClusterPhotos.
-// Actually, I can just update map.ts one more time quickly.
-// OR: I can assume that `selectGroupPhoto` in map.ts (called by thumbnail click)
-// can be hooked?
-// `selectGroupPhoto` is exported.
-// But `showGroupLightbox` acts on `currentPopup`.
-
-// Let's assume for now that I need to update map.ts to call updateLightboxGroup.
-// Im already 10 tool calls deep in this turn? No.
-// I'll update map.ts next.
-
-// For now write index.ts assuming exports exist.
 
 // Keyboard shortcuts (capture phase to intercept before focused elements)
 document.addEventListener(
@@ -147,7 +124,6 @@ setLightboxNavigateCallback((mode, index) => {
   }
 });
 
-// Expose global functions for HTML access
 window.selectGroupPhoto = selectGroupPhoto;
 window.showLightbox = showLightbox;
 window.showGroupLightbox = showGroupLightbox;
@@ -163,163 +139,27 @@ window.applyManualDate = applyManualDate;
 window.handleDateInputKey = handleDateInputKey;
 window.showMetadata = showMetadata;
 
-// --- Metadata modal ---
-function escapeHtml(s: string): string {
-  return s.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-function formatSimpleValue(value: boolean | string | number): string {
-  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
-  if (typeof value === 'string') {
-    return value === '' ? '<em>—</em>' : escapeHtml(value);
+function restoreFiltersFromUrl() {
+  const saved = filtersFromUrl();
+  if (saved === null) {
+    cascadeAndApply();
+    return;
   }
-  return String(value);
-}
-
-function formatMetadataValue(value: unknown): string {
-  if (value === null || value === undefined) return '<em>—</em>';
-  if (
-    typeof value === 'boolean' ||
-    typeof value === 'string' ||
-    typeof value === 'number'
-  ) {
-    return formatSimpleValue(value);
+  if (saved.year !== undefined) setSelectValue('year-select', saved.year);
+  if (saved.gps !== undefined) setButtonGroupActive('gps-buttons', saved.gps);
+  if (saved.media !== undefined) {
+    setButtonGroupActive('media-buttons', saved.media);
   }
-  if (Array.isArray(value)) {
-    if (value.length === 0) return '<em>—</em>';
-    return value
-      .map((v: unknown) => (typeof v === 'string' ? v : JSON.stringify(v)))
-      .join(', ');
+  // Album/camera need cascading — set year first, cascade, then set values
+  cascadeAndApply();
+  if (saved.album !== undefined) {
+    setSelectValue('album-select', saved.album);
+    cascadeAndApply();
   }
-  if (typeof value === 'object') {
-    const json = JSON.stringify(value, null, 2);
-    return `<details><summary>object</summary><pre style="font-size:11px;white-space:pre-wrap">${escapeHtml(json)}</pre></details>`;
+  if (saved.camera !== undefined) {
+    setSelectValue('camera-select', saved.camera);
+    cascadeAndApply();
   }
-  // Unreachable for known input types, but satisfies exhaustive return
-  return '';
-}
-
-const METADATA_FIELDS: Array<[string, string]> = [
-  ['filename', 'Filename'],
-  ['original_filename', 'Original filename'],
-  ['date', 'Date'],
-  ['date_added', 'Date added'],
-  ['date_modified', 'Date modified'],
-  ['title', 'Title'],
-  ['description', 'Description'],
-  ['keywords', 'Keywords'],
-  ['albums', 'Albums'],
-  ['persons', 'Persons'],
-  ['labels', 'Labels'],
-  ['ai_caption', 'AI caption'],
-  ['width', 'Width'],
-  ['height', 'Height'],
-  ['original_filesize', 'File size'],
-  ['uti', 'UTI'],
-  ['latitude', 'Latitude'],
-  ['longitude', 'Longitude'],
-  ['place', 'Place'],
-  ['favorite', 'Favorite'],
-  ['hidden', 'Hidden'],
-  ['ismovie', 'Video'],
-  ['live_photo', 'Live Photo'],
-  ['hdr', 'HDR'],
-  ['panorama', 'Panorama'],
-  ['selfie', 'Selfie'],
-  ['portrait', 'Portrait'],
-  ['burst', 'Burst'],
-  ['screenshot', 'Screenshot'],
-  ['slow_mo', 'Slow-mo'],
-  ['time_lapse', 'Time-lapse'],
-  ['hasadjustments', 'Has adjustments'],
-  ['shared', 'Shared'],
-  ['orientation', 'Orientation'],
-  ['path', 'Path'],
-  ['exif_info', 'EXIF'],
-  ['score', 'Score'],
-  ['search_info', 'Search info'],
-  ['cloud_guid', 'Cloud GUID'],
-  ['uuid', 'UUID']
-];
-
-function uuidCellHtml(val: unknown): string {
-  const uuid = typeof val === 'string' ? val : '';
-  return `${formatMetadataValue(val)} <button class="copy-btn" onclick="navigator.clipboard.writeText('${uuid}').then(()=>{this.classList.add('copied');setTimeout(()=>this.classList.remove('copied'),1000)})" title="Copy UUID"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 010 1.5h-1.5a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-1.5a.75.75 0 011.5 0v1.5A1.75 1.75 0 019.25 16h-7.5A1.75 1.75 0 010 14.25z"/><path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0114.25 11h-7.5A1.75 1.75 0 015 9.25zm1.75-.25a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-7.5a.25.25 0 00-.25-.25z"/></svg></button>`;
-}
-
-function isEmptyValue(val: unknown): boolean {
-  return (
-    val === null ||
-    val === undefined ||
-    val === '' ||
-    val === false ||
-    (Array.isArray(val) && val.length === 0)
-  );
-}
-
-function renderMetadataTable(data: Record<string, unknown>): string {
-  let html = '<table>';
-  for (const [key, label] of METADATA_FIELDS) {
-    if (!(key in data)) continue;
-    const val = data[key];
-    if (isEmptyValue(val)) continue;
-    const cell = key === 'uuid' ? uuidCellHtml(val) : formatMetadataValue(val);
-    html += `<tr><td>${label}</td><td>${cell}</td></tr>`;
-  }
-  html += '</table>';
-  return html;
-}
-
-function showMetadata(uuid: string) {
-  const modal = document.getElementById('metadata-modal');
-  const body = document.getElementById('metadata-body');
-  if (modal === null || body === null) return;
-
-  body.innerHTML = '<div class="loading">Loading...</div>';
-  modal.classList.add('active');
-
-  void fetch(`/api/metadata/${uuid}`)
-    .then((r) => {
-      if (!r.ok) throw new Error(`${r.status}`);
-      return r.json() as Promise<Record<string, unknown>>;
-    })
-    .then((data) => {
-      body.innerHTML = renderMetadataTable(data);
-    })
-    .catch((err: unknown) => {
-      body.innerHTML = `<div class="loading">Failed to load metadata: ${err instanceof Error ? err.message : String(err)}</div>`;
-    });
-}
-
-function initMetadataModal() {
-  const modal = document.getElementById('metadata-modal');
-  const closeBtn = document.getElementById('metadata-close');
-
-  closeBtn?.addEventListener('click', () => {
-    modal?.classList.remove('active');
-  });
-  modal?.addEventListener('click', (e) => {
-    if (e.target === modal) {
-      modal.classList.remove('active');
-    }
-  });
-  // Capture phase — intercept all keys when metadata modal is open
-  document.addEventListener(
-    'keydown',
-    (e) => {
-      if (modal?.classList.contains('active') !== true) return;
-      // Only allow Escape through (to close), block everything else
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        modal.classList.remove('active');
-        return;
-      }
-      // Stop arrow keys etc. from reaching lightbox/popup handlers
-      e.stopImmediatePropagation();
-    },
-    true
-  );
 }
 
 function cascadeAndApply() {
@@ -356,6 +196,7 @@ function cascadeAndApply() {
     document.querySelectorAll('#gps-buttons .filter-btn.active')
   ).map((btn) => (btn as HTMLElement).dataset.value!);
   applyFilters({ year: y, gps: g, media: m, album: a, camera: c });
+  filtersToUrl({ year: y, album: a, camera: c, gps: g, media: m });
 }
 
 function setupFilterListeners() {
@@ -446,7 +287,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initUI();
     initMetadataModal();
 
-    // Event Listeners
     const mapButtons = document.getElementById('map-type-buttons');
     if (mapButtons !== null) {
       mapButtons.addEventListener('click', (e) => {
@@ -466,7 +306,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     setupFilterListeners();
 
-    // Fit to view button
     const fitViewBtn = document.getElementById('fit-view-btn');
     if (fitViewBtn !== null) {
       fitViewBtn.addEventListener('click', () => {
@@ -474,7 +313,6 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    // Save/Discard edits
     const saveBtn = document.getElementById('save-edits-btn');
     const discardBtn = document.getElementById('discard-edits-btn');
 
@@ -490,20 +328,18 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    // Load data
     await loadPhotos();
-
-    // Init Map
     initMap();
-
-    // Populate UI — year is static, album/camera cascade from year
     const years = [
       ...new Set(
         state.photos.map(getYear).filter((y): y is string => y !== null)
       )
     ].sort();
     repopulateSelect('year-select', years);
-    cascadeAndApply();
+
+    setOnPhotoChange(photoToUrl);
+    restoreFiltersFromUrl();
+    reopenPopup(photoFromUrl());
 
     updateStats(state.filteredPhotos);
   })();

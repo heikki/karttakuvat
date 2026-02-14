@@ -41,6 +41,9 @@ let currentSinglePhotoIndex: number | null = null;
 let currentPhotoUuid: string | null = null;
 let currentGroupIndex = 0;
 let dateEditMode = false;
+let onPhotoChangeFn: (uuid: string | null) => void = () => {
+  /* noop */
+};
 
 // Callbacks that will be set by map.ts
 let highlightMarkerFn: (index: number | null) => void = () => {
@@ -98,6 +101,10 @@ export function setCurrentSinglePhotoIndex(index: number | null) {
   currentSinglePhotoIndex = index;
 }
 
+export function setOnPhotoChange(fn: (uuid: string | null) => void) {
+  onPhotoChangeFn = fn;
+}
+
 export function isDateEditMode(): boolean {
   return dateEditMode;
 }
@@ -153,6 +160,7 @@ export function showPopup(props: FeatureProps, coords: [number, number]) {
   currentPhotoUuid = photo.uuid;
   clusterPhotos = [];
   highlightMarkerFn(index);
+  onPhotoChangeFn(photo.uuid);
   updateSunPositionFn(photo.date, photo.tz ?? null, photo.albums);
 
   currentPopup = new maplibregl.Popup({
@@ -172,6 +180,7 @@ export function showPopup(props: FeatureProps, coords: [number, number]) {
     highlightMarkerFn(null);
     currentSinglePhotoIndex = null;
     currentPhotoUuid = null;
+    onPhotoChangeFn(null);
   });
 
   panToFitPopupFn(coords);
@@ -431,6 +440,7 @@ export function navigateSinglePhoto(newIndex: number) {
   currentSinglePhotoIndex = newIndex;
   currentPhotoUuid = photo.uuid;
   highlightMarkerFn(newIndex);
+  onPhotoChangeFn(photo.uuid);
   updateSunPositionFn(photo.date, photo.tz ?? null, photo.albums);
 
   const img = document.getElementById('single-img') as HTMLImageElement | null;
