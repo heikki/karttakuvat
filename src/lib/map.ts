@@ -123,7 +123,7 @@ export function initMap() {
   const zoom = savedView === null ? 10 : savedView.zoom;
   map = new maplibregl.Map({
     container: 'map',
-    style: withGlobe(mapStyles().opentopomap as StyleSpecification),
+    style: withGlobe(mapStyles().outdoors as StyleSpecification),
     center,
     zoom,
     boxZoom: false,

@@ -38,12 +38,12 @@ Changing any filter recomputes the filtered set and notifies:
 
 MapLibre GL JS with raster tile sources. Style switching via buttons:
 
-- **Topo** (default): OpenTopoMap
+- **Topo** (default, `outdoors`): Thunderforest Outdoors (requires API key)
 - **Satellite**: Google Satellite
-- **Maasto**: MML Maastokartta (requires API key)
+- **Maasto**: MML Maastokartta over Thunderforest Outdoors (requires API keys)
 - **Orto**: MML Ortokuva over Google Satellite (requires API key)
 
-Selected map style is persisted in URL params (default Topo is omitted from URL). Style switching tears down and re-adds all layers after the new style is idle.
+Selected map style is persisted in URL params (default `outdoors` is omitted from URL). Style switching tears down and re-adds all layers after the new style is idle.
 
 ### Projection
 

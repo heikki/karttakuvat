@@ -1,28 +1,29 @@
 import type { MapStyles } from './types';
 
 const mmlKey = process.env.PUBLIC_MML_API_KEY ?? '';
+const tfKey = process.env.PUBLIC_THUNDERFOREST_API_KEY ?? '';
 
 const mmlTile = (layer: string, ext: string) =>
   `https://avoin-karttakuva.maanmittauslaitos.fi/avoin/wmts/1.0.0/${layer}/default/WGS84_Pseudo-Mercator/{z}/{y}/{x}.${ext}?api-key=${mmlKey}`;
 
 export function mapStyles(): MapStyles {
   return {
-    opentopomap: {
+    outdoors: {
       version: 8,
       sources: {
-        opentopomap: {
+        thunderforest: {
           type: 'raster',
           tiles: [
-            'https://a.tile.opentopomap.org/{z}/{x}/{y}.png',
-            'https://b.tile.opentopomap.org/{z}/{x}/{y}.png',
-            'https://c.tile.opentopomap.org/{z}/{x}/{y}.png'
+            `https://a.tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=${tfKey}`,
+            `https://b.tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=${tfKey}`,
+            `https://c.tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=${tfKey}`
           ],
           tileSize: 256,
-          maxzoom: 17,
-          attribution: '© OpenTopoMap (CC-BY-SA)'
+          maxzoom: 22,
+          attribution: '© Thunderforest, © OpenStreetMap contributors'
         }
       },
-      layers: [{ id: 'opentopomap', type: 'raster', source: 'opentopomap' }]
+      layers: [{ id: 'thunderforest', type: 'raster', source: 'thunderforest' }]
     },
     satellite: {
       version: 8,
@@ -47,16 +48,16 @@ export function mapStyles(): MapStyles {
     mml_maastokartta: {
       version: 8,
       sources: {
-        opentopomap: {
+        thunderforest: {
           type: 'raster',
           tiles: [
-            'https://a.tile.opentopomap.org/{z}/{x}/{y}.png',
-            'https://b.tile.opentopomap.org/{z}/{x}/{y}.png',
-            'https://c.tile.opentopomap.org/{z}/{x}/{y}.png'
+            `https://a.tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=${tfKey}`,
+            `https://b.tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=${tfKey}`,
+            `https://c.tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=${tfKey}`
           ],
           tileSize: 256,
-          maxzoom: 17,
-          attribution: '© OpenTopoMap (CC-BY-SA)'
+          maxzoom: 22,
+          attribution: '© Thunderforest, © OpenStreetMap contributors'
         },
         mml_maastokartta: {
           type: 'raster',
@@ -68,7 +69,7 @@ export function mapStyles(): MapStyles {
         }
       },
       layers: [
-        { id: 'opentopomap', type: 'raster', source: 'opentopomap' },
+        { id: 'thunderforest', type: 'raster', source: 'thunderforest' },
         {
           id: 'mml_maastokartta',
           type: 'raster',

@@ -24,7 +24,7 @@ export interface MapStyle {
 }
 
 export interface MapStyles {
-  opentopomap: MapStyle;
+  outdoors: MapStyle;
   satellite: MapStyle;
   mml_maastokartta: MapStyle;
   mml_ortokuva: MapStyle;
