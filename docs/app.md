@@ -39,9 +39,9 @@ Changing any filter recomputes the filtered set and notifies:
 MapLibre GL JS with raster tile sources. Style switching via buttons:
 
 - **Topo** (default): OpenTopoMap
-- **Satellite**: Esri World Imagery
+- **Satellite**: Google Satellite
 - **Maasto**: MML Maastokartta (requires API key)
-- **Orto**: MML Ortokuva (requires API key)
+- **Orto**: MML Ortokuva over Google Satellite (requires API key)
 
 Selected map style is persisted in URL params (default Topo is omitted from URL). Style switching tears down and re-adds all layers after the new style is idle.
 
