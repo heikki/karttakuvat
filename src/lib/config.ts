@@ -81,7 +81,7 @@ export function mapStyles(): MapStyles {
           tileSize: 256,
           attribution: '© Esri'
         },
-        mml_ortokuva: {
+        'mml_ortokuva': {
           type: 'raster',
           tiles: [mmlTile('ortokuva', 'jpg')],
           tileSize: 256,
