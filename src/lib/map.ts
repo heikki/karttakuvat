@@ -243,7 +243,7 @@ export function changeMapStyle(styleKey: string) {
 
   // Stop any ongoing animation to prevent MapLibre crash during style change
   map.stop();
-  map.setStyle(withGlobe(style));
+  // Register listener before setStyle to avoid missing synchronous style.load
   void map.once('style.load', () => {
     addPhotoLayers();
     addSelectionLayer();
@@ -251,6 +251,7 @@ export function changeMapStyle(styleKey: string) {
     updateMapData();
     addNightLayer(map);
   });
+  map.setStyle(withGlobe(style));
 }
 
 function createGeoJSON(): FeatureCollection<Point> {
