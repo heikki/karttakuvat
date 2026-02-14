@@ -60,8 +60,9 @@ def main():
             # Set timezone from coordinates
             tz_name = tz_name_from_coords(lat, lon)
             tz_offset = tz_offset_from_coords(lat, lon, date) if date else None
+            old_tz = edit.get("tz")
 
-            if tz_name:
+            if tz_name and tz_offset != old_tz:
                 tz_result = subprocess.run(
                     [
                         OSXPHOTOS,

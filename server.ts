@@ -124,10 +124,10 @@ async function processLocationEdits(
   const tzResults = new Map<string, string | null>();
   if (edits.length === 0) return { tzResults };
 
-  const editsWithDates = edits.map((e) => ({
-    ...e,
-    date: itemsByUuid.get(e.uuid)?.date ?? ''
-  }));
+  const editsWithDates = edits.map((e) => {
+    const item = itemsByUuid.get(e.uuid);
+    return { ...e, date: item?.date ?? '', tz: item?.tz ?? null };
+  });
 
   const result = await runScript(
     ['python3', 'scripts/set_locations.py'],
