@@ -350,6 +350,11 @@ function handleReset() {
   fitToPhotos(true);
 }
 
+// Prevent accidental page zoom from trackpad pinch gestures
+document.addEventListener('wheel', (e) => { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+document.addEventListener('gesturestart', (e) => e.preventDefault());
+document.addEventListener('gesturechange', (e) => e.preventDefault());
+
 document.addEventListener('DOMContentLoaded', () => {
   void (async () => {
     initUI();
