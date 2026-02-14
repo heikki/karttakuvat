@@ -347,6 +347,19 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
+    const googleMapsBtn = document.getElementById('google-maps-btn');
+    if (googleMapsBtn !== null) {
+      googleMapsBtn.addEventListener('click', () => {
+        const map = getMap();
+        const center = map.getCenter();
+        const zoom = Math.round(map.getZoom());
+        window.open(
+          `https://www.google.com/maps/@${center.lat},${center.lng},${zoom}z`,
+          '_blank'
+        );
+      });
+    }
+
     const resetBtn = document.getElementById('reset-btn');
     if (resetBtn !== null) {
       resetBtn.addEventListener('click', () => {
