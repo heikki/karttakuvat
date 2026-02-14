@@ -340,7 +340,7 @@ document.addEventListener('DOMContentLoaded', () => {
         getCurrentPopup()?.remove();
         clearSelection();
         resetNightLayer(getMap());
-        // Reset filters to defaults
+        // Reset all filters to defaults
         setSelectValue('year-select', 'all');
         setButtonGroupActive('gps-buttons', [
           'exif',
@@ -349,7 +349,33 @@ document.addEventListener('DOMContentLoaded', () => {
           'none'
         ]);
         setButtonGroupActive('media-buttons', ['photo', 'video']);
-        cascadeAndApply();
+        repopulateSelect(
+          'album-select',
+          [...new Set(state.photos.flatMap((p) => p.albums))].sort()
+        );
+        repopulateSelect(
+          'camera-select',
+          [
+            ...new Set(state.photos.map((p) => p.camera ?? '(unknown)'))
+          ].sort()
+        );
+        // repopulateSelect preserves previous value; force to "all"
+        setSelectValue('album-select', 'all');
+        setSelectValue('camera-select', 'all');
+        applyFilters({
+          year: 'all',
+          gps: ['exif', 'inferred', 'user', 'none'],
+          media: ['photo', 'video'],
+          album: 'all',
+          camera: 'all'
+        });
+        filtersToUrl({
+          year: 'all',
+          album: 'all',
+          camera: 'all',
+          gps: ['exif', 'inferred', 'user', 'none'],
+          media: ['photo', 'video']
+        });
         // Clear URL and fit to all photos
         history.replaceState(null, '', location.pathname);
         fitToPhotos(true);

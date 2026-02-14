@@ -180,26 +180,25 @@ export function initMap() {
   });
 
   subscribe(() => {
-    if (map.isStyleLoaded() === true) {
-      const uuid = getCurrentPhotoUuid();
-      updateMapData();
-      const popup = getCurrentPopup();
-      if (popup !== null) {
-        if (uuid !== null) {
-          const newIndex = state.filteredPhotos.findIndex(
-            (p) => p.uuid === uuid
-          );
-          if (newIndex !== -1) {
-            const photo = state.filteredPhotos[newIndex]!;
-            const pending = state.pendingEdits.get(photo.uuid);
-            const lon = pending === undefined ? (photo.lon ?? 0) : pending.lon;
-            const lat = pending === undefined ? (photo.lat ?? 0) : pending.lat;
-            showPopup({ index: newIndex }, [lon, lat]);
-            return;
-          }
+    if (map.getSource('photos') === undefined) return;
+    const uuid = getCurrentPhotoUuid();
+    updateMapData();
+    const popup = getCurrentPopup();
+    if (popup !== null) {
+      if (uuid !== null) {
+        const newIndex = state.filteredPhotos.findIndex(
+          (p) => p.uuid === uuid
+        );
+        if (newIndex !== -1) {
+          const photo = state.filteredPhotos[newIndex]!;
+          const pending = state.pendingEdits.get(photo.uuid);
+          const lon = pending === undefined ? (photo.lon ?? 0) : pending.lon;
+          const lat = pending === undefined ? (photo.lat ?? 0) : pending.lat;
+          showPopup({ index: newIndex }, [lon, lat]);
+          return;
         }
-        popup.remove();
       }
+      popup.remove();
     }
   });
 
@@ -230,6 +229,7 @@ function updateMapData() {
 
   const geoSource = source as maplibregl.GeoJSONSource;
   geoSource.setData(createGeoJSON());
+  map.triggerRepaint();
 }
 
 export function changeMapStyle(styleKey: string) {
