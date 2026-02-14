@@ -18,6 +18,7 @@ export function mapStyles(): MapStyles {
             'https://c.tile.opentopomap.org/{z}/{x}/{y}.png'
           ],
           tileSize: 256,
+          maxzoom: 17,
           attribution: '© OpenTopoMap (CC-BY-SA)'
         }
       },
@@ -32,6 +33,7 @@ export function mapStyles(): MapStyles {
             'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
           ],
           tileSize: 256,
+          maxzoom: 19,
           attribution: '© Esri'
         }
       },
@@ -50,6 +52,7 @@ export function mapStyles(): MapStyles {
             'https://c.tile.opentopomap.org/{z}/{x}/{y}.png'
           ],
           tileSize: 256,
+          maxzoom: 17,
           attribution: '© OpenTopoMap (CC-BY-SA)'
         },
         mml_maastokartta: {
@@ -79,6 +82,7 @@ export function mapStyles(): MapStyles {
             'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
           ],
           tileSize: 256,
+          maxzoom: 19,
           attribution: '© Esri'
         },
         'mml_ortokuva': {
