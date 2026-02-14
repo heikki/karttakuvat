@@ -347,6 +347,15 @@ function handleReset() {
     media: ['photo', 'video']
   });
   history.replaceState(null, '', location.pathname);
+  const mapButtons = document.getElementById('map-type-buttons');
+  const currentStyle = mapButtons?.querySelector('.map-type-btn.active')?.getAttribute('data-style');
+  if (currentStyle !== 'outdoors') {
+    changeMapStyle('outdoors');
+    mapButtons?.querySelector('.map-type-btn.active')?.classList.remove('active');
+    mapButtons
+      ?.querySelector('.map-type-btn[data-style="outdoors"]')
+      ?.classList.add('active');
+  }
   fitToPhotos(true);
 }
 

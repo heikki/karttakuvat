@@ -249,15 +249,6 @@ export function changeMapStyle(styleKey: string) {
     addNightLayer(map);
   };
 
-  if (map.isStyleLoaded() !== true) {
-    // Previous style still loading — wait for it before switching
-    void map.once('style.load', () => {
-      void map.once('style.load', applyLayers);
-      map.setStyle(withGlobe(style));
-    });
-    return;
-  }
-
   void map.once('style.load', applyLayers);
   map.setStyle(withGlobe(style));
 }
