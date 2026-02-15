@@ -3,7 +3,7 @@ import { NightLayer } from 'maplibre-gl-nightlayer';
 
 import { toUtcSortKey } from './utils';
 
-let nightLayer = createNightLayer();
+export let nightLayer = createNightLayer();
 let nightLayerDate: Date | null = null;
 let nightAnimationId: number | null = null;
 let nightLayerAlbums: string[] = [];

@@ -11,7 +11,7 @@ import { updateGlobeRadius } from './globe-radius';
 import { PhotoGlowLayer } from './glow-layer';
 import { defaultMarkerStyle, markerStyles } from './marker-styles';
 import { addMeasureLayers, initMeasure } from './measure';
-import { addNightLayer, onProjectionChange, updateSunPosition } from './night';
+import { addNightLayer, nightLayer, onProjectionChange, updateSunPosition } from './night';
 import { createPanToFitPopup } from './pan';
 import { enterPlacementMode as enterPlacement, isInPlacementMode, setupPlacement } from './placement';
 import { getClusterPhotos, getCurrentPhotoUuid, getCurrentPopup, initPopupCallbacks, scrollToActiveThumbnail, selectGroupPhoto as selectGroupPhotoFromPopup, showPopup } from './popup';
@@ -292,6 +292,7 @@ function addPhotoLayers() {
   // WebGL glow layer (custom clustering, no MapLibre source needed)
   if (config.glow !== undefined) {
     currentGlowLayer = new PhotoGlowLayer('photo-glow', config.glow);
+    currentGlowLayer.setSunProvider(() => nightLayer.getSubsolarPoint());
     map.addLayer(currentGlowLayer);
     layers.push('photo-glow');
 

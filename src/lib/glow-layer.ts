@@ -18,11 +18,13 @@ const BLUR_WEIGHTS = [0.227027, 0.194595, 0.121622, 0.054054, 0.016216];
 interface PointShaderSet {
   program: WebGLProgram;
   aPhotoPos: number;
+  aLngLat: number;
   uViewport: WebGLUniformLocation | null;
   uZoom: WebGLUniformLocation | null;
   uPointSize: WebGLUniformLocation | null;
   uColor: WebGLUniformLocation | null;
   uIntensity: WebGLUniformLocation | null;
+  uSunDir: WebGLUniformLocation | null;
   uMatrix: WebGLUniformLocation | null;
   uProjectionMatrix: WebGLUniformLocation | null;
   uFallbackMatrix: WebGLUniformLocation | null;
@@ -81,10 +83,15 @@ export class PhotoGlowLayer implements maplibregl.CustomLayerInterface {
 
   private instanceCount = 0;
   private config: GlowConfig;
+  private sunProvider: (() => { lng: number; lat: number }) | null = null;
 
   constructor(id: string, config: GlowConfig) {
     this.id = id;
     this.config = config;
+  }
+
+  setSunProvider(provider: () => { lng: number; lat: number }) {
+    this.sunProvider = provider;
   }
 
   onAdd(map: maplibregl.Map, gl: WebGL2RenderingContext) {
@@ -177,9 +184,12 @@ export class PhotoGlowLayer implements maplibregl.CustomLayerInterface {
     const vertSrc = `#version 300 es
       precision highp float;
       in vec3 a_photo_pos;
+      in vec2 a_lnglat;
       uniform vec2 u_viewport;
       uniform float u_zoom;
       uniform float u_point_size;
+      uniform vec3 u_sun_dir;
+      out float v_night;
 ${
   hasPrelude
     ? `
@@ -197,7 +207,17 @@ ${
         vec4 center = projectTile(a_photo_pos.xy);
         gl_Position = center;
         float weight = a_photo_pos.z;
-        gl_PointSize = max(2.0, u_point_size * pow(1.5, u_zoom - 8.0) * weight);
+
+        // Compute night factor: dot product of point direction and sun direction
+        float lng = a_lnglat.x;
+        float lat = a_lnglat.y;
+        vec3 pointDir = vec3(cos(lat) * cos(lng), cos(lat) * sin(lng), sin(lat));
+        float sunDot = dot(pointDir, u_sun_dir);
+        // sunDot > 0 = dayside, < 0 = nightside
+        // Smooth transition over twilight zone
+        v_night = smoothstep(0.1, -0.1, sunDot);
+
+        gl_PointSize = max(2.0, u_point_size * pow(1.5, u_zoom - 8.0) * weight) * v_night;
       }
     `;
 
@@ -205,13 +225,15 @@ ${
       precision highp float;
       uniform vec3 u_color;
       uniform float u_intensity;
+      in float v_night;
       out vec4 fragColor;
       void main() {
+        if (v_night < 0.001) discard;
         vec2 p = gl_PointCoord * 2.0 - 1.0;
         float dist = length(p);
         if (dist > 1.0) discard;
         float falloff = 1.0 - dist * dist;
-        fragColor = vec4(u_color * u_intensity * falloff, 1.0);
+        fragColor = vec4(u_color * u_intensity * falloff * v_night, 1.0);
       }
     `;
 
@@ -221,11 +243,13 @@ ${
     const set: PointShaderSet = {
       program,
       aPhotoPos: gl.getAttribLocation(program, 'a_photo_pos'),
+      aLngLat: gl.getAttribLocation(program, 'a_lnglat'),
       uViewport: gl.getUniformLocation(program, 'u_viewport'),
       uZoom: gl.getUniformLocation(program, 'u_zoom'),
       uPointSize: gl.getUniformLocation(program, 'u_point_size'),
       uColor: gl.getUniformLocation(program, 'u_color'),
       uIntensity: gl.getUniformLocation(program, 'u_intensity'),
+      uSunDir: gl.getUniformLocation(program, 'u_sun_dir'),
       uMatrix: gl.getUniformLocation(program, 'u_matrix'),
       uProjectionMatrix: gl.getUniformLocation(program, 'u_projection_matrix'),
       uFallbackMatrix: gl.getUniformLocation(program, 'u_projection_fallback_matrix'),
@@ -398,13 +422,36 @@ ${combine}
     gl.uniform3fv(pointShader.uColor, this.config.color);
     gl.uniform1f(pointShader.uIntensity, 1.7);
 
+    // Sun direction as unit vector
+    if (this.sunProvider !== null) {
+      const sun = this.sunProvider();
+      const DEG2RAD = Math.PI / 180;
+      const slng = sun.lng * DEG2RAD;
+      const slat = sun.lat * DEG2RAD;
+      gl.uniform3f(
+        pointShader.uSunDir,
+        Math.cos(slat) * Math.cos(slng),
+        Math.cos(slat) * Math.sin(slng),
+        Math.sin(slat)
+      );
+    } else {
+      // No sun provider — show all glow (sun at nadir)
+      gl.uniform3f(pointShader.uSunDir, 0, 0, -1);
+    }
+
+    const STRIDE = 5 * 4; // 5 floats × 4 bytes
     gl.bindBuffer(gl.ARRAY_BUFFER, this.instanceBuffer);
     gl.enableVertexAttribArray(pointShader.aPhotoPos);
-    gl.vertexAttribPointer(pointShader.aPhotoPos, 3, gl.FLOAT, false, 0, 0);
+    gl.vertexAttribPointer(pointShader.aPhotoPos, 3, gl.FLOAT, false, STRIDE, 0);
+    if (pointShader.aLngLat >= 0) {
+      gl.enableVertexAttribArray(pointShader.aLngLat);
+      gl.vertexAttribPointer(pointShader.aLngLat, 2, gl.FLOAT, false, STRIDE, 3 * 4);
+    }
 
     gl.drawArrays(gl.POINTS, 0, this.instanceCount);
 
     gl.disableVertexAttribArray(pointShader.aPhotoPos);
+    if (pointShader.aLngLat >= 0) gl.disableVertexAttribArray(pointShader.aLngLat);
 
     // ============================================================
     // Passes 2–N: Downsample + blur pyramid
@@ -539,13 +586,18 @@ ${combine}
     const gl = this.gl;
     if (gl === null || this.instanceBuffer === null) return;
 
-    const data = new Float32Array(positions.length * 3);
+    const STRIDE = 5; // mercX, mercY, weight, lngRad, latRad
+    const data = new Float32Array(positions.length * STRIDE);
+    const DEG2RAD = Math.PI / 180;
     for (let i = 0; i < positions.length; i++) {
       const p = positions[i]!;
       const merc = maplibregl.MercatorCoordinate.fromLngLat([p.lng, p.lat]);
-      data[i * 3] = merc.x;
-      data[i * 3 + 1] = merc.y;
-      data[i * 3 + 2] = p.weight ?? 1.0;
+      const off = i * STRIDE;
+      data[off] = merc.x;
+      data[off + 1] = merc.y;
+      data[off + 2] = p.weight ?? 1.0;
+      data[off + 3] = p.lng * DEG2RAD;
+      data[off + 4] = p.lat * DEG2RAD;
     }
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this.instanceBuffer);
