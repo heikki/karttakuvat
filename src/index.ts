@@ -248,8 +248,12 @@ function setupFilterListeners() {
       }
       const btn = (e.target as HTMLElement).closest<HTMLElement>('.filter-btn');
       if (btn === null) return;
-      for (const b of Array.from(container.querySelectorAll('.filter-btn'))) {
-        b.classList.toggle('active', b === btn);
+      const allBtns = Array.from(container.querySelectorAll('.filter-btn'));
+      const activeBtns = allBtns.filter((b) => b.classList.contains('active'));
+      const isOnlyActive =
+        activeBtns.length === 1 && activeBtns[0] === btn;
+      for (const b of allBtns) {
+        b.classList.toggle('active', isOnlyActive || b === btn);
       }
       cascadeAndApply();
     });
