@@ -11,9 +11,18 @@ body {
 #map {
   height: 100vh;
   width: 100%;
+  position: relative;
+}
+#globe-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
 }
 .maplibregl-canvas {
-  background: #191a22;
+  background: transparent;
 }
 
 .maplibregl-popup-content {

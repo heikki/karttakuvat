@@ -8,6 +8,12 @@ import { addPendingEdit, getEffectiveCoords, state, subscribe } from './data';
 import { mapViewFromUrl, mapViewToUrl } from './filter-url';
 import { addMeasureLayers, initMeasure } from './measure';
 import {
+  initGlobeBackground,
+  setGlobeRadius,
+  startGlobeBackground,
+  stopGlobeBackground
+} from './globe-background';
+import {
   addNightLayer,
   onProjectionChange,
   setNightLayerHidden,
@@ -108,6 +114,20 @@ export function enterPlacementMode(photoIndex: number) {
   setNightLayerHidden(true);
 }
 
+function updateGlobeRadius() {
+  if (map.getProjection().type !== 'globe') return;
+  // Project center and a point 90° away to estimate globe screen radius
+  const center = map.getCenter();
+  const centerPx = map.project([center.lng, center.lat]);
+  const edgePx = map.project([center.lng + 90, center.lat]);
+  const dx = edgePx.x - centerPx.x;
+  const dy = edgePx.y - centerPx.y;
+  const radiusPx = Math.sqrt(dx * dx + dy * dy);
+  const canvas = map.getCanvas();
+  const minDim = Math.min(canvas.clientWidth, canvas.clientHeight);
+  setGlobeRadius(radiusPx, minDim);
+}
+
 function withGlobe(style: StyleSpecification): StyleSpecification {
   return {
     ...style,
@@ -127,7 +147,8 @@ export function initMap() {
     center,
     zoom,
     boxZoom: false,
-    keyboard: false
+    keyboard: false,
+    canvasContextAttributes: { alpha: true }
   });
 
   map.addControl(new maplibregl.NavigationControl(), 'bottom-right');
@@ -155,6 +176,14 @@ export function initMap() {
   initSelectionCallbacks(getMap);
   initMeasure(getMap);
 
+  // Init globe background shader
+  initGlobeBackground(map.getContainer());
+  // Globe is the default projection, so start immediately
+  startGlobeBackground();
+
+  // Update globe radius for background glow on every render
+  map.on('render', updateGlobeRadius);
+
   map.on('load', () => {
     addPhotoLayers();
     addSelectionLayer();
@@ -170,6 +199,11 @@ export function initMap() {
   });
 
   map.on('projectiontransition', () => {
+    if (map.getProjection().type === 'globe') {
+      startGlobeBackground();
+    } else {
+      stopGlobeBackground();
+    }
     onProjectionChange(map);
     const popup = getCurrentPopup();
     if (popup === null) return;
