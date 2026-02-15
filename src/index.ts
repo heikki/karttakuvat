@@ -12,8 +12,11 @@ import {
 import {
   filtersFromUrl,
   filtersToUrl,
+  initStyleButtonGroup,
   mapStyleFromUrl,
   mapStyleToUrl,
+  markerStyleFromUrl,
+  markerStyleToUrl,
   photoFromUrl,
   photoToUrl,
   setButtonGroupActive,
@@ -21,6 +24,7 @@ import {
 } from './lib/filter-url';
 import {
   changeMapStyle,
+  changeMarkerStyle,
   enterPlacementMode,
   fitToPhotos,
   getMap,
@@ -266,20 +270,6 @@ function setupFilterListeners() {
   }
 }
 
-function restoreMapStyle(mapButtons: HTMLElement | null) {
-  const savedStyle = mapStyleFromUrl();
-  if (savedStyle === null) return;
-  changeMapStyle(savedStyle);
-  const activeBtn = mapButtons?.querySelector(
-    `.map-type-btn[data-style="${savedStyle}"]`
-  );
-  if (activeBtn !== null && activeBtn !== undefined) {
-    mapButtons
-      ?.querySelector('.map-type-btn.active')
-      ?.classList.remove('active');
-    activeBtn.classList.add('active');
-  }
-}
 
 function reopenPopup(uuid: string | null) {
   if (uuid === null) return;
@@ -371,31 +361,13 @@ function handleReset() {
 
 // Prevent accidental page zoom from trackpad pinch gestures
 document.addEventListener('wheel', (e) => { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
-document.addEventListener('gesturestart', (e) => e.preventDefault());
-document.addEventListener('gesturechange', (e) => e.preventDefault());
+document.addEventListener('gesturestart', (e) => { e.preventDefault(); });
+document.addEventListener('gesturechange', (e) => { e.preventDefault(); });
 
 document.addEventListener('DOMContentLoaded', () => {
   void (async () => {
     initUI();
     initMetadataModal();
-
-    const mapButtons = document.getElementById('map-type-buttons');
-    if (mapButtons !== null) {
-      mapButtons.addEventListener('click', (e) => {
-        const btn = (e.target as HTMLElement).closest<HTMLElement>(
-          '.map-type-btn'
-        );
-        if (btn === null) return;
-        const style = btn.dataset.style;
-        if (style === undefined) return;
-        mapButtons
-          .querySelector('.map-type-btn.active')
-          ?.classList.remove('active');
-        btn.classList.add('active');
-        changeMapStyle(style);
-        mapStyleToUrl(style);
-      });
-    }
 
     setupFilterListeners();
 
@@ -467,7 +439,16 @@ document.addEventListener('DOMContentLoaded', () => {
     await loadPhotos();
     initMap();
 
-    restoreMapStyle(mapButtons);
+    initStyleButtonGroup(
+      'map-type-buttons',
+      (s) => { changeMapStyle(s); mapStyleToUrl(s); },
+      mapStyleFromUrl
+    );
+    initStyleButtonGroup(
+      'marker-style-buttons',
+      (s) => { changeMarkerStyle(s); markerStyleToUrl(s); },
+      markerStyleFromUrl
+    );
 
     const years = [
       ...new Set(

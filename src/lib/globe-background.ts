@@ -184,7 +184,7 @@ function createShader(
   if (shader === null) return null;
   ctx.shaderSource(shader, source);
   ctx.compileShader(shader);
-  if (!ctx.getShaderParameter(shader, ctx.COMPILE_STATUS)) {
+  if (ctx.getShaderParameter(shader, ctx.COMPILE_STATUS) !== true) {
     console.error('Shader compile error:', ctx.getShaderInfoLog(shader));
     ctx.deleteShader(shader);
     return null;
@@ -201,13 +201,13 @@ function createProgram(
   const fs = createShader(ctx, ctx.FRAGMENT_SHADER, fsSrc);
   if (vs === null || fs === null) return null;
 
-  const prog = ctx.createProgram();
+  const prog = ctx.createProgram() as WebGLProgram | null;
   if (prog === null) return null;
   ctx.attachShader(prog, vs);
   ctx.attachShader(prog, fs);
   ctx.linkProgram(prog);
 
-  if (!ctx.getProgramParameter(prog, ctx.LINK_STATUS)) {
+  if (ctx.getProgramParameter(prog, ctx.LINK_STATUS) !== true) {
     console.error('Program link error:', ctx.getProgramInfoLog(prog));
     return null;
   }

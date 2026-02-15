@@ -1,42 +1,21 @@
-/* eslint-disable max-lines -- map module handles all map layer setup and interactions */
 import type { FeatureCollection, Point } from 'geojson';
 import maplibregl from 'maplibre-gl';
 import type { FilterSpecification, StyleSpecification } from 'maplibre-gl';
 
 import { mapStyles } from './config';
-import { addPendingEdit, getEffectiveCoords, state, subscribe } from './data';
+import { getEffectiveCoords, state, subscribe } from './data';
+import { fitToPhotos, initFit } from './fit';
 import { mapViewFromUrl, mapViewToUrl } from './filter-url';
+import { initGlobeBackground, setMapIdle, startGlobeBackground, stopGlobeBackground } from './globe-background';
+import { updateGlobeRadius } from './globe-radius';
+import { defaultMarkerStyle, markerStyles } from './marker-styles';
 import { addMeasureLayers, initMeasure } from './measure';
-import {
-  initGlobeBackground,
-  setGlobeRadius,
-  setMapIdle,
-  startGlobeBackground,
-  stopGlobeBackground
-} from './globe-background';
-import {
-  addNightLayer,
-  onProjectionChange,
-  setNightLayerHidden,
-  updateSunPosition
-} from './night';
+import { addNightLayer, onProjectionChange, updateSunPosition } from './night';
 import { createPanToFitPopup } from './pan';
-import {
-  getClusterPhotos,
-  getCurrentPhotoUuid,
-  getCurrentPopup,
-  initPopupCallbacks,
-  scrollToActiveThumbnail,
-  selectGroupPhoto as selectGroupPhotoFromPopup,
-  showPopup
-} from './popup';
-import {
-  addSelectionLayer,
-  initSelectionCallbacks,
-  setupRectangularSelection
-} from './selection';
+import { enterPlacementMode as enterPlacement, isInPlacementMode, setupPlacement } from './placement';
+import { getClusterPhotos, getCurrentPhotoUuid, getCurrentPopup, initPopupCallbacks, scrollToActiveThumbnail, selectGroupPhoto as selectGroupPhotoFromPopup, showPopup } from './popup';
+import { addSelectionLayer, initSelectionCallbacks, setupRectangularSelection } from './selection';
 import type { MapStyles } from './types';
-import { formatDate, getThumbUrl } from './utils';
 
 // Declare window augmentation for map
 declare global {
@@ -53,29 +32,9 @@ export function getMap(): maplibregl.Map {
   return map;
 }
 
-// Placement mode state
-let placementPhotoIndex: number | null = null;
+let currentMarkerStyle = defaultMarkerStyle;
 
-function showPlacementPanel(photoIndex: number) {
-  const photo = state.filteredPhotos[photoIndex];
-  if (photo === undefined) return;
-
-  let panel = document.getElementById('placement-panel');
-  if (panel === null) {
-    panel = document.createElement('div');
-    panel.id = 'placement-panel';
-    document.body.appendChild(panel);
-  }
-
-  panel.innerHTML = `<img src="${getThumbUrl(photo)}" alt="" /><div class="placement-panel-info">${formatDate(photo.date, photo.tz)}</div><div class="placement-panel-hint">Click map to set location. Esc to cancel.</div>`;
-  panel.classList.add('active');
-}
-
-function hidePlacementPanel() {
-  document.getElementById('placement-panel')?.classList.remove('active');
-}
-
-const markerLayers = [
+let markerLayers = [
   'photo-markers',
   'photo-markers-selected',
   'photo-markers-highlight-ring'
@@ -90,69 +49,8 @@ function setMarkerVisibility(visible: boolean) {
   }
 }
 
-function exitPlacementMode() {
-  placementPhotoIndex = null;
-  map.getCanvas().classList.remove('crosshair');
-  hidePlacementPanel();
-  setMarkerVisibility(true);
-  setNightLayerHidden(false);
-}
-
-function finishPlacement(photoIndex: number, lat: number, lon: number) {
-  const photo = state.filteredPhotos[photoIndex];
-  if (photo === undefined) return;
-  addPendingEdit(photo.uuid, lat, lon);
-  exitPlacementMode();
-  showPopup({ index: photoIndex }, [lon, lat]);
-}
-
 export function enterPlacementMode(photoIndex: number) {
-  getCurrentPopup()?.remove();
-  placementPhotoIndex = photoIndex;
-  map.getCanvas().classList.add('crosshair');
-  showPlacementPanel(photoIndex);
-  setMarkerVisibility(false);
-  setNightLayerHidden(true);
-}
-
-// Destination point on sphere given start, bearing (deg), angular distance (rad)
-function destPoint(
-  lat: number,
-  lng: number,
-  bearing: number,
-  dist: number
-): [number, number] {
-  const R = Math.PI / 180;
-  const lat1 = lat * R;
-  const brng = bearing * R;
-  const sd = Math.sin(dist);
-  const cd = Math.cos(dist);
-  const sl = Math.sin(lat1);
-  const cl = Math.cos(lat1);
-  const lat2 = Math.asin(sl * cd + cl * sd * Math.cos(brng));
-  const lng2 =
-    lng * R + Math.atan2(Math.sin(brng) * sd * cl, cd - sl * Math.sin(lat2));
-  return [lng2 / R, lat2 / R];
-}
-
-function updateGlobeRadius() {
-  if (map.getProjection().type !== 'globe') return;
-  const center = map.getCenter();
-  const centerPx = map.project(center);
-  // Project 4 points exactly 90° away on the sphere at cardinal bearings.
-  // These land on the visible horizon regardless of globe orientation.
-  const HALF_PI = Math.PI / 2;
-  let radiusPx = 0;
-  for (const b of [0, 90, 180, 270]) {
-    const [lng, lat] = destPoint(center.lat, center.lng, b, HALF_PI);
-    const px = map.project([lng, lat]);
-    const dx = px.x - centerPx.x;
-    const dy = px.y - centerPx.y;
-    radiusPx = Math.max(radiusPx, Math.sqrt(dx * dx + dy * dy));
-  }
-  const canvas = map.getCanvas();
-  const minDim = Math.min(canvas.clientWidth, canvas.clientHeight);
-  setGlobeRadius(radiusPx, minDim);
+  enterPlacement(map, photoIndex);
 }
 
 function withGlobe(style: StyleSpecification): StyleSpecification {
@@ -202,14 +100,15 @@ export function initMap() {
   initPopupCallbacks(highlightMarker, panToFitPopup, getMap, updateSun);
   initSelectionCallbacks(getMap);
   initMeasure(getMap);
+  initFit(getMap);
 
   // Init globe background shader
   initGlobeBackground(map.getContainer());
   startGlobeBackground();
-  map.on('render', updateGlobeRadius);
+  map.on('render', () => { updateGlobeRadius(map); });
 
-  map.on('movestart', () => setMapIdle(false));
-  map.on('idle', () => setMapIdle(true));
+  map.on('movestart', () => { setMapIdle(false); });
+  map.on('idle', () => { setMapIdle(true); });
 
   map.on('load', () => {
     addPhotoLayers();
@@ -262,25 +161,7 @@ export function initMap() {
     }
   });
 
-  // Placement mode: click to set location
-  map.on('click', (e) => {
-    if (placementPhotoIndex === null) return;
-
-    if (state.filteredPhotos[placementPhotoIndex] === undefined) {
-      exitPlacementMode();
-      return;
-    }
-
-    e.preventDefault();
-    finishPlacement(placementPhotoIndex, e.lngLat.lat, e.lngLat.lng);
-  });
-
-  // Esc to cancel placement mode
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && placementPhotoIndex !== null) {
-      exitPlacementMode();
-    }
-  });
+  setupPlacement(map, setMarkerVisibility);
 }
 
 function updateMapData() {
@@ -314,6 +195,14 @@ export function changeMapStyle(styleKey: string) {
   map.setStyle(withGlobe(style));
 }
 
+export function changeMarkerStyle(styleKey: string) {
+  if (markerStyles[styleKey] === undefined) return;
+  currentMarkerStyle = styleKey;
+  if (map.getSource('photos') === undefined) return;
+  stopPulseAnimation();
+  addPhotoLayers();
+}
+
 function createGeoJSON(): FeatureCollection<Point> {
   return {
     type: 'FeatureCollection',
@@ -335,12 +224,22 @@ function createGeoJSON(): FeatureCollection<Point> {
   };
 }
 
+const allPossibleLayers = [
+  'photo-markers-highlight-ring',
+  'photo-markers-selected',
+  'photo-markers-highlight',
+  'photo-markers',
+  'photo-markers-shadow'
+];
+
+const sortKey = [
+  '-',
+  ['*', -1000000, ['get', 'lat']],
+  ['get', 'index']
+] as maplibregl.ExpressionSpecification;
+
 function addPhotoLayers() {
-  for (const id of [
-    'photo-markers-highlight-ring',
-    'photo-markers-selected',
-    'photo-markers'
-  ]) {
+  for (const id of allPossibleLayers) {
     if (map.getLayer(id) !== undefined) map.removeLayer(id);
   }
   if (map.getSource('photos') !== undefined) map.removeSource('photos');
@@ -350,60 +249,64 @@ function addPhotoLayers() {
     data: createGeoJSON()
   });
 
-  const markerPaint: maplibregl.CircleLayerSpecification['paint'] = {
-    'circle-color': [
-      'match',
-      ['get', 'gps'],
-      'exif',
-      '#3b82f6',
-      'user',
-      '#22c55e',
-      'inferred',
-      '#f59e0b',
-      '#9ca3af'
-    ],
-    'circle-radius': 8,
-    'circle-stroke-width': 2,
-    'circle-stroke-color': '#fff',
-    'circle-pitch-alignment': 'map'
-  };
+  const config = markerStyles[currentMarkerStyle]!;
+  const layers: string[] = [];
 
+  // Shadow layer (optional)
+  if (config.shadow !== undefined) {
+    map.addLayer({
+      id: 'photo-markers-shadow',
+      type: 'circle',
+      source: 'photos',
+      layout: { 'circle-sort-key': sortKey },
+      paint: config.shadow
+    });
+    layers.push('photo-markers-shadow');
+  }
+
+  // Base markers
   map.addLayer({
     id: 'photo-markers',
     type: 'circle',
     source: 'photos',
-    layout: {
-      'circle-sort-key': [
-        '-',
-        ['*', -1000000, ['get', 'lat']],
-        ['get', 'index']
-      ]
-    },
-    paint: markerPaint
+    layout: { 'circle-sort-key': sortKey },
+    paint: config.markerPaint
   });
+  layers.push('photo-markers');
 
+  // Glass highlight layer (optional)
+  if (config.highlight !== undefined) {
+    map.addLayer({
+      id: 'photo-markers-highlight',
+      type: 'circle',
+      source: 'photos',
+      layout: { 'circle-sort-key': sortKey },
+      paint: config.highlight
+    });
+    layers.push('photo-markers-highlight');
+  }
+
+  // Selected marker overlay
   map.addLayer({
     id: 'photo-markers-selected',
     type: 'circle',
     source: 'photos',
-    paint: markerPaint,
+    paint: config.markerPaint,
     filter: ['==', ['get', 'index'], -1]
   });
+  layers.push('photo-markers-selected');
 
+  // Pulse ring
   map.addLayer({
     id: 'photo-markers-highlight-ring',
     type: 'circle',
     source: 'photos',
-    paint: {
-      'circle-color': 'transparent',
-      'circle-radius': 18,
-      'circle-stroke-width': 3,
-      'circle-stroke-color': '#007AFF',
-      'circle-stroke-opacity': 0.6,
-      'circle-pitch-alignment': 'map'
-    },
+    paint: config.ring,
     filter: ['==', ['get', 'index'], -1]
   });
+  layers.push('photo-markers-highlight-ring');
+
+  markerLayers = layers;
 }
 
 let pulseAnimationId: number | null = null;
@@ -411,10 +314,10 @@ let pulseAnimationId: number | null = null;
 function startPulseAnimation() {
   if (pulseAnimationId !== null) return;
   const start = performance.now();
+  const config = markerStyles[currentMarkerStyle]!;
   const animate = (now: number) => {
     const t = ((now - start) % 1200) / 1200;
-    const radius = 12 + 8 * t;
-    const opacity = 0.8 - 0.8 * t;
+    const { radius, opacity } = config.pulseRadius(map.getZoom(), t);
     if (map.getLayer('photo-markers-highlight-ring') !== undefined) {
       map.setPaintProperty(
         'photo-markers-highlight-ring',
@@ -458,7 +361,7 @@ function highlightMarker(index: number | null) {
 function setupMarkerInteractions() {
   map.on('click', 'photo-markers', (e) => {
     // In placement mode, let the map-level click handler handle it
-    if (placementPhotoIndex !== null) return;
+    if (isInPlacementMode()) return;
 
     e.preventDefault();
     e.originalEvent.stopPropagation();
@@ -493,19 +396,19 @@ function setupMarkerInteractions() {
   });
 
   map.on('mouseenter', 'photo-markers', () => {
-    if (placementPhotoIndex === null) {
+    if (!isInPlacementMode()) {
       map.getCanvas().style.cursor = 'pointer';
     }
   });
   map.on('mouseleave', 'photo-markers', () => {
-    if (placementPhotoIndex === null) {
+    if (!isInPlacementMode()) {
       map.getCanvas().style.cursor = '';
     }
   });
 
   map.on('click', (e) => {
     // In placement mode, don't close popups on empty clicks
-    if (placementPhotoIndex !== null) return;
+    if (isInPlacementMode()) return;
 
     const features = map.queryRenderedFeatures(e.point, {
       layers: ['photo-markers']
@@ -522,59 +425,5 @@ function setupMarkerInteractions() {
   });
 }
 
-function showFirstPopup() {
-  const photo = state.filteredPhotos[0];
-  if (photo === undefined) return;
-  const { lon, lat } = getEffectiveCoords(photo);
-  showPopup({ index: 0 }, [lon, lat]);
-}
-
-function computePhotoBounds(): maplibregl.LngLatBounds {
-  const bounds = new maplibregl.LngLatBounds();
-  state.filteredPhotos.forEach((p) => bounds.extend([p.lon ?? 0, p.lat ?? 0]));
-  return bounds;
-}
-
-function isSinglePointBounds(bounds: maplibregl.LngLatBounds): boolean {
-  return (
-    bounds.getSouthWest().lng === bounds.getNorthEast().lng &&
-    bounds.getSouthWest().lat === bounds.getNorthEast().lat
-  );
-}
-
-function applyFitCallback(animate: boolean, selectFirst: boolean) {
-  if (animate && selectFirst) {
-    void map.once('moveend', showFirstPopup);
-  } else if (selectFirst) {
-    showFirstPopup();
-  }
-}
-
-function computeTopPadding(): number {
-  if (map.getProjection().type !== 'globe') return 350;
-  const popupEl = getCurrentPopup()?.getElement();
-  if (popupEl === undefined) return 50;
-  return Math.max(50, popupEl.getBoundingClientRect().height + 60);
-}
-
-export function fitToPhotos(animate = false, selectFirst = false) {
-  if (state.filteredPhotos.length === 0) return;
-  const bounds = computePhotoBounds();
-  const duration = animate ? 500 : 0;
-
-  if (isSinglePointBounds(bounds)) {
-    const center = bounds.getCenter();
-    map.flyTo({ center: [center.lng, center.lat], zoom: 14, duration });
-    applyFitCallback(animate, selectFirst);
-    return;
-  }
-
-  map.fitBounds(bounds, {
-    padding: { top: computeTopPadding(), bottom: 40, left: 50, right: 270 },
-    maxZoom: 18,
-    duration
-  });
-  applyFitCallback(animate, selectFirst);
-}
-
+export { fitToPhotos };
 export { selectGroupPhotoFromPopup as selectGroupPhoto };

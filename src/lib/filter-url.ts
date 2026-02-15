@@ -131,6 +131,55 @@ export function mapStyleFromUrl(): string | null {
   return new URLSearchParams(location.search).get('style');
 }
 
+export function markerStyleToUrl(style: string): void {
+  const params = currentParams();
+  if (style === 'classic') {
+    params.delete('markers');
+  } else {
+    params.set('markers', style);
+  }
+  updateUrl(params);
+}
+
+export function markerStyleFromUrl(): string | null {
+  return new URLSearchParams(location.search).get('markers');
+}
+
+export function initStyleButtonGroup(
+  id: string,
+  onChange: (style: string) => void,
+  fromUrl: () => string | null
+): void {
+  const container = document.getElementById(id);
+  if (container === null) return;
+
+  container.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLElement>('.map-type-btn');
+    if (btn === null) return;
+    const style = btn.dataset.style;
+    if (style === undefined) return;
+    container
+      .querySelector('.map-type-btn.active')
+      ?.classList.remove('active');
+    btn.classList.add('active');
+    onChange(style);
+  });
+
+  const saved = fromUrl();
+  if (saved !== null) {
+    const btn = container.querySelector(
+      `.map-type-btn[data-style="${saved}"]`
+    );
+    if (btn !== null) {
+      container
+        .querySelector('.map-type-btn.active')
+        ?.classList.remove('active');
+      btn.classList.add('active');
+      onChange(saved);
+    }
+  }
+}
+
 export function setSelectValue(id: string, value: string): void {
   const el = document.getElementById(id) as HTMLSelectElement | null;
   if (el === null) return;
