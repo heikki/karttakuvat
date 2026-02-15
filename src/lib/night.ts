@@ -1,51 +1,29 @@
 import type maplibregl from 'maplibre-gl';
-import { NightLayer } from 'maplibre-gl-nightlayer';
 
+import type { PhotoGlowLayer } from './glow-layer';
 import { toUtcSortKey } from './utils';
 
-export let nightLayer = createNightLayer();
+let glowLayer: PhotoGlowLayer | null = null;
 let nightLayerDate: Date | null = null;
 let nightAnimationId: number | null = null;
 let nightLayerAlbums: string[] = [];
-let nightLayerHidden = false;
+let mapRef: maplibregl.Map | null = null;
 
-function createNightLayer(date: Date | null = null): NightLayer {
-  return new NightLayer({
-    date,
-    opacity: 0.8,
-    color: [0, 0, 0, 255],
-    daytimeColor: [0, 0, 0, 0],
-    twilightSteps: 0,
-    updateInterval: 0
-  });
-}
-
-function updateNightLayerVisibility(map: maplibregl.Map) {
-  if (map.getLayer(nightLayer.id) === undefined) return;
-  const visible = map.getProjection().type === 'globe' && !nightLayerHidden;
-  nightLayer.setOpacity(visible ? 0.8 : 0);
-}
-
-export function addNightLayer(map: maplibregl.Map, insertBefore?: string) {
-  if (map.getLayer(nightLayer.id) !== undefined) {
-    map.removeLayer(nightLayer.id);
+export function setGlowLayer(layer: PhotoGlowLayer | null, map?: maplibregl.Map) {
+  glowLayer = layer;
+  if (map !== undefined) mapRef = map;
+  if (glowLayer !== null && nightLayerDate !== null) {
+    glowLayer.setNightDate(nightLayerDate);
   }
-  nightLayer = createNightLayer(nightLayerDate);
-  if (insertBefore !== undefined && map.getLayer(insertBefore) !== undefined) {
-    map.addLayer(nightLayer, insertBefore);
-  } else {
-    map.addLayer(nightLayer);
-  }
-  updateNightLayerVisibility(map);
 }
 
-export function onProjectionChange(map: maplibregl.Map) {
-  updateNightLayerVisibility(map);
+export function onProjectionChange(_map: maplibregl.Map) {
+  // Night visibility is handled inside the glow layer's render() based on projection type
+  mapRef?.triggerRepaint();
 }
 
 export function setNightLayerHidden(hidden: boolean) {
-  nightLayerHidden = hidden;
-  nightLayer.setOpacity(hidden ? 0 : 0.8);
+  glowLayer?.setNightHidden(hidden);
 }
 
 export function resetNightLayer(map: maplibregl.Map) {
@@ -55,7 +33,7 @@ export function resetNightLayer(map: maplibregl.Map) {
   }
   nightLayerDate = null;
   nightLayerAlbums = [];
-  nightLayer.setDate(new Date());
+  glowLayer?.setNightDate(null);
   map.triggerRepaint();
 }
 
@@ -73,7 +51,7 @@ function animateNightTransition(
     const interpolated = startTime + (endTime - startTime) * eased;
     const d = new Date(interpolated);
     nightLayerDate = d;
-    nightLayer.setDate(d);
+    glowLayer?.setNightDate(d);
     map.triggerRepaint();
     if (t < 1) {
       nightAnimationId = requestAnimationFrame(animate);
@@ -108,7 +86,7 @@ export function updateSunPosition(options: SunPositionOptions) {
   const currentDate = nightLayerDate;
   if (currentDate === null) {
     nightLayerDate = targetDate;
-    nightLayer.setDate(targetDate);
+    glowLayer?.setNightDate(targetDate);
     map.triggerRepaint();
     return;
   }

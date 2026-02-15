@@ -11,7 +11,7 @@ import { updateGlobeRadius } from './globe-radius';
 import { PhotoGlowLayer } from './glow-layer';
 import { defaultMarkerStyle, markerStyles } from './marker-styles';
 import { addMeasureLayers, initMeasure } from './measure';
-import { addNightLayer, nightLayer, onProjectionChange, updateSunPosition } from './night';
+import { setGlowLayer, onProjectionChange, updateSunPosition } from './night';
 import { createPanToFitPopup } from './pan';
 import { enterPlacementMode as enterPlacement, isInPlacementMode, setupPlacement } from './placement';
 import { getClusterPhotos, getCurrentPhotoUuid, getCurrentPopup, initPopupCallbacks, scrollToActiveThumbnail, selectGroupPhoto as selectGroupPhotoFromPopup, showPopup } from './popup';
@@ -117,7 +117,6 @@ export function initMap() {
     addSelectionLayer();
     addMeasureLayers();
     setupMarkerInteractions();
-    addNightLayer(map, nightInsertBefore());
     setupRectangularSelection();
 
     updateMapData();
@@ -193,7 +192,6 @@ export function changeMapStyle(styleKey: string) {
     addMeasureLayers();
     setupMarkerInteractions();
     updateMapData();
-    addNightLayer(map, nightInsertBefore());
   };
 
   void map.once('style.load', applyLayers);
@@ -206,7 +204,6 @@ export function changeMarkerStyle(styleKey: string) {
   if (map.getSource('photos') === undefined) return;
   stopPulseAnimation();
   addPhotoLayers();
-  addNightLayer(map, nightInsertBefore());
 }
 
 function createGeoJSON(): FeatureCollection<Point> {
@@ -228,20 +225,6 @@ function createGeoJSON(): FeatureCollection<Point> {
       };
     })
   };
-}
-
-/** Returns the layer ID that the night layer should be inserted before */
-function nightInsertBefore(): string | undefined {
-  const config = markerStyles[currentMarkerStyle]!;
-  if (config.nightBelow === true) {
-    // Night below all marker layers — find the first one that exists
-    for (const id of markerLayers) {
-      if (map.getLayer(id) !== undefined) return id;
-    }
-    return undefined;
-  }
-  // Default: night above base markers, below selected
-  return 'photo-markers-selected';
 }
 
 const allPossibleLayers = [
@@ -274,6 +257,7 @@ function addPhotoLayers() {
   if (currentGlowLayer !== null) {
     if (map.getLayer('photo-glow') !== undefined) map.removeLayer('photo-glow');
     currentGlowLayer = null;
+    setGlowLayer(null);
   }
 
   for (const id of allPossibleLayers) {
@@ -292,8 +276,8 @@ function addPhotoLayers() {
   // WebGL glow layer (custom clustering, no MapLibre source needed)
   if (config.glow !== undefined) {
     currentGlowLayer = new PhotoGlowLayer('photo-glow', config.glow);
-    currentGlowLayer.setSunProvider(() => nightLayer.getSubsolarPoint());
     map.addLayer(currentGlowLayer);
+    setGlowLayer(currentGlowLayer, map);
     layers.push('photo-glow');
 
     // Initial sync

@@ -13,8 +13,6 @@ export interface MarkerStyleConfig {
   glow?: GlowConfig;
   ring: CirclePaint;
   pulseRadius: (zoom: number, t: number) => { radius: number; opacity: number };
-  /** When true, night layer renders below all marker layers (markers glow on top of night) */
-  nightBelow?: boolean;
 }
 
 const gpsColor = [
@@ -112,7 +110,6 @@ export const markerStyles: Record<string, MarkerStyleConfig> = {
     pulseRadius: () => ({
       radius: 0,
       opacity: 0
-    }),
-    nightBelow: true
+    })
   }
 };

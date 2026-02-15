@@ -27,7 +27,6 @@
     "@kikuchan/decimal": "^0.1.0-alpha.7",
     "@turf/distance": "^7.3.4",
     "@turf/helpers": "^7.3.4",
-    "maplibre-gl": "^5.16.0",
-    "maplibre-gl-nightlayer": "^1.0.0-alpha.14"
+    "maplibre-gl": "^5.16.0"
   }
 }
