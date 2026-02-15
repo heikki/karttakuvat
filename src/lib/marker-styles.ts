@@ -7,8 +7,11 @@ export interface MarkerStyleConfig {
   markerPaint: CirclePaint;
   shadow?: CirclePaint;
   highlight?: CirclePaint;
+  selectedPaint?: CirclePaint;
   ring: CirclePaint;
   pulseRadius: (zoom: number, t: number) => { radius: number; opacity: number };
+  /** When true, night layer renders below all marker layers (markers glow on top of night) */
+  nightBelow?: boolean;
 }
 
 const gpsColor = [
@@ -52,15 +55,15 @@ export const markerStyles: Record<string, MarkerStyleConfig> = {
   glass: {
     label: 'Glass',
     markerPaint: {
-      'circle-color': gpsColor,
+      'circle-color': '#ffffff',
       'circle-radius': [
         'interpolate',
         ['exponential', 1.5],
         ['zoom'],
         4,
-        5,
+        4,
         8,
-        8,
+        7,
         12,
         12,
         16,
@@ -68,41 +71,10 @@ export const markerStyles: Record<string, MarkerStyleConfig> = {
         20,
         24
       ],
-      'circle-stroke-width': [
-        'interpolate',
-        ['linear'],
-        ['zoom'],
-        4,
-        1,
-        8,
-        2,
-        14,
-        3,
-        20,
-        4
-      ],
-      'circle-stroke-color': '#fff',
-      'circle-pitch-alignment': 'map'
-    },
-    shadow: {
-      'circle-color': '#000000',
-      'circle-radius': [
-        'interpolate',
-        ['exponential', 1.5],
-        ['zoom'],
-        4,
-        7,
-        8,
-        11,
-        12,
-        16,
-        16,
-        24,
-        20,
-        32
-      ],
-      'circle-opacity': 0.35,
-      'circle-blur': 1,
+      'circle-opacity': 0.6,
+      'circle-blur': 0.5,
+      'circle-stroke-width': 0,
+      'circle-stroke-color': 'transparent',
       'circle-pitch-alignment': 'map'
     },
     highlight: {
@@ -112,48 +84,31 @@ export const markerStyles: Record<string, MarkerStyleConfig> = {
         ['exponential', 1.5],
         ['zoom'],
         4,
-        2.5,
+        1.5,
         8,
-        4,
+        3,
         12,
-        6,
+        5,
         16,
-        9,
+        8,
         20,
-        12
+        11
       ],
-      'circle-opacity': 0.3,
-      'circle-blur': 0.6,
-      'circle-translate': [0, -1.5],
+      'circle-opacity': 1,
+      'circle-blur': 0.4,
       'circle-pitch-alignment': 'map'
     },
     ring: {
       'circle-color': 'transparent',
-      'circle-radius': 18,
-      'circle-stroke-width': [
-        'interpolate',
-        ['linear'],
-        ['zoom'],
-        4,
-        2,
-        8,
-        3,
-        14,
-        4,
-        20,
-        5
-      ],
-      'circle-stroke-color': '#007AFF',
-      'circle-stroke-opacity': 0.6,
+      'circle-radius': 0,
+      'circle-stroke-width': 0,
+      'circle-stroke-color': 'transparent',
       'circle-pitch-alignment': 'map'
     },
-    pulseRadius: (zoom, t) => {
-      // Match the zoom interpolation curve for base marker radius
-      const base = zoom <= 4 ? 5 : zoom >= 20 ? 24 : 5 + (zoom - 4) * 1.2;
-      return {
-        radius: base * 1.5 + base * 0.5 * t,
-        opacity: 0.8 - 0.8 * t
-      };
-    }
+    pulseRadius: () => ({
+      radius: 0,
+      opacity: 0
+    }),
+    nightBelow: true
   }
 };

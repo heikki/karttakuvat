@@ -26,15 +26,15 @@ function updateNightLayerVisibility(map: maplibregl.Map) {
   nightLayer.setOpacity(visible ? 0.8 : 0);
 }
 
-export function addNightLayer(map: maplibregl.Map) {
+export function addNightLayer(map: maplibregl.Map, insertBefore?: string) {
   if (map.getLayer(nightLayer.id) !== undefined) {
     map.removeLayer(nightLayer.id);
   }
   nightLayer = createNightLayer(nightLayerDate);
-  if (map.getLayer('photo-markers-selected') === undefined) {
-    map.addLayer(nightLayer);
+  if (insertBefore !== undefined && map.getLayer(insertBefore) !== undefined) {
+    map.addLayer(nightLayer, insertBefore);
   } else {
-    map.addLayer(nightLayer, 'photo-markers-selected');
+    map.addLayer(nightLayer);
   }
   updateNightLayerVisibility(map);
 }
