@@ -14,9 +14,12 @@
   <body>
     <div id="map"></div>
 
-    <div class="stats-panel">
-      <h2>Karttakuvat</h2>
-      <p id="count-label">0 photos found</p>
+    <div class="stats-panel" id="stats-panel">
+      <div class="panel-header" id="panel-header">
+        <h2>Karttakuvat</h2>
+        <p id="count-label">0 photos found</p>
+      </div>
+      <div class="panel-body" id="panel-body">
       <div class="filter-section">
         <label for="year-select">Year</label>
         <select id="year-select">
@@ -93,6 +96,7 @@
           <button id="save-edits-btn">Save to Photos</button>
           <button id="discard-edits-btn" class="secondary">Discard</button>
         </div>
+      </div>
       </div>
     </div>
 

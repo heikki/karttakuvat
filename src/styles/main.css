@@ -127,10 +127,19 @@ body {
   border-radius: 8px;
 }
 
-.filter-section {
+.panel-header {
+  cursor: pointer;
+  user-select: none;
+}
+.panel-body {
   margin-top: 12px;
-  padding-top: 12px;
   border-top: 1px solid #3a3a3c;
+  padding-top: 12px;
+}
+.stats-panel.collapsed .panel-body {
+  display: none;
+}
+.filter-section {
 }
 .filter-section label {
   font-size: 12px;

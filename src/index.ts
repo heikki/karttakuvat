@@ -219,6 +219,12 @@ function cascadeAndApply() {
 }
 
 function setupFilterListeners() {
+  const statsPanel = document.getElementById('stats-panel')!;
+  const panelHeader = document.getElementById('panel-header')!;
+  panelHeader.addEventListener('click', () => {
+    statsPanel.classList.toggle('collapsed');
+  });
+
   const yearSelect = document.getElementById('year-select');
   const albumSelect = document.getElementById('album-select');
   const cameraSelect = document.getElementById('camera-select');
