@@ -71,13 +71,6 @@ export function isVideo(item: Photo): boolean {
   return item.type === 'video';
 }
 
-export function durationSpan(item: Photo): string {
-  if (item.duration !== undefined && item.duration !== null) {
-    return `<span class="duration">${item.duration}</span>`;
-  }
-  return '';
-}
-
 function toDMS(decimal: number): string {
   const abs = Math.abs(decimal);
   const deg = Math.floor(abs);
@@ -85,13 +78,23 @@ function toDMS(decimal: number): string {
   return `${deg}°${min.toFixed(1)}'`;
 }
 
-export function formatLocation(photo: Photo): string {
-  if (photo.lat !== null && photo.lon !== null) {
-    const ns = photo.lat >= 0 ? 'N' : 'S';
-    const ew = photo.lon >= 0 ? 'E' : 'W';
-    return `${toDMS(photo.lat)}${ns}, ${toDMS(photo.lon)}${ew}`;
+export function formatCoords(
+  coords: { lat: number; lon: number } | null
+): string {
+  if (coords !== null) {
+    const ns = coords.lat >= 0 ? 'N' : 'S';
+    const ew = coords.lon >= 0 ? 'E' : 'W';
+    return `${toDMS(coords.lat)}${ns}, ${toDMS(coords.lon)}${ew}`;
   }
   return 'No location';
+}
+
+export function formatLocation(photo: Photo): string {
+  return formatCoords(
+    photo.lat !== null && photo.lon !== null
+      ? { lat: photo.lat, lon: photo.lon }
+      : null
+  );
 }
 
 export function getThumbUrl(photo: Photo): string {

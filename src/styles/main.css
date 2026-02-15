@@ -81,7 +81,6 @@ body {
   z-index: 2000;
   justify-content: center;
   align-items: center;
-  cursor: pointer;
 }
 .lightbox.active {
   display: flex;
@@ -91,40 +90,17 @@ body {
   max-height: 95vh;
   object-fit: contain;
 }
-.lightbox .close {
-  position: absolute;
-  top: 20px;
-  right: 30px;
-  font-size: 40px;
-  color: white;
-  cursor: pointer;
-}
-.lightbox .nav {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 50px;
-  color: white;
-  cursor: pointer;
-  padding: 20px;
-  user-select: none;
-}
-.lightbox .nav.prev {
-  left: 10px;
-}
-.lightbox .nav.next {
-  right: 10px;
-}
 .lightbox .info {
   position: absolute;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
+  bottom: 10px;
+  left: 10px;
   color: white;
-  text-align: center;
+  font-size: 12px;
   background: rgba(0, 0, 0, 0.5);
-  padding: 10px 20px;
-  border-radius: 8px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 5;
 }
 
 .panel-header {
@@ -718,14 +694,3 @@ canvas.crosshair {
   border-color: #007aff;
 }
 
-/* Duration text */
-.photo-popup .duration {
-  margin-left: 6px;
-  font-size: 11px;
-  color: #999;
-}
-.lightbox .duration {
-  font-size: 13px;
-  color: #ccc;
-  margin-left: 6px;
-}

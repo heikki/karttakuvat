@@ -9,7 +9,6 @@ import type { Photo } from './types';
 import {
   computeDateOffsetHours,
   computeFullDatetimeOffsetHours,
-  durationSpan,
   formatDate,
   formatLocation,
   getThumbUrl,
@@ -76,12 +75,11 @@ function dateEditButtonsHtml(uuid: string): string {
 export function dateLineHtml(photo: Photo, isEditMode: boolean): string {
   const effectiveDate = getEffectiveDate(photo);
   const dateText = formatDate(effectiveDate, photo.tz);
-  const duration = durationSpan(photo);
   if (isEditMode) {
     const inputVal = editableDateStr(effectiveDate);
-    return `${dateText}${duration} ${dateEditButtonsHtml(photo.uuid)}<div class="date-edit-row"><input class="date-input" type="text" value="${inputVal}" id="date-input" onkeydown="window.handleDateInputKey(event)" /><button class="time-btn" onclick="event.preventDefault(); window.applyManualDate()">OK</button></div>`;
+    return `${dateText} ${dateEditButtonsHtml(photo.uuid)}<div class="date-edit-row"><input class="date-input" type="text" value="${inputVal}" id="date-input" onkeydown="window.handleDateInputKey(event)" /><button class="time-btn" onclick="event.preventDefault(); window.applyManualDate()">OK</button></div>`;
   }
-  return `${dateText}${duration} ${dateNormalButtonsHtml(shouldShowDatePaste(photo))}`;
+  return `${dateText} ${dateNormalButtonsHtml(shouldShowDatePaste(photo))}`;
 }
 
 function locationButtonsHtml(photo: Photo, index: number): string {

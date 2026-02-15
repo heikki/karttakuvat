@@ -1,9 +1,9 @@
 import { state } from './data';
 import type { Photo } from './types';
+import { getEffectiveDate, getEffectiveLocation } from './popup-html';
 import {
-  durationSpan,
+  formatCoords,
   formatDate,
-  formatLocation,
   getFullUrl,
   isVideo
 } from './utils';
@@ -52,16 +52,6 @@ export function initUI() {
   setupLightboxEvents();
 }
 
-function addButtonListener(
-  selector: string,
-  handler: (e: Event) => void
-): void {
-  const btn = lightbox?.querySelector(selector);
-  if (btn !== null && btn !== undefined) {
-    btn.addEventListener('click', handler);
-  }
-}
-
 export function isLightboxActive(): boolean {
   return lightbox?.classList.contains('active') === true;
 }
@@ -81,16 +71,6 @@ function handleLightboxKeydown(e: KeyboardEvent): void {
 }
 
 function setupLightboxEvents() {
-  addButtonListener('.close', hideLightbox);
-  addButtonListener('.next', (e) => {
-    e.stopPropagation();
-    nextPhoto();
-  });
-  addButtonListener('.prev', (e) => {
-    e.stopPropagation();
-    prevPhoto();
-  });
-
   lightbox?.addEventListener('click', hideLightbox);
 
   const imageWrap = document.getElementById('lightbox-image-wrap');
@@ -182,9 +162,8 @@ function displayPhoto(photo: Photo, index: number, total: number) {
     lightboxImg.src = getFullUrl(photo);
   }
   const isVid = isVideo(photo);
-  const countInfo = `<br>(${index} of ${total})`;
   if (lightboxInfo !== null) {
-    lightboxInfo.innerHTML = `${formatDate(photo.date, photo.tz)}${durationSpan(photo)}<br>${formatLocation(photo)}${countInfo}`;
+    lightboxInfo.innerHTML = `${formatDate(getEffectiveDate(photo), photo.tz)}<br>${formatCoords(getEffectiveLocation(photo))}`;
   }
   if (lightbox !== null) {
     lightbox.classList.toggle('video', isVid);
