@@ -1,5 +1,7 @@
 import type maplibregl from 'maplibre-gl';
 
+import type { GlowConfig } from './glow-layer';
+
 type CirclePaint = maplibregl.CircleLayerSpecification['paint'];
 
 export interface MarkerStyleConfig {
@@ -8,6 +10,7 @@ export interface MarkerStyleConfig {
   shadow?: CirclePaint;
   highlight?: CirclePaint;
   selectedPaint?: CirclePaint;
+  glow?: GlowConfig;
   ring: CirclePaint;
   pulseRadius: (zoom: number, t: number) => { radius: number; opacity: number };
   /** When true, night layer renders below all marker layers (markers glow on top of night) */
@@ -55,27 +58,28 @@ export const markerStyles: Record<string, MarkerStyleConfig> = {
   glass: {
     label: 'Glass',
     markerPaint: {
-      'circle-color': '#ffffff',
+      'circle-color': 'transparent',
       'circle-radius': [
         'interpolate',
         ['exponential', 1.5],
         ['zoom'],
         4,
-        4,
+        6,
         8,
-        7,
-        12,
+        10,
         12,
         16,
-        18,
+        16,
+        22,
         20,
-        24
+        30
       ],
-      'circle-opacity': 0.6,
-      'circle-blur': 0.5,
-      'circle-stroke-width': 0,
-      'circle-stroke-color': 'transparent',
+      'circle-opacity': 0,
       'circle-pitch-alignment': 'map'
+    },
+    glow: {
+      baseRadius: 20,
+      color: [1.0, 0.96, 0.88]
     },
     highlight: {
       'circle-color': '#ffffff',
@@ -84,15 +88,15 @@ export const markerStyles: Record<string, MarkerStyleConfig> = {
         ['exponential', 1.5],
         ['zoom'],
         4,
-        1.5,
+        1,
         8,
-        3,
+        2,
         12,
-        5,
+        3,
         16,
-        8,
+        5,
         20,
-        11
+        7
       ],
       'circle-opacity': 1,
       'circle-blur': 0.4,

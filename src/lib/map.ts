@@ -8,6 +8,7 @@ import { fitToPhotos, initFit } from './fit';
 import { mapViewFromUrl, mapViewToUrl } from './filter-url';
 import { initGlobeBackground, setMapIdle, startGlobeBackground, stopGlobeBackground } from './globe-background';
 import { updateGlobeRadius } from './globe-radius';
+import { PhotoGlowLayer } from './glow-layer';
 import { defaultMarkerStyle, markerStyles } from './marker-styles';
 import { addMeasureLayers, initMeasure } from './measure';
 import { addNightLayer, onProjectionChange, updateSunPosition } from './night';
@@ -33,6 +34,7 @@ export function getMap(): maplibregl.Map {
 }
 
 let currentMarkerStyle = defaultMarkerStyle;
+let currentGlowLayer: PhotoGlowLayer | null = null;
 
 let markerLayers = [
   'photo-markers',
@@ -168,9 +170,12 @@ function updateMapData() {
   const source = map.getSource('photos');
   if (source === undefined) return;
 
+  const geojson = createGeoJSON();
   const geoSource = source as maplibregl.GeoJSONSource;
-  geoSource.setData(createGeoJSON());
-  map.triggerRepaint();
+  geoSource.setData(geojson);
+
+  // Re-cluster glow positions from new data
+  syncGlowPositions();
 }
 
 export function changeMapStyle(styleKey: string) {
@@ -244,7 +249,8 @@ const allPossibleLayers = [
   'photo-markers-selected',
   'photo-markers-highlight',
   'photo-markers',
-  'photo-markers-shadow'
+  'photo-markers-shadow',
+  'photo-glow'
 ];
 
 const sortKey = [
@@ -253,7 +259,23 @@ const sortKey = [
   ['get', 'index']
 ] as maplibregl.ExpressionSpecification;
 
+function syncGlowPositions() {
+  if (currentGlowLayer === null) return;
+  const positions: Array<{ lng: number; lat: number }> = [];
+  for (const photo of state.filteredPhotos) {
+    const { lon, lat } = getEffectiveCoords(photo);
+    positions.push({ lng: lon, lat });
+  }
+  currentGlowLayer.updateData(positions);
+}
+
 function addPhotoLayers() {
+  // Remove old glow custom layer
+  if (currentGlowLayer !== null) {
+    if (map.getLayer('photo-glow') !== undefined) map.removeLayer('photo-glow');
+    currentGlowLayer = null;
+  }
+
   for (const id of allPossibleLayers) {
     if (map.getLayer(id) !== undefined) map.removeLayer(id);
   }
@@ -266,6 +288,16 @@ function addPhotoLayers() {
 
   const config = markerStyles[currentMarkerStyle]!;
   const layers: string[] = [];
+
+  // WebGL glow layer (custom clustering, no MapLibre source needed)
+  if (config.glow !== undefined) {
+    currentGlowLayer = new PhotoGlowLayer('photo-glow', config.glow);
+    map.addLayer(currentGlowLayer);
+    layers.push('photo-glow');
+
+    // Initial sync
+    syncGlowPositions();
+  }
 
   // Shadow layer (optional)
   if (config.shadow !== undefined) {
