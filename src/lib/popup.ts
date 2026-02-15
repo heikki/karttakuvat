@@ -457,6 +457,7 @@ export function navigateSinglePhoto(newIndex: number) {
   }
   updatePhotosLink('single-photos-link', photo);
   updateVideoIndicator(photo);
+  updateInfoOverlay(photo);
 
   updatePasteLink(newIndex);
 
