@@ -119,7 +119,7 @@ export function mapViewFromUrl(): MapView | null {
 
 export function mapStyleToUrl(style: string): void {
   const params = currentParams();
-  if (style === 'outdoors') {
+  if (style === 'satellite') {
     params.delete('style');
   } else {
     params.set('style', style);

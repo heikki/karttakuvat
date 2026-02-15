@@ -8,23 +8,6 @@ const mmlTile = (layer: string, ext: string) =>
 
 export function mapStyles(): MapStyles {
   return {
-    outdoors: {
-      version: 8,
-      sources: {
-        thunderforest: {
-          type: 'raster',
-          tiles: [
-            `https://a.tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=${tfKey}`,
-            `https://b.tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=${tfKey}`,
-            `https://c.tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=${tfKey}`
-          ],
-          tileSize: 256,
-          maxzoom: 22,
-          attribution: '© Thunderforest, © OpenStreetMap contributors'
-        }
-      },
-      layers: [{ id: 'thunderforest', type: 'raster', source: 'thunderforest' }]
-    },
     satellite: {
       version: 8,
       sources: {
@@ -44,6 +27,23 @@ export function mapStyles(): MapStyles {
       layers: [
         { id: 'google-satellite', type: 'raster', source: 'google-satellite' }
       ]
+    },
+    topo: {
+      version: 8,
+      sources: {
+        thunderforest: {
+          type: 'raster',
+          tiles: [
+            `https://a.tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=${tfKey}`,
+            `https://b.tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=${tfKey}`,
+            `https://c.tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=${tfKey}`
+          ],
+          tileSize: 256,
+          maxzoom: 22,
+          attribution: '© Thunderforest, © OpenStreetMap contributors'
+        }
+      },
+      layers: [{ id: 'thunderforest', type: 'raster', source: 'thunderforest' }]
     },
     mml_maastokartta: {
       version: 8,

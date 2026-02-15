@@ -349,11 +349,11 @@ function handleReset() {
   history.replaceState(null, '', location.pathname);
   const mapButtons = document.getElementById('map-type-buttons');
   const currentStyle = mapButtons?.querySelector('.map-type-btn.active')?.getAttribute('data-style');
-  if (currentStyle !== 'outdoors') {
-    changeMapStyle('outdoors');
+  if (currentStyle !== 'satellite') {
+    changeMapStyle('satellite');
     mapButtons?.querySelector('.map-type-btn.active')?.classList.remove('active');
     mapButtons
-      ?.querySelector('.map-type-btn[data-style="outdoors"]')
+      ?.querySelector('.map-type-btn[data-style="satellite"]')
       ?.classList.add('active');
   }
   fitToPhotos(true);

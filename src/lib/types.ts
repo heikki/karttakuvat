@@ -24,8 +24,8 @@ export interface MapStyle {
 }
 
 export interface MapStyles {
-  outdoors: MapStyle;
   satellite: MapStyle;
+  topo: MapStyle;
   mml_maastokartta: MapStyle;
   mml_ortokuva: MapStyle;
 }
