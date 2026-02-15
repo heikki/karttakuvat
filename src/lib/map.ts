@@ -10,6 +10,7 @@ import { addMeasureLayers, initMeasure } from './measure';
 import {
   initGlobeBackground,
   setGlobeRadius,
+  setMapIdle,
   startGlobeBackground,
   stopGlobeBackground
 } from './globe-background';
@@ -178,11 +179,10 @@ export function initMap() {
 
   // Init globe background shader
   initGlobeBackground(map.getContainer());
-  // Globe is the default projection, so start immediately
   startGlobeBackground();
-
-  // Update globe radius for background glow on every render
   map.on('render', updateGlobeRadius);
+  map.on('movestart', () => setMapIdle(false));
+  map.on('idle', () => setMapIdle(true));
 
   map.on('load', () => {
     addPhotoLayers();

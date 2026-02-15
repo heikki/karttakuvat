@@ -1,6 +1,7 @@
 // Animated cosmic background shader for globe projection mode
-// Renders flowing nebula, color gradients, and particles behind the transparent map canvas
-// Globe glow adjusts to the globe's apparent size on screen
+// Two-pass rendering:
+//   1. Full nebula+particles rendered to offscreen texture (only when idle)
+//   2. Cheap blit shader composites cached texture + live globe glow (every frame)
 
 const VERTEX_SRC = `#version 300 es
 in vec2 a_pos;
@@ -8,16 +9,15 @@ void main() {
   gl_Position = vec4(a_pos, 0.0, 1.0);
 }`;
 
-const FRAGMENT_SRC = `#version 300 es
+// Pass 1: Nebula + particles rendered to texture (no globe glow)
+const NEBULA_SRC = `#version 300 es
 precision highp float;
 
 uniform float u_time;
 uniform vec2 u_resolution;
-uniform float u_globeRadius; // globe radius in normalized coords (0..1 relative to min dimension)
 
 out vec4 fragColor;
 
-// Hash functions for noise
 vec3 hash33(vec3 p) {
   p = fract(p * vec3(443.8975, 397.2973, 491.1871));
   p += dot(p.zxy, p.yxz + 19.19);
@@ -30,12 +30,10 @@ float hash21(vec2 p) {
   return fract((p3.x + p3.y) * p3.z);
 }
 
-// Smooth noise
 float noise(vec3 p) {
   vec3 i = floor(p);
   vec3 f = fract(p);
   f = f * f * (3.0 - 2.0 * f);
-
   float n = mix(
     mix(mix(dot(hash33(i) - 0.5, f),
             dot(hash33(i + vec3(1,0,0)) - 0.5, f - vec3(1,0,0)), f.x),
@@ -49,7 +47,6 @@ float noise(vec3 p) {
   return n + 0.5;
 }
 
-// Fractal brownian motion
 float fbm(vec3 p) {
   float v = 0.0;
   float a = 0.5;
@@ -62,15 +59,14 @@ float fbm(vec3 p) {
   return v;
 }
 
-// Star/particle layer
-float stars(vec2 uv, float scale, float brightness) {
+float stars(vec2 uv, float scale, float brightness, float time) {
   vec2 id = floor(uv * scale);
   vec2 gv = fract(uv * scale) - 0.5;
   float h = hash21(id);
   float star = 0.0;
   if (h > 0.97) {
     float d = length(gv);
-    float twinkle = sin(u_time * (1.0 + h * 3.0) + h * 6.28) * 0.5 + 0.5;
+    float twinkle = sin(time * (1.0 + h * 3.0) + h * 6.28) * 0.5 + 0.5;
     star = brightness * smoothstep(0.05, 0.0, d) * (0.5 + 0.5 * twinkle);
   }
   return star;
@@ -81,61 +77,99 @@ void main() {
   vec2 centered = (gl_FragCoord.xy - u_resolution * 0.5) / min(u_resolution.x, u_resolution.y);
   float t = u_time * 0.03;
 
-  // Flowing nebula using domain-warped FBM
   vec3 p = vec3(centered * 2.0, t * 0.5);
   float warp1 = fbm(p + vec3(0.0, 0.0, t));
   float warp2 = fbm(p + vec3(5.2, 1.3, t * 0.7));
   float nebula = fbm(p + vec3(warp1, warp2, 0.0) * 1.5);
 
-  // Color palette - deep space with purple, blue, teal accents
-  vec3 col1 = vec3(0.08, 0.02, 0.15); // deep purple-black
-  vec3 col2 = vec3(0.05, 0.08, 0.18); // deep blue
-  vec3 col3 = vec3(0.02, 0.12, 0.15); // teal
-  vec3 col4 = vec3(0.15, 0.04, 0.12); // warm purple
+  vec3 col1 = vec3(0.08, 0.02, 0.15);
+  vec3 col2 = vec3(0.05, 0.08, 0.18);
+  vec3 col3 = vec3(0.02, 0.12, 0.15);
+  vec3 col4 = vec3(0.15, 0.04, 0.12);
 
   vec3 color = mix(col1, col2, smoothstep(0.2, 0.6, nebula));
   color = mix(color, col3, smoothstep(0.4, 0.8, warp1) * 0.6);
   color = mix(color, col4, smoothstep(0.5, 0.9, warp2) * 0.4);
 
-  // Add glow highlights in the nebula
   float glow = smoothstep(0.55, 0.75, nebula) * 0.15;
   vec3 glowColor = mix(vec3(0.15, 0.1, 0.3), vec3(0.05, 0.2, 0.25), warp1);
   color += glow * glowColor;
 
-  // Floating particles - multiple layers for depth
-  float p1 = stars(uv + vec2(t * 0.01, t * 0.005), 80.0, 0.8);
-  float p2 = stars(uv + vec2(-t * 0.008, t * 0.012), 120.0, 0.5);
-  float p3 = stars(uv + vec2(t * 0.006, -t * 0.003), 200.0, 0.3);
-  float particleBrightness = p1 + p2 + p3;
-  color += vec3(0.7, 0.8, 1.0) * particleBrightness;
-
-  // Globe glow - adapts to globe radius
-  float dist = length(centered);
-  float r = u_globeRadius;
-  // Soft glow ring around the globe edge
-  float glowRing = exp(-pow((dist - r) * 4.0 / max(r, 0.1), 2.0)) * 0.12;
-  // Faint atmospheric haze
-  float haze = smoothstep(r + 0.5, r * 0.6, dist) * 0.06;
-  vec3 globeGlowCol = mix(vec3(0.25, 0.35, 0.6), vec3(0.15, 0.25, 0.5), nebula);
-  color += globeGlowCol * (glowRing + haze);
+  // Floating particles
+  float p1 = stars(uv + vec2(t * 0.01, t * 0.005), 80.0, 0.8, u_time);
+  float p2 = stars(uv + vec2(-t * 0.008, t * 0.012), 120.0, 0.5, u_time);
+  float p3 = stars(uv + vec2(t * 0.006, -t * 0.003), 200.0, 0.3, u_time);
+  color += vec3(0.7, 0.8, 1.0) * (p1 + p2 + p3);
 
   // Subtle vignette
+  float dist = length(centered);
   float vignette = 1.0 - 0.25 * smoothstep(0.5, 1.5, dist);
   color *= max(vignette, 0.0);
 
   fragColor = vec4(color, 1.0);
 }`;
 
+// Pass 2: Blit cached texture + live globe glow
+const BLIT_SRC = `#version 300 es
+precision highp float;
+
+uniform sampler2D u_nebulaTexture;
+uniform vec2 u_resolution;
+uniform float u_globeRadius;
+
+out vec4 fragColor;
+
+void main() {
+  vec2 uv = gl_FragCoord.xy / u_resolution;
+  vec2 centered = (gl_FragCoord.xy - u_resolution * 0.5) / min(u_resolution.x, u_resolution.y);
+  float dist = length(centered);
+
+  // Sample cached nebula
+  vec3 color = texture(u_nebulaTexture, uv).rgb;
+
+  // Live globe glow
+  float r = u_globeRadius;
+  float glowRing = exp(-pow((dist - r) * 4.0 / max(r, 0.1), 2.0)) * 0.12;
+  float haze = smoothstep(r + 0.5, r * 0.6, dist) * 0.06;
+  vec3 globeGlowCol = vec3(0.2, 0.3, 0.55);
+  color += globeGlowCol * (glowRing + haze);
+
+  fragColor = vec4(color, 1.0);
+}`;
+
 let canvas: HTMLCanvasElement | null = null;
 let gl: WebGL2RenderingContext | null = null;
-let program: WebGLProgram | null = null;
+let nebulaProgram: WebGLProgram | null = null;
+let blitProgram: WebGLProgram | null = null;
 let animationId: number | null = null;
 let resizeObserver: ResizeObserver | null = null;
-let uTimeLoc: WebGLUniformLocation | null = null;
-let uResolutionLoc: WebGLUniformLocation | null = null;
-let uGlobeRadiusLoc: WebGLUniformLocation | null = null;
 let startTime = 0;
-let currentGlobeRadius = 0.45; // default normalized radius
+let currentGlobeRadius = 0.45;
+
+// Nebula program uniforms
+let nebTimeLoc: WebGLUniformLocation | null = null;
+let nebResolutionLoc: WebGLUniformLocation | null = null;
+
+// Blit program uniforms
+let blitTextureLoc: WebGLUniformLocation | null = null;
+let blitResolutionLoc: WebGLUniformLocation | null = null;
+let blitGlobeRadiusLoc: WebGLUniformLocation | null = null;
+
+// Framebuffer for offscreen nebula rendering
+let fbo: WebGLFramebuffer | null = null;
+let fboTexture: WebGLTexture | null = null;
+let fboWidth = 0;
+let fboHeight = 0;
+
+// State
+let mapIdle = true;
+let needsNebulaUpdate = true;
+let pausedAt = 0; // timestamp when map interaction started
+let totalPausedMs = 0; // accumulated paused time to subtract from elapsed
+
+const RESOLUTION_SCALE = 0.5;
+const FRAME_INTERVAL = 1000 / 30;
+let lastFrameTime = 0;
 
 function createShader(
   ctx: WebGL2RenderingContext,
@@ -154,6 +188,54 @@ function createShader(
   return shader;
 }
 
+function createProgram(
+  ctx: WebGL2RenderingContext,
+  vsSrc: string,
+  fsSrc: string
+): WebGLProgram | null {
+  const vs = createShader(ctx, ctx.VERTEX_SHADER, vsSrc);
+  const fs = createShader(ctx, ctx.FRAGMENT_SHADER, fsSrc);
+  if (vs === null || fs === null) return null;
+
+  const prog = ctx.createProgram();
+  if (prog === null) return null;
+  ctx.attachShader(prog, vs);
+  ctx.attachShader(prog, fs);
+  ctx.linkProgram(prog);
+
+  if (!ctx.getProgramParameter(prog, ctx.LINK_STATUS)) {
+    console.error('Program link error:', ctx.getProgramInfoLog(prog));
+    return null;
+  }
+  return prog;
+}
+
+function ensureFbo(w: number, h: number) {
+  if (gl === null) return;
+  if (fboWidth === w && fboHeight === h && fbo !== null) return;
+
+  // Clean up old
+  if (fbo !== null) gl.deleteFramebuffer(fbo);
+  if (fboTexture !== null) gl.deleteTexture(fboTexture);
+
+  fboTexture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, fboTexture);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+  fbo = gl.createFramebuffer();
+  gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, fboTexture, 0);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+  fboWidth = w;
+  fboHeight = h;
+  needsNebulaUpdate = true;
+}
+
 function initGL(container: HTMLElement): boolean {
   canvas = document.createElement('canvas');
   canvas.id = 'globe-bg';
@@ -162,22 +244,11 @@ function initGL(container: HTMLElement): boolean {
   gl = canvas.getContext('webgl2', { alpha: false, antialias: false });
   if (gl === null) return false;
 
-  const vs = createShader(gl, gl.VERTEX_SHADER, VERTEX_SRC);
-  const fs = createShader(gl, gl.FRAGMENT_SHADER, FRAGMENT_SRC);
-  if (vs === null || fs === null) return false;
+  nebulaProgram = createProgram(gl, VERTEX_SRC, NEBULA_SRC);
+  blitProgram = createProgram(gl, VERTEX_SRC, BLIT_SRC);
+  if (nebulaProgram === null || blitProgram === null) return false;
 
-  program = gl.createProgram();
-  if (program === null) return false;
-  gl.attachShader(program, vs);
-  gl.attachShader(program, fs);
-  gl.linkProgram(program);
-
-  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-    console.error('Program link error:', gl.getProgramInfoLog(program));
-    return false;
-  }
-
-  // Fullscreen quad
+  // Fullscreen quad (shared by both programs)
   const buf = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, buf);
   // prettier-ignore
@@ -186,22 +257,28 @@ function initGL(container: HTMLElement): boolean {
     -1, 1, 1, -1, 1, 1
   ]), gl.STATIC_DRAW);
 
-  const aPos = gl.getAttribLocation(program, 'a_pos');
-  gl.enableVertexAttribArray(aPos);
-  gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+  // Setup attribs for both programs
+  for (const prog of [nebulaProgram, blitProgram]) {
+    gl.useProgram(prog);
+    const aPos = gl.getAttribLocation(prog, 'a_pos');
+    gl.enableVertexAttribArray(aPos);
+    gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+  }
 
-  uTimeLoc = gl.getUniformLocation(program, 'u_time');
-  uResolutionLoc = gl.getUniformLocation(program, 'u_resolution');
-  uGlobeRadiusLoc = gl.getUniformLocation(program, 'u_globeRadius');
+  // Get uniform locations
+  nebTimeLoc = gl.getUniformLocation(nebulaProgram, 'u_time');
+  nebResolutionLoc = gl.getUniformLocation(nebulaProgram, 'u_resolution');
 
-  gl.useProgram(program);
+  blitTextureLoc = gl.getUniformLocation(blitProgram, 'u_nebulaTexture');
+  blitResolutionLoc = gl.getUniformLocation(blitProgram, 'u_resolution');
+  blitGlobeRadiusLoc = gl.getUniformLocation(blitProgram, 'u_globeRadius');
 
   return true;
 }
 
-function resize() {
-  if (canvas === null || gl === null) return;
-  const dpr = window.devicePixelRatio;
+function resize(): { w: number; h: number } {
+  if (canvas === null || gl === null) return { w: 0, h: 0 };
+  const dpr = window.devicePixelRatio * RESOLUTION_SCALE;
   const w = canvas.clientWidth;
   const h = canvas.clientHeight;
   const pw = Math.round(w * dpr);
@@ -209,19 +286,75 @@ function resize() {
   if (canvas.width !== pw || canvas.height !== ph) {
     canvas.width = pw;
     canvas.height = ph;
-    gl.viewport(0, 0, pw, ph);
   }
+  return { w: pw, h: ph };
 }
 
-function render() {
-  if (gl === null) return;
-  resize();
-  const elapsed = (performance.now() - startTime) / 1000;
-  gl.uniform1f(uTimeLoc, elapsed);
-  gl.uniform2f(uResolutionLoc, gl.drawingBufferWidth, gl.drawingBufferHeight);
-  gl.uniform1f(uGlobeRadiusLoc, currentGlobeRadius);
+function renderNebulaToTexture(elapsed: number, w: number, h: number) {
+  if (gl === null || nebulaProgram === null) return;
+
+  ensureFbo(w, h);
+
+  gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+  gl.viewport(0, 0, w, h);
+  gl.useProgram(nebulaProgram);
+  gl.uniform1f(nebTimeLoc, elapsed);
+  gl.uniform2f(nebResolutionLoc, w, h);
   gl.drawArrays(gl.TRIANGLES, 0, 6);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+  needsNebulaUpdate = false;
+}
+
+function blitToScreen(w: number, h: number) {
+  if (gl === null || blitProgram === null || fboTexture === null) return;
+
+  gl.viewport(0, 0, w, h);
+  gl.useProgram(blitProgram);
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, fboTexture);
+  gl.uniform1i(blitTextureLoc, 0);
+  gl.uniform2f(blitResolutionLoc, w, h);
+  gl.uniform1f(blitGlobeRadiusLoc, currentGlobeRadius);
+  gl.drawArrays(gl.TRIANGLES, 0, 6);
+}
+
+function render(now: number) {
+  if (gl === null) return;
   animationId = requestAnimationFrame(render);
+
+  // Skip when globe covers entire viewport
+  if (currentGlobeRadius > 0.75) return;
+
+  if (now - lastFrameTime < FRAME_INTERVAL) return;
+  lastFrameTime = now;
+
+  const { w, h } = resize();
+  if (w === 0 || h === 0) return;
+
+  const elapsed = (now - startTime - totalPausedMs) / 1000;
+
+  // Only re-render the expensive nebula when idle and needed
+  if (mapIdle || needsNebulaUpdate) {
+    renderNebulaToTexture(elapsed, w, h);
+  }
+
+  // Always blit cached texture + live glow (cheap)
+  blitToScreen(w, h);
+}
+
+export function setMapIdle(idle: boolean) {
+  const now = performance.now();
+  if (!idle && mapIdle) {
+    // Map interaction started — record pause start
+    pausedAt = now;
+  } else if (idle && !mapIdle && pausedAt > 0) {
+    // Map interaction ended — accumulate paused duration
+    totalPausedMs += now - pausedAt;
+    pausedAt = 0;
+    needsNebulaUpdate = true;
+  }
+  mapIdle = idle;
 }
 
 export function setGlobeRadius(radiusPixels: number, viewportMinDim: number) {
@@ -234,6 +367,10 @@ export function startGlobeBackground() {
   }
   if (animationId !== null) return;
   startTime = performance.now();
+  lastFrameTime = 0;
+  totalPausedMs = 0;
+  pausedAt = 0;
+  needsNebulaUpdate = true;
   animationId = requestAnimationFrame(render);
 }
 
@@ -253,7 +390,9 @@ export function initGlobeBackground(container: HTMLElement) {
     return;
   }
 
-  resizeObserver = new ResizeObserver(() => resize());
+  resizeObserver = new ResizeObserver(() => {
+    needsNebulaUpdate = true;
+  });
   resizeObserver.observe(container);
 
   // Start hidden
@@ -265,8 +404,15 @@ export function initGlobeBackground(container: HTMLElement) {
 export function destroyGlobeBackground() {
   stopGlobeBackground();
   resizeObserver?.disconnect();
+  if (gl !== null) {
+    if (fbo !== null) gl.deleteFramebuffer(fbo);
+    if (fboTexture !== null) gl.deleteTexture(fboTexture);
+  }
   canvas?.remove();
   canvas = null;
   gl = null;
-  program = null;
+  nebulaProgram = null;
+  blitProgram = null;
+  fbo = null;
+  fboTexture = null;
 }
