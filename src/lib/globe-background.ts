@@ -66,8 +66,12 @@ float stars(vec2 uv, float scale, float brightness, float time) {
   float star = 0.0;
   if (h > 0.97) {
     float d = length(gv);
-    float twinkle = sin(time * (1.0 + h * 3.0) + h * 6.28) * 0.5 + 0.5;
-    star = brightness * smoothstep(0.05, 0.0, d) * (0.5 + 0.5 * twinkle);
+    float h2 = hash21(id + 71.7);
+    // Mix two sine waves at different speeds per star for organic twinkle
+    float slow = sin(time * (0.15 + h * 0.4) + h * 6.28);
+    float fast = sin(time * (0.6 + h2 * 1.2) + h2 * 6.28);
+    float twinkle = (slow * 0.6 + fast * 0.4) * 0.5 + 0.5;
+    star = brightness * smoothstep(0.05, 0.0, d) * (0.6 + 0.4 * twinkle);
   }
   return star;
 }
@@ -82,17 +86,17 @@ void main() {
   float warp2 = fbm(p + vec3(5.2, 1.3, t * 0.7));
   float nebula = fbm(p + vec3(warp1, warp2, 0.0) * 1.5);
 
-  vec3 col1 = vec3(0.08, 0.02, 0.15);
-  vec3 col2 = vec3(0.05, 0.08, 0.18);
-  vec3 col3 = vec3(0.02, 0.12, 0.15);
-  vec3 col4 = vec3(0.15, 0.04, 0.12);
+  vec3 col1 = vec3(0.05, 0.015, 0.10);
+  vec3 col2 = vec3(0.03, 0.05, 0.12);
+  vec3 col3 = vec3(0.015, 0.08, 0.10);
+  vec3 col4 = vec3(0.10, 0.025, 0.08);
 
   vec3 color = mix(col1, col2, smoothstep(0.2, 0.6, nebula));
   color = mix(color, col3, smoothstep(0.4, 0.8, warp1) * 0.6);
   color = mix(color, col4, smoothstep(0.5, 0.9, warp2) * 0.4);
 
-  float glow = smoothstep(0.55, 0.75, nebula) * 0.15;
-  vec3 glowColor = mix(vec3(0.15, 0.1, 0.3), vec3(0.05, 0.2, 0.25), warp1);
+  float glow = smoothstep(0.55, 0.75, nebula) * 0.12;
+  vec3 glowColor = mix(vec3(0.12, 0.08, 0.25), vec3(0.04, 0.15, 0.18), warp1);
   color += glow * glowColor;
 
   // Floating particles
@@ -127,12 +131,12 @@ void main() {
   // Sample cached nebula
   vec3 color = texture(u_nebulaTexture, uv).rgb;
 
-  // Live globe glow
+  // Live globe glow — smooth falloff from globe edge
   float r = u_globeRadius;
-  float glowRing = exp(-pow((dist - r) * 4.0 / max(r, 0.1), 2.0)) * 0.12;
-  float haze = smoothstep(r + 0.5, r * 0.6, dist) * 0.06;
+  float d = max(dist - r, 0.0) / max(r, 0.1);
+  float glow = 0.15 / (1.0 + d * 6.0) * smoothstep(r + 0.8, r, dist);
   vec3 globeGlowCol = vec3(0.2, 0.3, 0.55);
-  color += globeGlowCol * (glowRing + haze);
+  color += globeGlowCol * glow;
 
   fragColor = vec4(color, 1.0);
 }`;
