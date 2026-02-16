@@ -219,7 +219,7 @@ export class PhotoGlowLayer implements maplibregl.CustomLayerInterface {
     gl.vertexAttribPointer(b.a('a_pos'), 2, gl.FLOAT, false, 0, 0);
     gl.activeTexture(gl.TEXTURE0);
     gl.uniform1i(b.u('u_tex'), 0);
-    gl.uniform1f(b.u('u_spread'), Math.max(0.1, 1.4 ** (this.map!.getZoom() - 4.0) * 0.3));
+    gl.uniform1f(b.u('u_spread'), Math.min(3.0, Math.max(0.1, 1.4 ** (this.map!.getZoom() - 4.0) * 0.3)));
     let src = this.brightTex!;
     for (const mip of this.mips) {
       gl.viewport(0, 0, mip.w, mip.h);
@@ -253,7 +253,7 @@ export class PhotoGlowLayer implements maplibregl.CustomLayerInterface {
       gl.bindTexture(gl.TEXTURE_2D, this.mips[i]!.tex);
       gl.uniform1i(c.u(`u_b${i}`), i);
     }
-    gl.uniform1f(c.u('u_strength'), 1.2);
+    gl.uniform1f(c.u('u_strength'), 1.2 / Math.max(1, (this.map!.getZoom() - 4) * 0.5));
     gl.uniform1fv(c.u('u_w'), MIP_W);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.quadBuf);
     gl.enableVertexAttribArray(c.a('a_pos'));
