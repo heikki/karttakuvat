@@ -27,33 +27,10 @@ const gpsColor = [
   '#9ca3af'
 ] as unknown as string;
 
-export const defaultMarkerStyle = 'classic';
+export const defaultMarkerStyle = 'points';
 
 export const markerStyles: Record<string, MarkerStyleConfig> = {
-  classic: {
-    label: 'Classic',
-    markerPaint: {
-      'circle-color': gpsColor,
-      'circle-radius': 8,
-      'circle-stroke-width': 2,
-      'circle-stroke-color': '#fff',
-      'circle-pitch-alignment': 'map'
-    },
-    ring: {
-      'circle-color': 'transparent',
-      'circle-radius': 18,
-      'circle-stroke-width': 3,
-      'circle-stroke-color': '#007AFF',
-      'circle-stroke-opacity': 0.6,
-      'circle-pitch-alignment': 'map'
-    },
-    pulseRadius: (_zoom, t) => ({
-      radius: 12 + 8 * t,
-      opacity: 0.8 - 0.8 * t
-    })
-  },
-
-  glass: {
+  points: {
     label: 'Points',
     markerPaint: {
       'circle-color': 'transparent',
@@ -109,6 +86,29 @@ export const markerStyles: Record<string, MarkerStyleConfig> = {
     pulseRadius: () => ({
       radius: 0,
       opacity: 0
+    })
+  },
+
+  classic: {
+    label: 'Classic',
+    markerPaint: {
+      'circle-color': gpsColor,
+      'circle-radius': 8,
+      'circle-stroke-width': 2,
+      'circle-stroke-color': '#fff',
+      'circle-pitch-alignment': 'map'
+    },
+    ring: {
+      'circle-color': 'transparent',
+      'circle-radius': 18,
+      'circle-stroke-width': 3,
+      'circle-stroke-color': '#007AFF',
+      'circle-stroke-opacity': 0.6,
+      'circle-pitch-alignment': 'map'
+    },
+    pulseRadius: (_zoom, t) => ({
+      radius: 12 + 8 * t,
+      opacity: 0.8 - 0.8 * t
     })
   }
 };

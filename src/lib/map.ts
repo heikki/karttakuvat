@@ -307,7 +307,7 @@ function addPhotoLayers() {
   });
   layers.push('photo-markers');
 
-  // Glass highlight layer (optional)
+  // Points highlight layer (optional)
   if (config.highlight !== undefined) {
     map.addLayer({
       id: 'photo-markers-highlight',

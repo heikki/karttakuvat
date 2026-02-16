@@ -133,7 +133,7 @@ export function mapStyleFromUrl(): string | null {
 
 export function markerStyleToUrl(style: string): void {
   const params = currentParams();
-  if (style === 'classic') {
+  if (style === 'points') {
     params.delete('markers');
   } else {
     params.set('markers', style);
