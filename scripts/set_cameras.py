@@ -54,20 +54,16 @@ def get_camera_from_ref(uuid):
     return make, model
 
 
-def get_photo_path(uuid):
-    """Get the original file path for a photo UUID."""
-    result = subprocess.run(
-        [OSXPHOTOS, "query", "--uuid", uuid, "--json"],
-        capture_output=True, text=True,
-    )
+def get_photo_paths(uuids):
+    """Query osxphotos for multiple UUIDs at once, return {uuid: path} for downloaded photos."""
+    args = [OSXPHOTOS, "query", "--json"]
+    for uuid in uuids:
+        args.extend(["--uuid", uuid])
+    result = subprocess.run(args, capture_output=True, text=True)
     if result.returncode != 0:
-        return None, result.stderr.strip()
-
+        return {}
     photos = json.loads(result.stdout)
-    if not photos:
-        return None, "not found"
-
-    return photos[0].get("path"), None
+    return {p["uuid"]: p["path"] for p in photos if p.get("path")}
 
 
 def has_camera_exif(path):
@@ -127,17 +123,21 @@ def main():
             print(f"  Would update: {item['uuid']} ({item.get('date', 'no date')})")
         return
 
-    # 3. Update each photo
+    # 3. Batch-query paths, filter to downloaded only
+    all_uuids = [item["uuid"] for item in targets]
+    paths = get_photo_paths(all_uuids)
+    missing = len(all_uuids) - len(paths)
+    if missing:
+        print(f"  ({missing} not downloaded, skipping)")
+
+    if not paths:
+        print("No downloaded photos to update")
+        return
+
+    # 4. Update each downloaded photo
     updated = 0
     errors = 0
-    for item in targets:
-        uuid = item["uuid"]
-        path, err = get_photo_path(uuid)
-        if not path:
-            print(f"  SKIP {uuid}: {err}")
-            errors += 1
-            continue
-
+    for uuid, path in paths.items():
         if has_camera_exif(path):
             print(f"  ALREADY {uuid}: {os.path.basename(path)}")
             continue
@@ -150,7 +150,7 @@ def main():
             print(f"  OK {uuid}: {os.path.basename(path)}")
             updated += 1
 
-    print(f"\nDone: {updated} updated, {errors} errors")
+    print(f"\nDone: {updated} updated, {errors} errors, {missing} not downloaded")
 
 
 if __name__ == "__main__":
