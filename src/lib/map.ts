@@ -37,8 +37,7 @@ let currentGlowLayer: PhotoGlowLayer | null = null;
 
 let markerLayers = [
   'photo-markers',
-  'photo-markers-selected',
-  'photo-markers-highlight-ring'
+  'photo-markers-selected'
 ];
 
 function setMarkerVisibility(visible: boolean) {
@@ -211,7 +210,6 @@ export function changeMarkerStyle(styleKey: string) {
   if (markerStyles[styleKey] === undefined) return;
   currentMarkerStyle = styleKey;
   if (map.getSource('photos') === undefined) return;
-  stopPulseAnimation();
   addPhotoLayers();
 }
 
@@ -237,9 +235,8 @@ function createGeoJSON(): FeatureCollection<Point> {
 }
 
 const allPossibleLayers = [
-  'photo-markers-highlight-ring',
   'photo-markers-selected',
-  'photo-markers-highlight',
+  'photo-markers-dot',
   'photo-markers',
   'photo-markers-shadow',
   'photo-glow'
@@ -305,26 +302,26 @@ function addPhotoLayers() {
     layers.push('photo-markers-shadow');
   }
 
-  // Base markers
+  // Hit area & base markers (visible in classic, invisible in points)
   map.addLayer({
     id: 'photo-markers',
     type: 'circle',
     source: 'photos',
     layout: { 'circle-sort-key': sortKey },
-    paint: config.markerPaint
+    paint: config.hitArea
   });
   layers.push('photo-markers');
 
-  // Points highlight layer (optional)
-  if (config.highlight !== undefined) {
+  // Visible dot layer (optional, used by points style)
+  if (config.dot !== undefined) {
     map.addLayer({
-      id: 'photo-markers-highlight',
+      id: 'photo-markers-dot',
       type: 'circle',
       source: 'photos',
       layout: { 'circle-sort-key': sortKey },
-      paint: config.highlight
+      paint: config.dot
     });
-    layers.push('photo-markers-highlight');
+    layers.push('photo-markers-dot');
   }
 
   // Selected marker overlay
@@ -332,55 +329,13 @@ function addPhotoLayers() {
     id: 'photo-markers-selected',
     type: 'circle',
     source: 'photos',
-    paint: config.markerPaint,
+    paint: config.hitArea,
     filter: ['==', ['get', 'index'], -1]
   });
   layers.push('photo-markers-selected');
 
-  // Pulse ring
-  map.addLayer({
-    id: 'photo-markers-highlight-ring',
-    type: 'circle',
-    source: 'photos',
-    paint: config.ring,
-    filter: ['==', ['get', 'index'], -1]
-  });
-  layers.push('photo-markers-highlight-ring');
 
   markerLayers = layers;
-}
-
-let pulseAnimationId: number | null = null;
-
-function startPulseAnimation() {
-  if (pulseAnimationId !== null) return;
-  const start = performance.now();
-  const config = markerStyles[currentMarkerStyle]!;
-  const animate = (now: number) => {
-    const t = ((now - start) % 1200) / 1200;
-    const { radius, opacity } = config.pulseRadius(map.getZoom(), t);
-    if (map.getLayer('photo-markers-highlight-ring') !== undefined) {
-      map.setPaintProperty(
-        'photo-markers-highlight-ring',
-        'circle-radius',
-        radius
-      );
-      map.setPaintProperty(
-        'photo-markers-highlight-ring',
-        'circle-stroke-opacity',
-        opacity
-      );
-    }
-    pulseAnimationId = requestAnimationFrame(animate);
-  };
-  pulseAnimationId = requestAnimationFrame(animate);
-}
-
-function stopPulseAnimation() {
-  if (pulseAnimationId !== null) {
-    cancelAnimationFrame(pulseAnimationId);
-    pulseAnimationId = null;
-  }
 }
 
 function highlightMarker(index: number | null) {
@@ -389,13 +344,8 @@ function highlightMarker(index: number | null) {
       ? ['==', ['get', 'index'], -1]
       : ['==', ['get', 'index'], index];
 
-  for (const id of ['photo-markers-selected', 'photo-markers-highlight-ring']) {
-    if (map.getLayer(id) !== undefined) map.setFilter(id, filter);
-  }
-  if (index === null) {
-    stopPulseAnimation();
-  } else {
-    startPulseAnimation();
+  if (map.getLayer('photo-markers-selected') !== undefined) {
+    map.setFilter('photo-markers-selected', filter);
   }
 }
 

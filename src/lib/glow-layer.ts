@@ -84,6 +84,15 @@ export class PhotoGlowLayer implements maplibregl.CustomLayerInterface {
   private readonly nightOpacity = 0.8;
   private nightHidden = false;
 
+  // Dirty-checking: skip bright+blur when camera and data unchanged
+  private lastMatrix: Float32Array | null = null;
+  private dataGeneration = 0;
+  private renderedGeneration = -1;
+  private hasCachedBlur = false;
+
+  // Reusable instance buffer
+  private instanceData: Float32Array | null = null;
+
   constructor(id: string, config: GlowConfig) {
     this.id = id;
     this.config = config;
@@ -266,6 +275,25 @@ export class PhotoGlowLayer implements maplibregl.CustomLayerInterface {
     }
   }
 
+  private needsBlurUpdate(mvp: Float32Array, w: number, h: number): boolean {
+    return this.matrixChanged(mvp) || this.renderedGeneration !== this.dataGeneration ||
+      w !== this.fbW || h !== this.fbH || !this.hasCachedBlur;
+  }
+
+  private matrixChanged(matrix: Float32Array): boolean {
+    if (this.lastMatrix === null) {
+      this.lastMatrix = new Float32Array(matrix);
+      return true;
+    }
+    for (let i = 0; i < matrix.length; i++) {
+      if (this.lastMatrix[i] !== matrix[i]) {
+        this.lastMatrix.set(matrix);
+        return true;
+      }
+    }
+    return false;
+  }
+
   render(_gl: WebGLRenderingContext | WebGL2RenderingContext, options: CustomRenderMethodInput) {
     if (this.map === null || this.quadBuf === null) { return; }
     const gl = _gl as WebGL2RenderingContext;
@@ -277,8 +305,13 @@ export class PhotoGlowLayer implements maplibregl.CustomLayerInterface {
     }
     if (this.instanceCount > 0 && this.instanceBuf !== null && this.brightFbo !== null &&
         this.blur !== null && this.composite !== null) {
-      this.drawBright(gl, options, sun);
-      this.drawBlur(gl);
+      const mvp = options.modelViewProjectionMatrix as Float32Array;
+      if (this.needsBlurUpdate(mvp, w, h)) {
+        this.drawBright(gl, options, sun);
+        this.drawBlur(gl);
+        this.renderedGeneration = this.dataGeneration;
+        this.hasCachedBlur = true;
+      }
       this.drawComposite(gl, saved[0], w, h);
     }
     restoreGl(gl, saved);
@@ -287,7 +320,11 @@ export class PhotoGlowLayer implements maplibregl.CustomLayerInterface {
   updateData(positions: Array<{ lng: number; lat: number; weight?: number }>) {
     const gl = this.gl;
     if (gl === null || this.instanceBuf === null) { return; }
-    const data = new Float32Array(positions.length * 5);
+    const needed = positions.length * 5;
+    if (this.instanceData === null || this.instanceData.length < needed) {
+      this.instanceData = new Float32Array(needed);
+    }
+    const data = this.instanceData;
     for (let i = 0; i < positions.length; i++) {
       const p = positions[i]!;
       const m = maplibregl.MercatorCoordinate.fromLngLat([p.lng, p.lat]);
@@ -296,9 +333,10 @@ export class PhotoGlowLayer implements maplibregl.CustomLayerInterface {
       data[o + 3] = p.lng * DEG2RAD; data[o + 4] = p.lat * DEG2RAD;
     }
     gl.bindBuffer(gl.ARRAY_BUFFER, this.instanceBuf);
-    gl.bufferData(gl.ARRAY_BUFFER, data, gl.DYNAMIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, data.subarray(0, needed), gl.DYNAMIC_DRAW);
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
     this.instanceCount = positions.length;
+    this.dataGeneration++;
   }
 
   onRemove(_map: maplibregl.Map, gl: WebGL2RenderingContext) {
