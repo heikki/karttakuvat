@@ -1,3 +1,5 @@
+import type { Map as MapGL } from 'maplibre-gl';
+
 export interface Photo {
   uuid: string;
   type: 'photo' | 'video';
@@ -28,4 +30,13 @@ export interface MapStyles {
   topo: MapStyle;
   mml_maastokartta: MapStyle;
   mml_ortokuva: MapStyle;
+}
+
+export interface MarkerLayer {
+  readonly id: string;
+  install: (map: MapGL) => void;
+  uninstall: () => void;
+  toggle: (visible: boolean) => void;
+  highlight: (photo: Photo | null) => void;
+  setMarkers: (photos: Photo[]) => void;
 }

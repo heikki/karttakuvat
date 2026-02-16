@@ -6,6 +6,7 @@ import type { getMap as GetMapFn } from './map';
 
 // eslint-disable-next-line @typescript-eslint/init-declarations -- initialized in initMeasure() before any usage
 let getMap: typeof GetMapFn;
+let getMarkerLayerIdFn: () => string | null = () => null;
 let active = false;
 const coords: Array<[number, number]> = [];
 
@@ -20,8 +21,9 @@ export function isMeasureMode(): boolean {
   return active;
 }
 
-export function initMeasure(getMapFn: typeof GetMapFn) {
+export function initMeasure(getMapFn: typeof GetMapFn, getMarkerLayerId: () => string | null) {
   getMap = getMapFn;
+  getMarkerLayerIdFn = getMarkerLayerId;
 }
 
 export function addMeasureLayers() {
@@ -172,9 +174,10 @@ function onMapClick(e: maplibregl.MapMouseEvent) {
   }
 
   // Ignore clicks on photo markers
-  if (map.getLayer('photo-markers') !== undefined) {
+  const markerLayerId = getMarkerLayerIdFn();
+  if (markerLayerId !== null && map.getLayer(markerLayerId) !== undefined) {
     const photoFeatures = map.queryRenderedFeatures(e.point, {
-      layers: ['photo-markers']
+      layers: [markerLayerId]
     });
     if (photoFeatures.length > 0) return;
   }

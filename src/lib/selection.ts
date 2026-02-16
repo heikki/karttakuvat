@@ -24,9 +24,11 @@ let selectionStart: { x: number; y: number } | null = null;
 let getMapFn: () => maplibregl.Map = () => {
   throw new Error('Map not initialized');
 };
+let getMarkerLayerIdFn: () => string | null = () => null;
 
-export function initSelectionCallbacks(getMap: () => maplibregl.Map) {
+export function initSelectionCallbacks(getMap: () => maplibregl.Map, getMarkerLayerId: () => string | null) {
   getMapFn = getMap;
+  getMarkerLayerIdFn = getMarkerLayerId;
 }
 
 export function addSelectionLayer() {
@@ -175,12 +177,15 @@ function handleMouseUp(e: MouseEvent, container: HTMLElement) {
   const sw = map.unproject([minX, maxY]);
   const ne = map.unproject([maxX, minY]);
 
+  const markerLayerId = getMarkerLayerIdFn();
+  if (markerLayerId === null) return;
+
   const allFeatures = map.queryRenderedFeatures(
     [
       [minX, minY],
       [maxX, maxY]
     ],
-    { layers: ['photo-markers'] }
+    { layers: [markerLayerId] }
   );
   const features = allFeatures.filter((f) => {
     const geom = f.geometry as Point;

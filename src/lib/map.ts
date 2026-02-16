@@ -1,6 +1,6 @@
-import type { FeatureCollection, Point } from 'geojson';
+import type { Point } from 'geojson';
 import maplibregl from 'maplibre-gl';
-import type { FilterSpecification, StyleSpecification } from 'maplibre-gl';
+import type { StyleSpecification } from 'maplibre-gl';
 
 import { mapStyles } from './config';
 import { getEffectiveCoords, state, subscribe } from './data';
@@ -9,12 +9,11 @@ import { mapViewFromUrl, mapViewToUrl } from './filter-url';
 import { initGlobeBackground, setGlobeRadius, setMapIdle, startGlobeBackground, stopGlobeBackground } from './globe-background';
 import { defaultMarkerStyle, markerStyles } from './marker-styles';
 import { addMeasureLayers, initMeasure } from './measure';
-import { PointsLayer } from './points-layer';
 import { createPanToFitPopup } from './pan';
 import { enterPlacementMode as enterPlacement, isInPlacementMode, setupPlacement } from './placement';
 import { getClusterPhotos, getCurrentPhotoUuid, getCurrentPopup, initPopupCallbacks, scrollToActiveThumbnail, selectGroupPhoto as selectGroupPhotoFromPopup, showPopup } from './popup';
 import { addSelectionLayer, initSelectionCallbacks, setupRectangularSelection } from './selection';
-import type { MapStyles } from './types';
+import type { MarkerLayer, MapStyles, Photo } from './types';
 
 // Declare window augmentation for map
 declare global {
@@ -32,21 +31,14 @@ export function getMap(): maplibregl.Map {
 }
 
 let currentMarkerStyle = defaultMarkerStyle;
-let currentPointsLayer: PointsLayer | null = null;
+let currentLayer: MarkerLayer | null = null;
 
-let markerLayers = [
-  'photo-markers',
-  'photo-markers-selected'
-];
+function getMarkerLayerId(): string | null {
+  return currentLayer?.id ?? null;
+}
 
 function setMarkerVisibility(visible: boolean) {
-  const visibility = visible ? 'visible' : 'none';
-  for (const id of markerLayers) {
-    if (map.getLayer(id) !== undefined) {
-      map.setLayoutProperty(id, 'visibility', visibility);
-    }
-  }
-  currentPointsLayer?.setNightHidden(!visible);
+  currentLayer?.toggle(visible);
 }
 
 export function enterPlacementMode(photoIndex: number) {
@@ -95,12 +87,12 @@ export function initMap() {
   window.map = map;
 
   const panToFitPopup = createPanToFitPopup(map);
-  const updateSun = (dateStr: string, tz: string | null) => {
-    currentPointsLayer?.setTime(dateStr, tz);
+  const highlight = (photo: Photo | null) => {
+    currentLayer?.highlight(photo);
   };
-  initPopupCallbacks(highlightMarker, panToFitPopup, getMap, updateSun);
-  initSelectionCallbacks(getMap);
-  initMeasure(getMap);
+  initPopupCallbacks(highlight, panToFitPopup, getMap);
+  initSelectionCallbacks(getMap, getMarkerLayerId);
+  initMeasure(getMap, getMarkerLayerId);
   initFit(getMap);
 
   // Init globe background shader
@@ -151,7 +143,7 @@ export function initMap() {
   });
 
   subscribe(() => {
-    if (map.getSource('photos') === undefined) return;
+    if (currentLayer === null) return;
     const uuid = getCurrentPhotoUuid();
     updateMapData();
     const popup = getCurrentPopup();
@@ -173,14 +165,7 @@ export function initMap() {
 }
 
 function updateMapData() {
-  const source = map.getSource('photos');
-  if (source === undefined) return;
-
-  const geojson = createGeoJSON();
-  const geoSource = source as maplibregl.GeoJSONSource;
-  geoSource.setData(geojson);
-
-  syncPointsPositions();
+  currentLayer?.setMarkers(state.filteredPhotos);
 }
 
 export function changeMapStyle(styleKey: string) {
@@ -207,143 +192,24 @@ export function changeMapStyle(styleKey: string) {
 export function changeMarkerStyle(styleKey: string) {
   if (markerStyles[styleKey] === undefined) return;
   currentMarkerStyle = styleKey;
-  if (map.getSource('photos') === undefined) return;
+  if (currentLayer === null) return;
   addPhotoLayers();
-}
-
-function createGeoJSON(): FeatureCollection<Point> {
-  return {
-    type: 'FeatureCollection',
-    features: state.filteredPhotos.map((photo, index) => {
-      const { lon, lat } = getEffectiveCoords(photo);
-      return {
-        type: 'Feature' as const,
-        geometry: {
-          type: 'Point' as const,
-          coordinates: [lon, lat]
-        },
-        properties: {
-          index,
-          lat,
-          gps: photo.gps ?? 'none'
-        }
-      };
-    })
-  };
-}
-
-const allPossibleLayers = [
-  'photo-markers-selected',
-  'photo-markers-dot',
-  'photo-markers',
-  'photo-markers-shadow',
-  'photo-points'
-];
-
-const sortKey = [
-  '-',
-  ['*', -1000000, ['get', 'lat']],
-  ['get', 'index']
-] as maplibregl.ExpressionSpecification;
-
-function syncPointsPositions() {
-  if (currentPointsLayer === null) return;
-  const positions: Array<{ lng: number; lat: number }> = [];
-  for (const photo of state.filteredPhotos) {
-    const { lon, lat } = getEffectiveCoords(photo);
-    positions.push({ lng: lon, lat });
-  }
-  currentPointsLayer.updateData(positions);
+  setupMarkerInteractions();
+  updateMapData();
 }
 
 function addPhotoLayers() {
-  if (currentPointsLayer !== null) {
-    if (map.getLayer('photo-points') !== undefined) map.removeLayer('photo-points');
-    currentPointsLayer = null;
-  }
-
-  for (const id of allPossibleLayers) {
-    if (map.getLayer(id) !== undefined) map.removeLayer(id);
-  }
-  if (map.getSource('photos') !== undefined) map.removeSource('photos');
-
-  map.addSource('photos', {
-    type: 'geojson',
-    data: createGeoJSON()
-  });
-
+  currentLayer?.uninstall();
   const config = markerStyles[currentMarkerStyle]!;
-  const layers: string[] = [];
-
-  if (config.points === true) {
-    currentPointsLayer = new PointsLayer('photo-points');
-    map.addLayer(currentPointsLayer);
-    layers.push('photo-points');
-
-    syncPointsPositions();
-  }
-
-  // Shadow layer (optional)
-  if (config.shadow !== undefined) {
-    map.addLayer({
-      id: 'photo-markers-shadow',
-      type: 'circle',
-      source: 'photos',
-      layout: { 'circle-sort-key': sortKey },
-      paint: config.shadow
-    });
-    layers.push('photo-markers-shadow');
-  }
-
-  // Hit area & base markers (visible in classic, invisible in points)
-  map.addLayer({
-    id: 'photo-markers',
-    type: 'circle',
-    source: 'photos',
-    layout: { 'circle-sort-key': sortKey },
-    paint: config.hitArea
-  });
-  layers.push('photo-markers');
-
-  // Visible dot layer (optional, used by points style)
-  if (config.dot !== undefined) {
-    map.addLayer({
-      id: 'photo-markers-dot',
-      type: 'circle',
-      source: 'photos',
-      layout: { 'circle-sort-key': sortKey },
-      paint: config.dot
-    });
-    layers.push('photo-markers-dot');
-  }
-
-  // Selected marker overlay
-  map.addLayer({
-    id: 'photo-markers-selected',
-    type: 'circle',
-    source: 'photos',
-    paint: config.hitArea,
-    filter: ['==', ['get', 'index'], -1]
-  });
-  layers.push('photo-markers-selected');
-
-
-  markerLayers = layers;
-}
-
-function highlightMarker(index: number | null) {
-  const filter: FilterSpecification =
-    index === null
-      ? ['==', ['get', 'index'], -1]
-      : ['==', ['get', 'index'], index];
-
-  if (map.getLayer('photo-markers-selected') !== undefined) {
-    map.setFilter('photo-markers-selected', filter);
-  }
+  currentLayer = config.create();
+  currentLayer.install(map);
 }
 
 function setupMarkerInteractions() {
-  map.on('click', 'photo-markers', (e) => {
+  const layerId = currentLayer?.id;
+  if (layerId === undefined) return;
+
+  map.on('click', layerId, (e) => {
     // In placement mode, let the map-level click handler handle it
     if (isInPlacementMode()) return;
 
@@ -379,12 +245,12 @@ function setupMarkerInteractions() {
     showPopup({ index: clickedIndex }, coords);
   });
 
-  map.on('mouseenter', 'photo-markers', () => {
+  map.on('mouseenter', layerId, () => {
     if (!isInPlacementMode()) {
       map.getCanvas().style.cursor = 'pointer';
     }
   });
-  map.on('mouseleave', 'photo-markers', () => {
+  map.on('mouseleave', layerId, () => {
     if (!isInPlacementMode()) {
       map.getCanvas().style.cursor = '';
     }
@@ -394,10 +260,13 @@ function setupMarkerInteractions() {
     // In placement mode, don't close popups on empty clicks
     if (isInPlacementMode()) return;
 
-    const features = map.queryRenderedFeatures(e.point, {
-      layers: ['photo-markers']
-    });
-    if (features.length > 0) return;
+    const id = getMarkerLayerId();
+    if (id !== null) {
+      const features = map.queryRenderedFeatures(e.point, {
+        layers: [id]
+      });
+      if (features.length > 0) return;
+    }
     const selectionFeatures = map.queryRenderedFeatures(e.point, {
       layers: ['selection-fill']
     });

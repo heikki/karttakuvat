@@ -46,33 +46,22 @@ let onPhotoChangeFn: (uuid: string | null) => void = () => {
 };
 
 // Callbacks that will be set by map.ts
-let highlightMarkerFn: (index: number | null) => void = () => {
+let highlightFn: (photo: Photo | null) => void = () => {
   /* noop */
 };
 let panToFitPopupFn: (coords: [number, number]) => void = () => {
   /* noop */
 };
 let getMapFn: () => maplibregl.Map | undefined = () => undefined;
-let updateSunPositionFn: (
-  dateStr: string,
-  tz: string | null
-) => void = () => {
-  /* noop */
-};
 
 export function initPopupCallbacks(
-  highlightMarker: (index: number | null) => void,
+  highlight: (photo: Photo | null) => void,
   panToFitPopup: (coords: [number, number]) => void,
-  getMap: () => maplibregl.Map,
-  updateSunPosition: (
-    dateStr: string,
-    tz: string | null
-  ) => void
+  getMap: () => maplibregl.Map
 ) {
-  highlightMarkerFn = highlightMarker;
+  highlightFn = highlight;
   panToFitPopupFn = panToFitPopup;
   getMapFn = getMap;
-  updateSunPositionFn = updateSunPosition;
 }
 
 export function getCurrentPopup(): maplibregl.Popup | null {
@@ -157,9 +146,8 @@ export function showPopup(props: FeatureProps, coords: [number, number]) {
   currentSinglePhotoIndex = index;
   currentPhotoUuid = photo.uuid;
   clusterPhotos = [];
-  highlightMarkerFn(index);
+  highlightFn(photo);
   onPhotoChangeFn(photo.uuid);
-  updateSunPositionFn(photo.date, photo.tz ?? null);
 
   currentPopup = new maplibregl.Popup({
     closeButton: false,
@@ -175,11 +163,10 @@ export function showPopup(props: FeatureProps, coords: [number, number]) {
 
   currentPopup.on('close', () => {
     dateEditMode = false;
-    highlightMarkerFn(null);
+    highlightFn(null);
     currentSinglePhotoIndex = null;
     currentPhotoUuid = null;
     onPhotoChangeFn(null);
-    updateSunPositionFn('', null);
   });
 
   panToFitPopupFn(coords);
@@ -224,7 +211,7 @@ export function showMultiPhotoPopup(
 
   clusterPhotos.sort(compareDates);
   currentGroupIndex = 0;
-  highlightMarkerFn(clusterPhotos[0]!._index ?? 0);
+  highlightFn(clusterPhotos[0]!);
 
   const firstPhoto = clusterPhotos[0]!;
   const lastPhoto = clusterPhotos[clusterPhotos.length - 1];
@@ -252,9 +239,8 @@ export function showMultiPhotoPopup(
   currentPopup.on('close', () => {
     dateEditMode = false;
     clearSelectionFn();
-    highlightMarkerFn(null);
+    highlightFn(null);
     clusterPhotos = [];
-    updateSunPositionFn('', null);
   });
 
   if (!keepSelection) {
@@ -290,8 +276,7 @@ export function selectGroupPhoto(index: number) {
     thumb.classList.toggle('active', i === index);
   });
 
-  highlightMarkerFn(photo._index ?? null);
-  updateSunPositionFn(photo.date, photo.tz ?? null);
+  highlightFn(photo);
   currentGroupIndex = index;
 }
 
@@ -439,9 +424,8 @@ export function navigateSinglePhoto(newIndex: number) {
   dateEditMode = false;
   currentSinglePhotoIndex = newIndex;
   currentPhotoUuid = photo.uuid;
-  highlightMarkerFn(newIndex);
+  highlightFn(photo);
   onPhotoChangeFn(photo.uuid);
-  updateSunPositionFn(photo.date, photo.tz ?? null);
 
   const img = document.getElementById('single-img') as HTMLImageElement | null;
   const info = document.getElementById('single-info');
