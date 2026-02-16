@@ -5,14 +5,9 @@ import {
   MIP_LEVELS, type Shader,
   createBlurShader, createCompositeShader, createNightShader, createPointShader,
   setProjectionUniforms,
-} from './glow-shaders';
-import { getSubsolarPoint } from './subsolar';
-
-export { getSubsolarPoint };
-
-export interface GlowConfig {
-  color: [number, number, number];
-}
+} from './shaders';
+import { computeTransition, getSubsolarPoint } from './night';
+import { toUtcSortKey } from '../utils';
 
 interface MipLevel {
   fbo: WebGLFramebuffer; tex: WebGLTexture;
@@ -54,7 +49,7 @@ function restoreGl(gl: WebGL2RenderingContext, s: GlState) {
   gl.viewport(s[7][0]!, s[7][1]!, s[7][2]!, s[7][3]!);
 }
 
-export class PhotoGlowLayer implements maplibregl.CustomLayerInterface {
+export class PointsLayer implements maplibregl.CustomLayerInterface {
   readonly id: string;
   readonly type = 'custom' as const;
   readonly renderingMode = '2d' as const;
@@ -79,10 +74,12 @@ export class PhotoGlowLayer implements maplibregl.CustomLayerInterface {
   private mips: MipLevel[] = [];
 
   private instanceCount = 0;
-  private readonly config: GlowConfig;
+  private readonly color: [number, number, number] = [1.0, 0.96, 0.88];
   private nightDate: Date | null = null;
   private readonly nightOpacity = 0.8;
   private nightHidden = false;
+  private nightAnimationId: number | null = null;
+  private projectionHandler: (() => void) | null = null;
 
   // Dirty-checking: skip bright+blur when camera and data unchanged
   private lastMatrix: Float32Array | null = null;
@@ -93,15 +90,55 @@ export class PhotoGlowLayer implements maplibregl.CustomLayerInterface {
   // Reusable instance buffer
   private instanceData: Float32Array | null = null;
 
-  constructor(id: string, config: GlowConfig) {
+  constructor(id: string) {
     this.id = id;
-    this.config = config;
   }
 
-  setNightDate(date: Date | null) { this.nightDate = date; this.map?.triggerRepaint(); }
-  getNightDate(): Date | null { return this.nightDate; }
   setNightHidden(hidden: boolean) { this.nightHidden = hidden; this.map?.triggerRepaint(); }
-  getSubsolarPoint(): { lng: number; lat: number } { return getSubsolarPoint(this.nightDate); }
+
+  setTime(dateStr: string, tz: string | null) {
+    if (this.nightAnimationId !== null) {
+      cancelAnimationFrame(this.nightAnimationId);
+      this.nightAnimationId = null;
+    }
+
+    if (dateStr === '') {
+      this.nightDate = null;
+      this.map?.triggerRepaint();
+      return;
+    }
+
+    const targetDate = new Date(toUtcSortKey(dateStr, tz));
+    if (isNaN(targetDate.getTime())) return;
+
+    if (this.nightDate === null) {
+      this.nightDate = targetDate;
+      this.map?.triggerRepaint();
+      return;
+    }
+
+    const { startTime, endTime, duration } = computeTransition(this.nightDate, targetDate);
+    this.animateNight(startTime, endTime, duration);
+  }
+
+  private animateNight(startTime: number, endTime: number, duration: number) {
+    const animStart = performance.now();
+    const animate = (now: number) => {
+      const t = Math.min(1, (now - animStart) / duration);
+      const eased = t < 0.5 ? 2 * t * t : 1 - 2 * (1 - t) * (1 - t);
+      const interpolated = startTime + (endTime - startTime) * eased;
+      this.nightDate = new Date(interpolated);
+      this.map?.triggerRepaint();
+      if (t < 1) {
+        this.nightAnimationId = requestAnimationFrame(animate);
+      } else {
+        this.nightAnimationId = null;
+      }
+    };
+    this.nightAnimationId = requestAnimationFrame(animate);
+  }
+
+  private getSubsolarPoint(): { lng: number; lat: number } { return getSubsolarPoint(this.nightDate); }
 
   onAdd(map: maplibregl.Map, gl: WebGL2RenderingContext) {
     this.map = map;
@@ -116,6 +153,9 @@ export class PhotoGlowLayer implements maplibregl.CustomLayerInterface {
     this.nightIB = gl.createBuffer();
     this.blur = createBlurShader(gl);
     this.composite = createCompositeShader(gl);
+
+    this.projectionHandler = () => { map.triggerRepaint(); };
+    map.on('projectiontransition', this.projectionHandler);
   }
 
   private cached(key: string, create: () => Shader): Shader {
@@ -203,7 +243,7 @@ export class PhotoGlowLayer implements maplibregl.CustomLayerInterface {
     gl.uniform2f(s.u('u_viewport'), w, h);
     gl.uniform1f(s.u('u_zoom'), zoom);
     gl.uniform1f(s.u('u_point_size'), 10.0);
-    gl.uniform3fv(s.u('u_color'), this.config.color);
+    gl.uniform3fv(s.u('u_color'), this.color);
     gl.uniform1f(s.u('u_intensity'), 1.7);
     gl.uniform3f(s.u('u_sun_dir'), Math.cos(slat) * Math.cos(slng), Math.cos(slat) * Math.sin(slng), Math.sin(slat));
     gl.bindBuffer(gl.ARRAY_BUFFER, this.instanceBuf);
@@ -339,7 +379,7 @@ export class PhotoGlowLayer implements maplibregl.CustomLayerInterface {
     this.dataGeneration++;
   }
 
-  onRemove(_map: maplibregl.Map, gl: WebGL2RenderingContext) {
+  private deleteGlResources(gl: WebGL2RenderingContext) {
     for (const s of this.shaders.values()) { gl.deleteProgram(s.program); }
     this.shaders.clear();
     if (this.blur !== null) { gl.deleteProgram(this.blur.program); }
@@ -354,6 +394,18 @@ export class PhotoGlowLayer implements maplibregl.CustomLayerInterface {
       gl.deleteFramebuffer(m.pingFbo); gl.deleteTexture(m.pingTex);
     }
     this.mips = [];
+  }
+
+  onRemove(_map: maplibregl.Map, gl: WebGL2RenderingContext) {
+    if (this.nightAnimationId !== null) {
+      cancelAnimationFrame(this.nightAnimationId);
+      this.nightAnimationId = null;
+    }
+    if (this.projectionHandler !== null) {
+      _map.off('projectiontransition', this.projectionHandler);
+      this.projectionHandler = null;
+    }
+    this.deleteGlResources(gl);
     this.gl = null;
     this.map = null;
   }

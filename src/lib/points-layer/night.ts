@@ -1,4 +1,4 @@
-// Subsolar point calculation (ported from maplibre-gl-nightlayer)
+// Subsolar point calculation (ported from maplibre-gl-nightlayer) + transition helpers
 
 function toRad(deg: number): number {
   return (deg * Math.PI) / 180;
@@ -95,4 +95,40 @@ export function getSubsolarPoint(date: Date | null = null): { lng: number; lat: 
   const lat = toDeg(Math.asin(Math.sin(-obliquity) * Math.cos(eclipticLng)));
 
   return { lng, lat };
+}
+
+const MS_PER_DAY = 86400000;
+
+/**
+ * Compute animation transition parameters for night shadow.
+ * Big time jumps (>24h) get shortened animation (keep time-of-day, change date).
+ * Small jumps animate smoothly.
+ */
+export function computeTransition(
+  currentDate: Date,
+  targetDate: Date
+): { startTime: number; endTime: number; duration: number } {
+  const endTime = targetDate.getTime();
+  const fullDiffMs = Math.abs(endTime - currentDate.getTime());
+
+  const startTime = fullDiffMs <= MS_PER_DAY
+    ? currentDate.getTime()
+    : (() => {
+        let t = new Date(targetDate).setHours(
+          currentDate.getHours(),
+          currentDate.getMinutes(),
+          currentDate.getSeconds()
+        );
+        const realDirection = endTime - currentDate.getTime();
+        const shortDirection = endTime - t;
+        if (realDirection > 0 && shortDirection <= 0) {
+          t -= MS_PER_DAY;
+        } else if (realDirection < 0 && shortDirection >= 0) {
+          t += MS_PER_DAY;
+        }
+        return t;
+      })();
+
+  const duration = fullDiffMs > MS_PER_DAY ? 2000 : 400;
+  return { startTime, endTime, duration };
 }

@@ -1,7 +1,6 @@
 import type maplibregl from 'maplibre-gl';
 
 import { addPendingEdit, state } from './data';
-import { setNightLayerHidden } from './night';
 import { getCurrentPopup, showPopup } from './popup';
 import { formatDate, getThumbUrl } from './utils';
 
@@ -37,7 +36,6 @@ function exitPlacementMode(map: maplibregl.Map) {
   map.getCanvas().classList.remove('crosshair');
   hidePlacementPanel();
   markerVisibility(true);
-  setNightLayerHidden(false);
 }
 
 function finishPlacement(
@@ -62,7 +60,6 @@ export function enterPlacementMode(
   map.getCanvas().classList.add('crosshair');
   showPlacementPanel(photoIndex);
   markerVisibility(false);
-  setNightLayerHidden(true);
 }
 
 export function setupPlacement(

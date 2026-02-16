@@ -1,7 +1,5 @@
 import type maplibregl from 'maplibre-gl';
 
-import type { GlowConfig } from './glow-layer';
-
 type CirclePaint = maplibregl.CircleLayerSpecification['paint'];
 
 export interface MarkerStyleConfig {
@@ -12,7 +10,7 @@ export interface MarkerStyleConfig {
   /** Optional visible dot layer rendered on top of hit area */
   dot?: CirclePaint;
   selectedPaint?: CirclePaint;
-  glow?: GlowConfig;
+  points?: boolean;
 }
 
 const gpsColor = [
@@ -52,9 +50,7 @@ export const markerStyles: Record<string, MarkerStyleConfig> = {
       'circle-opacity': 0,
       'circle-pitch-alignment': 'map'
     },
-    glow: {
-      color: [1.0, 0.96, 0.88]
-    },
+    points: true,
     dot: {
       'circle-color': '#ffffff',
       'circle-radius': [

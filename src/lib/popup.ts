@@ -55,8 +55,7 @@ let panToFitPopupFn: (coords: [number, number]) => void = () => {
 let getMapFn: () => maplibregl.Map | undefined = () => undefined;
 let updateSunPositionFn: (
   dateStr: string,
-  tz: string | null,
-  albums?: string[]
+  tz: string | null
 ) => void = () => {
   /* noop */
 };
@@ -67,8 +66,7 @@ export function initPopupCallbacks(
   getMap: () => maplibregl.Map,
   updateSunPosition: (
     dateStr: string,
-    tz: string | null,
-    albums?: string[]
+    tz: string | null
   ) => void
 ) {
   highlightMarkerFn = highlightMarker;
@@ -161,7 +159,7 @@ export function showPopup(props: FeatureProps, coords: [number, number]) {
   clusterPhotos = [];
   highlightMarkerFn(index);
   onPhotoChangeFn(photo.uuid);
-  updateSunPositionFn(photo.date, photo.tz ?? null, photo.albums);
+  updateSunPositionFn(photo.date, photo.tz ?? null);
 
   currentPopup = new maplibregl.Popup({
     closeButton: false,
@@ -181,6 +179,7 @@ export function showPopup(props: FeatureProps, coords: [number, number]) {
     currentSinglePhotoIndex = null;
     currentPhotoUuid = null;
     onPhotoChangeFn(null);
+    updateSunPositionFn('', null);
   });
 
   panToFitPopupFn(coords);
@@ -255,6 +254,7 @@ export function showMultiPhotoPopup(
     clearSelectionFn();
     highlightMarkerFn(null);
     clusterPhotos = [];
+    updateSunPositionFn('', null);
   });
 
   if (!keepSelection) {
@@ -291,7 +291,7 @@ export function selectGroupPhoto(index: number) {
   });
 
   highlightMarkerFn(photo._index ?? null);
-  updateSunPositionFn(photo.date, photo.tz ?? null, photo.albums);
+  updateSunPositionFn(photo.date, photo.tz ?? null);
   currentGroupIndex = index;
 }
 
@@ -441,7 +441,7 @@ export function navigateSinglePhoto(newIndex: number) {
   currentPhotoUuid = photo.uuid;
   highlightMarkerFn(newIndex);
   onPhotoChangeFn(photo.uuid);
-  updateSunPositionFn(photo.date, photo.tz ?? null, photo.albums);
+  updateSunPositionFn(photo.date, photo.tz ?? null);
 
   const img = document.getElementById('single-img') as HTMLImageElement | null;
   const info = document.getElementById('single-info');

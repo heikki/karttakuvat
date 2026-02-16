@@ -37,7 +37,6 @@ import {
   toggleMeasureMode
 } from './lib/measure';
 import { initMetadataModal, showMetadata } from './lib/metadata';
-import { resetNightLayer } from './lib/night';
 import {
   adjustTime,
   applyManualDate,
@@ -320,7 +319,6 @@ function handleReset() {
   getCurrentPopup()?.remove();
   clearSelection();
   if (isMeasureMode()) exitMeasureMode();
-  resetNightLayer(getMap());
   setSelectValue('year-select', 'all');
   setButtonGroupActive('gps-buttons', ['exif', 'inferred', 'user', 'none']);
   setButtonGroupActive('media-buttons', ['photo', 'video']);

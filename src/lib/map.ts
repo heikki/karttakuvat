@@ -7,10 +7,9 @@ import { getEffectiveCoords, state, subscribe } from './data';
 import { fitToPhotos, initFit } from './fit';
 import { mapViewFromUrl, mapViewToUrl } from './filter-url';
 import { initGlobeBackground, setGlobeRadius, setMapIdle, startGlobeBackground, stopGlobeBackground } from './globe-background';
-import { PhotoGlowLayer } from './glow-layer';
 import { defaultMarkerStyle, markerStyles } from './marker-styles';
 import { addMeasureLayers, initMeasure } from './measure';
-import { setGlowLayer, onProjectionChange, updateSunPosition } from './night';
+import { PointsLayer } from './points-layer';
 import { createPanToFitPopup } from './pan';
 import { enterPlacementMode as enterPlacement, isInPlacementMode, setupPlacement } from './placement';
 import { getClusterPhotos, getCurrentPhotoUuid, getCurrentPopup, initPopupCallbacks, scrollToActiveThumbnail, selectGroupPhoto as selectGroupPhotoFromPopup, showPopup } from './popup';
@@ -33,7 +32,7 @@ export function getMap(): maplibregl.Map {
 }
 
 let currentMarkerStyle = defaultMarkerStyle;
-let currentGlowLayer: PhotoGlowLayer | null = null;
+let currentPointsLayer: PointsLayer | null = null;
 
 let markerLayers = [
   'photo-markers',
@@ -47,6 +46,7 @@ function setMarkerVisibility(visible: boolean) {
       map.setLayoutProperty(id, 'visibility', visibility);
     }
   }
+  currentPointsLayer?.setNightHidden(!visible);
 }
 
 export function enterPlacementMode(photoIndex: number) {
@@ -95,8 +95,8 @@ export function initMap() {
   window.map = map;
 
   const panToFitPopup = createPanToFitPopup(map);
-  const updateSun = (dateStr: string, tz: string | null, albums?: string[]) => {
-    updateSunPosition({ map, dateStr, tz, albums });
+  const updateSun = (dateStr: string, tz: string | null) => {
+    currentPointsLayer?.setTime(dateStr, tz);
   };
   initPopupCallbacks(highlightMarker, panToFitPopup, getMap, updateSun);
   initSelectionCallbacks(getMap);
@@ -139,7 +139,6 @@ export function initMap() {
     } else {
       stopGlobeBackground();
     }
-    onProjectionChange(map);
     const popup = getCurrentPopup();
     if (popup === null) return;
     const uuid = getCurrentPhotoUuid();
@@ -181,8 +180,7 @@ function updateMapData() {
   const geoSource = source as maplibregl.GeoJSONSource;
   geoSource.setData(geojson);
 
-  // Re-cluster glow positions from new data
-  syncGlowPositions();
+  syncPointsPositions();
 }
 
 export function changeMapStyle(styleKey: string) {
@@ -239,7 +237,7 @@ const allPossibleLayers = [
   'photo-markers-dot',
   'photo-markers',
   'photo-markers-shadow',
-  'photo-glow'
+  'photo-points'
 ];
 
 const sortKey = [
@@ -248,22 +246,20 @@ const sortKey = [
   ['get', 'index']
 ] as maplibregl.ExpressionSpecification;
 
-function syncGlowPositions() {
-  if (currentGlowLayer === null) return;
+function syncPointsPositions() {
+  if (currentPointsLayer === null) return;
   const positions: Array<{ lng: number; lat: number }> = [];
   for (const photo of state.filteredPhotos) {
     const { lon, lat } = getEffectiveCoords(photo);
     positions.push({ lng: lon, lat });
   }
-  currentGlowLayer.updateData(positions);
+  currentPointsLayer.updateData(positions);
 }
 
 function addPhotoLayers() {
-  // Remove old glow custom layer
-  if (currentGlowLayer !== null) {
-    if (map.getLayer('photo-glow') !== undefined) map.removeLayer('photo-glow');
-    currentGlowLayer = null;
-    setGlowLayer(null);
+  if (currentPointsLayer !== null) {
+    if (map.getLayer('photo-points') !== undefined) map.removeLayer('photo-points');
+    currentPointsLayer = null;
   }
 
   for (const id of allPossibleLayers) {
@@ -279,15 +275,12 @@ function addPhotoLayers() {
   const config = markerStyles[currentMarkerStyle]!;
   const layers: string[] = [];
 
-  // WebGL glow layer (custom clustering, no MapLibre source needed)
-  if (config.glow !== undefined) {
-    currentGlowLayer = new PhotoGlowLayer('photo-glow', config.glow);
-    map.addLayer(currentGlowLayer);
-    setGlowLayer(currentGlowLayer, map);
-    layers.push('photo-glow');
+  if (config.points === true) {
+    currentPointsLayer = new PointsLayer('photo-points');
+    map.addLayer(currentPointsLayer);
+    layers.push('photo-points');
 
-    // Initial sync
-    syncGlowPositions();
+    syncPointsPositions();
   }
 
   // Shadow layer (optional)
