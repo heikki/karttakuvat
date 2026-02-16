@@ -54,7 +54,7 @@ export const markerStyles: Record<string, MarkerStyleConfig> = {
   },
 
   glass: {
-    label: 'Glass',
+    label: 'Points',
     markerPaint: {
       'circle-color': 'transparent',
       'circle-radius': [
