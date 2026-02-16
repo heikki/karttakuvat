@@ -75,10 +75,11 @@ export function initMap() {
     zoom,
     boxZoom: false,
     keyboard: false,
+    dragRotate: false,
     canvasContextAttributes: { alpha: true }
   });
 
-  map.addControl(new maplibregl.NavigationControl(), 'bottom-right');
+  map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
   map.addControl(new maplibregl.GlobeControl(), 'bottom-right');
   map.addControl(
     new maplibregl.ScaleControl({ unit: 'metric' }),
