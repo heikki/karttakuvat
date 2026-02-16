@@ -195,7 +195,7 @@ function onKeyDown(e: KeyboardEvent) {
   }
 }
 
-export function enterMeasureMode() {
+function enterMeasureMode() {
   if (active) return;
   active = true;
   coords.length = 0;

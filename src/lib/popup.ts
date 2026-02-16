@@ -85,10 +85,6 @@ export function getCurrentPhotoUuid(): string | null {
   return currentPhotoUuid;
 }
 
-export function setCurrentSinglePhotoIndex(index: number | null) {
-  currentSinglePhotoIndex = index;
-}
-
 export function setOnPhotoChange(fn: (uuid: string | null) => void) {
   onPhotoChangeFn = fn;
 }

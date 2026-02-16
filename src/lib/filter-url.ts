@@ -1,7 +1,7 @@
 const ALL_GPS = ['exif', 'inferred', 'user', 'none'];
 const ALL_MEDIA = ['photo', 'video'];
 
-export interface SavedFilters {
+interface SavedFilters {
   year: string;
   album: string;
   camera: string;
@@ -86,7 +86,7 @@ export function filtersFromUrl(): Partial<SavedFilters> | null {
   return result;
 }
 
-export interface MapView {
+interface MapView {
   lat: number;
   lon: number;
   zoom: number;

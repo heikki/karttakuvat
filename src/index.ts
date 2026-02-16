@@ -1,7 +1,6 @@
 import {
   applyFilters,
   clearPendingEdits,
-  copyLocation,
   getPendingEdits,
   getPendingTimeEdits,
   loadPhotos,
@@ -85,7 +84,6 @@ declare global {
     showLightbox: typeof showLightbox;
     showGroupLightbox: typeof showGroupLightbox;
     enterPlacementMode: typeof enterPlacementMode;
-    copyLocation: typeof copyLocation;
     copyLocationFromPopup: typeof copyLocationFromPopup;
     adjustTime: typeof adjustTime;
     pasteLocation: typeof pasteLocation;
@@ -150,7 +148,6 @@ window.selectGroupPhoto = selectGroupPhoto;
 window.showLightbox = showLightbox;
 window.showGroupLightbox = showGroupLightbox;
 window.enterPlacementMode = enterPlacementMode;
-window.copyLocation = copyLocation;
 window.copyLocationFromPopup = copyLocationFromPopup;
 window.adjustTime = adjustTime;
 window.pasteLocation = pasteLocation;

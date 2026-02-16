@@ -12,7 +12,7 @@ export function initTex(
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 }
 
-export type GlState = [
+type GlState = [
   WebGLFramebuffer | null,
   boolean,
   number,

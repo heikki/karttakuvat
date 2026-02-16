@@ -420,19 +420,3 @@ export function initGlobeBackground(container: HTMLElement) {
     canvas.style.display = 'none';
   }
 }
-
-export function destroyGlobeBackground() {
-  stopGlobeBackground();
-  resizeObserver?.disconnect();
-  if (gl !== null) {
-    if (fbo !== null) gl.deleteFramebuffer(fbo);
-    if (fboTexture !== null) gl.deleteTexture(fboTexture);
-  }
-  canvas?.remove();
-  canvas = null;
-  gl = null;
-  nebulaProgram = null;
-  blitProgram = null;
-  fbo = null;
-  fboTexture = null;
-}

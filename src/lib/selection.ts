@@ -103,7 +103,7 @@ export function clearSelection() {
   updateSelectionLayer(null, null);
 }
 
-export function fitToSelectionWithPopup(sw: LngLat, ne: LngLat) {
+function fitToSelectionWithPopup(sw: LngLat, ne: LngLat) {
   const map = getMapFn();
   setTimeout(() => {
     // Guard against MapLibre crash when container has invalid dimensions

@@ -96,48 +96,7 @@ export function showLightbox(index: number) {
   if (lightbox !== null) lightbox.classList.add('active');
 }
 
-export function showGroupLightbox(index: number, groupPhotos?: Photo[]) {
-  // If groupPhotos is passed, update state. If not, rely on existing (helper for window calls usually passes nothing if just switching index?)
-  // Actually, onclick="window.showGroupLightbox(i)" only passes index.
-  // So map.ts must rely on currentGroupPhotos being set?
-  // No, map.ts calls showGroupLightbox with index only?
-  // Wait, in map.ts: window.showGroupLightbox(index)
-  // But where is currentGroupPhotos set?
-  // Ah, map.ts has its own `clusterPhotos` array.
-  // ui.ts has `currentGroupPhotos`.
-  // If map.ts handles the cluster, then ui.ts needs access to it?
-  // OR map.ts should pass the array.
-  // But the onclick string is static/hardcoded or simple.
-
-  // Resolution: map.ts's `clusterPhotos` describes the group.
-  // ui.ts needs to know about this group.
-  // Maybe `selectGroupPhoto` in map.ts (which is called before lightbox) sets the "active group"?
-  // Yes, map.ts has `clusterPhotos`.
-  // ui.ts needs to sync with that.
-
-  // Actually, let's export `setLightboxGroup(photos)` ?
-  // Or simpler: map.ts calls `showGroupLightbox` logic directly?
-  // No, lightbox logic is in ui.ts.
-
-  // Hack: map.ts exposes `getClusterPhotos()` ?
-  // DO NOT overcomplicate.
-  // In `index.ts`, `window.showGroupLightbox` calls `ui.showGroupLightbox`.
-  // `map.ts` has the data.
-  // I should pass the data FROM map.ts TO ui.ts when the popup opens?
-  // `selectGroupPhoto` in `map.ts` is called when clicking a thumb.
-
-  // Changing design slightly:
-  // `map.ts` exports `getClusterPhotos()`.
-  // `ui.ts` imports `getClusterPhotos` from `map.ts`? Circular dependency!
-
-  // Okay, `ui.ts` should hold the lightbox state.
-  // `map.ts` calls `setLightboxGroup(photos)` whenever a popup opens with multiple photos.
-  // Let's add `updateLightboxGroup(photos)` export to `ui.ts`.
-  // `map.ts` calls it in `showMultiPhotoPopup`.
-
-  // For this fix:
-  // I will assume `groupPhotos` is managed via `updateLightboxGroup`.
-
+export function showGroupLightbox(index: number) {
   currentGroupIndex = index;
   lightboxMode = 'group';
 

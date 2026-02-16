@@ -19,7 +19,7 @@ export interface Photo {
   filename?: string;
 }
 
-export interface MapStyle {
+interface MapStyle {
   version: number;
   sources: Record<string, unknown>;
   layers: unknown[];

@@ -72,7 +72,7 @@ function dateEditButtonsHtml(uuid: string): string {
   return `<span class="time-adjust-buttons"><button class="time-btn" onclick="event.preventDefault(); window.adjustTime('${uuid}', -24)">-1d</button><button class="time-btn" onclick="event.preventDefault(); window.adjustTime('${uuid}', 24)">+1d</button><button class="time-btn" onclick="event.preventDefault(); window.adjustTime('${uuid}', -1)">-1h</button><button class="time-btn" onclick="event.preventDefault(); window.adjustTime('${uuid}', 1)">+1h</button><button class="time-btn" onclick="event.preventDefault(); window.toggleDateEdit()">done</button></span>`;
 }
 
-export function dateLineHtml(photo: Photo, isEditMode: boolean): string {
+function dateLineHtml(photo: Photo, isEditMode: boolean): string {
   const effectiveDate = getEffectiveDate(photo);
   const dateText = formatDate(effectiveDate, photo.tz);
   if (isEditMode) {
@@ -93,7 +93,7 @@ function locationButtonsHtml(photo: Photo, index: number): string {
   return `<span class="loc-buttons"><button class="loc-btn" onclick="event.preventDefault(); window.enterPlacementMode(${index})">set</button>${copyBtn}${pasteBtn}</span>`;
 }
 
-export function buildOverlayButtons(
+function buildOverlayButtons(
   photosLinkId: string,
   photo: Photo
 ): string {
