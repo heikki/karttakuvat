@@ -6,8 +6,7 @@ import { mapStyles } from './config';
 import { getEffectiveCoords, state, subscribe } from './data';
 import { fitToPhotos, initFit } from './fit';
 import { mapViewFromUrl, mapViewToUrl } from './filter-url';
-import { initGlobeBackground, setMapIdle, startGlobeBackground, stopGlobeBackground } from './globe-background';
-import { updateGlobeRadius } from './globe-radius';
+import { initGlobeBackground, setGlobeRadius, setMapIdle, startGlobeBackground, stopGlobeBackground } from './globe-background';
 import { PhotoGlowLayer } from './glow-layer';
 import { defaultMarkerStyle, markerStyles } from './marker-styles';
 import { addMeasureLayers, initMeasure } from './measure';
@@ -108,7 +107,16 @@ export function initMap() {
   // Init globe background shader
   initGlobeBackground(map.getContainer());
   startGlobeBackground();
-  map.on('render', () => { updateGlobeRadius(map); });
+  map.on('render', () => {
+    if (map.getProjection().type !== 'globe') return;
+    const { lat, lng } = map.getCenter();
+    const centerPx = map.project([lng, lat]);
+    const px = map.project([lng + 90, 0]);
+    const dx = px.x - centerPx.x;
+    const dy = px.y - centerPx.y;
+    const canvas = map.getCanvas();
+    setGlobeRadius(Math.sqrt(dx * dx + dy * dy), Math.min(canvas.clientWidth, canvas.clientHeight));
+  });
 
   map.on('movestart', () => { setMapIdle(false); });
   map.on('idle', () => { setMapIdle(true); });
