@@ -76,7 +76,6 @@ export const markerStyles: Record<string, MarkerStyleConfig> = {
       'circle-pitch-alignment': 'map'
     },
     glow: {
-      baseRadius: 20,
       color: [1.0, 0.96, 0.88]
     },
     highlight: {
