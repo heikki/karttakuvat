@@ -201,6 +201,7 @@ export class BloomLayer implements CustomLayerInterface {
     gl.useProgram(s.program);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.colorMask(true, true, true, false);
     setProjectionUniforms(gl, s, this.map!, options);
     gl.uniform2f(s.u('u_subsolar'), sun.lng, sun.lat);
     gl.uniform1f(s.u('u_opacity'), this.nightOpacity);
@@ -209,6 +210,7 @@ export class BloomLayer implements CustomLayerInterface {
     gl.enableVertexAttribArray(s.a('a_pos'));
     gl.vertexAttribPointer(s.a('a_pos'), 2, gl.FLOAT, false, 0, 0);
     gl.drawElements(gl.TRIANGLES, this.nightCount, gl.UNSIGNED_SHORT, 0);
+    gl.colorMask(true, true, true, true);
     gl.disableVertexAttribArray(s.a('a_pos'));
   }
 
@@ -305,6 +307,7 @@ export class BloomLayer implements CustomLayerInterface {
     gl.useProgram(c.program);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_COLOR);
+    gl.colorMask(true, true, true, false);
     for (let i = 0; i < MIP_LEVELS; i++) {
       gl.activeTexture(gl.TEXTURE0 + i);
       gl.bindTexture(gl.TEXTURE_2D, this.mips[i]!.tex);
@@ -319,6 +322,7 @@ export class BloomLayer implements CustomLayerInterface {
     gl.enableVertexAttribArray(c.a('a_pos'));
     gl.vertexAttribPointer(c.a('a_pos'), 2, gl.FLOAT, false, 0, 0);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    gl.colorMask(true, true, true, true);
     gl.disableVertexAttribArray(c.a('a_pos'));
     for (let i = 0; i < MIP_LEVELS; i++) {
       gl.activeTexture(gl.TEXTURE0 + i);
