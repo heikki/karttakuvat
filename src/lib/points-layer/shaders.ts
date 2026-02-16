@@ -140,7 +140,14 @@ export function createNightShader(
 precision highp float;
 in vec2 a_pos; out vec2 v_pos;
 ${prelude(sd)}
-void main(){gl_Position=projectTile(a_pos);v_pos=a_pos;}`,
+uniform vec2 u_viewport;
+void main(){
+  vec4 p=projectTile(a_pos);
+  vec2 dir=p.xy;
+  float len=length(dir);
+  if(len>0.0){p.xy+=dir/len*(2.0/min(u_viewport.x,u_viewport.y))*p.w;}
+  gl_Position=p;v_pos=a_pos;
+}`,
     `#version 300 es
 precision highp float;
 in vec2 v_pos; out vec4 fragColor;
@@ -151,7 +158,7 @@ void main(){
   float alt=degrees(asin(sin(o.y)*sin(s.y)+cos(o.y)*cos(s.y)*cos(s.x-o.x)));
   fragColor=vec4(0.,0.,0.,(1.-clamp(pow(0.5,-alt/6.),0.,1.))*u_opacity);
 }`,
-    { u: ['u_subsolar', 'u_opacity', ...PROJ_U], a: ['a_pos'] }
+    { u: ['u_subsolar', 'u_opacity', 'u_viewport', ...PROJ_U], a: ['a_pos'] }
   );
 }
 

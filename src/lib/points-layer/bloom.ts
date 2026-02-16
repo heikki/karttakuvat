@@ -203,6 +203,8 @@ export class BloomLayer implements CustomLayerInterface {
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.colorMask(true, true, true, false);
     setProjectionUniforms(gl, s, this.map!, options);
+    const { width: nw, height: nh } = this.map!.getCanvas();
+    gl.uniform2f(s.u('u_viewport'), nw, nh);
     gl.uniform2f(s.u('u_subsolar'), sun.lng, sun.lat);
     gl.uniform1f(s.u('u_opacity'), this.nightOpacity);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.nightVB);
