@@ -17,20 +17,30 @@ Geolocation photo visualization web app displaying geotagged photographs on an i
 │   ├── index.html         # Shell HTML
 │   ├── styles/main.css    # All styles
 │   └── lib/
-│       ├── types.ts       # Photo, MapStyle interfaces
+│       ├── types.ts       # Photo, MapStyle, MarkerLayer interfaces
 │       ├── config.ts      # Map tile source definitions
 │       ├── data.ts        # State, data loading, filtering, pub/sub, pending edits
 │       ├── utils.ts       # Date formatting, URL helpers, date parsing
-│       ├── filter-url.ts  # URL state persistence (filters, map view, style, photo)
-│       ├── map.ts         # MapLibre init, layers, marker interactions, placement mode
-│       ├── night.ts       # Day/night shadow layer (globe projection)
+│       ├── filter-url.ts  # URL state persistence (filters, map view, style, marker style, photo)
+│       ├── map.ts         # MapLibre init, marker layer management, marker interactions
+│       ├── fit.ts         # Map fitting logic (fit to photos, padding)
 │       ├── pan.ts         # Auto-pan map to keep popup visible
+│       ├── placement.ts   # Placement mode (set photo location by clicking map)
+│       ├── globe-background.ts  # WebGL2 animated nebula/stars background for globe
 │       ├── popup.ts       # Popup state, navigation, date/location editing logic
 │       ├── popup-html.ts  # Popup HTML generation, overlay buttons
 │       ├── measure.ts     # Distance measurement tool
 │       ├── metadata.ts    # Metadata modal (osxphotos detail view)
 │       ├── selection.ts   # Shift+drag rectangular selection, arrow key navigation
-│       └── ui.ts          # Lightbox, stats panel, filter UI helpers
+│       ├── ui.ts          # Lightbox, stats panel, filter UI helpers
+│       ├── classic-layer/
+│       │   └── index.ts   # Classic marker style (color-coded circles by GPS type)
+│       └── points-layer/
+│           ├── index.ts   # Points marker style (white dots with WebGL bloom)
+│           ├── bloom.ts   # Custom WebGL layer: bloom glow + night shadow
+│           ├── night.ts   # Subsolar point calculation, night transition animation
+│           ├── shaders.ts # GLSL shaders for points, blur, composite, night
+│           └── gl-utils.ts # WebGL framebuffer/mip helpers
 ├── public/                # Static assets (served at root)
 │   ├── items.json         # Photo/video metadata
 │   ├── full/              # Full-size photos/videos
@@ -82,6 +92,7 @@ python3 scripts/export.py           # Full export from Photos.app to public/
 python3 scripts/sync.py             # Sync metadata in items.json from Photos.app
 python3 scripts/set_locations.py    # Set photo locations (called by server)
 python3 scripts/set_times.py        # Set photo dates (called by server)
+python3 scripts/set_cameras.py      # Copy camera EXIF to photos missing it
 python3 scripts/sync_timezones.py   # Sync timezone data
 ```
 

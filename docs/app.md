@@ -38,12 +38,12 @@ Changing any filter recomputes the filtered set and notifies:
 
 MapLibre GL JS with raster tile sources. Style switching via buttons:
 
-- **Outdoors** (default): Thunderforest Outdoors (requires API key)
-- **Satellite**: Google Satellite
+- **Aerial** (default): Google Satellite
+- **Topo**: Thunderforest Outdoors (requires API key)
 - **Maasto**: MML Maastokartta over Thunderforest Outdoors (requires API keys)
 - **Orto**: MML Ortokuva over Google Satellite (requires API key)
 
-Selected map style is persisted in URL params (default `outdoors` is omitted from URL). Style switching tears down and re-adds all layers after the new style is idle.
+Selected map style is persisted in URL params (default `satellite` is omitted from URL). Style switching tears down and re-adds all layers after the new style loads.
 
 ### Projection
 
@@ -55,22 +55,34 @@ The map uses globe projection by default. A globe control (bottom-right) lets th
 - Globe control (projection toggle) at bottom-right
 - Scale bar (metric) at bottom-left
 
-### Layers
+### Marker Styles
 
-Three circle layers on a single GeoJSON source:
+Two switchable marker styles, selectable via buttons in the stats panel. The active marker style is persisted in URL params.
 
-- **Markers** (`photo-markers`): Color-coded by GPS type:
+**Points** (default): Minimalist white dots with WebGL bloom glow effect.
+
+- **Markers** (`points-markers`): Transparent hit-area circles with zoom-dependent radius (6–30px). Pitch-aligned to map.
+- **Dots** (`points-dot`): Small white circles with blur, zoom-dependent radius (1–7px). Pitch-aligned to map.
+- **Selected** (`points-selected`): Same hit-area paint, filtered by UUID.
+- **Bloom** (`points-bloom`): Custom WebGL layer that renders glowing point sprites with multi-pass Gaussian blur, composited additively. Includes night shadow rendering in globe mode.
+
+**Classic**: Color-coded circles by GPS type.
+
+- **Markers** (`classic-markers`): Color-coded by GPS type:
   - Blue (`#3b82f6`): exif
   - Amber (`#f59e0b`): inferred
   - Green (`#22c55e`): user
   - Gray (`#9ca3af`): none
   - Radius 8, white stroke width 2. Sorted by latitude (northern behind southern) then index.
+- **Selected** (`classic-selected`): Same paint, filtered by UUID.
 
-- **Selected marker** (`photo-markers-selected`): Same paint as markers. Shown via filter on index. Drawn above regular markers.
+### Night Layer
 
-- **Highlight ring** (`photo-markers-highlight-ring`): Pulsing animation — blue stroke ring that grows from radius 12 to 20 while fading from 0.8 to 0 opacity over 1.2s, repeating. Shown via filter on index.
+Day/night shadow overlay rendered as a custom WebGL layer (part of the Points bloom layer). Uses subsolar point calculation to determine sun position. Visible only in globe projection. When navigating photos, the night layer animates to match the photo's date/time — fast transition (400ms) within a day, slower (2s) across large time gaps.
 
-- **Night layer**: Day/night shadow overlay using `maplibre-gl-nightlayer`. Visible only in globe projection (opacity 0 in mercator). When navigating photos, the night layer animates to match the photo's date/time — fast transition (400ms) within an album, slower (2s) across large time gaps. Reset button clears the night layer to current time.
+### Globe Background
+
+Animated cosmic background (nebula + twinkling stars) rendered via a separate WebGL2 canvas behind the map. Two-pass rendering: expensive nebula texture rendered to FBO only when map is idle, cheap blit shader composites cached texture + live globe glow every frame. Visible only in globe projection. Pauses animation during map interaction to save GPU. Renders at half resolution, capped at 30fps.
 
 Default center: Kuhmo, Finland (29.52, 64.13). Zoom 10. Box zoom and keyboard navigation disabled.
 
@@ -216,14 +228,16 @@ Measurement layers (points + line) are re-added after map style changes to persi
 
 ## Stats Panel
 
-Fixed top-right (220px wide). Shows:
+Fixed top-right (220px wide). Collapsible — clicking the header toggles the panel body. Shows:
 
-- Title "Karttakuvat"
+- Title "Karttakuvat" (clickable header to collapse/expand)
 - Item count (photos and/or videos)
-- Filter section: Year, Album, Camera dropdowns; Media and GPS toggle buttons; Map type buttons
+- Filter section: Year, Album, Camera dropdowns; Media and GPS toggle buttons; Map type buttons; Marker style buttons (Points/Classic)
 - "Fit" button — fits map to filtered photos and opens popup on first photo
-- "Reset" button — closes popup, clears selection, exits measure mode, resets night layer, resets all filters to defaults, clears URL params, fits to all photos
+- "Reset" button — closes popup, clears selection, exits measure mode, resets all filters to defaults, resets map style to satellite, clears URL params, fits to all photos
 - "Measure" button — toggles distance measurement mode (highlighted blue when active)
+- "Apple Maps" button — opens Apple Maps at the current map center or selected photo location (satellite view)
+- "Google Maps" button — opens Google Maps at the current map center or selected photo location
 - Pending edits section (hidden when no edits): count + Save/Discard buttons
 
 ## URL State
@@ -233,7 +247,8 @@ App state is persisted in URL query parameters:
 - **Filters**: `year`, `album`, `camera`, `gps` (comma-separated), `media` (comma-separated). Default values are omitted.
 - **Photo**: `id` (UUID of currently viewed photo)
 - **Map view**: `lat`, `lon`, `z` (zoom) — updated on every map move
-- **Map style**: `style` (e.g. `satellite`, `mml_maastokartta`). Default `opentopomap` is omitted.
+- **Map style**: `style` (e.g. `topo`, `mml_maastokartta`). Default `satellite` is omitted.
+- **Marker style**: `markers` (e.g. `classic`). Default `points` is omitted.
 
 On startup, saved URL state is restored: filters are applied, map view is positioned, map style is set, and the selected photo popup is reopened. The Reset button clears all URL params.
 

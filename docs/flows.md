@@ -8,7 +8,7 @@ If the user previously had a URL with filters or a selected photo, the app resto
 
 ## Find a specific photo on the map
 
-User sees color-coded markers on the map (blue for GPS, amber for inferred, green for user-set, gray for no location) and clicks one. A popup appears with a thumbnail, date, coordinates, and overlay buttons (info, Photos.app link).
+User sees markers on the map (white glowing dots in Points mode, or color-coded circles in Classic mode) and clicks one. A popup appears with a thumbnail, date, coordinates, and overlay buttons (info, Photos.app link).
 
 The user can press left/right arrow keys to step through all filtered items chronologically. The popup moves to each item's marker on the map. Clicking the thumbnail opens the full-screen viewer. Pressing Space also opens the viewer. Clicking elsewhere on the map dismisses the popup.
 
@@ -53,15 +53,23 @@ The user clicks GPS precision toggle buttons (Exif, Inferred, User, None). Same 
 
 ## Switch map style
 
-The user clicks one of the map style buttons (Topo, Satellite, Maasto, Orto). The active button gets highlighted. Map tiles change while keeping the same view position. Photo markers reappear after the new tiles load. The selected style is saved in the URL.
+The user clicks one of the map style buttons (Aerial, Topo, Maasto, Orto). The active button gets highlighted. Map tiles change while keeping the same view position. Photo markers reappear after the new tiles load. The selected style is saved in the URL.
+
+## Switch marker style
+
+The user clicks one of the marker style buttons (Points, Classic). Points mode shows minimalist white dots with a WebGL bloom glow effect and integrated night shadow. Classic mode shows traditional color-coded circles (blue for GPS, amber for inferred, green for user-set, gray for no location). The selected marker style is saved in the URL.
 
 ## Switch map projection
 
-The user clicks the globe control (bottom-right) to toggle between globe and flat (mercator) projections. In globe mode, a day/night shadow overlay is visible, showing the sun position corresponding to the currently viewed photo's date and time. The shadow animates smoothly when navigating between photos.
+The user clicks the globe control (bottom-right) to toggle between globe and flat (mercator) projections. In globe mode, an animated cosmic background (nebula and twinkling stars) is visible behind the globe. When using the Points marker style, a day/night shadow overlay shows the sun position corresponding to the currently viewed photo's date and time, and the shadow animates smoothly when navigating between photos.
 
 ## Reset the app
 
-The user clicks the "Reset" button next to "Fit". This closes any open popup, clears the selection, resets the night layer to the current time, resets all filters to their defaults (all years, all media types, all GPS types), clears the URL, and fits the map to all photos.
+The user clicks the "Reset" button next to "Fit". This closes any open popup, clears the selection, exits measure mode, resets all filters to their defaults (all years, all media types, all GPS types), resets the map style to satellite, clears the URL, and fits the map to all photos.
+
+## Open in Apple Maps / Google Maps
+
+The user clicks the "Apple Maps" or "Google Maps" button in the stats panel. If a photo is currently selected, the external map opens centered on that photo's location. Otherwise, it opens at the current map center and zoom level. Apple Maps opens in satellite view.
 
 ## Set a photo's location
 
@@ -104,6 +112,10 @@ Single-photo popup, multi-photo popup, and the lightbox all show a Photos.app li
 The user clicks the "Measure" button in the stats panel. The button highlights blue and the cursor becomes a crosshair. Each click on the map adds a point, connected by a dashed red line to previous points. A floating overlay at the top of the screen shows the cumulative distance.
 
 To remove a point, the user clicks on it. To finish, the user presses Escape or clicks the "Measure" button again — all points and the line are cleared.
+
+## Collapse the stats panel
+
+The user clicks the panel header ("Karttakuvat" title area) to collapse the panel body, leaving only the header visible. Clicking again expands it.
 
 ## Dismiss things
 
