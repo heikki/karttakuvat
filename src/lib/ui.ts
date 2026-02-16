@@ -1,12 +1,7 @@
 import { state } from './data';
-import type { Photo } from './types';
 import { getEffectiveDate, getEffectiveLocation } from './popup-html';
-import {
-  formatCoords,
-  formatDate,
-  getFullUrl,
-  isVideo
-} from './utils';
+import type { Photo } from './types';
+import { formatCoords, formatDate, getFullUrl, isVideo } from './utils';
 
 // --- Lightbox Elements ---
 let lightbox: HTMLElement | null = null;

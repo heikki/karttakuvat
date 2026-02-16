@@ -1,5 +1,11 @@
-import type { CircleLayerSpecification, ExpressionSpecification, FilterSpecification, GeoJSONSource, Map as MapGL } from 'maplibre-gl';
 import type { FeatureCollection, Point } from 'geojson';
+import type {
+  CircleLayerSpecification,
+  ExpressionSpecification,
+  FilterSpecification,
+  GeoJSONSource,
+  Map as MapGL
+} from 'maplibre-gl';
 
 import { getEffectiveCoords } from '../data';
 import type { MarkerLayer, Photo } from '../types';
@@ -65,7 +71,9 @@ export class ClassicLayer implements MarkerLayer {
   uninstall() {
     if (this.map === null) return;
     for (let i = LAYERS.length - 1; i >= 0; i--) {
-      if (this.map.getLayer(LAYERS[i]!) !== undefined) this.map.removeLayer(LAYERS[i]!);
+      if (this.map.getLayer(LAYERS[i]!) !== undefined) {
+        this.map.removeLayer(LAYERS[i]!);
+      }
     }
     if (this.map.getSource(SOURCE) !== undefined) this.map.removeSource(SOURCE);
     this.map = null;
@@ -75,15 +83,18 @@ export class ClassicLayer implements MarkerLayer {
     if (this.map === null) return;
     const v = visible ? 'visible' : 'none';
     for (const id of LAYERS) {
-      if (this.map.getLayer(id) !== undefined) this.map.setLayoutProperty(id, 'visibility', v);
+      if (this.map.getLayer(id) !== undefined) {
+        this.map.setLayoutProperty(id, 'visibility', v);
+      }
     }
   }
 
   highlight(photo: Photo | null) {
     if (this.map === null) return;
-    const filter: FilterSpecification = photo === null
-      ? ['==', ['get', 'uuid'], '']
-      : ['==', ['get', 'uuid'], photo.uuid];
+    const filter: FilterSpecification =
+      photo === null
+        ? ['==', ['get', 'uuid'], '']
+        : ['==', ['get', 'uuid'], photo.uuid];
     if (this.map.getLayer('classic-selected') !== undefined) {
       this.map.setFilter('classic-selected', filter);
     }

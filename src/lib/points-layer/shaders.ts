@@ -1,5 +1,4 @@
-import type { CustomRenderMethodInput } from 'maplibre-gl';
-import type maplibregl from 'maplibre-gl';
+import type { CustomRenderMethodInput, Map as MapGL } from 'maplibre-gl';
 
 export const MIP_LEVELS = 4;
 
@@ -17,19 +16,33 @@ export class Shader {
     opts: { u: string[]; a: string[] }
   ) {
     this.program = compile(gl, vertSrc, fragSrc);
-    for (const n of opts.u) { this._u[n] = gl.getUniformLocation(this.program, n); }
-    for (const n of opts.a) { this._a[n] = gl.getAttribLocation(this.program, n); }
+    for (const n of opts.u) {
+      this._u[n] = gl.getUniformLocation(this.program, n);
+    }
+    for (const n of opts.a) {
+      this._a[n] = gl.getAttribLocation(this.program, n);
+    }
   }
 
-  u(name: string): WebGLUniformLocation | null { return this._u[name] ?? null; }
-  a(name: string): number { return this._a[name] ?? -1; }
+  u(name: string): WebGLUniformLocation | null {
+    return this._u[name] ?? null;
+  }
+  a(name: string): number {
+    return this._a[name] ?? -1;
+  }
 }
 
 // --- Compilation ---
 
-function compileShader(gl: WebGL2RenderingContext, type: number, src: string): WebGLShader {
+function compileShader(
+  gl: WebGL2RenderingContext,
+  type: number,
+  src: string
+): WebGLShader {
   const s = gl.createShader(type);
-  if (s === null) { throw new Error('createShader failed'); }
+  if (s === null) {
+    throw new Error('createShader failed');
+  }
   gl.shaderSource(s, src);
   gl.compileShader(s);
   if (gl.getShaderParameter(s, gl.COMPILE_STATUS) === false) {
@@ -38,7 +51,11 @@ function compileShader(gl: WebGL2RenderingContext, type: number, src: string): W
   return s;
 }
 
-function compile(gl: WebGL2RenderingContext, vertSrc: string, fragSrc: string): WebGLProgram {
+function compile(
+  gl: WebGL2RenderingContext,
+  vertSrc: string,
+  fragSrc: string
+): WebGLProgram {
   const vs = compileShader(gl, gl.VERTEX_SHADER, vertSrc);
   const fs = compileShader(gl, gl.FRAGMENT_SHADER, fragSrc);
   const p = gl.createProgram();
@@ -58,8 +75,12 @@ function compile(gl: WebGL2RenderingContext, vertSrc: string, fragSrc: string): 
 type ShaderData = CustomRenderMethodInput['shaderData'];
 
 const PROJ_U = [
-  'u_matrix', 'u_projection_matrix', 'u_projection_fallback_matrix',
-  'u_projection_tile_mercator_coords', 'u_projection_clipping_plane', 'u_projection_transition',
+  'u_matrix',
+  'u_projection_matrix',
+  'u_projection_fallback_matrix',
+  'u_projection_tile_mercator_coords',
+  'u_projection_clipping_plane',
+  'u_projection_transition'
 ];
 
 function prelude(sd: ShaderData): string {
@@ -72,32 +93,49 @@ function prelude(sd: ShaderData): string {
 export function setProjectionUniforms(
   gl: WebGL2RenderingContext,
   s: Shader,
-  map: maplibregl.Map,
+  map: MapGL,
   options: CustomRenderMethodInput
 ) {
   const t = map.transform as unknown as Record<string, unknown>;
   if (typeof t.getProjectionDataForCustomLayer !== 'function') {
-    gl.uniformMatrix4fv(s.u('u_matrix'), false, options.modelViewProjectionMatrix as Float32Array);
+    gl.uniformMatrix4fv(
+      s.u('u_matrix'),
+      false,
+      options.modelViewProjectionMatrix as Float32Array
+    );
     return;
   }
-  const pd = (t.getProjectionDataForCustomLayer as (b: boolean) => {
-    mainMatrix: Float32Array;
-    fallbackMatrix: Float32Array;
-    tileMercatorCoords: [number, number, number, number];
-    clippingPlane: [number, number, number, number];
-    projectionTransition: number;
-  })(true);
+  const pd = (
+    t.getProjectionDataForCustomLayer as (b: boolean) => {
+      mainMatrix: Float32Array;
+      fallbackMatrix: Float32Array;
+      tileMercatorCoords: [number, number, number, number];
+      clippingPlane: [number, number, number, number];
+      projectionTransition: number;
+    }
+  )(true);
   gl.uniformMatrix4fv(s.u('u_projection_matrix'), false, pd.mainMatrix);
-  gl.uniformMatrix4fv(s.u('u_projection_fallback_matrix'), false, pd.fallbackMatrix);
-  gl.uniform4f(s.u('u_projection_tile_mercator_coords'), ...pd.tileMercatorCoords);
+  gl.uniformMatrix4fv(
+    s.u('u_projection_fallback_matrix'),
+    false,
+    pd.fallbackMatrix
+  );
+  gl.uniform4f(
+    s.u('u_projection_tile_mercator_coords'),
+    ...pd.tileMercatorCoords
+  );
   gl.uniform4f(s.u('u_projection_clipping_plane'), ...pd.clippingPlane);
   gl.uniform1f(s.u('u_projection_transition'), pd.projectionTransition);
 }
 
 // --- Shader factories ---
 
-export function createNightShader(gl: WebGL2RenderingContext, sd: ShaderData): Shader {
-  return new Shader(gl,
+export function createNightShader(
+  gl: WebGL2RenderingContext,
+  sd: ShaderData
+): Shader {
+  return new Shader(
+    gl,
     `#version 300 es
 precision highp float;
 in vec2 a_pos; out vec2 v_pos;
@@ -117,8 +155,12 @@ void main(){
   );
 }
 
-export function createPointShader(gl: WebGL2RenderingContext, sd: ShaderData): Shader {
-  return new Shader(gl,
+export function createPointShader(
+  gl: WebGL2RenderingContext,
+  sd: ShaderData
+): Shader {
+  return new Shader(
+    gl,
     `#version 300 es
 precision highp float;
 in vec3 a_photo_pos; in vec2 a_lnglat;
@@ -141,8 +183,16 @@ void main(){
   fragColor=vec4(u_color*u_intensity*(1.-dist*dist)*v_night,1.);
 }`,
     {
-      u: ['u_viewport', 'u_zoom', 'u_point_size', 'u_color', 'u_intensity', 'u_sun_dir', ...PROJ_U],
-      a: ['a_photo_pos', 'a_lnglat'],
+      u: [
+        'u_viewport',
+        'u_zoom',
+        'u_point_size',
+        'u_color',
+        'u_intensity',
+        'u_sun_dir',
+        ...PROJ_U
+      ],
+      a: ['a_photo_pos', 'a_lnglat']
     }
   );
 }
@@ -155,7 +205,9 @@ void main(){v_uv=a_pos*.5+.5;gl_Position=vec4(a_pos,0.,1.);}`;
 const BLUR_W = [0.227027, 0.194595, 0.121622, 0.054054, 0.016216];
 
 export function createBlurShader(gl: WebGL2RenderingContext): Shader {
-  return new Shader(gl, QUAD_VERT,
+  return new Shader(
+    gl,
+    QUAD_VERT,
     `#version 300 es
 precision highp float;
 in vec2 v_uv; out vec4 fragColor;
@@ -178,15 +230,21 @@ export function createCompositeShader(gl: WebGL2RenderingContext): Shader {
     samplers += `uniform sampler2D u_b${i};`;
     combine += `b+=texture(u_b${i},v_uv).rgb*u_w[${i}];`;
   }
-  return new Shader(gl, QUAD_VERT,
+  return new Shader(
+    gl,
+    QUAD_VERT,
     `#version 300 es
 precision highp float;
 in vec2 v_uv; out vec4 fragColor;
 ${samplers} uniform float u_strength; uniform float u_w[${MIP_LEVELS}];
 void main(){${combine}fragColor=vec4(b*u_strength,1.);}`,
     {
-      u: [...Array.from({ length: MIP_LEVELS }, (_, i) => `u_b${i}`), 'u_strength', 'u_w'],
-      a: ['a_pos'],
+      u: [
+        ...Array.from({ length: MIP_LEVELS }, (_, i) => `u_b${i}`),
+        'u_strength',
+        'u_w'
+      ],
+      a: ['a_pos']
     }
   );
 }

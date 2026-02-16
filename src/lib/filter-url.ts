@@ -158,18 +158,14 @@ export function initStyleButtonGroup(
     if (btn === null) return;
     const style = btn.dataset.style;
     if (style === undefined) return;
-    container
-      .querySelector('.map-type-btn.active')
-      ?.classList.remove('active');
+    container.querySelector('.map-type-btn.active')?.classList.remove('active');
     btn.classList.add('active');
     onChange(style);
   });
 
   const saved = fromUrl();
   if (saved !== null) {
-    const btn = container.querySelector(
-      `.map-type-btn[data-style="${saved}"]`
-    );
+    const btn = container.querySelector(`.map-type-btn[data-style="${saved}"]`);
     if (btn !== null) {
       container
         .querySelector('.map-type-btn.active')

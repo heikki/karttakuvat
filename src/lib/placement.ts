@@ -1,4 +1,4 @@
-import type maplibregl from 'maplibre-gl';
+import type { Map as MapGL } from 'maplibre-gl';
 
 import { addPendingEdit, state } from './data';
 import { getCurrentPopup, showPopup } from './popup';
@@ -31,7 +31,7 @@ function hidePlacementPanel() {
   document.getElementById('placement-panel')?.classList.remove('active');
 }
 
-function exitPlacementMode(map: maplibregl.Map) {
+function exitPlacementMode(map: MapGL) {
   placementPhotoIndex = null;
   map.getCanvas().classList.remove('crosshair');
   hidePlacementPanel();
@@ -39,7 +39,7 @@ function exitPlacementMode(map: maplibregl.Map) {
 }
 
 function finishPlacement(
-  map: maplibregl.Map,
+  map: MapGL,
   photoIndex: number,
   lat: number,
   lon: number
@@ -51,10 +51,7 @@ function finishPlacement(
   showPopup({ index: photoIndex }, [lon, lat]);
 }
 
-export function enterPlacementMode(
-  map: maplibregl.Map,
-  photoIndex: number
-) {
+export function enterPlacementMode(map: MapGL, photoIndex: number) {
   getCurrentPopup()?.remove();
   placementPhotoIndex = photoIndex;
   map.getCanvas().classList.add('crosshair');
@@ -63,7 +60,7 @@ export function enterPlacementMode(
 }
 
 export function setupPlacement(
-  map: maplibregl.Map,
+  map: MapGL,
   setVisibility: (visible: boolean) => void
 ) {
   markerVisibility = setVisibility;

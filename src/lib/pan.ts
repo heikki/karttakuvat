@@ -1,4 +1,4 @@
-import type maplibregl from 'maplibre-gl';
+import type { Map as MapGL } from 'maplibre-gl';
 
 import { getCurrentPopup } from './popup';
 
@@ -25,7 +25,7 @@ function calculatePanOffset(
   return { panX, panY };
 }
 
-export function createPanToFitPopup(map: maplibregl.Map) {
+export function createPanToFitPopup(map: MapGL) {
   return (_coords: [number, number]) => {
     setTimeout(() => {
       const popup = getCurrentPopup();

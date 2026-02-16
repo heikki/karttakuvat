@@ -1,6 +1,6 @@
 import turfDistance from '@turf/distance';
 import { point } from '@turf/helpers';
-import type maplibregl from 'maplibre-gl';
+import type { GeoJSONSource, MapMouseEvent } from 'maplibre-gl';
 
 import type { getMap as GetMapFn } from './map';
 
@@ -21,7 +21,10 @@ export function isMeasureMode(): boolean {
   return active;
 }
 
-export function initMeasure(getMapFn: typeof GetMapFn, getMarkerLayerId: () => string | null) {
+export function initMeasure(
+  getMapFn: typeof GetMapFn,
+  getMarkerLayerId: () => string | null
+) {
   getMap = getMapFn;
   getMarkerLayerIdFn = getMarkerLayerId;
 }
@@ -81,7 +84,7 @@ function updateSources() {
 
   const pointSource = map.getSource(POINT_SOURCE);
   if (pointSource !== undefined) {
-    (pointSource as maplibregl.GeoJSONSource).setData({
+    (pointSource as GeoJSONSource).setData({
       type: 'FeatureCollection',
       features: coords.map((c, i) => ({
         type: 'Feature' as const,
@@ -93,7 +96,7 @@ function updateSources() {
 
   const lineSource = map.getSource(LINE_SOURCE);
   if (lineSource !== undefined) {
-    (lineSource as maplibregl.GeoJSONSource).setData(
+    (lineSource as GeoJSONSource).setData(
       coords.length >= 2
         ? {
             type: 'Feature',
@@ -159,7 +162,7 @@ function setLayerVisibility(visible: boolean) {
   }
 }
 
-function onMapClick(e: maplibregl.MapMouseEvent) {
+function onMapClick(e: MapMouseEvent) {
   const map = getMap();
 
   // Check if clicking on an existing measure point to remove it

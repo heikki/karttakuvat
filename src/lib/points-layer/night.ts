@@ -10,7 +10,7 @@ function toDeg(rad: number): number {
 /** Integer division that rounds toward negative infinity */
 function floorDiv(a: bigint, b: bigint): bigint {
   const q = a / b;
-  return a % b !== 0n && (a < 0n) !== (b < 0n) ? q - 1n : q;
+  return a % b !== 0n && a < 0n !== b < 0n ? q - 1n : q;
 }
 
 /** Modulo that always returns a non-negative result */
@@ -19,8 +19,12 @@ function floorMod(a: bigint, b: bigint): bigint {
 }
 
 function isLeapYear(y: bigint): boolean {
-  if (y % 4n !== 0n) { return false; }
-  if (y % 100n !== 0n) { return true; }
+  if (y % 4n !== 0n) {
+    return false;
+  }
+  if (y % 100n !== 0n) {
+    return true;
+  }
   return y % 400n === 0n;
 }
 
@@ -50,7 +54,8 @@ function dateParts(epochSeconds: number): DateParts {
   );
 
   let year = yearOfEra + era * 400n;
-  const dayOfYear0 = dayOfEra - (365n * yearOfEra + yearOfEra / 4n - yearOfEra / 100n);
+  const dayOfYear0 =
+    dayOfEra - (365n * yearOfEra + yearOfEra / 4n - yearOfEra / 100n);
   const m = (5n * dayOfYear0 + 2n) / 153n;
 
   let month = m + 3n;
@@ -59,7 +64,20 @@ function dateParts(epochSeconds: number): DateParts {
     year += 1n;
   }
 
-  const daysInMonth = [31n, isLeapYear(year) ? 29n : 28n, 31n, 30n, 31n, 30n, 31n, 31n, 30n, 31n, 30n, 31n];
+  const daysInMonth = [
+    31n,
+    isLeapYear(year) ? 29n : 28n,
+    31n,
+    30n,
+    31n,
+    30n,
+    31n,
+    31n,
+    30n,
+    31n,
+    30n,
+    31n
+  ];
   const day = dayOfYear0 - (153n * m + 2n) / 5n + 1n;
   let doy = day;
   for (let i = 0; i < Number(month) - 1; i++) {
@@ -68,14 +86,17 @@ function dateParts(epochSeconds: number): DateParts {
 
   return {
     dayOfYear: doy,
-    secondsOfDay: Number(secsOfDay) + frac,
+    secondsOfDay: Number(secsOfDay) + frac
   };
 }
 
 /**
  * Compute the subsolar point (where the sun is directly overhead) for a given date.
  */
-export function getSubsolarPoint(date: Date | null = null): { lng: number; lat: number } {
+export function getSubsolarPoint(date: Date | null = null): {
+  lng: number;
+  lat: number;
+} {
   const epochSec = (date ?? new Date()).getTime() / 1000;
   const { dayOfYear, secondsOfDay } = dateParts(epochSec);
 
@@ -85,10 +106,16 @@ export function getSubsolarPoint(date: Date | null = null): { lng: number; lat: 
   const eccentricity = 0.0167;
 
   const meanAnomaly = (dayFrac + 9) * angVel;
-  const eclipticLng = meanAnomaly + 2 * eccentricity * Math.sin((dayFrac - 3) * angVel);
+  const eclipticLng =
+    meanAnomaly + 2 * eccentricity * Math.sin((dayFrac - 3) * angVel);
 
   const eqTime =
-    (meanAnomaly - Math.atan2(Math.sin(eclipticLng), Math.cos(eclipticLng) * Math.cos(obliquity))) / Math.PI;
+    (meanAnomaly -
+      Math.atan2(
+        Math.sin(eclipticLng),
+        Math.cos(eclipticLng) * Math.cos(obliquity)
+      )) /
+    Math.PI;
   const correction = 720 * (eqTime - Math.trunc(eqTime + 0.5));
 
   const lng = -15 * (secondsOfDay / 3600 - 12 + correction / 60);
@@ -111,23 +138,24 @@ export function computeTransition(
   const endTime = targetDate.getTime();
   const fullDiffMs = Math.abs(endTime - currentDate.getTime());
 
-  const startTime = fullDiffMs <= MS_PER_DAY
-    ? currentDate.getTime()
-    : (() => {
-        let t = new Date(targetDate).setHours(
-          currentDate.getHours(),
-          currentDate.getMinutes(),
-          currentDate.getSeconds()
-        );
-        const realDirection = endTime - currentDate.getTime();
-        const shortDirection = endTime - t;
-        if (realDirection > 0 && shortDirection <= 0) {
-          t -= MS_PER_DAY;
-        } else if (realDirection < 0 && shortDirection >= 0) {
-          t += MS_PER_DAY;
-        }
-        return t;
-      })();
+  const startTime =
+    fullDiffMs <= MS_PER_DAY
+      ? currentDate.getTime()
+      : (() => {
+          let t = new Date(targetDate).setHours(
+            currentDate.getHours(),
+            currentDate.getMinutes(),
+            currentDate.getSeconds()
+          );
+          const realDirection = endTime - currentDate.getTime();
+          const shortDirection = endTime - t;
+          if (realDirection > 0 && shortDirection <= 0) {
+            t -= MS_PER_DAY;
+          } else if (realDirection < 0 && shortDirection >= 0) {
+            t += MS_PER_DAY;
+          }
+          return t;
+        })();
 
   const duration = fullDiffMs > MS_PER_DAY ? 2000 : 400;
   return { startTime, endTime, duration };

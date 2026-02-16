@@ -1,5 +1,6 @@
 import type { Point } from 'geojson';
-import maplibregl from 'maplibre-gl';
+import { LngLatBounds } from 'maplibre-gl';
+import type { GeoJSONSource, LngLat, Map as MapGL } from 'maplibre-gl';
 
 import { state } from './data';
 import {
@@ -21,12 +22,15 @@ let isSelecting = false;
 let selectionStart: { x: number; y: number } | null = null;
 
 // Callbacks
-let getMapFn: () => maplibregl.Map = () => {
+let getMapFn: () => MapGL = () => {
   throw new Error('Map not initialized');
 };
 let getMarkerLayerIdFn: () => string | null = () => null;
 
-export function initSelectionCallbacks(getMap: () => maplibregl.Map, getMarkerLayerId: () => string | null) {
+export function initSelectionCallbacks(
+  getMap: () => MapGL,
+  getMarkerLayerId: () => string | null
+) {
   getMapFn = getMap;
   getMarkerLayerIdFn = getMarkerLayerId;
 }
@@ -64,7 +68,7 @@ function updateSelectionLayer(
   const source = map.getSource('selection');
   const geoSource =
     source !== undefined && 'setData' in source
-      ? (source as maplibregl.GeoJSONSource)
+      ? (source as GeoJSONSource)
       : undefined;
   if (sw === null || ne === null || geoSource === undefined) {
     if (geoSource !== undefined) {
@@ -99,10 +103,7 @@ export function clearSelection() {
   updateSelectionLayer(null, null);
 }
 
-export function fitToSelectionWithPopup(
-  sw: maplibregl.LngLat,
-  ne: maplibregl.LngLat
-) {
+export function fitToSelectionWithPopup(sw: LngLat, ne: LngLat) {
   const map = getMapFn();
   setTimeout(() => {
     // Guard against MapLibre crash when container has invalid dimensions
@@ -115,7 +116,7 @@ export function fitToSelectionWithPopup(
     const popup = getCurrentPopup();
     const popupEl = popup?.getElement();
     const popupHeight = popupEl === undefined ? 350 : popupEl.offsetHeight;
-    const bounds = new maplibregl.LngLatBounds(sw, ne);
+    const bounds = new LngLatBounds(sw, ne);
     try {
       map.fitBounds(bounds, {
         padding: { top: popupHeight + 20, bottom: 30, left: 20, right: 270 },

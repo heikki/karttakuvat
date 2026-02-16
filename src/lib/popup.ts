@@ -1,4 +1,5 @@
-import maplibregl from 'maplibre-gl';
+import { Popup } from 'maplibre-gl';
+import type { Map as MapGL } from 'maplibre-gl';
 
 import {
   addPendingEdit,
@@ -35,7 +36,7 @@ import {
 } from './utils';
 
 // State
-let currentPopup: maplibregl.Popup | null = null;
+let currentPopup: Popup | null = null;
 let clusterPhotos: Photo[] = [];
 let currentSinglePhotoIndex: number | null = null;
 let currentPhotoUuid: string | null = null;
@@ -52,19 +53,19 @@ let highlightFn: (photo: Photo | null) => void = () => {
 let panToFitPopupFn: (coords: [number, number]) => void = () => {
   /* noop */
 };
-let getMapFn: () => maplibregl.Map | undefined = () => undefined;
+let getMapFn: () => MapGL | undefined = () => undefined;
 
 export function initPopupCallbacks(
   highlight: (photo: Photo | null) => void,
   panToFitPopup: (coords: [number, number]) => void,
-  getMap: () => maplibregl.Map
+  getMap: () => MapGL
 ) {
   highlightFn = highlight;
   panToFitPopupFn = panToFitPopup;
   getMapFn = getMap;
 }
 
-export function getCurrentPopup(): maplibregl.Popup | null {
+export function getCurrentPopup(): Popup | null {
   return currentPopup;
 }
 
@@ -149,7 +150,7 @@ export function showPopup(props: FeatureProps, coords: [number, number]) {
   highlightFn(photo);
   onPhotoChangeFn(photo.uuid);
 
-  currentPopup = new maplibregl.Popup({
+  currentPopup = new Popup({
     closeButton: false,
     maxWidth: '320px',
     anchor: 'bottom',
@@ -225,7 +226,7 @@ export function showMultiPhotoPopup(
     thumbsHtml
   );
 
-  currentPopup = new maplibregl.Popup({
+  currentPopup = new Popup({
     closeButton: false,
     closeOnClick: false,
     maxWidth: '400px',

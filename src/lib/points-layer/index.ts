@@ -1,9 +1,15 @@
-import type { CircleLayerSpecification, ExpressionSpecification, FilterSpecification, GeoJSONSource, Map as MapGL } from 'maplibre-gl';
 import type { FeatureCollection, Point } from 'geojson';
+import type {
+  CircleLayerSpecification,
+  ExpressionSpecification,
+  FilterSpecification,
+  GeoJSONSource,
+  Map as MapGL
+} from 'maplibre-gl';
 
-import { BloomLayer } from './bloom';
 import { getEffectiveCoords } from '../data';
 import type { MarkerLayer, Photo } from '../types';
+import { BloomLayer } from './bloom';
 
 const hitAreaPaint: CircleLayerSpecification['paint'] = {
   'circle-color': 'transparent',
@@ -11,7 +17,16 @@ const hitAreaPaint: CircleLayerSpecification['paint'] = {
     'interpolate',
     ['exponential', 1.5],
     ['zoom'],
-    4, 6, 8, 10, 12, 16, 16, 22, 20, 30
+    4,
+    6,
+    8,
+    10,
+    12,
+    16,
+    16,
+    22,
+    20,
+    30
   ],
   'circle-opacity': 0,
   'circle-pitch-alignment': 'map'
@@ -23,7 +38,16 @@ const dotPaint: CircleLayerSpecification['paint'] = {
     'interpolate',
     ['exponential', 1.5],
     ['zoom'],
-    4, 1, 8, 2, 12, 3, 16, 5, 20, 7
+    4,
+    1,
+    8,
+    2,
+    12,
+    3,
+    16,
+    5,
+    20,
+    7
   ],
   'circle-opacity': 1,
   'circle-blur': 0.4,
@@ -82,9 +106,13 @@ export class PointsLayer implements MarkerLayer {
   uninstall() {
     if (this.map === null) return;
     for (let i = LAYERS.length - 1; i >= 0; i--) {
-      if (this.map.getLayer(LAYERS[i]!) !== undefined) this.map.removeLayer(LAYERS[i]!);
+      if (this.map.getLayer(LAYERS[i]!) !== undefined) {
+        this.map.removeLayer(LAYERS[i]!);
+      }
     }
-    if (this.map.getLayer(this.bloom.id) !== undefined) this.map.removeLayer(this.bloom.id);
+    if (this.map.getLayer(this.bloom.id) !== undefined) {
+      this.map.removeLayer(this.bloom.id);
+    }
     if (this.map.getSource(SOURCE) !== undefined) this.map.removeSource(SOURCE);
     this.map = null;
   }
@@ -93,7 +121,9 @@ export class PointsLayer implements MarkerLayer {
     if (this.map === null) return;
     const v = visible ? 'visible' : 'none';
     for (const id of LAYERS) {
-      if (this.map.getLayer(id) !== undefined) this.map.setLayoutProperty(id, 'visibility', v);
+      if (this.map.getLayer(id) !== undefined) {
+        this.map.setLayoutProperty(id, 'visibility', v);
+      }
     }
     if (this.map.getLayer(this.bloom.id) !== undefined) {
       this.map.setLayoutProperty(this.bloom.id, 'visibility', v);
@@ -102,9 +132,10 @@ export class PointsLayer implements MarkerLayer {
 
   highlight(photo: Photo | null) {
     if (this.map === null) return;
-    const filter: FilterSpecification = photo === null
-      ? ['==', ['get', 'uuid'], '']
-      : ['==', ['get', 'uuid'], photo.uuid];
+    const filter: FilterSpecification =
+      photo === null
+        ? ['==', ['get', 'uuid'], '']
+        : ['==', ['get', 'uuid'], photo.uuid];
     if (this.map.getLayer('points-selected') !== undefined) {
       this.map.setFilter('points-selected', filter);
     }

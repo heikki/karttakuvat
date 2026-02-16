@@ -259,8 +259,7 @@ function setupFilterListeners() {
       if (btn === null) return;
       const allBtns = Array.from(container.querySelectorAll('.filter-btn'));
       const activeBtns = allBtns.filter((b) => b.classList.contains('active'));
-      const isOnlyActive =
-        activeBtns.length === 1 && activeBtns[0] === btn;
+      const isOnlyActive = activeBtns.length === 1 && activeBtns[0] === btn;
       for (const b of allBtns) {
         b.classList.toggle('active', isOnlyActive || b === btn);
       }
@@ -268,7 +267,6 @@ function setupFilterListeners() {
     });
   }
 }
-
 
 function reopenPopup(uuid: string | null) {
   if (uuid === null) return;
@@ -346,10 +344,14 @@ function handleReset() {
   });
   history.replaceState(null, '', location.pathname);
   const mapButtons = document.getElementById('map-type-buttons');
-  const currentStyle = mapButtons?.querySelector('.map-type-btn.active')?.getAttribute('data-style');
+  const currentStyle = mapButtons
+    ?.querySelector('.map-type-btn.active')
+    ?.getAttribute('data-style');
   if (currentStyle !== 'satellite') {
     changeMapStyle('satellite');
-    mapButtons?.querySelector('.map-type-btn.active')?.classList.remove('active');
+    mapButtons
+      ?.querySelector('.map-type-btn.active')
+      ?.classList.remove('active');
     mapButtons
       ?.querySelector('.map-type-btn[data-style="satellite"]')
       ?.classList.add('active');
@@ -358,9 +360,19 @@ function handleReset() {
 }
 
 // Prevent accidental page zoom from trackpad pinch gestures
-document.addEventListener('wheel', (e) => { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
-document.addEventListener('gesturestart', (e) => { e.preventDefault(); });
-document.addEventListener('gesturechange', (e) => { e.preventDefault(); });
+document.addEventListener(
+  'wheel',
+  (e) => {
+    if (e.ctrlKey) e.preventDefault();
+  },
+  { passive: false }
+);
+document.addEventListener('gesturestart', (e) => {
+  e.preventDefault();
+});
+document.addEventListener('gesturechange', (e) => {
+  e.preventDefault();
+});
 
 document.addEventListener('DOMContentLoaded', () => {
   void (async () => {
@@ -439,12 +451,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initStyleButtonGroup(
       'map-type-buttons',
-      (s) => { changeMapStyle(s); mapStyleToUrl(s); },
+      (s) => {
+        changeMapStyle(s);
+        mapStyleToUrl(s);
+      },
       mapStyleFromUrl
     );
     initStyleButtonGroup(
       'marker-style-buttons',
-      (s) => { changeMarkerStyle(s); markerStyleToUrl(s); },
+      (s) => {
+        changeMarkerStyle(s);
+        markerStyleToUrl(s);
+      },
       markerStyleFromUrl
     );
 

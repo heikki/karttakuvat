@@ -1,36 +1,69 @@
 import type { Point } from 'geojson';
-import maplibregl from 'maplibre-gl';
+import {
+  GlobeControl,
+  Map as MapGL,
+  NavigationControl,
+  ScaleControl
+} from 'maplibre-gl';
 import type { StyleSpecification } from 'maplibre-gl';
 
+import { ClassicLayer } from './classic-layer';
 import { mapStyles } from './config';
 import { getEffectiveCoords, state, subscribe } from './data';
-import { fitToPhotos, initFit } from './fit';
 import { mapViewFromUrl, mapViewToUrl } from './filter-url';
-import { initGlobeBackground, setGlobeRadius, setMapIdle, startGlobeBackground, stopGlobeBackground } from './globe-background';
-import { defaultMarkerStyle, markerStyles } from './marker-styles';
+import { fitToPhotos, initFit } from './fit';
+import {
+  initGlobeBackground,
+  setGlobeRadius,
+  setMapIdle,
+  startGlobeBackground,
+  stopGlobeBackground
+} from './globe-background';
 import { addMeasureLayers, initMeasure } from './measure';
 import { createPanToFitPopup } from './pan';
-import { enterPlacementMode as enterPlacement, isInPlacementMode, setupPlacement } from './placement';
-import { getClusterPhotos, getCurrentPhotoUuid, getCurrentPopup, initPopupCallbacks, scrollToActiveThumbnail, selectGroupPhoto as selectGroupPhotoFromPopup, showPopup } from './popup';
-import { addSelectionLayer, initSelectionCallbacks, setupRectangularSelection } from './selection';
-import type { MarkerLayer, MapStyles, Photo } from './types';
+import {
+  enterPlacementMode as enterPlacement,
+  isInPlacementMode,
+  setupPlacement
+} from './placement';
+import { PointsLayer } from './points-layer';
+import {
+  getClusterPhotos,
+  getCurrentPhotoUuid,
+  getCurrentPopup,
+  initPopupCallbacks,
+  scrollToActiveThumbnail,
+  selectGroupPhoto as selectGroupPhotoFromPopup,
+  showPopup
+} from './popup';
+import {
+  addSelectionLayer,
+  initSelectionCallbacks,
+  setupRectangularSelection
+} from './selection';
+import type { MapStyles, MarkerLayer, Photo } from './types';
 
 // Declare window augmentation for map
 declare global {
   interface Window {
-    map?: maplibregl.Map;
+    map?: MapGL;
   }
 }
 
 // Global map variable (local to module)
 // eslint-disable-next-line @typescript-eslint/init-declarations -- map is initialized in initMap() which is called before any other usage
-let map: maplibregl.Map;
+let map: MapGL;
 
-export function getMap(): maplibregl.Map {
+export function getMap(): MapGL {
   return map;
 }
 
-let currentMarkerStyle = defaultMarkerStyle;
+const markerStyles: Record<string, () => MarkerLayer> = {
+  points: () => new PointsLayer(),
+  classic: () => new ClassicLayer()
+};
+
+let currentMarkerStyle = 'points';
 let currentLayer: MarkerLayer | null = null;
 
 function getMarkerLayerId(): string | null {
@@ -58,7 +91,7 @@ export function initMap() {
   const center: [number, number] =
     savedView === null ? [29.52, 64.13] : [savedView.lon, savedView.lat];
   const zoom = savedView === null ? 10 : savedView.zoom;
-  map = new maplibregl.Map({
+  map = new MapGL({
     container: 'map',
     style: withGlobe(mapStyles().satellite as StyleSpecification),
     center,
@@ -69,12 +102,9 @@ export function initMap() {
     canvasContextAttributes: { alpha: true }
   });
 
-  map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
-  map.addControl(new maplibregl.GlobeControl(), 'bottom-right');
-  map.addControl(
-    new maplibregl.ScaleControl({ unit: 'metric' }),
-    'bottom-left'
-  );
+  map.addControl(new NavigationControl({ showCompass: false }), 'bottom-right');
+  map.addControl(new GlobeControl(), 'bottom-right');
+  map.addControl(new ScaleControl({ unit: 'metric' }), 'bottom-left');
 
   map.on('moveend', () => {
     const c = map.getCenter();
@@ -106,11 +136,18 @@ export function initMap() {
     const dx = px.x - centerPx.x;
     const dy = px.y - centerPx.y;
     const canvas = map.getCanvas();
-    setGlobeRadius(Math.sqrt(dx * dx + dy * dy), Math.min(canvas.clientWidth, canvas.clientHeight));
+    setGlobeRadius(
+      Math.sqrt(dx * dx + dy * dy),
+      Math.min(canvas.clientWidth, canvas.clientHeight)
+    );
   });
 
-  map.on('movestart', () => { setMapIdle(false); });
-  map.on('idle', () => { setMapIdle(true); });
+  map.on('movestart', () => {
+    setMapIdle(false);
+  });
+  map.on('idle', () => {
+    setMapIdle(true);
+  });
 
   map.on('load', () => {
     addPhotoLayers();
@@ -190,7 +227,7 @@ export function changeMapStyle(styleKey: string) {
 }
 
 export function changeMarkerStyle(styleKey: string) {
-  if (markerStyles[styleKey] === undefined) return;
+  if (!(styleKey in markerStyles)) return;
   currentMarkerStyle = styleKey;
   if (currentLayer === null) return;
   addPhotoLayers();
@@ -200,8 +237,7 @@ export function changeMarkerStyle(styleKey: string) {
 
 function addPhotoLayers() {
   currentLayer?.uninstall();
-  const config = markerStyles[currentMarkerStyle]!;
-  currentLayer = config.create();
+  currentLayer = markerStyles[currentMarkerStyle]!();
   currentLayer.install(map);
 }
 

@@ -1,9 +1,10 @@
-import maplibregl from 'maplibre-gl';
+import { LngLatBounds } from 'maplibre-gl';
+import type { Map as MapGL } from 'maplibre-gl';
 
 import { getEffectiveCoords, state } from './data';
 import { getCurrentPopup, showPopup } from './popup';
 
-type GetMap = () => maplibregl.Map;
+type GetMap = () => MapGL;
 
 // eslint-disable-next-line @typescript-eslint/init-declarations -- set in initFit
 let getMap: GetMap;
@@ -19,13 +20,13 @@ function showFirstPopup() {
   showPopup({ index: 0 }, [lon, lat]);
 }
 
-function computePhotoBounds(): maplibregl.LngLatBounds {
-  const bounds = new maplibregl.LngLatBounds();
+function computePhotoBounds(): LngLatBounds {
+  const bounds = new LngLatBounds();
   state.filteredPhotos.forEach((p) => bounds.extend([p.lon ?? 0, p.lat ?? 0]));
   return bounds;
 }
 
-function isSinglePointBounds(bounds: maplibregl.LngLatBounds): boolean {
+function isSinglePointBounds(bounds: LngLatBounds): boolean {
   return (
     bounds.getSouthWest().lng === bounds.getNorthEast().lng &&
     bounds.getSouthWest().lat === bounds.getNorthEast().lat
