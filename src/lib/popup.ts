@@ -136,7 +136,7 @@ function removeCanvasZoomOverride() {
   map.scrollZoom.enable();
 }
 
-function reanchorPopup() {
+export function reanchorPopup() {
   if (currentPopup === null) return;
   const map = getMapFn();
   if (map === undefined) return;

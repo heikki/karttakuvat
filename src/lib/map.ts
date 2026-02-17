@@ -165,6 +165,7 @@ export function initMap() {
     setupRectangularSelection();
 
     updateMapData();
+    restoreHighlight();
     if (savedView === null && state.filteredPhotos.length > 0) {
       fitToPhotos();
     }
@@ -213,6 +214,17 @@ function updateMapData() {
   currentLayer?.setMarkers(state.filteredPhotos);
 }
 
+function restoreHighlight() {
+  const uuid = getCurrentPhotoUuid();
+  if (uuid === null) return;
+  const index = state.filteredPhotos.findIndex((p) => p.uuid === uuid);
+  if (index === -1) return;
+  const photo = state.filteredPhotos[index]!;
+  const { lon, lat } = getEffectiveCoords(photo);
+  showPopup({ index }, [lon, lat]);
+}
+
+
 export function changeMapStyle(styleKey: string) {
   const style = mapStyles()[styleKey as keyof MapStyles] as
     | StyleSpecification
@@ -228,6 +240,7 @@ export function changeMapStyle(styleKey: string) {
     addMeasureLayers();
     setupMarkerInteractions();
     updateMapData();
+    restoreHighlight();
   };
 
   void map.once('style.load', applyLayers);
@@ -241,6 +254,7 @@ export function changeMarkerStyle(styleKey: string) {
   addPhotoLayers();
   setupMarkerInteractions();
   updateMapData();
+  restoreHighlight();
 }
 
 function addPhotoLayers() {
