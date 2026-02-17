@@ -55,7 +55,13 @@ let panToFitPopupFn: (coords: [number, number]) => void = () => {
   /* noop */
 };
 let getMapFn: () => MapGL | undefined = () => undefined;
-const POPUP_OFFSET: [number, number] = [0, -14];
+let getMarkerRadiusFn: (zoom: number) => number = () => 0;
+function popupOffset(): [number, number] {
+  const map = getMapFn();
+  const zoom = map?.getZoom() ?? 10;
+  const radius = getMarkerRadiusFn(zoom);
+  return [0, -(radius * 1.3 + 5)];
+}
 
 let reanchoring = false;
 
@@ -139,6 +145,7 @@ function reanchorPopup() {
   if (lngLat === undefined) return;
   reanchoring = true;
   currentPopup.remove();
+  currentPopup.setOffset(popupOffset());
   currentPopup.setLngLat(lngLat).addTo(map);
   setupPopupEvents(currentPopup);
   reanchoring = false;
@@ -147,11 +154,13 @@ function reanchorPopup() {
 export function initPopupCallbacks(
   highlight: (photo: Photo | null) => void,
   panToFitPopup: (coords: [number, number]) => void,
-  getMap: () => MapGL
+  getMap: () => MapGL,
+  getMarkerRadius: (zoom: number) => number
 ) {
   highlightFn = highlight;
   panToFitPopupFn = panToFitPopup;
   getMapFn = getMap;
+  getMarkerRadiusFn = getMarkerRadius;
   const map = getMap();
   if (map !== undefined) {
     map.on('zoomend', reanchorPopup);
@@ -246,7 +255,7 @@ export function showPopup(props: FeatureProps, coords: [number, number]) {
     closeButton: false,
     maxWidth: '320px',
     anchor: 'bottom',
-    offset: POPUP_OFFSET,
+    offset: popupOffset(),
     subpixelPositioning: true
   })
     .setLngLat([lon, lat])
@@ -329,7 +338,7 @@ export function showMultiPhotoPopup(
     closeOnClick: false,
     maxWidth: '400px',
     anchor: 'bottom',
-    offset: POPUP_OFFSET,
+    offset: popupOffset(),
     subpixelPositioning: true
   })
     .setLngLat([firstLon, firstLat])

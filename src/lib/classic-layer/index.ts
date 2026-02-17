@@ -27,8 +27,7 @@ const radius: ExpressionSpecification = [
   ['zoom'],
   2, 3,
   8, 6,
-  14, 10,
-  18, 14
+  14, 10
 ];
 
 // radius + stroke for the outline layer (pre-computed)
@@ -38,8 +37,7 @@ const outlineRadius: ExpressionSpecification = [
   ['zoom'],
   2, 4,
   8, 7.5,
-  14, 12,
-  18, 17
+  14, 12
 ];
 
 // radius + stroke*3 for the selection ring (pre-computed)
@@ -49,8 +47,7 @@ const selectedRadius: ExpressionSpecification = [
   ['zoom'],
   2, 6,
   8, 10.5,
-  14, 16,
-  18, 23
+  14, 16
 ];
 
 const selectedStroke: ExpressionSpecification = [
@@ -59,8 +56,7 @@ const selectedStroke: ExpressionSpecification = [
   ['zoom'],
   2, 1,
   8, 1.5,
-  14, 2,
-  18, 3
+  14, 2
 ];
 
 const sortKey = [
@@ -169,6 +165,25 @@ export class ClassicLayer implements MarkerLayer {
     const source = this.map.getSource<GeoJSONSource>(SOURCE);
     if (source !== undefined) source.setData(geojson);
   }
+
+  markerRadius(zoom: number): number {
+    // Matches outlineRadius stops (visual edge of marker) + extra padding
+    const stops = [2, 4, 8, 7.5, 14, 12];
+    return lerpStops(zoom, stops);
+  }
+}
+
+function lerpStops(zoom: number, stops: number[]): number {
+  if (zoom <= stops[0]!) return stops[1]!;
+  for (let i = 0; i < stops.length - 2; i += 2) {
+    const z0 = stops[i]!, v0 = stops[i + 1]!;
+    const z1 = stops[i + 2]!, v1 = stops[i + 3]!;
+    if (zoom <= z1) {
+      const t = (zoom - z0) / (z1 - z0);
+      return v0 + t * (v1 - v0);
+    }
+  }
+  return stops[stops.length - 1]!;
 }
 
 function buildGeoJSON(photos: Photo[]): FeatureCollection<Point> {

@@ -39,4 +39,5 @@ export interface MarkerLayer {
   toggle: (visible: boolean) => void;
   highlight: (photo: Photo | null) => void;
   setMarkers: (photos: Photo[]) => void;
+  markerRadius: (zoom: number) => number;
 }

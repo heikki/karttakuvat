@@ -161,6 +161,23 @@ export class PointsLayer implements MarkerLayer {
     }
     this.bloom.updateData(positions);
   }
+
+  markerRadius(zoom: number): number {
+    // Matches dotPaint circle-radius: exponential 1.5 interpolation
+    const base = 1.5;
+    const stops = [4, 1, 8, 2, 12, 3, 16, 5, 20, 7];
+    if (zoom <= stops[0]!) return stops[1]!;
+    for (let i = 0; i < stops.length - 2; i += 2) {
+      const z0 = stops[i]!, v0 = stops[i + 1]!;
+      const z1 = stops[i + 2]!, v1 = stops[i + 3]!;
+      if (zoom <= z1) {
+        const t = (zoom - z0) / (z1 - z0);
+        const factor = (Math.pow(base, t) - 1) / (base - 1);
+        return v0 + (v1 - v0) * factor;
+      }
+    }
+    return stops[stops.length - 1]!;
+  }
 }
 
 function buildGeoJSON(photos: Photo[]): FeatureCollection<Point> {

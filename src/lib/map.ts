@@ -126,7 +126,9 @@ export function initMap() {
   const highlight = (photo: Photo | null) => {
     currentLayer?.highlight(photo);
   };
-  initPopupCallbacks(highlight, panToFitPopup, getMap);
+  const getMarkerRadius = (zoom: number) =>
+    currentLayer?.markerRadius(zoom) ?? 0;
+  initPopupCallbacks(highlight, panToFitPopup, getMap, getMarkerRadius);
   initSelectionCallbacks(getMap, getMarkerLayerId);
   initMeasure(getMap, getMarkerLayerId);
   initFit(getMap);
