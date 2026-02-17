@@ -278,8 +278,8 @@ Two scripts already exist:
 
 Additional server-side scripts called by APIs:
 
-- **`scripts/set_locations.py`** — sets photo locations in Photos.app (called by `/api/set-locations`)
-- **`scripts/set_times.py`** — sets photo dates in Photos.app (called by `/api/set-locations`)
+- **`scripts/set_locations.py`** — sets photo locations in Photos.app (called by `/api/save-edits`)
+- **`scripts/set_times.py`** — sets photo dates in Photos.app (called by `/api/save-edits`)
 
 ### Route Generation Function
 

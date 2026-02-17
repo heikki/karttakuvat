@@ -194,7 +194,7 @@ Location changes are stored as pending edits until saved.
 When location or time edits exist:
 
 - Edit section appears in stats panel showing count of pending edits
-- **Save to Photos**: POST to `/api/set-locations`, reloads data, reopens current popup
+- **Save to Photos**: POST to `/api/save-edits`, reloads data, reopens current popup
 - **Discard**: clears all pending edits
 
 Pending edits are reflected immediately on the map (markers move to new positions) and in popups (dates show adjusted values).

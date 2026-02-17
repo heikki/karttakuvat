@@ -102,7 +102,7 @@ python3 scripts/sync_timezones.py   # Sync timezone data
 
 The dev server (`server.ts`) exposes:
 
-- `POST /api/set-locations` — Save pending location and time edits to Photos.app
+- `POST /api/save-edits` — Save pending location and time edits to Photos.app
 - `GET /api/metadata/:uuid` — Fetch full osxphotos metadata for a photo
 
 ## Docs
