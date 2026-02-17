@@ -37,10 +37,19 @@ function zoomAroundPopup(e: WheelEvent) {
   if (newZoom === oldZoom) return;
   const anchorPx = map.project(coords);
   const { clientWidth: w, clientHeight: h } = map.getCanvas();
+
+  // If the marker is off-screen, zoom around cursor position instead
+  const markerOnScreen =
+    anchorPx.x >= 0 && anchorPx.x <= w && anchorPx.y >= 0 && anchorPx.y <= h;
+  const rect = map.getCanvas().getBoundingClientRect();
+  const zoomAnchor = markerOnScreen
+    ? anchorPx
+    : { x: e.clientX - rect.left, y: e.clientY - rect.top };
+
   const scale = 2 ** (newZoom - oldZoom);
   const newCenterPx = [
-    anchorPx.x + (w / 2 - anchorPx.x) / scale,
-    anchorPx.y + (h / 2 - anchorPx.y) / scale
+    zoomAnchor.x + (w / 2 - zoomAnchor.x) / scale,
+    zoomAnchor.y + (h / 2 - zoomAnchor.y) / scale
   ] as [number, number];
   const newCenter = map.unproject(newCenterPx);
   map.jumpTo({ center: newCenter, zoom: newZoom });
