@@ -241,7 +241,11 @@ export function changeMapStyle(styleKey: string) {
     addMeasureLayers();
     setupMarkerInteractions();
     updateMapData();
-    restoreHighlight();
+    if (isInPlacementMode()) {
+      currentLayer?.toggle(false);
+    } else {
+      restoreHighlight();
+    }
   };
 
   void map.once('style.load', applyLayers);
@@ -255,7 +259,11 @@ export function changeMarkerStyle(styleKey: string) {
   addPhotoLayers();
   setupMarkerInteractions();
   updateMapData();
-  restoreHighlight();
+  if (isInPlacementMode()) {
+    currentLayer?.toggle(false);
+  } else {
+    restoreHighlight();
+  }
 }
 
 function addPhotoLayers() {
