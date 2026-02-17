@@ -11,7 +11,7 @@ import {
   buildMips,
   deleteMips,
   restoreGl,
-  saveGl
+  saveFbo
 } from './gl-utils';
 import { computeTransition, getSubsolarPoint } from './night';
 import {
@@ -66,6 +66,9 @@ export class BloomLayer implements CustomLayerInterface {
   private hasCachedBlur = false;
 
   private instanceData: Float32Array | null = null;
+  private cachedSun: { lng: number; lat: number } | null = null;
+  private cachedSunTime: number | null = null;
+  private mercatorCache = new Map<string, { x: number; y: number }>();
 
   setTime(dateStr: string, tz: string | null) {
     if (this.nightAnimationId !== null) {
@@ -113,7 +116,13 @@ export class BloomLayer implements CustomLayerInterface {
   }
 
   private getSubsolarPoint(): { lng: number; lat: number } {
-    return getSubsolarPoint(this.nightDate);
+    const t = this.nightDate?.getTime() ?? null;
+    if (t === this.cachedSunTime && this.cachedSun !== null) {
+      return this.cachedSun;
+    }
+    this.cachedSun = getSubsolarPoint(this.nightDate);
+    this.cachedSunTime = t;
+    return this.cachedSun;
   }
 
   onAdd(map: MapGL, gl: WebGL2RenderingContext) {
@@ -365,7 +374,7 @@ export class BloomLayer implements CustomLayerInterface {
     }
     const gl = _gl as WebGL2RenderingContext;
     const { width: w, height: h } = this.map.getCanvas();
-    const saved = saveGl(gl);
+    const prevFbo = saveFbo(gl);
     const sun = this.getSubsolarPoint();
     if (this.map.getProjection().type === 'globe') {
       this.drawNight(gl, options, sun);
@@ -384,12 +393,12 @@ export class BloomLayer implements CustomLayerInterface {
         this.renderedGeneration = this.dataGeneration;
         this.hasCachedBlur = true;
       }
-      this.drawComposite(gl, saved[0], w, h);
+      this.drawComposite(gl, prevFbo, w, h);
     }
-    restoreGl(gl, saved);
+    restoreGl(gl, prevFbo, w, h);
   }
 
-  updateData(positions: Array<{ lng: number; lat: number; weight?: number }>) {
+  updateData(positions: Array<{ lng: number; lat: number; uuid: string; weight?: number }>) {
     const gl = this.gl;
     if (gl === null || this.instanceBuf === null) {
       return;
@@ -399,16 +408,22 @@ export class BloomLayer implements CustomLayerInterface {
       this.instanceData = new Float32Array(needed);
     }
     const data = this.instanceData;
+    const newCache = new Map<string, { x: number; y: number }>();
     for (let i = 0; i < positions.length; i++) {
       const p = positions[i]!;
-      const m = MercatorCoordinate.fromLngLat([p.lng, p.lat]);
+      const key = `${p.uuid}:${p.lng}:${p.lat}`;
+      const cached = this.mercatorCache.get(key) ?? MercatorCoordinate.fromLngLat([p.lng, p.lat]);
+      const mx = cached.x;
+      const my = cached.y;
+      newCache.set(key, { x: mx, y: my });
       const o = i * 5;
-      data[o] = m.x;
-      data[o + 1] = m.y;
+      data[o] = mx;
+      data[o + 1] = my;
       data[o + 2] = p.weight ?? 1.0;
       data[o + 3] = p.lng * DEG2RAD;
       data[o + 4] = p.lat * DEG2RAD;
     }
+    this.mercatorCache = newCache;
     gl.bindBuffer(gl.ARRAY_BUFFER, this.instanceBuf);
     gl.bufferData(gl.ARRAY_BUFFER, data.subarray(0, needed), gl.DYNAMIC_DRAW);
     gl.bindBuffer(gl.ARRAY_BUFFER, null);

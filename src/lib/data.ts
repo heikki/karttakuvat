@@ -186,32 +186,43 @@ function matchesMedia(p: Photo, media: string[]): boolean {
   return media.includes(p.type);
 }
 
-export function applyFilters(filters: {
-  year: string;
-  gps: string[];
-  media: string[];
-  album?: string;
-  camera?: string;
-}) {
+export function applyFilters(
+  filters: {
+    year: string;
+    gps: string[];
+    media: string[];
+    album?: string;
+    camera?: string;
+  },
+  /** Pre-filtered subset (already filtered by year/album/camera) to avoid redundant work. */
+  preFiltered?: Photo[]
+) {
   state.filters.year = filters.year;
   state.filters.gps = filters.gps;
   state.filters.media = filters.media;
   state.filters.album = filters.album ?? 'all';
   state.filters.camera = filters.camera ?? 'all';
 
-  const { year, album, camera } = state.filters;
-
-  state.filteredPhotos = state.photos.filter((p) => {
-    if (year !== 'all' && getYear(p) !== year) return false;
-    if (!matchesGps(p, state.filters.gps)) return false;
-    if (!matchesMedia(p, state.filters.media)) return false;
-    if (album !== 'all' && !p.albums.includes(album)) return false;
-    if (camera !== 'all') {
-      const pc = p.camera ?? '(unknown)';
-      if (pc !== camera) return false;
-    }
-    return true;
-  });
+  if (preFiltered === undefined) {
+    const { year, album, camera } = state.filters;
+    state.filteredPhotos = state.photos.filter((p) => {
+      if (year !== 'all' && getYear(p) !== year) return false;
+      if (!matchesGps(p, state.filters.gps)) return false;
+      if (!matchesMedia(p, state.filters.media)) return false;
+      if (album !== 'all' && !p.albums.includes(album)) return false;
+      if (camera !== 'all') {
+        const pc = p.camera ?? '(unknown)';
+        if (pc !== camera) return false;
+      }
+      return true;
+    });
+  } else {
+    state.filteredPhotos = preFiltered.filter((p) => {
+      if (!matchesGps(p, state.filters.gps)) return false;
+      if (!matchesMedia(p, state.filters.media)) return false;
+      return true;
+    });
+  }
 
   notify();
 }

@@ -169,15 +169,11 @@ function restoreFiltersFromUrl() {
   if (saved.media !== undefined) {
     setButtonGroupActive('media-buttons', saved.media);
   }
-  // Cascade select options without triggering notify, then apply once at the end
+  // Cascade once to populate album options based on year
   cascadeSelectOptions();
-  if (saved.album !== undefined) {
-    setSelectValue('album-select', saved.album);
-    cascadeSelectOptions();
-  }
-  if (saved.camera !== undefined) {
-    setSelectValue('camera-select', saved.camera);
-  }
+  if (saved.album !== undefined) setSelectValue('album-select', saved.album);
+  if (saved.camera !== undefined) setSelectValue('camera-select', saved.camera);
+  // cascadeAndApply will cascade again (needed for camera options after album set) and apply
   cascadeAndApply();
 }
 
@@ -193,7 +189,7 @@ function activeValues(containerId: string): string[] {
   ).map((btn) => (btn as HTMLElement).dataset.value!);
 }
 
-/** Update cascading select options (year → album → camera) without applying filters. */
+/** Cascade year → album → camera dropdowns. Returns the cascaded subsets. */
 function cascadeSelectOptions() {
   const y = selectVal('year-select');
   const yearPhotos =
@@ -209,16 +205,20 @@ function cascadeSelectOptions() {
     'camera-select',
     [...new Set(albumPhotos.map((p) => p.camera ?? '(unknown)'))].sort()
   );
+  return { y, a, albumPhotos };
 }
 
+/** Cascade dropdowns and apply filters in a single combined pass. */
 function cascadeAndApply() {
-  cascadeSelectOptions();
-  const y = selectVal('year-select');
-  const a = selectVal('album-select');
+  const { y, a, albumPhotos } = cascadeSelectOptions();
   const c = selectVal('camera-select');
   const g = activeValues('gps-buttons');
   const m = activeValues('media-buttons');
-  applyFilters({ year: y, gps: g, media: m, album: a, camera: c });
+  const cameraPhotos =
+    c === 'all'
+      ? albumPhotos
+      : albumPhotos.filter((p) => (p.camera ?? '(unknown)') === c);
+  applyFilters({ year: y, gps: g, media: m, album: a, camera: c }, cameraPhotos);
   filtersToUrl({ year: y, album: a, camera: c, gps: g, media: m });
 }
 

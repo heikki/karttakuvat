@@ -150,14 +150,22 @@ export class PointsLayer implements MarkerLayer {
   setMarkers(photos: Photo[]) {
     if (this.map === null) return;
 
-    const geojson = buildGeoJSON(photos);
-    const source = this.map.getSource<GeoJSONSource>(SOURCE);
-    if (source !== undefined) source.setData(geojson);
-
-    const positions: Array<{ lng: number; lat: number }> = [];
-    for (const photo of photos) {
+    const features: FeatureCollection<Point>['features'] = [];
+    const positions: Array<{ lng: number; lat: number; uuid: string }> = [];
+    for (let i = 0; i < photos.length; i++) {
+      const photo = photos[i]!;
       const { lon, lat } = getEffectiveCoords(photo);
-      positions.push({ lng: lon, lat });
+      features.push({
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [lon, lat] },
+        properties: { index: i, uuid: photo.uuid, lat, gps: photo.gps ?? 'none' }
+      });
+      positions.push({ lng: lon, lat, uuid: photo.uuid });
+    }
+
+    const source = this.map.getSource<GeoJSONSource>(SOURCE);
+    if (source !== undefined) {
+      source.setData({ type: 'FeatureCollection', features });
     }
     this.bloom.updateData(positions);
   }
@@ -184,21 +192,3 @@ function pointsMarkerRadius(zoom: number): number {
   return stops[stops.length - 1]!;
 }
 
-function buildGeoJSON(photos: Photo[]): FeatureCollection<Point> {
-  return {
-    type: 'FeatureCollection',
-    features: photos.map((photo, index) => {
-      const { lon, lat } = getEffectiveCoords(photo);
-      return {
-        type: 'Feature',
-        geometry: { type: 'Point', coordinates: [lon, lat] },
-        properties: {
-          index,
-          uuid: photo.uuid,
-          lat,
-          gps: photo.gps ?? 'none'
-        }
-      };
-    })
-  };
-}

@@ -145,6 +145,7 @@ export function hideLightbox() {
     lightbox.classList.remove('video');
   }
   lightboxMode = '';
+  currentGroupPhotos = [];
 }
 
 function navigateAndSync(newIndex: number) {

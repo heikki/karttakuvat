@@ -12,40 +12,26 @@ export function initTex(
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 }
 
-type GlState = [
-  WebGLFramebuffer | null,
-  boolean,
-  number,
-  number,
-  number,
-  number,
-  number,
-  Int32Array
-];
-
-export function saveGl(gl: WebGL2RenderingContext): GlState {
-  return [
-    gl.getParameter(gl.FRAMEBUFFER_BINDING) as WebGLFramebuffer | null,
-    gl.getParameter(gl.BLEND) as boolean,
-    gl.getParameter(gl.BLEND_SRC_RGB) as number,
-    gl.getParameter(gl.BLEND_DST_RGB) as number,
-    gl.getParameter(gl.BLEND_SRC_ALPHA) as number,
-    gl.getParameter(gl.BLEND_DST_ALPHA) as number,
-    gl.getParameter(gl.ACTIVE_TEXTURE) as number,
-    gl.getParameter(gl.VIEWPORT) as Int32Array
-  ];
+/** Save only the framebuffer binding (the only unpredictable state).
+ *  Avoids 8× gl.getParameter() GPU-CPU sync stalls per frame. */
+export function saveFbo(
+  gl: WebGL2RenderingContext
+): WebGLFramebuffer | null {
+  return gl.getParameter(gl.FRAMEBUFFER_BINDING) as WebGLFramebuffer | null;
 }
 
-export function restoreGl(gl: WebGL2RenderingContext, s: GlState) {
-  gl.bindFramebuffer(gl.FRAMEBUFFER, s[0]);
-  if (s[1]) {
-    gl.enable(gl.BLEND);
-  } else {
-    gl.disable(gl.BLEND);
-  }
-  gl.blendFuncSeparate(s[2], s[3], s[4], s[5]);
-  gl.activeTexture(s[6]);
-  gl.viewport(s[7][0]!, s[7][1]!, s[7][2]!, s[7][3]!);
+/** Restore framebuffer, viewport, and reset GL state to MapLibre defaults. */
+export function restoreGl(
+  gl: WebGL2RenderingContext,
+  prevFbo: WebGLFramebuffer | null,
+  w: number,
+  h: number
+) {
+  gl.bindFramebuffer(gl.FRAMEBUFFER, prevFbo);
+  gl.viewport(0, 0, w, h);
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+  gl.activeTexture(gl.TEXTURE0);
 }
 
 export interface MipLevel {
