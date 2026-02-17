@@ -104,6 +104,7 @@ export function initMap() {
     minZoom: 1,
     boxZoom: false,
     keyboard: false,
+    doubleClickZoom: false,
     dragRotate: false,
     canvasContextAttributes: { alpha: true }
   });
