@@ -8,6 +8,7 @@ import {
   copyLocation,
   getCopiedDate,
   getCopiedLocation,
+  getEffectiveCoords,
   setPendingTimeEdit,
   state
 } from './data';
@@ -60,23 +61,34 @@ let reanchoring = false;
 
 const WHEEL_ZOOM_RATE = 1 / 300;
 
+function getSelectedMarkerCoords(): [number, number] | null {
+  const photo = getCurrentPhoto();
+  if (photo === undefined) return null;
+  const { lon, lat } = getEffectiveCoords(photo);
+  return [lon, lat];
+}
+
 function zoomAroundPopup(e: WheelEvent) {
   const map = getMapFn();
   if (map === undefined || currentPopup === null) return;
-  const lngLat = currentPopup.getLngLat();
-  if (lngLat === undefined) return;
+  const coords = getSelectedMarkerCoords();
+  if (coords === null) return;
   e.preventDefault();
   e.stopPropagation();
   const oldZoom = map.getZoom();
   const delta = -e.deltaY * WHEEL_ZOOM_RATE;
   const newZoom = Math.max(map.getMinZoom(), Math.min(map.getMaxZoom(), oldZoom + delta));
   if (newZoom === oldZoom) return;
-  // Shift center so marker stays at the same screen position
-  const center = map.getCenter();
+  // Keep marker at same screen position using projection-aware math
+  const anchorPx = map.project(coords);
+  const { clientWidth: w, clientHeight: h } = map.getCanvas();
   const scale = Math.pow(2, newZoom - oldZoom);
-  const newLng = lngLat.lng + (center.lng - lngLat.lng) / scale;
-  const newLat = lngLat.lat + (center.lat - lngLat.lat) / scale;
-  map.jumpTo({ center: [newLng, newLat], zoom: newZoom });
+  const newCenterPx = [
+    anchorPx.x + (w / 2 - anchorPx.x) / scale,
+    anchorPx.y + (h / 2 - anchorPx.y) / scale
+  ] as [number, number];
+  const newCenter = map.unproject(newCenterPx);
+  map.jumpTo({ center: newCenter, zoom: newZoom });
 }
 
 function setupPopupEvents(popup: Popup) {
@@ -220,6 +232,9 @@ export function showPopup(props: FeatureProps, coords: [number, number]) {
   const photo = state.filteredPhotos[index];
   if (photo === undefined) return;
 
+  // Use photo's actual coordinates (not tile-quantized feature geometry)
+  const { lon, lat } = getEffectiveCoords(photo);
+
   dateEditMode = false;
   currentSinglePhotoIndex = index;
   currentPhotoUuid = photo.uuid;
@@ -234,7 +249,7 @@ export function showPopup(props: FeatureProps, coords: [number, number]) {
     offset: POPUP_OFFSET,
     subpixelPositioning: true
   })
-    .setLngLat(coords)
+    .setLngLat([lon, lat])
     .setHTML(buildSinglePopupHtml(photo, index, dateEditMode))
     .addTo(map);
 
@@ -252,7 +267,7 @@ export function showPopup(props: FeatureProps, coords: [number, number]) {
     onPhotoChangeFn(null);
   });
 
-  panToFitPopupFn(coords);
+  panToFitPopupFn([lon, lat]);
 }
 
 export interface MapFeature {
@@ -297,6 +312,7 @@ export function showMultiPhotoPopup(
   highlightFn(clusterPhotos[0]!);
 
   const firstPhoto = clusterPhotos[0]!;
+  const { lon: firstLon, lat: firstLat } = getEffectiveCoords(firstPhoto);
   const lastPhoto = clusterPhotos[clusterPhotos.length - 1];
   const dateRangeStr = buildDateRangeString(firstPhoto, lastPhoto);
   const thumbsHtml = buildThumbsHtml(clusterPhotos);
@@ -316,7 +332,7 @@ export function showMultiPhotoPopup(
     offset: POPUP_OFFSET,
     subpixelPositioning: true
   })
-    .setLngLat(coords)
+    .setLngLat([firstLon, firstLat])
     .setHTML(popupContent)
     .addTo(map);
 

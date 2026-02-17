@@ -85,7 +85,8 @@ export class ClassicLayer implements MarkerLayer {
 
     map.addSource(SOURCE, {
       type: 'geojson',
-      data: { type: 'FeatureCollection', features: [] }
+      data: { type: 'FeatureCollection', features: [] },
+      maxzoom: 22
     });
 
     // Outline layer drawn first — white rings behind all fills

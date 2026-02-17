@@ -75,7 +75,8 @@ export class PointsLayer implements MarkerLayer {
 
     map.addSource(SOURCE, {
       type: 'geojson',
-      data: { type: 'FeatureCollection', features: [] }
+      data: { type: 'FeatureCollection', features: [] },
+      maxzoom: 22
     });
 
     map.addLayer({
