@@ -218,7 +218,10 @@ function cascadeAndApply() {
     c === 'all'
       ? albumPhotos
       : albumPhotos.filter((p) => (p.camera ?? '(unknown)') === c);
-  applyFilters({ year: y, gps: g, media: m, album: a, camera: c }, cameraPhotos);
+  applyFilters(
+    { year: y, gps: g, media: m, album: a, camera: c },
+    cameraPhotos
+  );
   filtersToUrl({ year: y, album: a, camera: c, gps: g, media: m });
 }
 
