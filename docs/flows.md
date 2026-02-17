@@ -57,7 +57,7 @@ The user clicks one of the map style buttons (Aerial, Topo, Maasto, Orto). The a
 
 ## Switch marker style
 
-The user clicks one of the marker style buttons (Points, Classic). Points mode shows minimalist white dots with a WebGL bloom glow effect and integrated night shadow. Classic mode shows traditional color-coded circles (blue for GPS, amber for inferred, green for user-set, gray for no location). The selected marker style is saved in the URL.
+The user clicks one of the marker style buttons (Classic, Points). Classic mode (default) shows color-coded circles with white outlines (blue for GPS, amber for inferred, green for user-set, gray for no location). The selected marker gets a dark highlight ring behind it. Points mode shows minimalist white dots with a WebGL bloom glow effect and integrated night shadow. The selected marker style is saved in the URL.
 
 ## Switch map projection
 
