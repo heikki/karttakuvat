@@ -48,6 +48,9 @@ function applyHourOffset(dateStr: string, hours: number): string {
   return `${d.getFullYear()}:${pad(d.getMonth() + 1)}:${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
+const scriptLogBuffer: string[] = [];
+let requestLabel = '';
+
 async function runScript(
   cmd: string[],
   input: string,
@@ -66,10 +69,26 @@ async function runScript(
   const stderr = await new Response(proc.stderr).text();
 
   if (!quiet && stderr !== '') {
-    console.error(`${label} stderr:`, stderr);
+    scriptLogBuffer.push(`  \x1b[2m╰ ${label}\x1b[0m \x1b[31m${stderr.trim()}\x1b[0m`);
   }
   if (!quiet && stdout !== '') {
-    console.log(`${label} stdout:`, stdout);
+    try {
+      const parsed = JSON.parse(stdout);
+      const results = Array.isArray(parsed) ? parsed : [parsed];
+      for (const r of results) {
+        const uuid = (r as Record<string, unknown>).uuid as string | undefined;
+        const short = uuid ?? '?';
+        const ok = (r as Record<string, unknown>).ok;
+        const icon = ok ? '\x1b[32m✓\x1b[0m' : '\x1b[31m✗\x1b[0m';
+        const extras = Object.entries(r as Record<string, unknown>)
+          .filter(([k]) => k !== 'uuid' && k !== 'ok' && k !== 'tz')
+          .map(([k, v]) => `${k}=${String(v)}`)
+          .join(' ');
+        scriptLogBuffer.push(`  \x1b[2m╰ ${label}\x1b[0m ${icon} ${short} ${extras ? `\x1b[2m${extras}\x1b[0m` : ''}`);
+      }
+    } catch {
+      scriptLogBuffer.push(`  \x1b[2m╰ ${label}\x1b[0m ${stdout.trim()}`);
+    }
   }
 
   if (exitCode !== 0) {
@@ -217,7 +236,7 @@ async function handleGetMetadata(uuid: string): Promise<Response> {
   }
 }
 
-async function handleSetLocations(req: Request): Promise<Response> {
+async function handleSaveEdits(req: Request): Promise<Response> {
   try {
     const body = (await req.json()) as SetLocationsBody;
     const locationEdits = Array.isArray(body.edits) ? body.edits : [];
@@ -226,6 +245,11 @@ async function handleSetLocations(req: Request): Promise<Response> {
     if (locationEdits.length === 0 && timeEdits.length === 0) {
       return new Response('No edits provided', { status: 400 });
     }
+
+    const parts: string[] = [];
+    if (locationEdits.length > 0) parts.push(`${locationEdits.length} location`);
+    if (timeEdits.length > 0) parts.push(`${timeEdits.length} time`);
+    requestLabel = parts.join(', ');
 
     // Load items to get dates for timezone lookup
     const itemsFile = Bun.file('public/items.json');
@@ -254,9 +278,38 @@ async function handleSetLocations(req: Request): Promise<Response> {
 
     return Response.json({ ok: true });
   } catch (err) {
-    console.error('handleSetLocations error:', err);
+    console.error('handleSaveEdits error:', err);
     return new Response(`Server error: ${String(err)}`, { status: 500 });
   }
+}
+
+function logRequest(method: string, pathname: string, status: number, ms: number) {
+  const methodColors: Record<string, string> = {
+    GET: '\x1b[36m',   // cyan
+    POST: '\x1b[33m',  // yellow
+    PUT: '\x1b[35m',   // magenta
+    DELETE: '\x1b[31m' // red
+  };
+  const reset = '\x1b[0m';
+  const dim = '\x1b[2m';
+  const methodColor = methodColors[method] ?? '\x1b[37m';
+
+  const statusColor =
+    status < 300 ? '\x1b[32m' :  // green
+    status < 400 ? '\x1b[33m' :  // yellow
+    '\x1b[31m';                   // red
+
+  const isApi = pathname.startsWith('/api/');
+  const pathDisplay = isApi ? `\x1b[1m${pathname}${reset}` : `${dim}${pathname}${reset}`;
+
+  const timing = ms < 10 ? `${dim}${ms.toFixed(0)}ms${reset}` : `${ms.toFixed(0)}ms`;
+
+  const labelDisplay = requestLabel !== '' ? ` ${dim}(${requestLabel})${reset}` : '';
+  requestLabel = '';
+
+  console.log(
+    `  ${methodColor}${method.padEnd(4)}${reset} ${pathDisplay}${labelDisplay} ${statusColor}${status}${reset} ${timing}`
+  );
 }
 
 const server = serve({
@@ -265,29 +318,42 @@ const server = serve({
   },
   development: true,
   async fetch(req) {
+    const start = performance.now();
     const url = new URL(req.url);
+    let response: Response;
 
     // API routes
-    if (url.pathname === '/api/set-locations' && req.method === 'POST') {
-      return await handleSetLocations(req);
+    if (url.pathname === '/api/save-edits' && req.method === 'POST') {
+      response = await handleSaveEdits(req);
+    } else {
+      const metadataMatch = /^\/api\/metadata\/(?<id>[A-F0-9-]+)$/i.exec(
+        url.pathname
+      );
+      if (metadataMatch?.groups !== undefined && req.method === 'GET') {
+        response = await handleGetMetadata(metadataMatch.groups.id!);
+      } else {
+        // Check public directory first
+        let file = Bun.file(`public${url.pathname}`);
+        if (file.size > 0) {
+          response = new Response(file);
+        } else {
+          // Check src directory (for CSS, etc.)
+          file = Bun.file(`src${url.pathname}`);
+          if (file.size > 0) {
+            response = new Response(file);
+          } else {
+            response = new Response('Not Found', { status: 404 });
+          }
+        }
+      }
     }
 
-    const metadataMatch = /^\/api\/metadata\/(?<id>[A-F0-9-]+)$/i.exec(
-      url.pathname
-    );
-    if (metadataMatch?.groups !== undefined && req.method === 'GET') {
-      return await handleGetMetadata(metadataMatch.groups.id!);
+    logRequest(req.method, url.pathname, response.status, performance.now() - start);
+    for (const line of scriptLogBuffer) {
+      console.log(line);
     }
-
-    // Check public directory first
-    let file = Bun.file(`public${url.pathname}`);
-    if (file.size > 0) return new Response(file);
-
-    // Check src directory (for CSS, etc.)
-    file = Bun.file(`src${url.pathname}`);
-    if (file.size > 0) return new Response(file);
-
-    return new Response('Not Found', { status: 404 });
+    scriptLogBuffer.length = 0;
+    return response;
   }
 });
 

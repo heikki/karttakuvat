@@ -288,7 +288,7 @@ async function saveEdits() {
   btn.textContent = 'Saving...';
 
   try {
-    const response = await fetch('/api/set-locations', {
+    const response = await fetch('/api/save-edits', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ edits, timeEdits })
