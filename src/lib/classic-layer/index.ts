@@ -65,10 +65,30 @@ const sortKey = [
   ['get', 'index']
 ] as ExpressionSpecification;
 
+// Dark ring between outline and selected: midpoint radius and width
+const selectedRingRadius: ExpressionSpecification = [
+  'interpolate',
+  ['linear'],
+  ['zoom'],
+  2, 5,
+  8, 9,
+  14, 14
+];
+
+const selectedRingWidth: ExpressionSpecification = [
+  'interpolate',
+  ['linear'],
+  ['zoom'],
+  2, 2,
+  8, 3,
+  14, 4
+];
+
 const SOURCE = 'classic-source';
 const LAYERS = [
   'classic-outlines',
   'classic-markers',
+  'classic-selected-highlight',
   'classic-selected'
 ] as const;
 
@@ -85,7 +105,7 @@ export class ClassicLayer implements MarkerLayer {
       maxzoom: 22
     });
 
-    // Outline layer drawn first — white rings behind all fills
+    // Outline layer — white rings behind all fills
     map.addLayer({
       id: 'classic-outlines',
       type: 'circle',
@@ -111,15 +131,30 @@ export class ClassicLayer implements MarkerLayer {
       }
     });
 
-    // Selected marker — larger ring highlight
+    // Selected marker — semi-transparent fill with white stroke
+    map.addLayer({
+      id: 'classic-selected-highlight',
+      type: 'circle',
+      source: SOURCE,
+      paint: {
+        'circle-color': 'rgba(0, 0, 0, 0.5)',
+        'circle-radius': selectedRadius,
+        'circle-stroke-width': selectedStroke,
+        'circle-stroke-color': '#fff',
+        'circle-pitch-alignment': 'map'
+      },
+      filter: ['==', ['get', 'uuid'], '']
+    });
+
+    // Selected marker — colored dot with white outline on top of highlight
     map.addLayer({
       id: 'classic-selected',
       type: 'circle',
       source: SOURCE,
       paint: {
-        'circle-color': 'transparent',
-        'circle-radius': selectedRadius,
-        'circle-stroke-width': selectedStroke,
+        'circle-color': gpsColor,
+        'circle-radius': radius,
+        'circle-stroke-width': ['interpolate', ['linear'], ['zoom'], 2, 1, 8, 1.5, 14, 2] as ExpressionSpecification,
         'circle-stroke-color': '#fff',
         'circle-pitch-alignment': 'map'
       },
@@ -154,8 +189,10 @@ export class ClassicLayer implements MarkerLayer {
       photo === null
         ? ['==', ['get', 'uuid'], '']
         : ['==', ['get', 'uuid'], photo.uuid];
-    if (this.map.getLayer('classic-selected') !== undefined) {
-      this.map.setFilter('classic-selected', filter);
+    for (const id of ['classic-selected-highlight', 'classic-selected']) {
+      if (this.map.getLayer(id) !== undefined) {
+        this.map.setFilter(id, filter);
+      }
     }
   }
 
