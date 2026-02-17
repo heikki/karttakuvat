@@ -48,17 +48,6 @@ export function mapStyles(): MapStyles {
     mml_maastokartta: {
       version: 8,
       sources: {
-        thunderforest: {
-          type: 'raster',
-          tiles: [
-            `https://a.tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=${tfKey}`,
-            `https://b.tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=${tfKey}`,
-            `https://c.tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=${tfKey}`
-          ],
-          tileSize: 256,
-          maxzoom: 22,
-          attribution: '© Thunderforest, © OpenStreetMap contributors'
-        },
         mml_maastokartta: {
           type: 'raster',
           tiles: [mmlTile('maastokartta', 'png')],
@@ -69,7 +58,11 @@ export function mapStyles(): MapStyles {
         }
       },
       layers: [
-        { id: 'thunderforest', type: 'raster', source: 'thunderforest' },
+        {
+          id: 'background',
+          type: 'background',
+          paint: { 'background-color': '#ffffff' }
+        },
         {
           id: 'mml_maastokartta',
           type: 'raster',
@@ -80,19 +73,7 @@ export function mapStyles(): MapStyles {
     mml_ortokuva: {
       version: 8,
       sources: {
-        'google-satellite': {
-          type: 'raster',
-          tiles: [
-            'https://mt0.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-            'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-            'https://mt2.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-            'https://mt3.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'
-          ],
-          tileSize: 256,
-          maxzoom: 20,
-          attribution: '© Google'
-        },
-        'mml_ortokuva': {
+        mml_ortokuva: {
           type: 'raster',
           tiles: [mmlTile('ortokuva', 'jpg')],
           tileSize: 256,
@@ -102,7 +83,11 @@ export function mapStyles(): MapStyles {
         }
       },
       layers: [
-        { id: 'google-satellite', type: 'raster', source: 'google-satellite' },
+        {
+          id: 'background',
+          type: 'background',
+          paint: { 'background-color': '#ffffff' }
+        },
         { id: 'mml_ortokuva', type: 'raster', source: 'mml_ortokuva' }
       ]
     }
