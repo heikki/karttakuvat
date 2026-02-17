@@ -225,7 +225,6 @@ function restoreHighlight() {
   showPopup({ index }, [lon, lat]);
 }
 
-
 export function changeMapStyle(styleKey: string) {
   const style = mapStyles()[styleKey as keyof MapStyles] as
     | StyleSpecification

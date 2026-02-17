@@ -12,6 +12,15 @@ import {
   setPendingTimeEdit,
   state
 } from '../data';
+import type { Photo } from '../types';
+import { updateLightboxGroup } from '../ui';
+import {
+  compareDates,
+  computeFullDatetimeOffsetHours,
+  getThumbUrl,
+  parseExifDate,
+  parseUserDatetime
+} from '../utils';
 import {
   buildDateRangeString,
   buildPopupContent,
@@ -32,15 +41,6 @@ import {
   removeCanvasZoomOverride,
   setupPopupEvents
 } from './zoom';
-import type { Photo } from '../types';
-import { updateLightboxGroup } from '../ui';
-import {
-  compareDates,
-  computeFullDatetimeOffsetHours,
-  getThumbUrl,
-  parseExifDate,
-  parseUserDatetime
-} from '../utils';
 
 // State
 let currentPopup: Popup | null = null;

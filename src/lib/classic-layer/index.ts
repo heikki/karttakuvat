@@ -25,9 +25,12 @@ const radius: ExpressionSpecification = [
   'interpolate',
   ['linear'],
   ['zoom'],
-  2, 3,
-  8, 6,
-  14, 10
+  2,
+  3,
+  8,
+  6,
+  14,
+  10
 ];
 
 // radius + stroke for the outline layer (pre-computed)
@@ -35,9 +38,12 @@ const outlineRadius: ExpressionSpecification = [
   'interpolate',
   ['linear'],
   ['zoom'],
-  2, 4,
-  8, 7.5,
-  14, 12
+  2,
+  4,
+  8,
+  7.5,
+  14,
+  12
 ];
 
 // radius + stroke*3 for the selection ring (pre-computed)
@@ -45,18 +51,24 @@ const selectedRadius: ExpressionSpecification = [
   'interpolate',
   ['linear'],
   ['zoom'],
-  2, 6,
-  8, 10.5,
-  14, 16
+  2,
+  6,
+  8,
+  10.5,
+  14,
+  16
 ];
 
 const selectedStroke: ExpressionSpecification = [
   'interpolate',
   ['linear'],
   ['zoom'],
-  2, 1,
-  8, 1.5,
-  14, 2
+  2,
+  1,
+  8,
+  1.5,
+  14,
+  2
 ];
 
 const sortKey = [
@@ -135,7 +147,17 @@ export class ClassicLayer implements MarkerLayer {
       paint: {
         'circle-color': gpsColor,
         'circle-radius': radius,
-        'circle-stroke-width': ['interpolate', ['linear'], ['zoom'], 2, 1, 8, 1.5, 14, 2] as ExpressionSpecification,
+        'circle-stroke-width': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          2,
+          1,
+          8,
+          1.5,
+          14,
+          2
+        ] as ExpressionSpecification,
         'circle-stroke-color': '#fff',
         'circle-pitch-alignment': 'map'
       },

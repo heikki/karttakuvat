@@ -23,7 +23,10 @@ function zoomAroundPopup(e: WheelEvent) {
   e.stopPropagation();
   const oldZoom = map.getZoom();
   const delta = -e.deltaY * WHEEL_ZOOM_RATE;
-  const newZoom = Math.max(map.getMinZoom(), Math.min(map.getMaxZoom(), oldZoom + delta));
+  const newZoom = Math.max(
+    map.getMinZoom(),
+    Math.min(map.getMaxZoom(), oldZoom + delta)
+  );
   if (newZoom === oldZoom) return;
   const anchorPx = map.project(coords);
   const { clientWidth: w, clientHeight: h } = map.getCanvas();

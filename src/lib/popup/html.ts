@@ -93,10 +93,7 @@ function locationButtonsHtml(photo: Photo, index: number): string {
   return `<span class="loc-buttons"><button class="loc-btn" onclick="event.preventDefault(); window.enterPlacementMode(${index})">set</button>${copyBtn}${pasteBtn}</span>`;
 }
 
-function buildOverlayButtons(
-  photosLinkId: string,
-  photo: Photo
-): string {
+function buildOverlayButtons(photosLinkId: string, photo: Photo): string {
   const photosBtn =
     photo.photos_url !== undefined && photo.photos_url !== ''
       ? `<a class="overlay-btn photos-btn" id="${photosLinkId}" href="${photo.photos_url}" target="_blank" tabindex="-1" onclick="event.stopPropagation()"></a>`
