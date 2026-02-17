@@ -5,7 +5,11 @@ import {
   NavigationControl,
   ScaleControl
 } from 'maplibre-gl';
-import type { StyleSpecification } from 'maplibre-gl';
+import type {
+  MapLayerMouseEvent,
+  MapMouseEvent,
+  StyleSpecification
+} from 'maplibre-gl';
 
 import { ClassicLayer } from './classic-layer';
 import { mapStyles } from './config';
@@ -65,6 +69,7 @@ const markerStyles: Record<string, () => MarkerLayer> = {
 
 let currentMarkerStyle = 'points';
 let currentLayer: MarkerLayer | null = null;
+let interactionCleanup: (() => void) | null = null;
 
 function getMarkerLayerId(): string | null {
   return currentLayer?.id ?? null;
@@ -243,10 +248,15 @@ function addPhotoLayers() {
 }
 
 function setupMarkerInteractions() {
+  // Remove previous handlers before adding new ones
+  if (interactionCleanup !== null) {
+    interactionCleanup();
+  }
+
   const layerId = currentLayer?.id;
   if (layerId === undefined) return;
 
-  map.on('click', layerId, (e) => {
+  const onLayerClick = (e: MapLayerMouseEvent) => {
     // In placement mode, let the map-level click handler handle it
     if (isInPlacementMode()) return;
 
@@ -280,20 +290,20 @@ function setupMarkerInteractions() {
     ];
     if (clickedIndex === undefined) return;
     showPopup({ index: clickedIndex }, coords);
-  });
+  };
 
-  map.on('mouseenter', layerId, () => {
+  const onMouseEnter = () => {
     if (!isInPlacementMode()) {
       map.getCanvas().style.cursor = 'pointer';
     }
-  });
-  map.on('mouseleave', layerId, () => {
+  };
+  const onMouseLeave = () => {
     if (!isInPlacementMode()) {
       map.getCanvas().style.cursor = '';
     }
-  });
+  };
 
-  map.on('click', (e) => {
+  const onMapClick = (e: MapMouseEvent) => {
     // In placement mode, don't close popups on empty clicks
     if (isInPlacementMode()) return;
 
@@ -312,7 +322,19 @@ function setupMarkerInteractions() {
     if (popup !== null) {
       popup.remove();
     }
-  });
+  };
+
+  map.on('click', layerId, onLayerClick);
+  map.on('mouseenter', layerId, onMouseEnter);
+  map.on('mouseleave', layerId, onMouseLeave);
+  map.on('click', onMapClick);
+
+  interactionCleanup = () => {
+    map.off('click', layerId, onLayerClick);
+    map.off('mouseenter', layerId, onMouseEnter);
+    map.off('mouseleave', layerId, onMouseLeave);
+    map.off('click', onMapClick);
+  };
 }
 
 export { fitToPhotos };

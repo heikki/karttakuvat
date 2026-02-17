@@ -169,51 +169,55 @@ function restoreFiltersFromUrl() {
   if (saved.media !== undefined) {
     setButtonGroupActive('media-buttons', saved.media);
   }
-  // Album/camera need cascading — set year first, cascade, then set values
-  cascadeAndApply();
+  // Cascade select options without triggering notify, then apply once at the end
+  cascadeSelectOptions();
   if (saved.album !== undefined) {
     setSelectValue('album-select', saved.album);
-    cascadeAndApply();
+    cascadeSelectOptions();
   }
   if (saved.camera !== undefined) {
     setSelectValue('camera-select', saved.camera);
-    cascadeAndApply();
   }
+  cascadeAndApply();
 }
 
-function cascadeAndApply() {
-  const y =
-    (document.getElementById('year-select') as HTMLSelectElement | null)
-      ?.value ?? 'all';
+function selectVal(id: string): string {
+  return (
+    (document.getElementById(id) as HTMLSelectElement | null)?.value ?? 'all'
+  );
+}
 
-  // Cascade: Year → Album options
+function activeValues(containerId: string): string[] {
+  return Array.from(
+    document.querySelectorAll(`#${containerId} .filter-btn.active`)
+  ).map((btn) => (btn as HTMLElement).dataset.value!);
+}
+
+/** Update cascading select options (year → album → camera) without applying filters. */
+function cascadeSelectOptions() {
+  const y = selectVal('year-select');
   const yearPhotos =
     y === 'all' ? state.photos : state.photos.filter((p) => getYear(p) === y);
   repopulateSelect(
     'album-select',
     [...new Set(yearPhotos.flatMap((p) => p.albums))].sort()
   );
-  const a =
-    (document.getElementById('album-select') as HTMLSelectElement | null)
-      ?.value ?? 'all';
-
-  // Cascade: Year + Album → Camera options
+  const a = selectVal('album-select');
   const albumPhotos =
     a === 'all' ? yearPhotos : yearPhotos.filter((p) => p.albums.includes(a));
   repopulateSelect(
     'camera-select',
     [...new Set(albumPhotos.map((p) => p.camera ?? '(unknown)'))].sort()
   );
-  const c =
-    (document.getElementById('camera-select') as HTMLSelectElement | null)
-      ?.value ?? 'all';
+}
 
-  const m = Array.from(
-    document.querySelectorAll('#media-buttons .filter-btn.active')
-  ).map((btn) => (btn as HTMLElement).dataset.value!);
-  const g = Array.from(
-    document.querySelectorAll('#gps-buttons .filter-btn.active')
-  ).map((btn) => (btn as HTMLElement).dataset.value!);
+function cascadeAndApply() {
+  cascadeSelectOptions();
+  const y = selectVal('year-select');
+  const a = selectVal('album-select');
+  const c = selectVal('camera-select');
+  const g = activeValues('gps-buttons');
+  const m = activeValues('media-buttons');
   applyFilters({ year: y, gps: g, media: m, album: a, camera: c });
   filtersToUrl({ year: y, album: a, camera: c, gps: g, media: m });
 }

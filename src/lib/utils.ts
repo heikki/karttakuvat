@@ -19,6 +19,15 @@ export function compareDates(a: Photo, b: Photo): number {
   return toUtcSortKey(a.date, a.tz).localeCompare(toUtcSortKey(b.date, b.tz));
 }
 
+/** Sort photos in-place using precomputed sort keys (avoids repeated Date allocations). */
+export function sortByDate(photos: Photo[]): void {
+  const keys = new Map<Photo, string>();
+  for (const p of photos) {
+    keys.set(p, p.date === '' ? '\uffff' : toUtcSortKey(p.date, p.tz));
+  }
+  photos.sort((a, b) => keys.get(a)!.localeCompare(keys.get(b)!));
+}
+
 function parseTimePart(timePart: string | undefined): string {
   if (timePart === undefined || timePart === '') return '';
   const [hours, minutes] = timePart.split(':');

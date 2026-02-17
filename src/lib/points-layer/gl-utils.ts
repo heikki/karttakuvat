@@ -37,6 +37,7 @@ export function saveGl(gl: WebGL2RenderingContext): GlState {
 }
 
 export function restoreGl(gl: WebGL2RenderingContext, s: GlState) {
+  gl.bindFramebuffer(gl.FRAMEBUFFER, s[0]);
   if (s[1]) {
     gl.enable(gl.BLEND);
   } else {

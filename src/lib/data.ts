@@ -1,5 +1,5 @@
 import type { Photo } from './types';
-import { compareDates, getYear } from './utils';
+import { getYear, sortByDate } from './utils';
 
 export const state = {
   photos: [] as Photo[],
@@ -36,7 +36,7 @@ export async function loadPhotos() {
   try {
     const response = await fetch(`items.json?t=${Date.now()}`);
     const data = (await response.json()) as Photo[];
-    data.sort(compareDates);
+    sortByDate(data);
     state.photos = data;
     applyFilters({
       year: state.filters.year,
