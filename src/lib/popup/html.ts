@@ -4,8 +4,8 @@ import {
   getCopiedLocation,
   getEffectiveCoords,
   state
-} from './data';
-import type { Photo } from './types';
+} from '../data';
+import type { Photo } from '../types';
 import {
   computeDateOffsetHours,
   computeFullDatetimeOffsetHours,
@@ -13,7 +13,7 @@ import {
   formatLocation,
   getThumbUrl,
   isVideo
-} from './utils';
+} from '../utils';
 
 export function getEffectiveDate(photo: Photo): string {
   const offset = state.pendingTimeEdits.get(photo.uuid) ?? 0;

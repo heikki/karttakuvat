@@ -1,5 +1,5 @@
 import { state } from './data';
-import { getEffectiveDate, getEffectiveLocation } from './popup-html';
+import { getEffectiveDate, getEffectiveLocation } from './popup/html';
 import type { Photo } from './types';
 import { formatCoords, formatDate, getFullUrl, isVideo } from './utils';
 

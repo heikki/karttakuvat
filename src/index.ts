@@ -55,7 +55,7 @@ import {
   showPopup,
   toggleDateEdit
 } from './lib/popup';
-import { getEffectiveLocation } from './lib/popup-html';
+import { getEffectiveLocation } from './lib/popup/html';
 import { clearSelection } from './lib/selection';
 import {
   hideLightbox,

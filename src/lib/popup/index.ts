@@ -11,7 +11,7 @@ import {
   getEffectiveCoords,
   setPendingTimeEdit,
   state
-} from './data';
+} from '../data';
 import {
   buildDateRangeString,
   buildPopupContent,
@@ -25,22 +25,22 @@ import {
   updateInfoOverlay,
   updatePhotosLink,
   updateVideoIndicator
-} from './popup-html';
+} from './html';
 import {
   initPopupZoom,
   installCanvasZoomOverride,
   removeCanvasZoomOverride,
   setupPopupEvents
-} from './popup-zoom';
-import type { Photo } from './types';
-import { updateLightboxGroup } from './ui';
+} from './zoom';
+import type { Photo } from '../types';
+import { updateLightboxGroup } from '../ui';
 import {
   compareDates,
   computeFullDatetimeOffsetHours,
   getThumbUrl,
   parseExifDate,
   parseUserDatetime
-} from './utils';
+} from '../utils';
 
 // State
 let currentPopup: Popup | null = null;
