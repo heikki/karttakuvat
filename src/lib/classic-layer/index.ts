@@ -65,25 +65,6 @@ const sortKey = [
   ['get', 'index']
 ] as ExpressionSpecification;
 
-// Dark ring between outline and selected: midpoint radius and width
-const selectedRingRadius: ExpressionSpecification = [
-  'interpolate',
-  ['linear'],
-  ['zoom'],
-  2, 5,
-  8, 9,
-  14, 14
-];
-
-const selectedRingWidth: ExpressionSpecification = [
-  'interpolate',
-  ['linear'],
-  ['zoom'],
-  2, 2,
-  8, 3,
-  14, 4
-];
-
 const SOURCE = 'classic-source';
 const LAYERS = [
   'classic-outlines',
@@ -203,18 +184,22 @@ export class ClassicLayer implements MarkerLayer {
     if (source !== undefined) source.setData(geojson);
   }
 
-  markerRadius(zoom: number): number {
-    // Matches outlineRadius stops (visual edge of marker) + extra padding
-    const stops = [2, 4, 8, 7.5, 14, 12];
-    return lerpStops(zoom, stops);
-  }
+  markerRadius = classicMarkerRadius;
+}
+
+function classicMarkerRadius(zoom: number): number {
+  // Matches outlineRadius stops (visual edge of marker) + extra padding
+  const stops = [2, 4, 8, 7.5, 14, 12];
+  return lerpStops(zoom, stops);
 }
 
 function lerpStops(zoom: number, stops: number[]): number {
   if (zoom <= stops[0]!) return stops[1]!;
   for (let i = 0; i < stops.length - 2; i += 2) {
-    const z0 = stops[i]!, v0 = stops[i + 1]!;
-    const z1 = stops[i + 2]!, v1 = stops[i + 3]!;
+    const z0 = stops[i]!;
+    const v0 = stops[i + 1]!;
+    const z1 = stops[i + 2]!;
+    const v1 = stops[i + 3]!;
     if (zoom <= z1) {
       const t = (zoom - z0) / (z1 - z0);
       return v0 + t * (v1 - v0);

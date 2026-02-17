@@ -26,6 +26,12 @@ import {
   updatePhotosLink,
   updateVideoIndicator
 } from './popup-html';
+import {
+  initPopupZoom,
+  installCanvasZoomOverride,
+  removeCanvasZoomOverride,
+  setupPopupEvents
+} from './popup-zoom';
 import type { Photo } from './types';
 import { updateLightboxGroup } from './ui';
 import {
@@ -65,75 +71,11 @@ function popupOffset(): [number, number] {
 
 let reanchoring = false;
 
-const WHEEL_ZOOM_RATE = 1 / 300;
-
 function getSelectedMarkerCoords(): [number, number] | null {
   const photo = getCurrentPhoto();
   if (photo === undefined) return null;
   const { lon, lat } = getEffectiveCoords(photo);
   return [lon, lat];
-}
-
-function zoomAroundPopup(e: WheelEvent) {
-  const map = getMapFn();
-  if (map === undefined || currentPopup === null) return;
-  const coords = getSelectedMarkerCoords();
-  if (coords === null) return;
-  e.preventDefault();
-  e.stopPropagation();
-  const oldZoom = map.getZoom();
-  const delta = -e.deltaY * WHEEL_ZOOM_RATE;
-  const newZoom = Math.max(map.getMinZoom(), Math.min(map.getMaxZoom(), oldZoom + delta));
-  if (newZoom === oldZoom) return;
-  // Keep marker at same screen position using projection-aware math
-  const anchorPx = map.project(coords);
-  const { clientWidth: w, clientHeight: h } = map.getCanvas();
-  const scale = Math.pow(2, newZoom - oldZoom);
-  const newCenterPx = [
-    anchorPx.x + (w / 2 - anchorPx.x) / scale,
-    anchorPx.y + (h / 2 - anchorPx.y) / scale
-  ] as [number, number];
-  const newCenter = map.unproject(newCenterPx);
-  map.jumpTo({ center: newCenter, zoom: newZoom });
-}
-
-function setupPopupEvents(popup: Popup) {
-  const el = popup.getElement();
-  const map = getMapFn();
-  if (el === undefined || map === undefined) return;
-  const canvas = map.getCanvas();
-  // Zoom around marker from popup
-  el.addEventListener('wheel', zoomAroundPopup);
-  // Forward mouse drag for panning
-  for (const type of ['mousedown', 'mousemove', 'mouseup'] as const) {
-    el.addEventListener(type, (e) => {
-      const target = e.target as HTMLElement;
-      if (target.closest('button, a, input, .thumb-strip')) return;
-      e.preventDefault();
-      canvas.dispatchEvent(new MouseEvent(type, e));
-    });
-  }
-}
-
-let canvasWheelHandler: ((e: WheelEvent) => void) | null = null;
-
-function installCanvasZoomOverride() {
-  const map = getMapFn();
-  if (map === undefined) return;
-  map.scrollZoom.disable();
-  const canvas = map.getCanvas();
-  canvasWheelHandler = zoomAroundPopup;
-  canvas.addEventListener('wheel', canvasWheelHandler);
-}
-
-function removeCanvasZoomOverride() {
-  const map = getMapFn();
-  if (map === undefined) return;
-  if (canvasWheelHandler !== null) {
-    map.getCanvas().removeEventListener('wheel', canvasWheelHandler);
-    canvasWheelHandler = null;
-  }
-  map.scrollZoom.enable();
 }
 
 export function reanchorPopup() {
@@ -142,12 +84,11 @@ export function reanchorPopup() {
   if (map === undefined) return;
   if (!currentPopup.isOpen()) return;
   const lngLat = currentPopup.getLngLat();
-  if (lngLat === undefined) return;
   reanchoring = true;
   currentPopup.remove();
   currentPopup.setOffset(popupOffset());
   currentPopup.setLngLat(lngLat).addTo(map);
-  setupPopupEvents(currentPopup);
+  setupPopupEvents(currentPopup.getElement());
   reanchoring = false;
 }
 
@@ -161,10 +102,9 @@ export function initPopupCallbacks(
   panToFitPopupFn = panToFitPopup;
   getMapFn = getMap;
   getMarkerRadiusFn = getMarkerRadius;
+  initPopupZoom(getMap, getSelectedMarkerCoords);
   const map = getMap();
-  if (map !== undefined) {
-    map.on('zoomend', reanchorPopup);
-  }
+  map.on('zoomend', reanchorPopup);
 }
 
 export function getCurrentPopup(): Popup | null {
@@ -262,7 +202,7 @@ export function showPopup(props: FeatureProps, coords: [number, number]) {
     .setHTML(buildSinglePopupHtml(photo, index, dateEditMode))
     .addTo(map);
 
-  setupPopupEvents(currentPopup);
+  setupPopupEvents(currentPopup.getElement());
   installCanvasZoomOverride();
   updatePasteLink(index);
 
@@ -345,7 +285,7 @@ export function showMultiPhotoPopup(
     .setHTML(popupContent)
     .addTo(map);
 
-  setupPopupEvents(currentPopup);
+  setupPopupEvents(currentPopup.getElement());
   installCanvasZoomOverride();
 
   currentPopup.on('close', () => {

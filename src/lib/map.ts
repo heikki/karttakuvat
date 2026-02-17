@@ -260,7 +260,7 @@ export function changeMarkerStyle(styleKey: string) {
   setupMarkerInteractions();
   updateMapData();
   if (isInPlacementMode()) {
-    currentLayer?.toggle(false);
+    currentLayer.toggle(false);
   } else {
     restoreHighlight();
   }
