@@ -14,9 +14,7 @@ export function initTex(
 
 /** Save only the framebuffer binding (the only unpredictable state).
  *  Avoids 8× gl.getParameter() GPU-CPU sync stalls per frame. */
-export function saveFbo(
-  gl: WebGL2RenderingContext
-): WebGLFramebuffer | null {
+export function saveFbo(gl: WebGL2RenderingContext): WebGLFramebuffer | null {
   return gl.getParameter(gl.FRAMEBUFFER_BINDING) as WebGLFramebuffer | null;
 }
 

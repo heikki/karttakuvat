@@ -158,7 +158,12 @@ export class PointsLayer implements MarkerLayer {
       features.push({
         type: 'Feature',
         geometry: { type: 'Point', coordinates: [lon, lat] },
-        properties: { index: i, uuid: photo.uuid, lat, gps: photo.gps ?? 'none' }
+        properties: {
+          index: i,
+          uuid: photo.uuid,
+          lat,
+          gps: photo.gps ?? 'none'
+        }
       });
       positions.push({ lng: lon, lat, uuid: photo.uuid });
     }
@@ -191,4 +196,3 @@ function pointsMarkerRadius(zoom: number): number {
   }
   return stops[stops.length - 1]!;
 }
-

@@ -398,7 +398,14 @@ export class BloomLayer implements CustomLayerInterface {
     restoreGl(gl, prevFbo, w, h);
   }
 
-  updateData(positions: Array<{ lng: number; lat: number; uuid: string; weight?: number }>) {
+  updateData(
+    positions: Array<{
+      lng: number;
+      lat: number;
+      uuid: string;
+      weight?: number;
+    }>
+  ) {
     const gl = this.gl;
     if (gl === null || this.instanceBuf === null) {
       return;
@@ -412,7 +419,9 @@ export class BloomLayer implements CustomLayerInterface {
     for (let i = 0; i < positions.length; i++) {
       const p = positions[i]!;
       const key = `${p.uuid}:${p.lng}:${p.lat}`;
-      const cached = this.mercatorCache.get(key) ?? MercatorCoordinate.fromLngLat([p.lng, p.lat]);
+      const cached =
+        this.mercatorCache.get(key) ??
+        MercatorCoordinate.fromLngLat([p.lng, p.lat]);
       const mx = cached.x;
       const my = cached.y;
       newCache.set(key, { x: mx, y: my });
