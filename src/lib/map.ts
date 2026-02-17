@@ -67,7 +67,7 @@ const markerStyles: Record<string, () => MarkerLayer> = {
   classic: () => new ClassicLayer()
 };
 
-let currentMarkerStyle = 'points';
+let currentMarkerStyle = 'classic';
 let currentLayer: MarkerLayer | null = null;
 let interactionCleanup: (() => void) | null = null;
 
