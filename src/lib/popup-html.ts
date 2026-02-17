@@ -129,7 +129,7 @@ export function buildSinglePopupHtml(
   return `
         <div class="photo-popup">
             <div class="popup-image-wrap">
-                <img id="single-img" src="${getThumbUrl(photo)}" alt="Photo" onclick="window.showLightbox(${index})"
+                <img id="single-img" src="${getThumbUrl(photo)}" alt="Photo"
                         onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22150%22><rect fill=%22%23f0f0f0%22 width=%22200%22 height=%22150%22/><text x=%22100%22 y=%2275%22 text-anchor=%22middle%22 fill=%22%23999%22>Preview unavailable</text></svg>'" />
                 ${videoOverlay}
                 ${overlayButtons}
@@ -200,7 +200,6 @@ export function buildPopupContent(
             <div class="photo-count">${countLabel}${dateRangeStr === '' ? '' : ` \u2022 ${dateRangeStr}`}</div>
             <div class="popup-image-wrap">
             <img class="main-image" id="group-main-img" src="${getThumbUrl(firstPhoto)}"
-                    onclick="window.showGroupLightbox(0)"
                     onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22150%22><rect fill=%22%23f0f0f0%22 width=%22200%22 height=%22150%22/><text x=%22100%22 y=%2275%22 text-anchor=%22middle%22 fill=%22%23999%22>Preview unavailable</text></svg>'" />
             ${videoOverlay}
             ${overlayButtons}

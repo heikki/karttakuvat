@@ -40,7 +40,6 @@ body {
 .photo-popup img {
   max-width: 100%;
   max-height: 220px;
-  cursor: pointer;
 }
 .photo-popup .info {
   margin: 8px 12px;
@@ -234,7 +233,6 @@ body {
 .photo-popup .main-image {
   max-width: 100%;
   max-height: 220px;
-  cursor: pointer;
 }
 .photo-popup .photo-count {
   font-size: 11px;
