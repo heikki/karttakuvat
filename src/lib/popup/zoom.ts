@@ -6,6 +6,13 @@ let getMapFn: () => MapGL | undefined = () => undefined;
 let getMarkerCoordsFn: () => [number, number] | null = () => null;
 let canvasWheelHandler: ((e: WheelEvent) => void) | null = null;
 
+// Track attached element and handlers for cleanup
+let attachedEl: HTMLElement | null = null;
+let mouseHandlers: Array<{
+  type: string;
+  handler: (e: MouseEvent) => void;
+}> = [];
+
 export function initPopupZoom(
   getMap: () => MapGL | undefined,
   getMarkerCoords: () => [number, number] | null
@@ -39,18 +46,32 @@ function zoomAroundPopup(e: WheelEvent) {
   map.jumpTo({ center: newCenter, zoom: newZoom });
 }
 
+function removePopupEvents() {
+  if (attachedEl === null) return;
+  attachedEl.removeEventListener('wheel', zoomAroundPopup);
+  for (const { type, handler } of mouseHandlers) {
+    attachedEl.removeEventListener(type, handler as EventListener);
+  }
+  mouseHandlers = [];
+  attachedEl = null;
+}
+
 export function setupPopupEvents(popupEl: HTMLElement) {
+  removePopupEvents();
   const map = getMapFn();
   if (map === undefined) return;
   const canvas = map.getCanvas();
+  attachedEl = popupEl;
   popupEl.addEventListener('wheel', zoomAroundPopup);
   for (const type of ['mousedown', 'mousemove', 'mouseup'] as const) {
-    popupEl.addEventListener(type, (e) => {
+    const handler = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       if (target.closest('button, a, input, .thumb-strip') !== null) return;
       e.preventDefault();
       canvas.dispatchEvent(new MouseEvent(type, e));
-    });
+    };
+    popupEl.addEventListener(type, handler);
+    mouseHandlers.push({ type, handler });
   }
 }
 
@@ -71,4 +92,5 @@ export function removeCanvasZoomOverride() {
     canvasWheelHandler = null;
   }
   map.scrollZoom.enable();
+  removePopupEvents();
 }
