@@ -96,6 +96,7 @@ export function initMap() {
     style: withGlobe(mapStyles().satellite as StyleSpecification),
     center,
     zoom,
+    minZoom: 1,
     boxZoom: false,
     keyboard: false,
     dragRotate: false,

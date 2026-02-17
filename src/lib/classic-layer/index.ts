@@ -1,6 +1,5 @@
 import type { FeatureCollection, Point } from 'geojson';
 import type {
-  CircleLayerSpecification,
   ExpressionSpecification,
   FilterSpecification,
   GeoJSONSource,
@@ -22,13 +21,47 @@ const gpsColor = [
   '#9ca3af'
 ] as unknown as string;
 
-const markerPaint: CircleLayerSpecification['paint'] = {
-  'circle-color': gpsColor,
-  'circle-radius': 8,
-  'circle-stroke-width': 2,
-  'circle-stroke-color': '#fff',
-  'circle-pitch-alignment': 'map'
-};
+const radius: ExpressionSpecification = [
+  'interpolate',
+  ['linear'],
+  ['zoom'],
+  2, 3,
+  8, 6,
+  14, 10,
+  18, 14
+];
+
+// radius + stroke for the outline layer (pre-computed)
+const outlineRadius: ExpressionSpecification = [
+  'interpolate',
+  ['linear'],
+  ['zoom'],
+  2, 4,
+  8, 7.5,
+  14, 12,
+  18, 17
+];
+
+// radius + stroke*3 for the selection ring (pre-computed)
+const selectedRadius: ExpressionSpecification = [
+  'interpolate',
+  ['linear'],
+  ['zoom'],
+  2, 6,
+  8, 10.5,
+  14, 16,
+  18, 23
+];
+
+const selectedStroke: ExpressionSpecification = [
+  'interpolate',
+  ['linear'],
+  ['zoom'],
+  2, 1,
+  8, 1.5,
+  14, 2,
+  18, 3
+];
 
 const sortKey = [
   '-',
@@ -37,7 +70,11 @@ const sortKey = [
 ] as ExpressionSpecification;
 
 const SOURCE = 'classic-source';
-const LAYERS = ['classic-markers', 'classic-selected'] as const;
+const LAYERS = [
+  'classic-outlines',
+  'classic-markers',
+  'classic-selected'
+] as const;
 
 export class ClassicLayer implements MarkerLayer {
   readonly id = 'classic-markers';
@@ -51,19 +88,44 @@ export class ClassicLayer implements MarkerLayer {
       data: { type: 'FeatureCollection', features: [] }
     });
 
+    // Outline layer drawn first — white rings behind all fills
+    map.addLayer({
+      id: 'classic-outlines',
+      type: 'circle',
+      source: SOURCE,
+      layout: { 'circle-sort-key': sortKey },
+      paint: {
+        'circle-color': '#fff',
+        'circle-radius': outlineRadius,
+        'circle-pitch-alignment': 'map'
+      }
+    });
+
+    // Fill layer on top — colored dots, no stroke
     map.addLayer({
       id: 'classic-markers',
       type: 'circle',
       source: SOURCE,
       layout: { 'circle-sort-key': sortKey },
-      paint: markerPaint
+      paint: {
+        'circle-color': gpsColor,
+        'circle-radius': radius,
+        'circle-pitch-alignment': 'map'
+      }
     });
 
+    // Selected marker — larger ring highlight
     map.addLayer({
       id: 'classic-selected',
       type: 'circle',
       source: SOURCE,
-      paint: markerPaint,
+      paint: {
+        'circle-color': 'transparent',
+        'circle-radius': selectedRadius,
+        'circle-stroke-width': selectedStroke,
+        'circle-stroke-color': '#fff',
+        'circle-pitch-alignment': 'map'
+      },
       filter: ['==', ['get', 'uuid'], '']
     });
   }

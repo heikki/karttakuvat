@@ -54,6 +54,22 @@ let panToFitPopupFn: (coords: [number, number]) => void = () => {
   /* noop */
 };
 let getMapFn: () => MapGL | undefined = () => undefined;
+const POPUP_OFFSET: [number, number] = [0, -14];
+
+let reanchoring = false;
+
+function reanchorPopup() {
+  if (currentPopup === null) return;
+  const map = getMapFn();
+  if (map === undefined) return;
+  if (!currentPopup.isOpen()) return;
+  const lngLat = currentPopup.getLngLat();
+  if (lngLat === undefined) return;
+  reanchoring = true;
+  currentPopup.remove();
+  currentPopup.setLngLat(lngLat).addTo(map);
+  reanchoring = false;
+}
 
 export function initPopupCallbacks(
   highlight: (photo: Photo | null) => void,
@@ -63,6 +79,10 @@ export function initPopupCallbacks(
   highlightFn = highlight;
   panToFitPopupFn = panToFitPopup;
   getMapFn = getMap;
+  const map = getMap();
+  if (map !== undefined) {
+    map.on('zoomend', reanchorPopup);
+  }
 }
 
 export function getCurrentPopup(): Popup | null {
@@ -150,7 +170,8 @@ export function showPopup(props: FeatureProps, coords: [number, number]) {
     closeButton: false,
     maxWidth: '320px',
     anchor: 'bottom',
-    offset: [0, -12]
+    offset: POPUP_OFFSET,
+    subpixelPositioning: true
   })
     .setLngLat(coords)
     .setHTML(buildSinglePopupHtml(photo, index, dateEditMode))
@@ -158,7 +179,9 @@ export function showPopup(props: FeatureProps, coords: [number, number]) {
 
   updatePasteLink(index);
 
+
   currentPopup.on('close', () => {
+    if (reanchoring) return;
     dateEditMode = false;
     highlightFn(null);
     currentSinglePhotoIndex = null;
@@ -227,13 +250,16 @@ export function showMultiPhotoPopup(
     closeOnClick: false,
     maxWidth: '400px',
     anchor: 'bottom',
-    offset: [0, -12]
+    offset: POPUP_OFFSET,
+    subpixelPositioning: true
   })
     .setLngLat(coords)
     .setHTML(popupContent)
     .addTo(map);
 
+
   currentPopup.on('close', () => {
+    if (reanchoring) return;
     dateEditMode = false;
     clearSelectionFn();
     highlightFn(null);
