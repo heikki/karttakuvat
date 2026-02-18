@@ -30,7 +30,10 @@ export function sortByDate(photos: Photo[]): void {
 
 function parseTimePart(timePart: string | undefined): string {
   if (timePart === undefined || timePart === '') return '';
-  const [hours, minutes] = timePart.split(':');
+  const [hours, minutes, seconds] = timePart.split(':');
+  if (hours !== undefined && minutes !== undefined && seconds !== undefined) {
+    return ` ${hours}:${minutes}:${seconds}`;
+  }
   if (hours !== undefined && minutes !== undefined) {
     return ` ${hours}:${minutes}`;
   }
@@ -64,7 +67,7 @@ function formatTz(tz: string): string {
 
 export function formatDate(dateStr: string, tz?: string | null): string {
   if (dateStr === '') return 'Unknown date';
-  // Input format: "YYYY:MM:DD HH:MM:SS" -> Output: "D.M.YYYY HH:MM"
+  // Input format: "YYYY:MM:DD HH:MM:SS" -> Output: "D.M.YYYY HH:MM:SS"
   const [datePart, timePart] = dateStr.split(' ');
   if (datePart === undefined || datePart === '') return dateStr;
   const formattedDate = parseDatePart(datePart);
