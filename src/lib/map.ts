@@ -23,6 +23,7 @@ import {
   startGlobeBackground,
   stopGlobeBackground
 } from './globe-background';
+import { addGpxLayers } from './gpx';
 import { addMeasureLayers, initMeasure } from './measure';
 import { createPanToFitPopup } from './pan';
 import {
@@ -159,6 +160,7 @@ export function initMap() {
   });
 
   map.on('load', () => {
+    addGpxLayers();
     addPhotoLayers();
     addSelectionLayer();
     addMeasureLayers();
@@ -235,6 +237,7 @@ export function changeMapStyle(styleKey: string) {
   map.stop();
 
   const applyLayers = () => {
+    addGpxLayers();
     addPhotoLayers();
     addSelectionLayer();
     addMeasureLayers();

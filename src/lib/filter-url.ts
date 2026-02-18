@@ -145,6 +145,20 @@ export function markerStyleFromUrl(): string | null {
   return new URLSearchParams(location.search).get('markers');
 }
 
+export function tracksVisibleToUrl(visible: boolean): void {
+  const params = currentParams();
+  if (visible) {
+    params.delete('tracks');
+  } else {
+    params.set('tracks', '0');
+  }
+  updateUrl(params);
+}
+
+export function tracksVisibleFromUrl(): boolean {
+  return new URLSearchParams(location.search).get('tracks') !== '0';
+}
+
 export function initStyleButtonGroup(
   id: string,
   onChange: (style: string) => void,

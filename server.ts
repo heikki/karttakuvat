@@ -221,6 +221,18 @@ async function processTimeEdits(
   return null;
 }
 
+async function handleGetGpxFiles(album: string): Promise<Response> {
+  try {
+    const { readdir } = await import('node:fs/promises');
+    const dir = `public/albums/${album}`;
+    const entries = await readdir(dir).catch(() => [] as string[]);
+    const gpxFiles = entries.filter((f) => f.toLowerCase().endsWith('.gpx'));
+    return Response.json(gpxFiles);
+  } catch {
+    return Response.json([]);
+  }
+}
+
 async function handleGetMetadata(uuid: string): Promise<Response> {
   try {
     const result = await runScript(
@@ -297,26 +309,41 @@ async function handleSaveEdits(req: Request): Promise<Response> {
   }
 }
 
-async function routeRequest(req: Request, url: URL): Promise<Response> {
-  if (url.pathname === '/api/save-edits' && req.method === 'POST') {
-    return await handleSaveEdits(req);
+function routeApiRequest(
+  req: Request,
+  pathname: string
+): Promise<Response> | null {
+  if (pathname === '/api/save-edits' && req.method === 'POST') {
+    return handleSaveEdits(req);
   }
 
-  const metadataMatch = /^\/api\/metadata\/(?<id>[A-F0-9-]+)$/i.exec(
-    url.pathname
-  );
-  if (metadataMatch?.groups !== undefined && req.method === 'GET') {
-    return await handleGetMetadata(metadataMatch.groups.id!);
+  const gpxMatch = /^\/api\/gpx\/(?<album>.+)$/.exec(pathname);
+  if (gpxMatch?.groups !== undefined && req.method === 'GET') {
+    return handleGetGpxFiles(decodeURIComponent(gpxMatch.groups.album!));
   }
+
+  const metadataMatch = /^\/api\/metadata\/(?<id>[A-F0-9-]+)$/i.exec(pathname);
+  if (metadataMatch?.groups !== undefined && req.method === 'GET') {
+    return handleGetMetadata(metadataMatch.groups.id!);
+  }
+
+  return null;
+}
+
+async function routeRequest(req: Request, url: URL): Promise<Response> {
+  const apiResponse = routeApiRequest(req, url.pathname);
+  if (apiResponse !== null) return await apiResponse;
+
+  const decodedPath = decodeURIComponent(url.pathname);
 
   // Check public directory first
-  let file = Bun.file(`public${url.pathname}`);
+  let file = Bun.file(`public${decodedPath}`);
   if (file.size > 0) {
     return new Response(file);
   }
 
   // Check src directory (for CSS, etc.)
-  file = Bun.file(`src${url.pathname}`);
+  file = Bun.file(`src${decodedPath}`);
   if (file.size > 0) {
     return new Response(file);
   }
@@ -374,8 +401,9 @@ const server = serve({
     const url = new URL(req.url);
     const response = await routeRequest(req, url);
 
-    const isImage =
-      /\.(jpe?g|png|gif|webp|avif|svg|ico)$/i.test(url.pathname);
+    const isImage = /\.(?:jpe?g|png|gif|webp|avif|svg|ico)$/i.test(
+      url.pathname
+    );
     if (!isImage || response.status >= 400) {
       logRequest(
         req.method,
