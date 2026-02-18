@@ -374,12 +374,16 @@ const server = serve({
     const url = new URL(req.url);
     const response = await routeRequest(req, url);
 
-    logRequest(
-      req.method,
-      url.pathname,
-      response.status,
-      performance.now() - start
-    );
+    const isImage =
+      /\.(jpe?g|png|gif|webp|avif|svg|ico)$/i.test(url.pathname);
+    if (!isImage || response.status >= 400) {
+      logRequest(
+        req.method,
+        url.pathname,
+        response.status,
+        performance.now() - start
+      );
+    }
     for (const line of scriptLogBuffer) {
       console.log(line);
     }
