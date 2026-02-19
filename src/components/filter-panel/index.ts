@@ -1,13 +1,13 @@
 import { LitElement, css, html, nothing } from 'lit';
 import { customElement, property, state as litState } from 'lit/decorators.js';
 
-import { applyFilters } from '../../lib/data';
+import { applyFilters } from '../../common/data';
 import {
   filtersFromUrl, filtersToUrl, mapStyleFromUrl, mapStyleToUrl,
   markerStyleFromUrl, markerStyleToUrl, tracksVisibleFromUrl, tracksVisibleToUrl
-} from '../../lib/filter-url';
+} from '../../common/filter-url';
 import { StoreController } from './store-controller';
-import { getYear, isVideo } from '../../lib/utils';
+import { getYear, isVideo } from '../../common/utils';
 
 const DEFAULT_GPS = ['exif', 'inferred', 'user', 'none'];
 const DEFAULT_MEDIA = ['photo', 'video'];

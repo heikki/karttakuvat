@@ -1,7 +1,7 @@
 import { LngLatBounds } from 'maplibre-gl';
 import type { Map as MapGL } from 'maplibre-gl';
 
-import { getEffectiveCoords, state } from '../lib/data';
+import { getEffectiveCoords, state } from '../common/data';
 import { getCurrentPopup, showPopup } from '../components/photo-popup/popup';
 
 type GetMap = () => MapGL;

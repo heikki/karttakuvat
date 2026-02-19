@@ -1,11 +1,11 @@
 import { LitElement, css, html, nothing } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 
-import { ShowMetadataEvent } from '../../lib/events';
-import { state } from '../../lib/data';
+import { ShowMetadataEvent } from '../../common/events';
+import { state } from '../../common/data';
 import { getEffectiveDate, getEffectiveLocation } from '../photo-popup/popup-utils';
-import type { Photo } from '../../lib/types';
-import { formatCoords, formatDate, getFullUrl, isVideo } from '../../lib/utils';
+import type { Photo } from '../../common/types';
+import { formatCoords, formatDate, getFullUrl, isVideo } from '../../common/utils';
 
 function stopPropagation(e: Event) {
   e.stopPropagation();

@@ -12,11 +12,11 @@ import {
   ShowLightboxEvent,
   ShowMetadataEvent,
   ToggleDateEditEvent
-} from '../../lib/events';
+} from '../../common/events';
 import { editableDateStr, getEffectiveDate, getEffectiveLocation } from './popup-utils';
-import type { Photo } from '../../lib/types';
-import { formatDate, formatLocation, getThumbUrl, isVideo } from '../../lib/utils';
-import { getCopiedDate, getCopiedLocation } from '../../lib/data';
+import type { Photo } from '../../common/types';
+import { formatDate, formatLocation, getThumbUrl, isVideo } from '../../common/utils';
+import { getCopiedDate, getCopiedLocation } from '../../common/data';
 
 @customElement('photo-popup')
 export class PhotoPopup extends LitElement {

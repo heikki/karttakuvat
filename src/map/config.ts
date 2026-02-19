@@ -1,4 +1,4 @@
-import type { MapStyles } from '../lib/types';
+import type { MapStyles } from '../common/types';
 
 const mmlKey = process.env.PUBLIC_MML_API_KEY ?? '';
 const tfKey = process.env.PUBLIC_THUNDERFOREST_API_KEY ?? '';

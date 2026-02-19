@@ -1,6 +1,6 @@
 import type { Map as MapGL } from 'maplibre-gl';
 
-import { addPendingEdit, state } from '../lib/data';
+import { addPendingEdit, state } from '../common/data';
 import { getCurrentPopup, showPopup } from '../components/photo-popup/popup';
 import type { PlacementPanel } from '../components/placement-panel';
 

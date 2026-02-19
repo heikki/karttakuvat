@@ -7,7 +7,7 @@ import {
   loadPhotos,
   state,
   subscribe
-} from './lib/data';
+} from './common/data';
 import {
   AdjustTimeEvent,
   ApplyManualDateEvent,
@@ -19,9 +19,9 @@ import {
   ShowLightboxEvent,
   ShowMetadataEvent,
   ToggleDateEditEvent
-} from './lib/events';
-import { photoFromUrl, photoToUrl } from './lib/filter-url';
-import { initGpx, loadGpxForAlbum, setGpxVisible } from './lib/gpx';
+} from './common/events';
+import { photoFromUrl, photoToUrl } from './common/filter-url';
+import { initGpx, loadGpxForAlbum, setGpxVisible } from './common/gpx';
 import {
   changeMapStyle,
   changeMarkerStyle,
@@ -34,7 +34,7 @@ import {
   exitMeasureMode,
   isMeasureMode,
   toggleMeasureMode
-} from './lib/measure';
+} from './common/measure';
 import type { FilterPanel } from './components/filter-panel';
 import type { MetadataModal } from './components/metadata-modal';
 import type { PhotoLightbox } from './components/photo-lightbox';
