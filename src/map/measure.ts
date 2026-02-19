@@ -1,6 +1,7 @@
 import turfDistance from '@turf/distance';
 import { point } from '@turf/helpers';
 import type { GeoJSONSource, Map as MapGL, MapMouseEvent } from 'maplibre-gl';
+import { ToggleMeasureModeEvent } from '@common/events';
 
 // eslint-disable-next-line @typescript-eslint/init-declarations -- initialized in initMeasure() before any usage
 let map: MapGL;
@@ -25,6 +26,9 @@ export function initMeasure(
 ) {
   map = m;
   getMarkerLayerIdFn = getMarkerLayerId;
+  document.addEventListener(ToggleMeasureModeEvent.type, () => {
+    toggleMeasureMode();
+  });
 }
 
 export function addMeasureLayers() {

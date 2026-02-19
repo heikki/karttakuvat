@@ -24,7 +24,7 @@ import {
   stopGlobeBackground
 } from './background';
 import { addGpxLayers, initGpx } from './gpx';
-import { EnterPlacementEvent } from '@common/events';
+import { ChangeMapStyleEvent, ChangeMarkerStyleEvent, EnterPlacementEvent, ResetMapEvent } from '@common/events';
 import { addMeasureLayers, exitMeasureMode, initMeasure, isMeasureMode } from './measure';
 import { createPanToFitPopup } from './pan';
 import {
@@ -78,7 +78,7 @@ export function enterPlacementMode(photoIndex: number) {
   enterPlacement(map, photoIndex);
 }
 
-export function resetMap() {
+function resetMap() {
   getCurrentPopup()?.remove();
   if (isMeasureMode()) exitMeasureMode();
   changeMapStyle('satellite');
@@ -214,6 +214,15 @@ export function initMap() {
   document.addEventListener(EnterPlacementEvent.type, (e: Event) => {
     enterPlacementMode((e as EnterPlacementEvent).index);
   });
+  document.addEventListener(ChangeMapStyleEvent.type, (e) => {
+    changeMapStyle(e.style);
+  });
+  document.addEventListener(ChangeMarkerStyleEvent.type, (e) => {
+    changeMarkerStyle(e.style);
+  });
+  document.addEventListener(ResetMapEvent.type, () => {
+    resetMap();
+  });
 }
 
 function updateMapData() {
@@ -230,7 +239,7 @@ function restoreHighlight() {
   showPopup({ index }, [lon, lat]);
 }
 
-export function changeMapStyle(styleKey: string) {
+function changeMapStyle(styleKey: string) {
   const style = mapStyles()[styleKey as keyof MapStyles] as
     | StyleSpecification
     | undefined;
@@ -256,7 +265,7 @@ export function changeMapStyle(styleKey: string) {
   map.setStyle(withGlobe(style));
 }
 
-export function changeMarkerStyle(styleKey: string) {
+function changeMarkerStyle(styleKey: string) {
   if (!(styleKey in markerStyles)) return;
   currentMarkerStyle = styleKey;
   if (currentLayer === null) return;
@@ -348,4 +357,3 @@ function setupMarkerInteractions() {
   };
 }
 
-export { fitToPhotos };

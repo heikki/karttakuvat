@@ -3,6 +3,7 @@ import { point } from '@turf/helpers';
 import type { Feature, FeatureCollection, LineString, Point } from 'geojson';
 import type { GeoJSONSource, Map as MapGL } from 'maplibre-gl';
 import { state, subscribe } from '@common/data';
+import { SetGpxVisibleEvent } from '@common/events';
 
 // Sources and layers
 const TRACK_SOURCE = 'gpx-tracks';
@@ -46,6 +47,9 @@ export function initGpx(m: MapGL): void {
     void loadGpxForAlbum(
       state.filters.album === 'all' ? null : state.filters.album
     );
+  });
+  document.addEventListener(SetGpxVisibleEvent.type, (e) => {
+    setGpxVisible(e.visible);
   });
 }
 

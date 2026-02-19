@@ -9,10 +9,10 @@ import {
 import { getEffectiveLocation } from '@common/photo-utils';
 import { getYear, isVideo } from '@common/utils';
 import {
-  changeMapStyle, changeMarkerStyle, fitToPhotos, getMap, resetMap
-} from '../../map';
-import { setGpxVisible } from '../../map/gpx';
-import { toggleMeasureMode } from '../../map/measure';
+  ChangeMapStyleEvent, ChangeMarkerStyleEvent, FitToPhotosEvent,
+  ResetMapEvent, SetGpxVisibleEvent, ToggleMeasureModeEvent
+} from '@common/events';
+import { getMap } from '../../map';
 import { getCurrentPhotoUuid } from '../../map/popup';
 import { saveEdits } from '../../save';
 import { StoreController } from './store-controller';
@@ -200,9 +200,9 @@ export class FilterPanel extends LitElement {
     const co = this._getCameraOptions();
     if (this._camera !== 'all' && !co.includes(this._camera)) this._camera = 'all';
     this._applyFilters();
-    changeMapStyle(this._mapStyle);
-    changeMarkerStyle(this._markerStyle);
-    setGpxVisible(this._tracksVisible);
+    document.dispatchEvent(new ChangeMapStyleEvent(this._mapStyle));
+    document.dispatchEvent(new ChangeMarkerStyleEvent(this._markerStyle));
+    document.dispatchEvent(new SetGpxVisibleEvent(this._tracksVisible));
   }
 
   private _getYearPhotos() {
@@ -299,7 +299,7 @@ export class FilterPanel extends LitElement {
     this._measureActive = false;
     this._applyFilters();
     history.replaceState(null, '', location.pathname);
-    resetMap();
+    document.dispatchEvent(new ResetMapEvent());
   }
 
   private _renderStats() {
@@ -351,19 +351,19 @@ export class FilterPanel extends LitElement {
           ${renderStyleBtns(
             [{ style: 'satellite', label: 'Aerial' }, { style: 'topo', label: 'Topo' },
              { style: 'mml_maastokartta', label: 'Maasto' }, { style: 'mml_ortokuva', label: 'Orto' }],
-            this._mapStyle, (s) => { this._mapStyle = s; mapStyleToUrl(s); changeMapStyle(s); }
+            this._mapStyle, (s) => { this._mapStyle = s; mapStyleToUrl(s); document.dispatchEvent(new ChangeMapStyleEvent(s)); }
           )}
           <label>Markers</label>
           ${renderStyleBtns(
             [{ style: 'points', label: 'Points' }, { style: 'classic', label: 'Classic' }],
-            this._markerStyle, (s) => { this._markerStyle = s; markerStyleToUrl(s); changeMarkerStyle(s); }
+            this._markerStyle, (s) => { this._markerStyle = s; markerStyleToUrl(s); document.dispatchEvent(new ChangeMarkerStyleEvent(s)); }
           )}
           <div class="view-buttons">
-            <button class="view-btn" @click=${() => { fitToPhotos(true, true); }}>Fit</button>
+            <button class="view-btn" @click=${() => { document.dispatchEvent(new FitToPhotosEvent(true, true)); }}>Fit</button>
             <button class="view-btn" @click=${() => { this._onReset(); }}>Reset</button>
             <button class="view-btn ${this._measureActive ? 'active' : ''}" @click=${() => {
               this._measureActive = !this._measureActive;
-              toggleMeasureMode();
+              document.dispatchEvent(new ToggleMeasureModeEvent());
             }}>Measure</button>
           </div>
           ${this._tracksAvailable ? html`
@@ -371,7 +371,7 @@ export class FilterPanel extends LitElement {
               <button class="view-btn ${this._tracksVisible ? 'active' : ''}" @click=${() => {
                 this._tracksVisible = !this._tracksVisible;
                 tracksVisibleToUrl(this._tracksVisible);
-                setGpxVisible(this._tracksVisible);
+                document.dispatchEvent(new SetGpxVisibleEvent(this._tracksVisible));
               }}>Tracks</button>
             </div>` : nothing}
           <div class="view-buttons">

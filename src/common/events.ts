@@ -100,6 +100,60 @@ export class CloseLightboxEvent extends Event {
   }
 }
 
+/* ── Map command events (filter-panel → map) ── */
+
+export class ChangeMapStyleEvent extends Event {
+  static readonly type = 'change-map-style';
+  readonly style: string;
+  constructor(style: string) {
+    super(ChangeMapStyleEvent.type);
+    this.style = style;
+  }
+}
+
+export class ChangeMarkerStyleEvent extends Event {
+  static readonly type = 'change-marker-style';
+  readonly style: string;
+  constructor(style: string) {
+    super(ChangeMarkerStyleEvent.type);
+    this.style = style;
+  }
+}
+
+export class FitToPhotosEvent extends Event {
+  static readonly type = 'fit-to-photos';
+  readonly animate: boolean;
+  readonly selectFirst: boolean;
+  constructor(animate = false, selectFirst = false) {
+    super(FitToPhotosEvent.type);
+    this.animate = animate;
+    this.selectFirst = selectFirst;
+  }
+}
+
+export class ResetMapEvent extends Event {
+  static readonly type = 'reset-map';
+  constructor() {
+    super(ResetMapEvent.type);
+  }
+}
+
+export class SetGpxVisibleEvent extends Event {
+  static readonly type = 'set-gpx-visible';
+  readonly visible: boolean;
+  constructor(visible: boolean) {
+    super(SetGpxVisibleEvent.type);
+    this.visible = visible;
+  }
+}
+
+export class ToggleMeasureModeEvent extends Event {
+  static readonly type = 'toggle-measure-mode';
+  constructor() {
+    super(ToggleMeasureModeEvent.type);
+  }
+}
+
 declare global {
   interface HTMLElementEventMap {
     [ShowLightboxEvent.type]: ShowLightboxEvent;
@@ -114,5 +168,13 @@ declare global {
     [ShowMetadataEvent.type]: ShowMetadataEvent;
     [NavigatePhotoEvent.type]: NavigatePhotoEvent;
     [CloseLightboxEvent.type]: CloseLightboxEvent;
+  }
+  interface DocumentEventMap {
+    [ChangeMapStyleEvent.type]: ChangeMapStyleEvent;
+    [ChangeMarkerStyleEvent.type]: ChangeMarkerStyleEvent;
+    [FitToPhotosEvent.type]: FitToPhotosEvent;
+    [ResetMapEvent.type]: ResetMapEvent;
+    [SetGpxVisibleEvent.type]: SetGpxVisibleEvent;
+    [ToggleMeasureModeEvent.type]: ToggleMeasureModeEvent;
   }
 }

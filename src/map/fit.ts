@@ -2,6 +2,7 @@ import { LngLatBounds } from 'maplibre-gl';
 import type { Map as MapGL } from 'maplibre-gl';
 
 import { getEffectiveCoords, state } from '@common/data';
+import { FitToPhotosEvent } from '@common/events';
 import { getCurrentPopup, showPopup } from './popup';
 
 // eslint-disable-next-line @typescript-eslint/init-declarations -- set in initFit
@@ -9,6 +10,9 @@ let map: MapGL;
 
 export function initFit(m: MapGL) {
   map = m;
+  document.addEventListener(FitToPhotosEvent.type, (e) => {
+    fitToPhotos(e.animate, e.selectFirst);
+  });
 }
 
 function showFirstPopup() {
