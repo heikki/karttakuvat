@@ -2,7 +2,7 @@ import turfDistance from '@turf/distance';
 import { point } from '@turf/helpers';
 import type { GeoJSONSource, MapMouseEvent } from 'maplibre-gl';
 
-import type { getMap as GetMapFn } from './map';
+import type { getMap as GetMapFn } from '.';
 
 // eslint-disable-next-line @typescript-eslint/init-declarations -- initialized in initMeasure() before any usage
 let getMap: typeof GetMapFn;

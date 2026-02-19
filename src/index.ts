@@ -21,7 +21,7 @@ import {
   ToggleDateEditEvent
 } from './common/events';
 import { photoFromUrl, photoToUrl } from './common/filter-url';
-import { initGpx, loadGpxForAlbum, setGpxVisible } from './common/gpx';
+import { initGpx, loadGpxForAlbum, setGpxVisible } from './map/gpx';
 import {
   changeMapStyle,
   changeMarkerStyle,
@@ -34,7 +34,7 @@ import {
   exitMeasureMode,
   isMeasureMode,
   toggleMeasureMode
-} from './common/measure';
+} from './map/measure';
 import type { FilterPanel } from './components/filter-panel';
 import type { MetadataModal } from './components/metadata-modal';
 import type { PhotoLightbox } from './components/photo-lightbox';

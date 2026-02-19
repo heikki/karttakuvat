@@ -23,8 +23,8 @@ import {
   startGlobeBackground,
   stopGlobeBackground
 } from './globe-background';
-import { addGpxLayers } from '../common/gpx';
-import { addMeasureLayers, initMeasure } from '../common/measure';
+import { addGpxLayers } from './gpx';
+import { addMeasureLayers, initMeasure } from './measure';
 import { createPanToFitPopup } from './pan';
 import {
   enterPlacementMode as enterPlacement,
