@@ -154,6 +154,24 @@ export class ToggleMeasureModeEvent extends Event {
   }
 }
 
+/* ── Map status events (map → filter-panel) ── */
+
+export class GpxDataChangedEvent extends Event {
+  static readonly type = 'gpx-data-changed';
+  readonly available: boolean;
+  constructor(available: boolean) {
+    super(GpxDataChangedEvent.type);
+    this.available = available;
+  }
+}
+
+export class MeasureModeExitedEvent extends Event {
+  static readonly type = 'measure-mode-exited';
+  constructor() {
+    super(MeasureModeExitedEvent.type);
+  }
+}
+
 declare global {
   interface HTMLElementEventMap {
     [ShowLightboxEvent.type]: ShowLightboxEvent;
@@ -176,5 +194,7 @@ declare global {
     [ResetMapEvent.type]: ResetMapEvent;
     [SetGpxVisibleEvent.type]: SetGpxVisibleEvent;
     [ToggleMeasureModeEvent.type]: ToggleMeasureModeEvent;
+    [GpxDataChangedEvent.type]: GpxDataChangedEvent;
+    [MeasureModeExitedEvent.type]: MeasureModeExitedEvent;
   }
 }

@@ -3,7 +3,7 @@ import { point } from '@turf/helpers';
 import type { Feature, FeatureCollection, LineString, Point } from 'geojson';
 import type { GeoJSONSource, Map as MapGL } from 'maplibre-gl';
 import { state, subscribe } from '@common/data';
-import { SetGpxVisibleEvent } from '@common/events';
+import { GpxDataChangedEvent, SetGpxVisibleEvent } from '@common/events';
 
 // Sources and layers
 const TRACK_SOURCE = 'gpx-tracks';
@@ -280,7 +280,7 @@ function updateSources(): void {
   }
 
   const hasData = trackFeatures.length > 0 || waypointFeatures.length > 0;
-  document.dispatchEvent(new CustomEvent('gpx-data-changed', { detail: hasData }));
+  document.dispatchEvent(new GpxDataChangedEvent(hasData));
 }
 
 export function setGpxVisible(v: boolean): void {

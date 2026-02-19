@@ -10,6 +10,7 @@ import { getEffectiveLocation } from '@common/photo-utils';
 import { getYear, isVideo } from '@common/utils';
 import {
   ChangeMapStyleEvent, ChangeMarkerStyleEvent, FitToPhotosEvent,
+  GpxDataChangedEvent, MeasureModeExitedEvent,
   ResetMapEvent, SetGpxVisibleEvent, ToggleMeasureModeEvent
 } from '@common/events';
 import { getMap } from '../../map';
@@ -155,8 +156,8 @@ export class FilterPanel extends LitElement {
   override connectedCallback() {
     super.connectedCallback();
     this._restoreFromUrl();
-    document.addEventListener('gpx-data-changed', this._onGpxDataChanged);
-    document.addEventListener('measure-mode-exited', this._onMeasureExited);
+    document.addEventListener(GpxDataChangedEvent.type, this._onGpxDataChanged);
+    document.addEventListener(MeasureModeExitedEvent.type, this._onMeasureExited);
   }
 
   override updated() {
@@ -168,12 +169,12 @@ export class FilterPanel extends LitElement {
 
   override disconnectedCallback() {
     super.disconnectedCallback();
-    document.removeEventListener('gpx-data-changed', this._onGpxDataChanged);
-    document.removeEventListener('measure-mode-exited', this._onMeasureExited);
+    document.removeEventListener(GpxDataChangedEvent.type, this._onGpxDataChanged);
+    document.removeEventListener(MeasureModeExitedEvent.type, this._onMeasureExited);
   }
 
-  private readonly _onGpxDataChanged = (e: Event) => {
-    this._tracksAvailable = (e as CustomEvent).detail as boolean;
+  private readonly _onGpxDataChanged = (e: GpxDataChangedEvent) => {
+    this._tracksAvailable = e.available;
   };
 
   private readonly _onMeasureExited = () => { this._measureActive = false; };
