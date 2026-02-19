@@ -22,7 +22,7 @@ import {
   setMapIdle,
   startGlobeBackground,
   stopGlobeBackground
-} from './globe-background';
+} from './background';
 import { addGpxLayers } from './gpx';
 import { addMeasureLayers, initMeasure } from './measure';
 import { createPanToFitPopup } from './pan';
