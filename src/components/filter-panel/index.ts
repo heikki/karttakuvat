@@ -54,11 +54,15 @@ export class FilterPanel extends LitElement {
   private _mediaClickTimer: ReturnType<typeof setTimeout> | null = null;
 
   static override styles = css`
+    *, *::before, *::after { box-sizing: border-box; }
     :host {
       display: block; position: absolute; top: 10px; right: 10px;
-      background: #2c2c2e; padding: 15px; border-radius: 10px;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5); z-index: 1000; width: 220px;
+      z-index: 1000; width: 220px;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    .wrapper {
+      background: #2c2c2e; padding: 15px; border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
     }
     h2 { font-size: 16px; margin: 0 0 10px 0; color: #e5e5e7; }
     p { font-size: 13px; color: #98989d; margin: 4px 0; }
@@ -289,6 +293,7 @@ export class FilterPanel extends LitElement {
     const years = [...new Set(this._store.photos.map(getYear).filter((y): y is string => y !== null))].sort();
     const ec = this._store.editCount;
     return html`
+      <div class="wrapper">
       <div class="panel-header" @click=${() => { this._collapsed = !this._collapsed; }}>
         <h2>Karttakuvat</h2><p>${this._renderStats()}</p>
       </div>
@@ -346,6 +351,7 @@ export class FilterPanel extends LitElement {
             </div>` : nothing}
         </div>
       `}
+      </div>
     `;
   }
 }

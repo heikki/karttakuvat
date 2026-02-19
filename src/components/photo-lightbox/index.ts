@@ -53,6 +53,7 @@ export class PhotoLightbox extends LitElement {
   }
 
   static override styles = css`
+    *, *::before, *::after { box-sizing: border-box; }
     :host {
       display: none;
       position: fixed;

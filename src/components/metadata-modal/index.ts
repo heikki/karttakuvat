@@ -66,6 +66,7 @@ export class MetadataModal extends LitElement {
   @litState() private _error: string | null = null;
 
   static override styles = css`
+    *, *::before, *::after { box-sizing: border-box; }
     :host {
       display: none;
       position: fixed;

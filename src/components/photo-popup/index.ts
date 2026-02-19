@@ -27,6 +27,7 @@ export class PhotoPopup extends LitElement {
   @property({ type: Boolean }) showPasteDate = false;
 
   static override styles = css`
+    *, *::before, *::after { box-sizing: border-box; }
     :host {
       display: block;
     }
