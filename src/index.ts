@@ -29,7 +29,7 @@ import {
   fitToPhotos,
   getMap,
   initMap
-} from './lib/map';
+} from './map';
 import {
   exitMeasureMode,
   isMeasureMode,

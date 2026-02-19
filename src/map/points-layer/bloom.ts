@@ -5,7 +5,7 @@ import type {
   Map as MapGL
 } from 'maplibre-gl';
 
-import { toUtcSortKey } from '../../utils';
+import { toUtcSortKey } from '../../lib/utils';
 import {
   type MipLevel,
   buildMips,
