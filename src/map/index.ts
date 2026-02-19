@@ -24,7 +24,8 @@ import {
   stopGlobeBackground
 } from './background';
 import { addGpxLayers, initGpx } from './gpx';
-import { ChangeMapStyleEvent, ChangeMarkerStyleEvent, EnterPlacementEvent, ResetMapEvent } from '@common/events';
+import { ChangeMapStyleEvent, ChangeMarkerStyleEvent, EnterPlacementEvent, OpenExternalMapEvent, ResetMapEvent } from '@common/events';
+import { getEffectiveLocation } from '@common/photo-utils';
 import { addMeasureLayers, exitMeasureMode, initMeasure, isMeasureMode } from './measure';
 import { createPanToFitPopup } from './pan';
 import {
@@ -91,6 +92,26 @@ function withGlobe(style: StyleSpecification): StyleSpecification {
     projection: { type: 'globe' },
     light: { anchor: 'viewport', color: '#ffffff', intensity: 0 }
   };
+}
+
+function openExternalMap(target: 'apple' | 'google') {
+  const c = map.getCenter();
+  const z = Math.round(map.getZoom());
+  const uuid = getCurrentPhotoUuid();
+  const photo = uuid === null ? undefined : state.filteredPhotos.find((p) => p.uuid === uuid);
+  const loc = photo === undefined ? undefined : getEffectiveLocation(photo) ?? undefined;
+
+  if (target === 'apple') {
+    const url = loc === undefined
+      ? `maps://?ll=${c.lat},${c.lng}&z=${z}&t=k`
+      : `maps://?ll=${loc.lat},${loc.lon}&q=${loc.lat},${loc.lon}&z=${z}&t=k`;
+    window.open(url, '_blank');
+  } else {
+    const url = loc === undefined
+      ? `https://www.google.com/maps/@${c.lat},${c.lng},${z}z`
+      : `https://www.google.com/maps?q=${loc.lat},${loc.lon}&z=${z}`;
+    window.open(url, '_blank');
+  }
 }
 
 export function initMap() {
@@ -222,6 +243,9 @@ export function initMap() {
   });
   document.addEventListener(ResetMapEvent.type, () => {
     resetMap();
+  });
+  document.addEventListener(OpenExternalMapEvent.type, (e) => {
+    openExternalMap(e.target_);
   });
 }
 

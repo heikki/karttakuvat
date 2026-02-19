@@ -154,6 +154,15 @@ export class ToggleMeasureModeEvent extends Event {
   }
 }
 
+export class OpenExternalMapEvent extends Event {
+  static readonly type = 'open-external-map';
+  readonly target_: 'apple' | 'google';
+  constructor(target: 'apple' | 'google') {
+    super(OpenExternalMapEvent.type);
+    this.target_ = target;
+  }
+}
+
 /* ── Map status events (map → filter-panel) ── */
 
 export class GpxDataChangedEvent extends Event {
@@ -194,6 +203,7 @@ declare global {
     [ResetMapEvent.type]: ResetMapEvent;
     [SetGpxVisibleEvent.type]: SetGpxVisibleEvent;
     [ToggleMeasureModeEvent.type]: ToggleMeasureModeEvent;
+    [OpenExternalMapEvent.type]: OpenExternalMapEvent;
     [GpxDataChangedEvent.type]: GpxDataChangedEvent;
     [MeasureModeExitedEvent.type]: MeasureModeExitedEvent;
   }

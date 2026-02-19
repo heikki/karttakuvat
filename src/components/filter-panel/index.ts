@@ -1,20 +1,17 @@
 import { LitElement, css, html, nothing } from 'lit';
 import { customElement, property, state as litState } from 'lit/decorators.js';
 
-import { applyFilters, clearPendingEdits, state } from '@common/data';
+import { applyFilters, clearPendingEdits } from '@common/data';
 import {
   filtersFromUrl, filtersToUrl, mapStyleFromUrl, mapStyleToUrl,
   markerStyleFromUrl, markerStyleToUrl, tracksVisibleFromUrl, tracksVisibleToUrl
 } from '@common/filter-url';
-import { getEffectiveLocation } from '@common/photo-utils';
 import { getYear, isVideo } from '@common/utils';
 import {
   ChangeMapStyleEvent, ChangeMarkerStyleEvent, FitToPhotosEvent,
-  GpxDataChangedEvent, MeasureModeExitedEvent,
+  GpxDataChangedEvent, MeasureModeExitedEvent, OpenExternalMapEvent,
   ResetMapEvent, SetGpxVisibleEvent, ToggleMeasureModeEvent
 } from '@common/events';
-import { getMap } from '../../map';
-import { getCurrentPhotoUuid } from '../../map/popup';
 import { saveEdits } from '../../save';
 import { StoreController } from './store-controller';
 
@@ -29,35 +26,6 @@ function renderSelect(label: string, options: string[], value: string, onChange:
       ${options.map((o) => html`<option value=${o} ?selected=${o === value}>${o}</option>`)}
     </select>
   `;
-}
-
-function getMapContext() {
-  const map = getMap();
-  const c = map.getCenter();
-  const z = Math.round(map.getZoom());
-  const uuid = getCurrentPhotoUuid();
-  if (uuid === null) return { c, z, loc: undefined };
-  const photo = state.filteredPhotos.find((p) => p.uuid === uuid);
-  if (photo === undefined) return { c, z, loc: undefined };
-  return { c, z, loc: getEffectiveLocation(photo) ?? undefined };
-}
-
-function openAppleMaps() {
-  const { c, z, loc } = getMapContext();
-  const url =
-    loc === undefined
-      ? `maps://?ll=${c.lat},${c.lng}&z=${z}&t=k`
-      : `maps://?ll=${loc.lat},${loc.lon}&q=${loc.lat},${loc.lon}&z=${z}&t=k`;
-  window.open(url, '_blank');
-}
-
-function openGoogleMaps() {
-  const { c, z, loc } = getMapContext();
-  const url =
-    loc === undefined
-      ? `https://www.google.com/maps/@${c.lat},${c.lng},${z}z`
-      : `https://www.google.com/maps?q=${loc.lat},${loc.lon}&z=${z}`;
-  window.open(url, '_blank');
 }
 
 function renderStyleBtns(items: Array<{ style: string; label: string }>, active: string, onClick: (s: string) => void) {
@@ -376,8 +344,8 @@ export class FilterPanel extends LitElement {
               }}>Tracks</button>
             </div>` : nothing}
           <div class="view-buttons">
-            <button class="view-btn" @click=${() => { openAppleMaps(); }}>Apple Maps</button>
-            <button class="view-btn" @click=${() => { openGoogleMaps(); }}>Google Maps</button>
+            <button class="view-btn" @click=${() => { document.dispatchEvent(new OpenExternalMapEvent('apple')); }}>Apple Maps</button>
+            <button class="view-btn" @click=${() => { document.dispatchEvent(new OpenExternalMapEvent('google')); }}>Google Maps</button>
           </div>
           ${ec > 0 ? html`
             <div class="edit-section">
