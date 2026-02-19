@@ -4,6 +4,7 @@ import './components';
 
 import { initKeyboard } from './keyboard';
 import { initMap } from './map';
+import { initSave } from './save';
 
 // Prevent zoom gestures
 document.addEventListener(
@@ -23,6 +24,7 @@ document.addEventListener('gesturechange', prevent);
 document.addEventListener('DOMContentLoaded', () => {
   void (async () => {
     initMap();
+    initSave();
     await loadPhotos();
     initKeyboard();
   })();

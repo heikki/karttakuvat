@@ -154,6 +154,13 @@ export class ToggleMeasureModeEvent extends Event {
   }
 }
 
+export class SaveEditsEvent extends Event {
+  static readonly type = 'save-edits';
+  constructor() {
+    super(SaveEditsEvent.type);
+  }
+}
+
 export class OpenExternalMapEvent extends Event {
   static readonly type = 'open-external-map';
   readonly provider: 'apple' | 'google';
@@ -204,6 +211,7 @@ declare global {
     [SetGpxVisibleEvent.type]: SetGpxVisibleEvent;
     [ToggleMeasureModeEvent.type]: ToggleMeasureModeEvent;
     [OpenExternalMapEvent.type]: OpenExternalMapEvent;
+    [SaveEditsEvent.type]: SaveEditsEvent;
     [GpxDataChangedEvent.type]: GpxDataChangedEvent;
     [MeasureModeExitedEvent.type]: MeasureModeExitedEvent;
   }

@@ -7,6 +7,7 @@ import {
   MeasureModeExitedEvent,
   OpenExternalMapEvent,
   ResetMapEvent,
+  SaveEditsEvent,
   SetGpxVisibleEvent,
   ToggleMeasureModeEvent
 } from '@common/events';
@@ -22,9 +23,8 @@ import {
 } from '@common/filter-url';
 import { getYear, isVideo } from '@common/utils';
 import { html, LitElement, nothing } from 'lit';
-import { customElement, state as litState, property } from 'lit/decorators.js';
+import { customElement, state as litState } from 'lit/decorators.js';
 
-import { saveEdits } from '../../save';
 import { StoreController } from './store-controller';
 import { styles } from './styles';
 
@@ -86,8 +86,6 @@ export class FilterPanel extends LitElement {
   @litState() private _measureActive = false;
   @litState() private _tracksVisible = true;
   @litState() private _tracksAvailable = false;
-
-  @property({ type: Boolean }) saving = false;
 
   private _initialized = false;
   private _gpsClickTimer: ReturnType<typeof setTimeout> | null = null;
@@ -489,12 +487,12 @@ export class FilterPanel extends LitElement {
                       <span class="count">${ec}</span> pending edits
                       <div class="edit-buttons">
                         <button
-                          ?disabled=${this.saving}
+                          ?disabled=${this._store.saving}
                           @click=${() => {
-                            void saveEdits();
+                            document.dispatchEvent(new SaveEditsEvent());
                           }}
                         >
-                          ${this.saving ? 'Saving...' : 'Save to Photos'}
+                          ${this._store.saving ? 'Saving...' : 'Save to Photos'}
                         </button>
                         <button
                           class="secondary"

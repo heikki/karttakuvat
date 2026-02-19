@@ -2,23 +2,19 @@ import {
   clearPendingEdits,
   getPendingEdits,
   getPendingTimeEdits,
-  loadPhotos
+  loadPhotos,
+  setSaving
 } from '@common/data';
-import type { FilterPanel } from '@components/filter-panel';
+import { SaveEditsEvent } from '@common/events';
 
 import { getCurrentPhotoUuid, getCurrentPopup, reopenPopup } from './map/popup';
 
-function getFilterPanel(): FilterPanel {
-  return document.getElementById('filter-panel') as unknown as FilterPanel;
-}
-
-export async function saveEdits() {
-  const panel = getFilterPanel();
+async function saveEdits() {
   const edits = getPendingEdits();
   const timeEdits = getPendingTimeEdits();
   if (edits.length === 0 && timeEdits.length === 0) return;
 
-  panel.saving = true;
+  setSaving(true);
 
   try {
     const response = await fetch('/api/save-edits', {
@@ -42,6 +38,12 @@ export async function saveEdits() {
       `Failed to save edits: ${err instanceof Error ? err.message : String(err)}`
     );
   } finally {
-    panel.saving = false;
+    setSaving(false);
   }
+}
+
+export function initSave() {
+  document.addEventListener(SaveEditsEvent.type, () => {
+    void saveEdits();
+  });
 }

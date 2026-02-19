@@ -12,7 +12,8 @@ export const state = {
     camera: 'all'
   },
   pendingEdits: new Map<string, { lat: number; lon: number }>(),
-  pendingTimeEdits: new Map<string, number>()
+  pendingTimeEdits: new Map<string, number>(),
+  saving: false
 };
 
 type Listener = (filtered: Photo[]) => void;
@@ -68,6 +69,11 @@ function notifyEdits() {
   editListeners.forEach((fn) => {
     fn(count);
   });
+}
+
+export function setSaving(v: boolean) {
+  state.saving = v;
+  notifyEdits();
 }
 
 export function addPendingEdit(uuid: string, lat: number, lon: number) {
