@@ -2,8 +2,6 @@ import './components';
 
 import {
   clearPendingEdits,
-  getPendingEdits,
-  getPendingTimeEdits,
   loadPhotos,
   state,
   subscribe
@@ -21,6 +19,7 @@ import {
   ToggleDateEditEvent
 } from '@common/events';
 import { photoFromUrl, photoToUrl } from '@common/filter-url';
+import { getEffectiveLocation } from '@common/photo-utils';
 import { initGpx, loadGpxForAlbum, setGpxVisible } from './map/gpx';
 import {
   changeMapStyle,
@@ -35,6 +34,8 @@ import {
   isMeasureMode,
   toggleMeasureMode
 } from './map/measure';
+import { initKeyboard } from './keyboard';
+import { reopenPopup, saveEdits } from './save';
 import type { FilterPanel } from '@components/filter-panel';
 import type { MetadataModal } from '@components/metadata-modal';
 import type { PhotoLightbox } from '@components/photo-lightbox';
@@ -45,16 +46,11 @@ import {
   copyLocationFromPopup,
   getCurrentPhotoUuid,
   getCurrentPopup,
-  getCurrentSinglePhotoIndex,
-  isDateEditMode,
-  navigateSinglePhoto,
   pasteDateToPhoto,
   pasteLocation,
   setOnPhotoChange,
-  showPopup,
   toggleDateEdit
 } from './map/popup';
-import { getEffectiveLocation } from '@common/photo-utils';
 
 function getLightbox(): PhotoLightbox {
   return document.getElementById('lightbox') as unknown as PhotoLightbox;
@@ -155,109 +151,6 @@ document.addEventListener('discard-edits', () => {
   clearPendingEdits();
 });
 
-// Keyboard handlers
-function handleArrowNav(e: KeyboardEvent) {
-  if (getLightbox().isActive) return false;
-  if (getCurrentSinglePhotoIndex() === null) return false;
-  e.preventDefault();
-  const total = state.filteredPhotos.length;
-  const idx = getCurrentSinglePhotoIndex()!;
-  const newIdx = (idx + (e.key === 'ArrowLeft' ? -1 : 1) + total) % total;
-  navigateSinglePhoto(newIdx);
-  return true;
-}
-
-function handleSpaceKey(e: KeyboardEvent) {
-  if (
-    e.target instanceof HTMLInputElement ||
-    e.target instanceof HTMLTextAreaElement
-  ) {
-    return;
-  }
-  if (getLightbox().isActive) {
-    e.preventDefault();
-    e.stopPropagation();
-    getLightbox().hide();
-    return;
-  }
-  const idx = getCurrentSinglePhotoIndex();
-  if (idx !== null) {
-    e.preventDefault();
-    e.stopPropagation();
-    getLightbox().show(idx);
-  }
-}
-
-document.addEventListener(
-  'keydown',
-  (e) => {
-    if (e.key === 'Escape') {
-      if (isDateEditMode()) {
-        e.preventDefault();
-        toggleDateEdit();
-      } else if (getCurrentPopup() !== null) {
-        e.preventDefault();
-        getCurrentPopup()?.remove();
-      }
-      return;
-    }
-    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-      handleArrowNav(e);
-      return;
-    }
-    if (e.key === ' ') {
-      handleSpaceKey(e);
-    }
-  },
-  true
-);
-
-getLightbox().setNavigateCallback((index) => {
-  navigateSinglePhoto(index);
-});
-
-function reopenPopup(uuid: string | null) {
-  if (uuid === null) return;
-  const newIndex = state.filteredPhotos.findIndex((p) => p.uuid === uuid);
-  if (newIndex === -1) return;
-  const photo = state.filteredPhotos[newIndex]!;
-  showPopup({ index: newIndex }, [photo.lon ?? 0, photo.lat ?? 0]);
-}
-
-async function saveEdits() {
-  const panel = getFilterPanel();
-  const edits = getPendingEdits();
-  const timeEdits = getPendingTimeEdits();
-  if (edits.length === 0 && timeEdits.length === 0) return;
-
-  panel.saving = true;
-
-  try {
-    const response = await fetch('/api/save-edits', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ edits, timeEdits })
-    });
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(text);
-    }
-    const reopenUuid = getCurrentPhotoUuid();
-    getCurrentPopup()?.remove();
-    await loadPhotos();
-    clearPendingEdits();
-    reopenPopup(reopenUuid);
-  } catch (err) {
-    console.error('Failed to save edits:', err);
-    // eslint-disable-next-line no-alert -- user needs feedback on save failure
-    alert(
-      `Failed to save edits: ${err instanceof Error ? err.message : String(err)}`
-    );
-  } finally {
-    panel.saving = false;
-  }
-}
-
 // Prevent zoom gestures
 document.addEventListener(
   'wheel',
@@ -278,6 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
     await loadPhotos();
     initMap();
     initGpx(getMap());
+    initKeyboard();
     setOnPhotoChange(photoToUrl);
     getFilterPanel().applyInitialFilters();
     reopenPopup(photoFromUrl());
