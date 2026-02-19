@@ -156,32 +156,57 @@ document.addEventListener('discard-edits', () => {
 });
 
 // Keyboard handlers
+function handleArrowNav(e: KeyboardEvent) {
+  if (getLightbox().isActive) return false;
+  if (getCurrentSinglePhotoIndex() === null) return false;
+  e.preventDefault();
+  const total = state.filteredPhotos.length;
+  const idx = getCurrentSinglePhotoIndex()!;
+  const newIdx = (idx + (e.key === 'ArrowLeft' ? -1 : 1) + total) % total;
+  navigateSinglePhoto(newIdx);
+  return true;
+}
+
+function handleSpaceKey(e: KeyboardEvent) {
+  if (
+    e.target instanceof HTMLInputElement ||
+    e.target instanceof HTMLTextAreaElement
+  ) {
+    return;
+  }
+  if (getLightbox().isActive) {
+    e.preventDefault();
+    e.stopPropagation();
+    getLightbox().hide();
+    return;
+  }
+  const idx = getCurrentSinglePhotoIndex();
+  if (idx !== null) {
+    e.preventDefault();
+    e.stopPropagation();
+    getLightbox().show(idx);
+  }
+}
+
 document.addEventListener(
   'keydown',
   (e) => {
-    if (e.key === 'Escape' && isDateEditMode()) {
-      e.preventDefault();
-      toggleDateEdit();
+    if (e.key === 'Escape') {
+      if (isDateEditMode()) {
+        e.preventDefault();
+        toggleDateEdit();
+      } else if (getCurrentPopup() !== null) {
+        e.preventDefault();
+        getCurrentPopup()?.remove();
+      }
       return;
     }
-    if (e.key !== ' ') return;
-    if (
-      e.target instanceof HTMLInputElement ||
-      e.target instanceof HTMLTextAreaElement
-    ) {
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      handleArrowNav(e);
       return;
     }
-    if (getLightbox().isActive) {
-      e.preventDefault();
-      e.stopPropagation();
-      getLightbox().hide();
-      return;
-    }
-    const idx = getCurrentSinglePhotoIndex();
-    if (idx !== null) {
-      e.preventDefault();
-      e.stopPropagation();
-      getLightbox().show(idx);
+    if (e.key === ' ') {
+      handleSpaceKey(e);
     }
   },
   true
