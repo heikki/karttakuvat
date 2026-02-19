@@ -1,6 +1,7 @@
 import { loadPhotos } from '@common/data';
 
 import './components';
+
 import { initKeyboard } from './keyboard';
 import { initMap } from './map';
 

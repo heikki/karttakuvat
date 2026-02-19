@@ -1,7 +1,6 @@
-import { LitElement, css, html, nothing } from 'lit';
-import { customElement, property, state as litState } from 'lit/decorators.js';
-
 import { ShowMetadataEvent } from '@common/events';
+import { css, html, LitElement, nothing } from 'lit';
+import { customElement, state as litState, property } from 'lit/decorators.js';
 
 function escapeHtml(s: string): string {
   return s.replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -9,18 +8,26 @@ function escapeHtml(s: string): string {
 
 function formatSimpleValue(value: boolean | string | number): string {
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';
-  if (typeof value === 'string') return value === '' ? '<em>—</em>' : escapeHtml(value);
+  if (typeof value === 'string') {
+    return value === '' ? '<em>—</em>' : escapeHtml(value);
+  }
   return String(value);
 }
 
 function formatMetadataValue(value: unknown): string {
   if (value === null || value === undefined) return '<em>—</em>';
-  if (typeof value === 'boolean' || typeof value === 'string' || typeof value === 'number') {
+  if (
+    typeof value === 'boolean' ||
+    typeof value === 'string' ||
+    typeof value === 'number'
+  ) {
     return formatSimpleValue(value);
   }
   if (Array.isArray(value)) {
     if (value.length === 0) return '<em>—</em>';
-    return value.map((v: unknown) => (typeof v === 'string' ? v : JSON.stringify(v))).join(', ');
+    return value
+      .map((v: unknown) => (typeof v === 'string' ? v : JSON.stringify(v)))
+      .join(', ');
   }
   if (typeof value === 'object') {
     const json = JSON.stringify(value, null, 2);
@@ -30,33 +37,65 @@ function formatMetadataValue(value: unknown): string {
 }
 
 const METADATA_FIELDS: Array<[string, string]> = [
-  ['filename', 'Filename'], ['original_filename', 'Original filename'],
-  ['date', 'Date'], ['date_added', 'Date added'], ['date_modified', 'Date modified'],
-  ['title', 'Title'], ['description', 'Description'], ['keywords', 'Keywords'],
-  ['albums', 'Albums'], ['persons', 'Persons'], ['labels', 'Labels'],
-  ['ai_caption', 'AI caption'], ['width', 'Width'], ['height', 'Height'],
-  ['original_filesize', 'File size'], ['uti', 'UTI'],
-  ['latitude', 'Latitude'], ['longitude', 'Longitude'], ['place', 'Place'],
-  ['favorite', 'Favorite'], ['hidden', 'Hidden'], ['ismovie', 'Video'],
-  ['live_photo', 'Live Photo'], ['hdr', 'HDR'], ['panorama', 'Panorama'],
-  ['selfie', 'Selfie'], ['portrait', 'Portrait'], ['burst', 'Burst'],
-  ['screenshot', 'Screenshot'], ['slow_mo', 'Slow-mo'], ['time_lapse', 'Time-lapse'],
-  ['hasadjustments', 'Has adjustments'], ['shared', 'Shared'],
-  ['orientation', 'Orientation'], ['path', 'Path'], ['exif_info', 'EXIF'],
-  ['score', 'Score'], ['search_info', 'Search info'],
-  ['cloud_guid', 'Cloud GUID'], ['uuid', 'UUID']
+  ['filename', 'Filename'],
+  ['original_filename', 'Original filename'],
+  ['date', 'Date'],
+  ['date_added', 'Date added'],
+  ['date_modified', 'Date modified'],
+  ['title', 'Title'],
+  ['description', 'Description'],
+  ['keywords', 'Keywords'],
+  ['albums', 'Albums'],
+  ['persons', 'Persons'],
+  ['labels', 'Labels'],
+  ['ai_caption', 'AI caption'],
+  ['width', 'Width'],
+  ['height', 'Height'],
+  ['original_filesize', 'File size'],
+  ['uti', 'UTI'],
+  ['latitude', 'Latitude'],
+  ['longitude', 'Longitude'],
+  ['place', 'Place'],
+  ['favorite', 'Favorite'],
+  ['hidden', 'Hidden'],
+  ['ismovie', 'Video'],
+  ['live_photo', 'Live Photo'],
+  ['hdr', 'HDR'],
+  ['panorama', 'Panorama'],
+  ['selfie', 'Selfie'],
+  ['portrait', 'Portrait'],
+  ['burst', 'Burst'],
+  ['screenshot', 'Screenshot'],
+  ['slow_mo', 'Slow-mo'],
+  ['time_lapse', 'Time-lapse'],
+  ['hasadjustments', 'Has adjustments'],
+  ['shared', 'Shared'],
+  ['orientation', 'Orientation'],
+  ['path', 'Path'],
+  ['exif_info', 'EXIF'],
+  ['score', 'Score'],
+  ['search_info', 'Search info'],
+  ['cloud_guid', 'Cloud GUID'],
+  ['uuid', 'UUID']
 ];
 
 function isEmptyValue(val: unknown): boolean {
-  return val === null || val === undefined || val === '' || val === false ||
-    (Array.isArray(val) && val.length === 0);
+  return (
+    val === null ||
+    val === undefined ||
+    val === '' ||
+    val === false ||
+    (Array.isArray(val) && val.length === 0)
+  );
 }
 
 function onCopyUuid(uuid: string, e: Event) {
   const btn = e.currentTarget as HTMLButtonElement;
   void navigator.clipboard.writeText(uuid).then(() => {
     btn.classList.add('copied');
-    setTimeout(() => { btn.classList.remove('copied'); }, 1000);
+    setTimeout(() => {
+      btn.classList.remove('copied');
+    }, 1000);
   });
 }
 
@@ -68,7 +107,11 @@ export class MetadataModal extends LitElement {
   @litState() private _error: string | null = null;
 
   static override styles = css`
-    *, *::before, *::after { box-sizing: border-box; }
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
     :host {
       display: none;
       position: fixed;
@@ -205,7 +248,10 @@ export class MetadataModal extends LitElement {
     super.disconnectedCallback();
     this.removeEventListener('click', this._handleHostClick);
     document.removeEventListener('keydown', this._handleKeydown, true);
-    document.removeEventListener(ShowMetadataEvent.type, this._handleShowMetadata);
+    document.removeEventListener(
+      ShowMetadataEvent.type,
+      this._handleShowMetadata
+    );
   }
 
   private readonly _handleShowMetadata = (e: Event) => {
@@ -232,14 +278,31 @@ export class MetadataModal extends LitElement {
 
   override render() {
     return html`
-      <div class="content" @click=${(e: Event) => { e.stopPropagation(); }}>
+      <div
+        class="content"
+        @click=${(e: Event) => {
+          e.stopPropagation();
+        }}
+      >
         <div class="header">
           <span>Metadata</span>
-          <span class="close" @click=${() => { this._close(); }}>&times;</span>
+          <span
+            class="close"
+            @click=${() => {
+              this._close();
+            }}
+            >&times;</span
+          >
         </div>
         <div class="body">
-          ${this._loading ? html`<div class="loading">Loading...</div>` : nothing}
-          ${this._error !== null && this._error !== '' ? html`<div class="loading">Failed to load metadata: ${this._error}</div>` : nothing}
+          ${this._loading
+            ? html`<div class="loading">Loading...</div>`
+            : nothing}
+          ${this._error !== null && this._error !== ''
+            ? html`<div class="loading">
+                Failed to load metadata: ${this._error}
+              </div>`
+            : nothing}
           ${this._data === null ? nothing : this._renderTable()}
         </div>
       </div>
@@ -255,12 +318,47 @@ export class MetadataModal extends LitElement {
       if (isEmptyValue(val)) continue;
       if (key === 'uuid') {
         const uuid = typeof val === 'string' ? val : '';
-        rows.push(html`<tr><td>${label}</td><td>${uuid} <button class="copy-btn" @click=${(e: Event) => { onCopyUuid(uuid, e); }} title="Copy UUID"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 010 1.5h-1.5a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-1.5a.75.75 0 011.5 0v1.5A1.75 1.75 0 019.25 16h-7.5A1.75 1.75 0 010 14.25z"/><path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0114.25 11h-7.5A1.75 1.75 0 015 9.25zm1.75-.25a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-7.5a.25.25 0 00-.25-.25z"/></svg></button></td></tr>`);
+        rows.push(
+          html`<tr>
+            <td>${label}</td>
+            <td>
+              ${uuid}
+              <button
+                class="copy-btn"
+                @click=${(e: Event) => {
+                  onCopyUuid(uuid, e);
+                }}
+                title="Copy UUID"
+              >
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 16 16"
+                  fill="currentColor"
+                >
+                  <path
+                    d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 010 1.5h-1.5a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-1.5a.75.75 0 011.5 0v1.5A1.75 1.75 0 019.25 16h-7.5A1.75 1.75 0 010 14.25z"
+                  />
+                  <path
+                    d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0114.25 11h-7.5A1.75 1.75 0 015 9.25zm1.75-.25a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-7.5a.25.25 0 00-.25-.25z"
+                  />
+                </svg>
+              </button>
+            </td>
+          </tr>`
+        );
       } else {
         // Use innerHTML for values that may contain HTML (em, details, etc.)
-        rows.push(html`<tr><td>${label}</td><td .innerHTML=${formatMetadataValue(val)}></td></tr>`);
+        rows.push(
+          html`<tr>
+            <td>${label}</td>
+            <td .innerHTML=${formatMetadataValue(val)}></td>
+          </tr>`
+        );
       }
     }
-    return html`<table>${rows}</table>`;
+    return html`<table>
+      ${rows}
+    </table>`;
   }
 }

@@ -1,11 +1,10 @@
-import { LitElement, css, html, nothing } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
-
-import { ShowLightboxEvent, ShowMetadataEvent } from '@common/events';
 import { state } from '@common/data';
+import { ShowLightboxEvent, ShowMetadataEvent } from '@common/events';
 import { getEffectiveDate, getEffectiveLocation } from '@common/photo-utils';
 import type { Photo } from '@common/types';
 import { formatCoords, formatDate, getFullUrl, isVideo } from '@common/utils';
+import { css, html, LitElement, nothing } from 'lit';
+import { customElement, property } from 'lit/decorators.js';
 
 function stopPropagation(e: Event) {
   e.stopPropagation();
@@ -53,7 +52,11 @@ export class PhotoLightbox extends LitElement {
   }
 
   static override styles = css`
-    *, *::before, *::after { box-sizing: border-box; }
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
     :host {
       display: none;
       position: fixed;
@@ -180,7 +183,10 @@ export class PhotoLightbox extends LitElement {
   override disconnectedCallback() {
     super.disconnectedCallback();
     document.removeEventListener('keydown', this._handleKeydown);
-    document.removeEventListener(ShowLightboxEvent.type, this._handleShowLightbox);
+    document.removeEventListener(
+      ShowLightboxEvent.type,
+      this._handleShowLightbox
+    );
   }
 
   private readonly _handleShowLightbox = (e: Event) => {
@@ -219,15 +225,33 @@ export class PhotoLightbox extends LitElement {
     return html`
       <div class="image-wrap" @click=${stopPropagation}>
         <img src=${getFullUrl(photo)} alt="" />
-        <div class="camera-overlay ${photo.camera === null ? '' : 'visible'}">${photo.camera ?? ''}</div>
+        <div class="camera-overlay ${photo.camera === null ? '' : 'visible'}">
+          ${photo.camera ?? ''}
+        </div>
         <div class="play-overlay ${isVideo(photo) ? 'video' : ''}"></div>
         <div class="overlay-buttons">
-          <button class="overlay-btn info-btn" @click=${(e: Event) => { this._onInfoClick(e); }} tabindex="-1"></button>
+          <button
+            class="overlay-btn info-btn"
+            @click=${(e: Event) => {
+              this._onInfoClick(e);
+            }}
+            tabindex="-1"
+          ></button>
           ${photo.photos_url === undefined
             ? nothing
-            : html`<a class="overlay-btn photos-btn" href=${photo.photos_url} target="_blank" tabindex="-1" @click=${(e: Event) => { e.stopPropagation(); }}></a>`}
+            : html`<a
+                class="overlay-btn photos-btn"
+                href=${photo.photos_url}
+                target="_blank"
+                tabindex="-1"
+                @click=${(e: Event) => {
+                  e.stopPropagation();
+                }}
+              ></a>`}
         </div>
-        <div class="info">${formatDate(effectiveDate, photo.tz)}<br>${formatCoords(loc)}</div>
+        <div class="info">
+          ${formatDate(effectiveDate, photo.tz)}<br />${formatCoords(loc)}
+        </div>
       </div>
     `;
   }

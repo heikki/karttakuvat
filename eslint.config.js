@@ -17,6 +17,10 @@ export default [
       '@typescript-eslint/promise-function-async': 'off',
       'no-console': 'off',
       'no-plusplus': 'off',
+      'max-lines': [
+        'error',
+        { max: 500, skipBlankLines: true, skipComments: true }
+      ],
       'require-unicode-regexp': 'off'
     }
   }

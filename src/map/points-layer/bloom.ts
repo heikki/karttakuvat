@@ -1,5 +1,5 @@
 import { toUtcSortKey } from '@common/utils';
-import { MercatorCoordinate, createTileMesh } from 'maplibre-gl';
+import { createTileMesh, MercatorCoordinate } from 'maplibre-gl';
 import type {
   CustomLayerInterface,
   CustomRenderMethodInput,
@@ -7,21 +7,21 @@ import type {
 } from 'maplibre-gl';
 
 import {
-  type MipLevel,
   buildMips,
   deleteMips,
   restoreGl,
-  saveFbo
+  saveFbo,
+  type MipLevel
 } from './gl-utils';
 import { computeTransition, getSubsolarPoint } from './night';
 import {
-  MIP_LEVELS,
-  type Shader,
   createBlurShader,
   createCompositeShader,
   createNightShader,
   createPointShader,
-  setProjectionUniforms
+  MIP_LEVELS,
+  setProjectionUniforms,
+  type Shader
 } from './shaders';
 
 const BLUR_ITERS = 2;

@@ -1,6 +1,4 @@
-import { LitElement, css, html, nothing } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
-
+import { getCopiedDate, getCopiedLocation } from '@common/data';
 import {
   AdjustTimeEvent,
   ApplyManualDateEvent,
@@ -13,10 +11,20 @@ import {
   ShowMetadataEvent,
   ToggleDateEditEvent
 } from '@common/events';
-import { editableDateStr, getEffectiveDate, getEffectiveLocation } from '@common/photo-utils';
+import {
+  editableDateStr,
+  getEffectiveDate,
+  getEffectiveLocation
+} from '@common/photo-utils';
 import type { Photo } from '@common/types';
-import { formatDate, formatLocation, getThumbUrl, isVideo } from '@common/utils';
-import { getCopiedDate, getCopiedLocation } from '@common/data';
+import {
+  formatDate,
+  formatLocation,
+  getThumbUrl,
+  isVideo
+} from '@common/utils';
+import { css, html, LitElement, nothing } from 'lit';
+import { customElement, property } from 'lit/decorators.js';
 
 @customElement('photo-popup')
 export class PhotoPopup extends LitElement {
@@ -27,7 +35,11 @@ export class PhotoPopup extends LitElement {
   @property({ type: Boolean }) showPasteDate = false;
 
   static override styles = css`
-    *, *::before, *::after { box-sizing: border-box; }
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
     :host {
       display: block;
     }
@@ -216,7 +228,9 @@ export class PhotoPopup extends LitElement {
 
   private _onApplyManualDate(e: Event) {
     e.preventDefault();
-    const input = this.shadowRoot?.getElementById('date-input') as HTMLInputElement | null;
+    const input = this.shadowRoot?.getElementById(
+      'date-input'
+    ) as HTMLInputElement | null;
     if (input !== null) {
       this.dispatchEvent(new ApplyManualDateEvent(input.value));
     }
@@ -225,7 +239,9 @@ export class PhotoPopup extends LitElement {
   private _onDateInputKey(e: KeyboardEvent) {
     if (e.key === 'Enter') {
       e.preventDefault();
-      const input = this.shadowRoot?.getElementById('date-input') as HTMLInputElement | null;
+      const input = this.shadowRoot?.getElementById(
+        'date-input'
+      ) as HTMLInputElement | null;
       if (input !== null) {
         this.dispatchEvent(new ApplyManualDateEvent(input.value));
       }
@@ -237,7 +253,9 @@ export class PhotoPopup extends LitElement {
 
   override updated(changed: Map<string, unknown>) {
     if (changed.has('dateEditMode') && this.dateEditMode) {
-      const input = this.shadowRoot?.getElementById('date-input') as HTMLInputElement | null;
+      const input = this.shadowRoot?.getElementById(
+        'date-input'
+      ) as HTMLInputElement | null;
       input?.focus();
     }
   }
@@ -271,15 +289,65 @@ export class PhotoPopup extends LitElement {
       return html`
         ${dateText}
         <span class="time-adjust-buttons">
-          <button class="time-btn" @click=${(e: Event) => { this._onAdjustTime(-24, e); }}>-1d</button>
-          <button class="time-btn" @click=${(e: Event) => { this._onAdjustTime(24, e); }}>+1d</button>
-          <button class="time-btn" @click=${(e: Event) => { this._onAdjustTime(-1, e); }}>-1h</button>
-          <button class="time-btn" @click=${(e: Event) => { this._onAdjustTime(1, e); }}>+1h</button>
-          <button class="time-btn" @click=${(e: Event) => { this._onToggleDateEdit(e); }}>done</button>
+          <button
+            class="time-btn"
+            @click=${(e: Event) => {
+              this._onAdjustTime(-24, e);
+            }}
+          >
+            -1d
+          </button>
+          <button
+            class="time-btn"
+            @click=${(e: Event) => {
+              this._onAdjustTime(24, e);
+            }}
+          >
+            +1d
+          </button>
+          <button
+            class="time-btn"
+            @click=${(e: Event) => {
+              this._onAdjustTime(-1, e);
+            }}
+          >
+            -1h
+          </button>
+          <button
+            class="time-btn"
+            @click=${(e: Event) => {
+              this._onAdjustTime(1, e);
+            }}
+          >
+            +1h
+          </button>
+          <button
+            class="time-btn"
+            @click=${(e: Event) => {
+              this._onToggleDateEdit(e);
+            }}
+          >
+            done
+          </button>
         </span>
         <div class="date-edit-row">
-          <input class="date-input" type="text" .value=${inputVal} id="date-input" @keydown=${(e: KeyboardEvent) => { this._onDateInputKey(e); }} />
-          <button class="time-btn" @click=${(e: Event) => { this._onApplyManualDate(e); }}>OK</button>
+          <input
+            class="date-input"
+            type="text"
+            .value=${inputVal}
+            id="date-input"
+            @keydown=${(e: KeyboardEvent) => {
+              this._onDateInputKey(e);
+            }}
+          />
+          <button
+            class="time-btn"
+            @click=${(e: Event) => {
+              this._onApplyManualDate(e);
+            }}
+          >
+            OK
+          </button>
         </div>
       `;
     }
@@ -287,9 +355,31 @@ export class PhotoPopup extends LitElement {
     return html`
       ${dateText}
       <span class="time-adjust-buttons">
-        <button class="time-btn" @click=${(e: Event) => { this._onCopyDate(e); }}>copy</button>
-        <button class="time-btn" @click=${(e: Event) => { this._onPasteDate(e); }} style=${this.showPasteDate ? '' : 'display:none'}>paste</button>
-        <button class="time-btn" @click=${(e: Event) => { this._onToggleDateEdit(e); }}>edit</button>
+        <button
+          class="time-btn"
+          @click=${(e: Event) => {
+            this._onCopyDate(e);
+          }}
+        >
+          copy
+        </button>
+        <button
+          class="time-btn"
+          @click=${(e: Event) => {
+            this._onPasteDate(e);
+          }}
+          style=${this.showPasteDate ? '' : 'display:none'}
+        >
+          paste
+        </button>
+        <button
+          class="time-btn"
+          @click=${(e: Event) => {
+            this._onToggleDateEdit(e);
+          }}
+        >
+          edit
+        </button>
       </span>
     `;
   }
@@ -301,9 +391,33 @@ export class PhotoPopup extends LitElement {
     return html`
       ${formatLocation(photo)}
       <span class="loc-buttons">
-        <button class="loc-btn" @click=${(e: Event) => { this._onPlacement(e); }}>set</button>
-        ${loc === null ? nothing : html`<button class="loc-btn" @click=${(e: Event) => { this._onCopyLocation(e); }}>copy</button>`}
-        <button class="loc-btn" @click=${(e: Event) => { this._onPasteLocation(e); }} style=${this.showPasteLocation ? '' : 'display:none'}>paste</button>
+        <button
+          class="loc-btn"
+          @click=${(e: Event) => {
+            this._onPlacement(e);
+          }}
+        >
+          set
+        </button>
+        ${loc === null
+          ? nothing
+          : html`<button
+              class="loc-btn"
+              @click=${(e: Event) => {
+                this._onCopyLocation(e);
+              }}
+            >
+              copy
+            </button>`}
+        <button
+          class="loc-btn"
+          @click=${(e: Event) => {
+            this._onPasteLocation(e);
+          }}
+          style=${this.showPasteLocation ? '' : 'display:none'}
+        >
+          paste
+        </button>
       </span>
     `;
   }
@@ -315,17 +429,39 @@ export class PhotoPopup extends LitElement {
     return html`
       <div class="photo-popup">
         <div class="popup-image-wrap">
-          <img src=${getThumbUrl(photo)} alt="Photo" @click=${() => { this._onImgClick(); }} />
-          ${isVideo(photo) ? html`<div class="video-indicator"></div>` : nothing}
+          <img
+            src=${getThumbUrl(photo)}
+            alt="Photo"
+            @click=${() => {
+              this._onImgClick();
+            }}
+          />
+          ${isVideo(photo)
+            ? html`<div class="video-indicator"></div>`
+            : nothing}
           <div class="overlay-buttons">
-            <button class="overlay-btn info-btn" @click=${(e: Event) => { this._onInfoClick(e); }} tabindex="-1"></button>
+            <button
+              class="overlay-btn info-btn"
+              @click=${(e: Event) => {
+                this._onInfoClick(e);
+              }}
+              tabindex="-1"
+            ></button>
             ${photo.photos_url !== undefined && photo.photos_url !== ''
-              ? html`<a class="overlay-btn photos-btn" href=${photo.photos_url} target="_blank" tabindex="-1" @click=${(e: Event) => { e.stopPropagation(); }}></a>`
+              ? html`<a
+                  class="overlay-btn photos-btn"
+                  href=${photo.photos_url}
+                  target="_blank"
+                  tabindex="-1"
+                  @click=${(e: Event) => {
+                    e.stopPropagation();
+                  }}
+                ></a>`
               : nothing}
           </div>
         </div>
         <div class="info">
-          ${this._renderDateLine()}<br>
+          ${this._renderDateLine()}<br />
           ${this._renderLocationLine()}
         </div>
       </div>

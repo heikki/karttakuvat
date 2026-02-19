@@ -4,15 +4,9 @@ const config = {
   semi: true,
   singleQuote: true,
   trailingComma: 'none',
-  plugins: ['@trivago/prettier-plugin-sort-imports'],
-  importOrder: [
-    '^react(-dom.*)?$',
-    '<THIRD_PARTY_MODULES>',
-    '^@repo/.*$',
-    '^[./]'
-  ],
-  importOrderSeparation: true,
-  importOrderSortSpecifiers: true
+  plugins: ['@ianvs/prettier-plugin-sort-imports'],
+  importOrder: ['<THIRD_PARTY_MODULES>', '', '^@repo/.*$', '^[./]'],
+  importOrderParserPlugins: ['typescript', 'decorators']
 };
 
 export default config;
