@@ -1,7 +1,6 @@
-import type { ReactiveController, ReactiveControllerHost } from 'lit';
-
 import { state, subscribe, subscribeEdits } from '@common/data';
 import type { Photo } from '@common/types';
+import type { ReactiveController, ReactiveControllerHost } from 'lit';
 
 export class StoreController implements ReactiveController {
   private readonly host: ReactiveControllerHost;
@@ -30,9 +29,17 @@ export class StoreController implements ReactiveController {
   }
 
   /* eslint-disable @typescript-eslint/class-methods-use-this -- intentional proxies to module-level state */
-  get photos(): Photo[] { return state.photos; }
-  get filteredPhotos(): Photo[] { return state.filteredPhotos; }
-  get filters() { return state.filters; }
-  get editCount(): number { return state.pendingEdits.size + state.pendingTimeEdits.size; }
+  get photos(): Photo[] {
+    return state.photos;
+  }
+  get filteredPhotos(): Photo[] {
+    return state.filteredPhotos;
+  }
+  get filters() {
+    return state.filters;
+  }
+  get editCount(): number {
+    return state.pendingEdits.size + state.pendingTimeEdits.size;
+  }
   /* eslint-enable @typescript-eslint/class-methods-use-this */
 }

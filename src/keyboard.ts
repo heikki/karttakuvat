@@ -1,5 +1,6 @@
 import { state } from '@common/data';
 import type { PhotoLightbox } from '@components/photo-lightbox';
+
 import {
   getCurrentPopup,
   getCurrentSinglePhotoIndex,

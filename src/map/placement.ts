@@ -1,15 +1,17 @@
+import { addPendingEdit, state } from '@common/data';
+import type { PlacementPanel } from '@components/placement-panel';
 import type { Map as MapGL } from 'maplibre-gl';
 
-import { addPendingEdit, state } from '@common/data';
 import { getCurrentPopup, showPopup } from './popup';
-import type { PlacementPanel } from '@components/placement-panel';
 
 let placementPhotoIndex: number | null = null;
 // eslint-disable-next-line @typescript-eslint/no-empty-function -- set in setupPlacement
 let markerVisibility: (visible: boolean) => void = () => {};
 
 function getPanel(): PlacementPanel {
-  return document.getElementById('placement-panel') as unknown as PlacementPanel;
+  return document.getElementById(
+    'placement-panel'
+  ) as unknown as PlacementPanel;
 }
 
 export function isInPlacementMode(): boolean {

@@ -1,8 +1,8 @@
-import './components';
-
 import { loadPhotos } from '@common/data';
-import { initMap } from './map';
+
+import './components';
 import { initKeyboard } from './keyboard';
+import { initMap } from './map';
 
 // Prevent zoom gestures
 document.addEventListener(

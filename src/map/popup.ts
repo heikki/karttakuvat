@@ -1,6 +1,3 @@
-import { Popup } from 'maplibre-gl';
-import type { Map as MapGL } from 'maplibre-gl';
-
 import {
   addPendingEdit,
   addPendingTimeEdit,
@@ -22,6 +19,11 @@ import {
   ToggleDateEditEvent
 } from '@common/events';
 import { photoFromUrl, photoToUrl } from '@common/filter-url';
+import {
+  computeManualDateOffset,
+  getEffectiveDate,
+  getEffectiveLocation
+} from '@common/photo-utils';
 import type { Photo } from '@common/types';
 import {
   computeFullDatetimeOffsetHours,
@@ -29,7 +31,9 @@ import {
   parseUserDatetime
 } from '@common/utils';
 import type { PhotoPopup } from '@components/photo-popup';
-import { computeManualDateOffset, getEffectiveDate, getEffectiveLocation } from '@common/photo-utils';
+import { Popup } from 'maplibre-gl';
+import type { Map as MapGL } from 'maplibre-gl';
+
 import {
   initPopupZoom,
   installCanvasZoomOverride,

@@ -1,3 +1,5 @@
+import { getEffectiveCoords } from '@common/data';
+import type { MarkerLayer, Photo } from '@common/types';
 import type { FeatureCollection, Point } from 'geojson';
 import type {
   CircleLayerSpecification,
@@ -7,8 +9,6 @@ import type {
   Map as MapGL
 } from 'maplibre-gl';
 
-import { getEffectiveCoords } from '@common/data';
-import type { MarkerLayer, Photo } from '@common/types';
 import { BloomLayer } from './bloom';
 
 const hitAreaPaint: CircleLayerSpecification['paint'] = {

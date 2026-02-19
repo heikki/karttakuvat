@@ -1,3 +1,5 @@
+import { getEffectiveCoords } from '@common/data';
+import type { MarkerLayer, Photo } from '@common/types';
 import type { FeatureCollection, Point } from 'geojson';
 import type {
   ExpressionSpecification,
@@ -5,9 +7,6 @@ import type {
   GeoJSONSource,
   Map as MapGL
 } from 'maplibre-gl';
-
-import { getEffectiveCoords } from '@common/data';
-import type { MarkerLayer, Photo } from '@common/types';
 
 const gpsColor = [
   'match',

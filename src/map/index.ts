@@ -1,3 +1,14 @@
+import { getEffectiveCoords, state, subscribe } from '@common/data';
+import {
+  ChangeMapStyleEvent,
+  ChangeMarkerStyleEvent,
+  EnterPlacementEvent,
+  OpenExternalMapEvent,
+  ResetMapEvent
+} from '@common/events';
+import { mapViewFromUrl, mapViewToUrl } from '@common/filter-url';
+import { getEffectiveLocation } from '@common/photo-utils';
+import type { MapStyles, MarkerLayer, Photo } from '@common/types';
 import type { Point } from 'geojson';
 import {
   GlobeControl,
@@ -11,11 +22,6 @@ import type {
   StyleSpecification
 } from 'maplibre-gl';
 
-import { ClassicLayer } from './classic-layer';
-import { mapStyles } from './config';
-import { getEffectiveCoords, state, subscribe } from '@common/data';
-import { mapViewFromUrl, mapViewToUrl } from '@common/filter-url';
-import { fitToPhotos, initFit } from './fit';
 import {
   initGlobeBackground,
   setGlobeRadius,
@@ -23,10 +29,16 @@ import {
   startGlobeBackground,
   stopGlobeBackground
 } from './background';
+import { ClassicLayer } from './classic-layer';
+import { mapStyles } from './config';
+import { fitToPhotos, initFit } from './fit';
 import { addGpxLayers, initGpx } from './gpx';
-import { ChangeMapStyleEvent, ChangeMarkerStyleEvent, EnterPlacementEvent, OpenExternalMapEvent, ResetMapEvent } from '@common/events';
-import { getEffectiveLocation } from '@common/photo-utils';
-import { addMeasureLayers, exitMeasureMode, initMeasure, isMeasureMode } from './measure';
+import {
+  addMeasureLayers,
+  exitMeasureMode,
+  initMeasure,
+  isMeasureMode
+} from './measure';
 import { createPanToFitPopup } from './pan';
 import {
   enterPlacementMode as enterPlacement,
@@ -41,7 +53,6 @@ import {
   reopenPopupFromUrl,
   showPopup
 } from './popup';
-import type { MapStyles, MarkerLayer, Photo } from '@common/types';
 
 // Declare window augmentation for map
 declare global {
@@ -98,18 +109,26 @@ function openExternalMap(target: 'apple' | 'google') {
   const c = map.getCenter();
   const z = Math.round(map.getZoom());
   const uuid = getCurrentPhotoUuid();
-  const photo = uuid === null ? undefined : state.filteredPhotos.find((p) => p.uuid === uuid);
-  const loc = photo === undefined ? undefined : getEffectiveLocation(photo) ?? undefined;
+  const photo =
+    uuid === null
+      ? undefined
+      : state.filteredPhotos.find((p) => p.uuid === uuid);
+  const loc =
+    photo === undefined
+      ? undefined
+      : (getEffectiveLocation(photo) ?? undefined);
 
   if (target === 'apple') {
-    const url = loc === undefined
-      ? `maps://?ll=${c.lat},${c.lng}&z=${z}&t=k`
-      : `maps://?ll=${loc.lat},${loc.lon}&q=${loc.lat},${loc.lon}&z=${z}&t=k`;
+    const url =
+      loc === undefined
+        ? `maps://?ll=${c.lat},${c.lng}&z=${z}&t=k`
+        : `maps://?ll=${loc.lat},${loc.lon}&q=${loc.lat},${loc.lon}&z=${z}&t=k`;
     window.open(url, '_blank');
   } else {
-    const url = loc === undefined
-      ? `https://www.google.com/maps/@${c.lat},${c.lng},${z}z`
-      : `https://www.google.com/maps?q=${loc.lat},${loc.lon}&z=${z}`;
+    const url =
+      loc === undefined
+        ? `https://www.google.com/maps/@${c.lat},${c.lng},${z}z`
+        : `https://www.google.com/maps?q=${loc.lat},${loc.lon}&z=${z}`;
     window.open(url, '_blank');
   }
 }
@@ -380,4 +399,3 @@ function setupMarkerInteractions() {
     map.off('click', onMapClick);
   };
 }
-

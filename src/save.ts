@@ -5,6 +5,7 @@ import {
   loadPhotos
 } from '@common/data';
 import type { FilterPanel } from '@components/filter-panel';
+
 import { getCurrentPhotoUuid, getCurrentPopup, reopenPopup } from './map/popup';
 
 function getFilterPanel(): FilterPanel {
