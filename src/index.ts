@@ -1,11 +1,8 @@
 import './components';
 
 import { loadPhotos } from '@common/data';
-import { photoFromUrl, photoToUrl } from '@common/filter-url';
 import { initMap } from './map';
 import { initKeyboard } from './keyboard';
-import { reopenPopup } from './save';
-import { setOnPhotoChange } from './map/popup';
 
 // Prevent zoom gestures
 document.addEventListener(
@@ -27,7 +24,5 @@ document.addEventListener('DOMContentLoaded', () => {
     initMap();
     await loadPhotos();
     initKeyboard();
-    setOnPhotoChange(photoToUrl);
-    reopenPopup(photoFromUrl());
   })();
 });

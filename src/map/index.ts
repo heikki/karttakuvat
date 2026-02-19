@@ -37,6 +37,7 @@ import {
   getCurrentPhotoUuid,
   getCurrentPopup,
   initPopupCallbacks,
+  reopenPopupFromUrl,
   showPopup
 } from './popup';
 import type { MapStyles, MarkerLayer, Photo } from '@common/types';
@@ -166,7 +167,7 @@ export function initMap() {
     setupMarkerInteractions();
 
     updateMapData();
-    restoreHighlight();
+    reopenPopupFromUrl();
     if (savedView === null && state.filteredPhotos.length > 0) {
       fitToPhotos();
     }

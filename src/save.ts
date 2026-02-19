@@ -2,22 +2,13 @@ import {
   clearPendingEdits,
   getPendingEdits,
   getPendingTimeEdits,
-  loadPhotos,
-  state
+  loadPhotos
 } from '@common/data';
 import type { FilterPanel } from '@components/filter-panel';
-import { getCurrentPhotoUuid, getCurrentPopup, showPopup } from './map/popup';
+import { getCurrentPhotoUuid, getCurrentPopup, reopenPopup } from './map/popup';
 
 function getFilterPanel(): FilterPanel {
   return document.getElementById('filter-panel') as unknown as FilterPanel;
-}
-
-export function reopenPopup(uuid: string | null) {
-  if (uuid === null) return;
-  const newIndex = state.filteredPhotos.findIndex((p) => p.uuid === uuid);
-  if (newIndex === -1) return;
-  const photo = state.filteredPhotos[newIndex]!;
-  showPopup({ index: newIndex }, [photo.lon ?? 0, photo.lat ?? 0]);
 }
 
 export async function saveEdits() {

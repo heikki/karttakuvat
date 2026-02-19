@@ -21,6 +21,7 @@ import {
   PasteLocationEvent,
   ToggleDateEditEvent
 } from '@common/events';
+import { photoFromUrl, photoToUrl } from '@common/filter-url';
 import type { Photo } from '@common/types';
 import {
   computeFullDatetimeOffsetHours,
@@ -42,9 +43,7 @@ let currentPopupElement: PhotoPopup | null = null;
 let currentSinglePhotoIndex: number | null = null;
 let currentPhotoUuid: string | null = null;
 let dateEditMode = false;
-let onPhotoChangeFn: (uuid: string | null) => void = () => {
-  /* noop */
-};
+const onPhotoChangeFn: (uuid: string | null) => void = photoToUrl;
 
 // Callbacks that will be set by map.ts
 let highlightFn: (photo: Photo | null) => void = () => {
@@ -132,8 +131,17 @@ export function getCurrentPhotoUuid(): string | null {
   return currentPhotoUuid;
 }
 
-export function setOnPhotoChange(fn: (uuid: string | null) => void) {
-  onPhotoChangeFn = fn;
+export function reopenPopup(uuid: string | null) {
+  if (uuid === null) return;
+  const newIndex = state.filteredPhotos.findIndex((p) => p.uuid === uuid);
+  if (newIndex === -1) return;
+  const photo = state.filteredPhotos[newIndex]!;
+  const { lon, lat } = getEffectiveCoords(photo);
+  showPopup({ index: newIndex }, [lon, lat]);
+}
+
+export function reopenPopupFromUrl() {
+  reopenPopup(photoFromUrl());
 }
 
 export function isDateEditMode(): boolean {
