@@ -7,8 +7,8 @@ import type {
   Map as MapGL
 } from 'maplibre-gl';
 
-import { getEffectiveCoords } from '../data';
-import type { MarkerLayer, Photo } from '../types';
+import { getEffectiveCoords } from '../../data';
+import type { MarkerLayer, Photo } from '../../types';
 import { BloomLayer } from './bloom';
 
 const hitAreaPaint: CircleLayerSpecification['paint'] = {

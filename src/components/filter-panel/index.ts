@@ -6,7 +6,7 @@ import {
   filtersFromUrl, filtersToUrl, mapStyleFromUrl, mapStyleToUrl,
   markerStyleFromUrl, markerStyleToUrl, tracksVisibleFromUrl, tracksVisibleToUrl
 } from '../../lib/filter-url';
-import { StoreController } from '../../lib/store-controller';
+import { StoreController } from './store-controller';
 import { getYear, isVideo } from '../../lib/utils';
 
 const DEFAULT_GPS = ['exif', 'inferred', 'user', 'none'];

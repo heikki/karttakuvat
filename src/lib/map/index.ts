@@ -13,8 +13,8 @@ import type {
 
 import { ClassicLayer } from './classic-layer';
 import { mapStyles } from './config';
-import { getEffectiveCoords, state, subscribe } from './data';
-import { mapViewFromUrl, mapViewToUrl } from './filter-url';
+import { getEffectiveCoords, state, subscribe } from '../data';
+import { mapViewFromUrl, mapViewToUrl } from '../filter-url';
 import { fitToPhotos, initFit } from './fit';
 import {
   initGlobeBackground,
@@ -23,8 +23,8 @@ import {
   startGlobeBackground,
   stopGlobeBackground
 } from './globe-background';
-import { addGpxLayers } from './gpx';
-import { addMeasureLayers, initMeasure } from './measure';
+import { addGpxLayers } from '../gpx';
+import { addMeasureLayers, initMeasure } from '../measure';
 import { createPanToFitPopup } from './pan';
 import {
   enterPlacementMode as enterPlacement,
@@ -37,8 +37,8 @@ import {
   getCurrentPopup,
   initPopupCallbacks,
   showPopup
-} from './popup';
-import type { MapStyles, MarkerLayer, Photo } from './types';
+} from '../../components/photo-popup/popup';
+import type { MapStyles, MarkerLayer, Photo } from '../types';
 
 // Declare window augmentation for map
 declare global {

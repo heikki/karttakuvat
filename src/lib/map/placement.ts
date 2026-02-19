@@ -1,8 +1,8 @@
 import type { Map as MapGL } from 'maplibre-gl';
 
-import { addPendingEdit, state } from './data';
-import { getCurrentPopup, showPopup } from './popup';
-import type { PlacementPanel } from '../components/placement-panel';
+import { addPendingEdit, state } from '../data';
+import { getCurrentPopup, showPopup } from '../../components/photo-popup/popup';
+import type { PlacementPanel } from '../../components/placement-panel';
 
 let placementPhotoIndex: number | null = null;
 // eslint-disable-next-line @typescript-eslint/no-empty-function -- set in setupPlacement

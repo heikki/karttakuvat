@@ -1,7 +1,6 @@
 import { Popup } from 'maplibre-gl';
 import type { Map as MapGL } from 'maplibre-gl';
 
-import type { PhotoPopup } from '../../components/photo-popup';
 import {
   addPendingEdit,
   addPendingTimeEdit,
@@ -12,20 +11,21 @@ import {
   getEffectiveCoords,
   setPendingTimeEdit,
   state
-} from '../data';
-import type { Photo } from '../types';
+} from '../../lib/data';
+import type { Photo } from '../../lib/types';
 import {
   computeFullDatetimeOffsetHours,
   parseExifDate,
   parseUserDatetime
-} from '../utils';
-import { computeManualDateOffset, getEffectiveDate, getEffectiveLocation } from './utils';
+} from '../../lib/utils';
+import type { PhotoPopup } from './index';
+import { computeManualDateOffset, getEffectiveDate, getEffectiveLocation } from './popup-utils';
 import {
   initPopupZoom,
   installCanvasZoomOverride,
   removeCanvasZoomOverride,
   setupPopupEvents
-} from './zoom';
+} from './popup-zoom';
 
 // State
 let currentPopup: Popup | null = null;

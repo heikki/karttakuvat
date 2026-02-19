@@ -3,7 +3,7 @@ import { customElement, property } from 'lit/decorators.js';
 
 import { ShowMetadataEvent } from '../../lib/events';
 import { state } from '../../lib/data';
-import { getEffectiveDate, getEffectiveLocation } from '../../lib/popup/utils';
+import { getEffectiveDate, getEffectiveLocation } from '../photo-popup/popup-utils';
 import type { Photo } from '../../lib/types';
 import { formatCoords, formatDate, getFullUrl, isVideo } from '../../lib/utils';
 

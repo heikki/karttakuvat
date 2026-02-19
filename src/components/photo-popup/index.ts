@@ -13,7 +13,7 @@ import {
   ShowMetadataEvent,
   ToggleDateEditEvent
 } from '../../lib/events';
-import { editableDateStr, getEffectiveDate, getEffectiveLocation } from '../../lib/popup/utils';
+import { editableDateStr, getEffectiveDate, getEffectiveLocation } from './popup-utils';
 import type { Photo } from '../../lib/types';
 import { formatDate, formatLocation, getThumbUrl, isVideo } from '../../lib/utils';
 import { getCopiedDate, getCopiedLocation } from '../../lib/data';
