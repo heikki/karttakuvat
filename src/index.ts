@@ -24,8 +24,8 @@ document.addEventListener('gesturechange', prevent);
 // Init
 document.addEventListener('DOMContentLoaded', () => {
   void (async () => {
-    await loadPhotos();
     initMap();
+    await loadPhotos();
     initKeyboard();
     setOnPhotoChange(photoToUrl);
     reopenPopup(photoFromUrl());
