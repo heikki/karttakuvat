@@ -156,10 +156,10 @@ export class ToggleMeasureModeEvent extends Event {
 
 export class OpenExternalMapEvent extends Event {
   static readonly type = 'open-external-map';
-  readonly target_: 'apple' | 'google';
+  readonly provider: 'apple' | 'google';
   constructor(target: 'apple' | 'google') {
     super(OpenExternalMapEvent.type);
-    this.target_ = target;
+    this.provider = target;
   }
 }
 

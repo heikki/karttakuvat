@@ -245,7 +245,7 @@ export function initMap() {
     resetMap();
   });
   document.addEventListener(OpenExternalMapEvent.type, (e) => {
-    openExternalMap(e.target_);
+    openExternalMap(e.provider);
   });
 }
 
