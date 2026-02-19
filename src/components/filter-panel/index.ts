@@ -87,6 +87,7 @@ export class FilterPanel extends LitElement {
 
   @property({ type: Boolean }) saving = false;
 
+  private _initialized = false;
   private _gpsClickTimer: ReturnType<typeof setTimeout> | null = null;
   private _mediaClickTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -157,6 +158,13 @@ export class FilterPanel extends LitElement {
     document.addEventListener('measure-mode-exited', this._onMeasureExited);
   }
 
+  override updated() {
+    if (!this._initialized && this._store.photos.length > 0) {
+      this._initialized = true;
+      this._applyInitialFilters();
+    }
+  }
+
   override disconnectedCallback() {
     super.disconnectedCallback();
     document.removeEventListener('gpx-data-changed', this._onGpxDataChanged);
@@ -185,7 +193,7 @@ export class FilterPanel extends LitElement {
     this._tracksVisible = tracksVisibleFromUrl();
   }
 
-  applyInitialFilters() {
+  private _applyInitialFilters() {
     const ao = this._getAlbumOptions();
     if (this._album !== 'all' && !ao.includes(this._album)) this._album = 'all';
     const co = this._getCameraOptions();

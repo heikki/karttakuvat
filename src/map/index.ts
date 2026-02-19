@@ -23,7 +23,7 @@ import {
   startGlobeBackground,
   stopGlobeBackground
 } from './background';
-import { addGpxLayers } from './gpx';
+import { addGpxLayers, initGpx } from './gpx';
 import { EnterPlacementEvent } from '@common/events';
 import { addMeasureLayers, exitMeasureMode, initMeasure, isMeasureMode } from './measure';
 import { createPanToFitPopup } from './pan';
@@ -133,6 +133,7 @@ export function initMap() {
   initPopupCallbacks(map, highlight, panToFitPopup, getMarkerRadius);
   initMeasure(map, getMarkerLayerId);
   initFit(map);
+  initGpx(map);
 
   // Init globe background shader
   initGlobeBackground(map.getContainer());
