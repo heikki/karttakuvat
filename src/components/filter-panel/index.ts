@@ -95,6 +95,7 @@ export class FilterPanel extends LitElement {
     *, *::before, *::after { box-sizing: border-box; }
     :host {
       display: block; position: absolute; top: 10px; right: 10px;
+      user-select: none;
       z-index: 1000; width: 220px;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
