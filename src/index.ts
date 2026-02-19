@@ -53,8 +53,8 @@ import {
   setOnPhotoChange,
   showPopup,
   toggleDateEdit
-} from '@components/photo-popup/popup';
-import { getEffectiveLocation } from '@components/photo-popup/popup-utils';
+} from './map/popup';
+import { getEffectiveLocation } from '@common/photo-utils';
 
 function getLightbox(): PhotoLightbox {
   return document.getElementById('lightbox') as unknown as PhotoLightbox;

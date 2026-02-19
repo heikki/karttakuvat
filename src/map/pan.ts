@@ -1,6 +1,6 @@
 import type { Map as MapGL } from 'maplibre-gl';
 
-import { getCurrentPopup } from '@components/photo-popup/popup';
+import { getCurrentPopup } from './popup';
 
 function calculatePanOffset(
   mapRect: DOMRect,

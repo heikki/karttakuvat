@@ -37,7 +37,7 @@ import {
   getCurrentPopup,
   initPopupCallbacks,
   showPopup
-} from '@components/photo-popup/popup';
+} from './popup';
 import type { MapStyles, MarkerLayer, Photo } from '@common/types';
 
 // Declare window augmentation for map

@@ -18,8 +18,8 @@ import {
   parseExifDate,
   parseUserDatetime
 } from '@common/utils';
-import type { PhotoPopup } from './index';
-import { computeManualDateOffset, getEffectiveDate, getEffectiveLocation } from './popup-utils';
+import type { PhotoPopup } from '@components/photo-popup';
+import { computeManualDateOffset, getEffectiveDate, getEffectiveLocation } from '@common/photo-utils';
 import {
   initPopupZoom,
   installCanvasZoomOverride,
