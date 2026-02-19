@@ -1,60 +1,51 @@
+import './components';
+
 import {
-  applyFilters,
   clearPendingEdits,
   getPendingEdits,
   getPendingTimeEdits,
   loadPhotos,
   state,
-  subscribe,
-  subscribeEdits
+  subscribe
 } from './lib/data';
 import {
-  filtersFromUrl,
-  filtersToUrl,
-  initStyleButtonGroup,
-  mapStyleFromUrl,
-  mapStyleToUrl,
-  markerStyleFromUrl,
-  markerStyleToUrl,
-  photoFromUrl,
-  photoToUrl,
-  setButtonGroupActive,
-  setSelectValue,
-  tracksVisibleFromUrl,
-  tracksVisibleToUrl
-} from './lib/filter-url';
-import {
-  initGpx,
-  loadGpxForAlbum,
-  setGpxVisible,
-  toggleGpxVisibility
-} from './lib/gpx';
+  AdjustTimeEvent,
+  ApplyManualDateEvent,
+  CopyDateEvent,
+  CopyLocationEvent,
+  EnterPlacementEvent,
+  PasteDateEvent,
+  PasteLocationEvent,
+  ShowLightboxEvent,
+  ShowMetadataEvent,
+  ToggleDateEditEvent
+} from './lib/events';
+import { photoFromUrl, photoToUrl } from './lib/filter-url';
+import { initGpx, loadGpxForAlbum, setGpxVisible } from './lib/gpx';
 import {
   changeMapStyle,
   changeMarkerStyle,
   enterPlacementMode,
   fitToPhotos,
   getMap,
-  initMap,
-  selectGroupPhoto
+  initMap
 } from './lib/map';
 import {
   exitMeasureMode,
   isMeasureMode,
   toggleMeasureMode
 } from './lib/measure';
-import { initMetadataModal, showMetadata } from './lib/metadata';
+import type { FilterPanel } from './components/filter-panel';
+import type { MetadataModal } from './components/metadata-modal';
+import type { PhotoLightbox } from './components/photo-lightbox';
 import {
   adjustTime,
   applyManualDate,
   copyDateFromPopup,
   copyLocationFromPopup,
-  getClusterPhotos,
-  getCurrentGroupIndex,
   getCurrentPhotoUuid,
   getCurrentPopup,
   getCurrentSinglePhotoIndex,
-  handleDateInputKey,
   isDateEditMode,
   navigateSinglePhoto,
   pasteDateToPhoto,
@@ -63,20 +54,15 @@ import {
   showPopup,
   toggleDateEdit
 } from './lib/popup';
-import { getEffectiveLocation } from './lib/popup/html';
-import { clearSelection } from './lib/selection';
-import {
-  hideLightbox,
-  initUI,
-  isLightboxActive,
-  repopulateSelect,
-  setLightboxNavigateCallback,
-  showGroupLightbox,
-  showLightbox,
-  updatePendingEdits,
-  updateStats
-} from './lib/ui';
-import { getYear } from './lib/utils';
+import { getEffectiveLocation } from './lib/popup/utils';
+
+function getLightbox(): PhotoLightbox {
+  return document.getElementById('lightbox') as unknown as PhotoLightbox;
+}
+
+function getFilterPanel(): FilterPanel {
+  return document.getElementById('filter-panel') as unknown as FilterPanel;
+}
 
 function getMapContext() {
   const map = getMap();
@@ -89,24 +75,87 @@ function getMapContext() {
   return { c, z, loc: getEffectiveLocation(photo) ?? undefined };
 }
 
-declare global {
-  interface Window {
-    selectGroupPhoto: typeof selectGroupPhoto;
-    showLightbox: typeof showLightbox;
-    showGroupLightbox: typeof showGroupLightbox;
-    enterPlacementMode: typeof enterPlacementMode;
-    copyLocationFromPopup: typeof copyLocationFromPopup;
-    adjustTime: typeof adjustTime;
-    pasteLocation: typeof pasteLocation;
-    copyDateFromPopup: typeof copyDateFromPopup;
-    pasteDateToPhoto: typeof pasteDateToPhoto;
-    toggleDateEdit: typeof toggleDateEdit;
-    applyManualDate: typeof applyManualDate;
-    handleDateInputKey: typeof handleDateInputKey;
-    showMetadata: (uuid: string) => void;
-  }
-}
+// Wire custom events from Lit components
+document.addEventListener(ShowLightboxEvent.type, (e: Event) => {
+  getLightbox().show((e as ShowLightboxEvent).index);
+});
+document.addEventListener(EnterPlacementEvent.type, (e: Event) => {
+  enterPlacementMode((e as EnterPlacementEvent).index);
+});
+document.addEventListener(CopyLocationEvent.type, () => {
+  copyLocationFromPopup();
+});
+document.addEventListener(PasteLocationEvent.type, () => {
+  pasteLocation();
+});
+document.addEventListener(AdjustTimeEvent.type, (e: Event) => {
+  const evt = e as AdjustTimeEvent;
+  const uuid = getCurrentPhotoUuid();
+  if (uuid !== null) adjustTime(uuid, evt.hours);
+});
+document.addEventListener(CopyDateEvent.type, () => {
+  copyDateFromPopup();
+});
+document.addEventListener(PasteDateEvent.type, () => {
+  pasteDateToPhoto();
+});
+document.addEventListener(ToggleDateEditEvent.type, () => {
+  toggleDateEdit();
+});
+document.addEventListener(ApplyManualDateEvent.type, (e: Event) => {
+  applyManualDate((e as ApplyManualDateEvent).dateValue);
+});
+document.addEventListener(ShowMetadataEvent.type, (e: Event) => {
+  const modal = document.getElementById('metadata-modal') as unknown as MetadataModal;
+  modal.loadMetadata((e as ShowMetadataEvent).uuid);
+});
 
+// Filter panel events
+document.addEventListener('map-style-change', (e: Event) => {
+  changeMapStyle((e as CustomEvent).detail as string);
+});
+document.addEventListener('marker-style-change', (e: Event) => {
+  changeMarkerStyle((e as CustomEvent).detail as string);
+});
+document.addEventListener('fit-view', () => {
+  fitToPhotos(true, true);
+});
+document.addEventListener('reset-app', () => {
+  getCurrentPopup()?.remove();
+  if (isMeasureMode()) exitMeasureMode();
+  changeMapStyle('satellite');
+  fitToPhotos(true);
+});
+document.addEventListener('toggle-measure', () => {
+  toggleMeasureMode();
+});
+document.addEventListener('toggle-tracks', (e: Event) => {
+  setGpxVisible((e as CustomEvent).detail as boolean);
+});
+document.addEventListener('open-apple-maps', () => {
+  const { c, z, loc } = getMapContext();
+  const url =
+    loc === undefined
+      ? `maps://?ll=${c.lat},${c.lng}&z=${z}&t=k`
+      : `maps://?ll=${loc.lat},${loc.lon}&q=${loc.lat},${loc.lon}&z=${z}&t=k`;
+  window.open(url, '_blank');
+});
+document.addEventListener('open-google-maps', () => {
+  const { c, z, loc } = getMapContext();
+  const url =
+    loc === undefined
+      ? `https://www.google.com/maps/@${c.lat},${c.lng},${z}z`
+      : `https://www.google.com/maps?q=${loc.lat},${loc.lon}&z=${z}`;
+  window.open(url, '_blank');
+});
+document.addEventListener('save-edits', () => {
+  void saveEdits();
+});
+document.addEventListener('discard-edits', () => {
+  clearPendingEdits();
+});
+
+// Keyboard handlers
 document.addEventListener(
   'keydown',
   (e) => {
@@ -122,160 +171,25 @@ document.addEventListener(
     ) {
       return;
     }
-    if (isLightboxActive()) {
+    if (getLightbox().isActive) {
       e.preventDefault();
       e.stopPropagation();
-      hideLightbox();
-      return;
-    }
-    const cluster = getClusterPhotos();
-    if (cluster.length > 0) {
-      e.preventDefault();
-      e.stopPropagation();
-      showGroupLightbox(getCurrentGroupIndex());
+      getLightbox().hide();
       return;
     }
     const idx = getCurrentSinglePhotoIndex();
     if (idx !== null) {
       e.preventDefault();
       e.stopPropagation();
-      showLightbox(idx);
+      getLightbox().show(idx);
     }
   },
   true
 );
 
-setLightboxNavigateCallback((mode, index) => {
-  if (mode === 'group') selectGroupPhoto(index);
-  else navigateSinglePhoto(index);
+getLightbox().setNavigateCallback((index) => {
+  navigateSinglePhoto(index);
 });
-window.selectGroupPhoto = selectGroupPhoto;
-window.showLightbox = showLightbox;
-window.showGroupLightbox = showGroupLightbox;
-window.enterPlacementMode = enterPlacementMode;
-window.copyLocationFromPopup = copyLocationFromPopup;
-window.adjustTime = adjustTime;
-window.pasteLocation = pasteLocation;
-window.copyDateFromPopup = copyDateFromPopup;
-window.pasteDateToPhoto = pasteDateToPhoto;
-window.toggleDateEdit = toggleDateEdit;
-window.applyManualDate = applyManualDate;
-window.handleDateInputKey = handleDateInputKey;
-window.showMetadata = showMetadata;
-
-function restoreFiltersFromUrl() {
-  const saved = filtersFromUrl();
-  if (saved === null) {
-    cascadeAndApply();
-    return;
-  }
-  if (saved.year !== undefined) setSelectValue('year-select', saved.year);
-  if (saved.gps !== undefined) setButtonGroupActive('gps-buttons', saved.gps);
-  if (saved.media !== undefined) {
-    setButtonGroupActive('media-buttons', saved.media);
-  }
-  // Cascade once to populate album options based on year
-  cascadeSelectOptions();
-  if (saved.album !== undefined) setSelectValue('album-select', saved.album);
-  if (saved.camera !== undefined) setSelectValue('camera-select', saved.camera);
-  // cascadeAndApply will cascade again (needed for camera options after album set) and apply
-  cascadeAndApply();
-}
-
-function selectVal(id: string): string {
-  return (
-    (document.getElementById(id) as HTMLSelectElement | null)?.value ?? 'all'
-  );
-}
-
-function activeValues(containerId: string): string[] {
-  return Array.from(
-    document.querySelectorAll(`#${containerId} .filter-btn.active`)
-  ).map((btn) => (btn as HTMLElement).dataset.value!);
-}
-
-/** Cascade year → album → camera dropdowns. Returns the cascaded subsets. */
-function cascadeSelectOptions() {
-  const y = selectVal('year-select');
-  const yearPhotos =
-    y === 'all' ? state.photos : state.photos.filter((p) => getYear(p) === y);
-  repopulateSelect(
-    'album-select',
-    [...new Set(yearPhotos.flatMap((p) => p.albums))].sort()
-  );
-  const a = selectVal('album-select');
-  const albumPhotos =
-    a === 'all' ? yearPhotos : yearPhotos.filter((p) => p.albums.includes(a));
-  repopulateSelect(
-    'camera-select',
-    [...new Set(albumPhotos.map((p) => p.camera ?? '(unknown)'))].sort()
-  );
-  return { y, a, albumPhotos };
-}
-
-/** Cascade dropdowns and apply filters in a single combined pass. */
-function cascadeAndApply() {
-  const { y, a, albumPhotos } = cascadeSelectOptions();
-  const c = selectVal('camera-select');
-  const g = activeValues('gps-buttons');
-  const m = activeValues('media-buttons');
-  const cameraPhotos =
-    c === 'all'
-      ? albumPhotos
-      : albumPhotos.filter((p) => (p.camera ?? '(unknown)') === c);
-  applyFilters(
-    { year: y, gps: g, media: m, album: a, camera: c },
-    cameraPhotos
-  );
-  filtersToUrl({ year: y, album: a, camera: c, gps: g, media: m });
-}
-
-function setupFilterListeners() {
-  const statsPanel = document.getElementById('stats-panel')!;
-  const panelHeader = document.getElementById('panel-header')!;
-  panelHeader.addEventListener('click', () => {
-    statsPanel.classList.toggle('collapsed');
-  });
-
-  const yearSelect = document.getElementById('year-select');
-  const albumSelect = document.getElementById('album-select');
-  const cameraSelect = document.getElementById('camera-select');
-  const mediaButtons = document.getElementById('media-buttons');
-  const gpsButtons = document.getElementById('gps-buttons');
-
-  for (const el of [yearSelect, albumSelect, cameraSelect]) {
-    el?.addEventListener('change', cascadeAndApply);
-  }
-
-  for (const container of [mediaButtons, gpsButtons]) {
-    let clickTimer: ReturnType<typeof setTimeout> | null = null;
-    container?.addEventListener('click', (e) => {
-      const btn = (e.target as HTMLElement).closest<HTMLElement>('.filter-btn');
-      if (btn === null) return;
-      if (clickTimer !== null) return;
-      clickTimer = setTimeout(() => {
-        clickTimer = null;
-        btn.classList.toggle('active');
-        cascadeAndApply();
-      }, 250);
-    });
-    container?.addEventListener('dblclick', (e) => {
-      if (clickTimer !== null) {
-        clearTimeout(clickTimer);
-        clickTimer = null;
-      }
-      const btn = (e.target as HTMLElement).closest<HTMLElement>('.filter-btn');
-      if (btn === null) return;
-      const allBtns = Array.from(container.querySelectorAll('.filter-btn'));
-      const activeBtns = allBtns.filter((b) => b.classList.contains('active'));
-      const isOnlyActive = activeBtns.length === 1 && activeBtns[0] === btn;
-      for (const b of allBtns) {
-        b.classList.toggle('active', isOnlyActive || b === btn);
-      }
-      cascadeAndApply();
-    });
-  }
-}
 
 function reopenPopup(uuid: string | null) {
   if (uuid === null) return;
@@ -286,14 +200,12 @@ function reopenPopup(uuid: string | null) {
 }
 
 async function saveEdits() {
-  const btn = document.getElementById('save-edits-btn');
-  if (btn === null) return;
+  const panel = getFilterPanel();
   const edits = getPendingEdits();
   const timeEdits = getPendingTimeEdits();
   if (edits.length === 0 && timeEdits.length === 0) return;
 
-  btn.setAttribute('disabled', '');
-  btn.textContent = 'Saving...';
+  panel.saving = true;
 
   try {
     const response = await fetch('/api/save-edits', {
@@ -317,58 +229,11 @@ async function saveEdits() {
       `Failed to save edits: ${err instanceof Error ? err.message : String(err)}`
     );
   } finally {
-    btn.removeAttribute('disabled');
-    btn.textContent = 'Save to Photos';
+    panel.saving = false;
   }
 }
 
-const defaultGps = ['exif', 'inferred', 'user', 'none'];
-const defaultMedia = ['photo', 'video'];
-const defaultFilters = {
-  year: 'all',
-  gps: defaultGps,
-  media: defaultMedia,
-  album: 'all',
-  camera: 'all'
-};
-
-function handleReset() {
-  getCurrentPopup()?.remove();
-  clearSelection();
-  if (isMeasureMode()) exitMeasureMode();
-  setSelectValue('year-select', 'all');
-  setButtonGroupActive('gps-buttons', defaultGps);
-  setButtonGroupActive('media-buttons', defaultMedia);
-  repopulateSelect(
-    'album-select',
-    [...new Set(state.photos.flatMap((p) => p.albums))].sort()
-  );
-  repopulateSelect(
-    'camera-select',
-    [...new Set(state.photos.map((p) => p.camera ?? '(unknown)'))].sort()
-  );
-  setSelectValue('album-select', 'all');
-  setSelectValue('camera-select', 'all');
-  applyFilters(defaultFilters);
-  filtersToUrl(defaultFilters);
-  history.replaceState(null, '', location.pathname);
-  const mapButtons = document.getElementById('map-type-buttons');
-  const cur = mapButtons
-    ?.querySelector('.map-type-btn.active')
-    ?.getAttribute('data-style');
-  if (cur !== 'satellite') {
-    changeMapStyle('satellite');
-    mapButtons
-      ?.querySelector('.map-type-btn.active')
-      ?.classList.remove('active');
-    mapButtons
-      ?.querySelector('.map-type-btn[data-style="satellite"]')
-      ?.classList.add('active');
-  }
-  fitToPhotos(true);
-}
-
-// Prevent accidental page zoom from trackpad pinch gestures
+// Prevent zoom gestures
 document.addEventListener(
   'wheel',
   (e) => {
@@ -382,99 +247,20 @@ const prevent = (e: Event) => {
 document.addEventListener('gesturestart', prevent);
 document.addEventListener('gesturechange', prevent);
 
+// Init
 document.addEventListener('DOMContentLoaded', () => {
   void (async () => {
-    initUI();
-    initMetadataModal();
-    setupFilterListeners();
-
-    document.getElementById('fit-view-btn')?.addEventListener('click', () => {
-      fitToPhotos(true, true);
-    });
-    document.getElementById('apple-maps-btn')?.addEventListener('click', () => {
-      const { c, z, loc } = getMapContext();
-      const url =
-        loc === undefined
-          ? `maps://?ll=${c.lat},${c.lng}&z=${z}&t=k`
-          : `maps://?ll=${loc.lat},${loc.lon}&q=${loc.lat},${loc.lon}&z=${z}&t=k`;
-      window.open(url, '_blank');
-    });
-    document
-      .getElementById('google-maps-btn')
-      ?.addEventListener('click', () => {
-        const { c, z, loc } = getMapContext();
-        const url =
-          loc === undefined
-            ? `https://www.google.com/maps/@${c.lat},${c.lng},${z}z`
-            : `https://www.google.com/maps?q=${loc.lat},${loc.lon}&z=${z}`;
-        window.open(url, '_blank');
-      });
-    document
-      .getElementById('reset-btn')
-      ?.addEventListener('click', handleReset);
-    const measureBtn = document.getElementById('measure-btn');
-    measureBtn?.addEventListener('click', () => {
-      toggleMeasureMode();
-      measureBtn.classList.toggle('active', isMeasureMode());
-    });
-    const tracksBtn = document.getElementById('tracks-btn');
-    if (tracksBtn !== null) {
-      const savedVis = tracksVisibleFromUrl();
-      tracksBtn.style.display = 'none';
-      tracksBtn.classList.toggle('active', savedVis);
-      setGpxVisible(savedVis);
-      tracksBtn.addEventListener('click', () => {
-        const nowVis = toggleGpxVisibility();
-        tracksBtn.classList.toggle('active', nowVis);
-        tracksVisibleToUrl(nowVis);
-      });
-    }
-    document.getElementById('save-edits-btn')?.addEventListener('click', () => {
-      void saveEdits();
-    });
-    document
-      .getElementById('discard-edits-btn')
-      ?.addEventListener('click', clearPendingEdits);
-
     await loadPhotos();
     initMap();
     initGpx(getMap);
-    initStyleButtonGroup(
-      'map-type-buttons',
-      (s) => {
-        changeMapStyle(s);
-        mapStyleToUrl(s);
-      },
-      mapStyleFromUrl
-    );
-    initStyleButtonGroup(
-      'marker-style-buttons',
-      (s) => {
-        changeMarkerStyle(s);
-        markerStyleToUrl(s);
-      },
-      markerStyleFromUrl
-    );
-
-    const years = [
-      ...new Set(
-        state.photos.map(getYear).filter((y): y is string => y !== null)
-      )
-    ].sort();
-    repopulateSelect('year-select', years);
     setOnPhotoChange(photoToUrl);
-    restoreFiltersFromUrl();
+    getFilterPanel().applyInitialFilters();
     reopenPopup(photoFromUrl());
-    updateStats(state.filteredPhotos);
   })();
 });
-subscribe((filtered) => {
-  updateStats(filtered);
+
+subscribe(() => {
   void loadGpxForAlbum(
     state.filters.album === 'all' ? null : state.filters.album
   );
-});
-
-subscribeEdits((count) => {
-  updatePendingEdits(count);
 });

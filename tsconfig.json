@@ -3,6 +3,8 @@
   "compilerOptions": {
     "target": "ES2024",
     "lib": ["ESNext", "DOM"],
-    "types": ["bun"]
+    "types": ["bun"],
+    "experimentalDecorators": true,
+    "useDefineForClassFields": false
   }
 }

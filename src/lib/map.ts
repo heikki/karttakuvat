@@ -33,19 +33,11 @@ import {
 } from './placement';
 import { PointsLayer } from './points-layer';
 import {
-  getClusterPhotos,
   getCurrentPhotoUuid,
   getCurrentPopup,
   initPopupCallbacks,
-  scrollToActiveThumbnail,
-  selectGroupPhoto as selectGroupPhotoFromPopup,
   showPopup
 } from './popup';
-import {
-  addSelectionLayer,
-  initSelectionCallbacks,
-  setupRectangularSelection
-} from './selection';
 import type { MapStyles, MarkerLayer, Photo } from './types';
 
 // Declare window augmentation for map
@@ -131,7 +123,6 @@ export function initMap() {
   const getMarkerRadius = (zoom: number) =>
     currentLayer?.markerRadius(zoom) ?? 0;
   initPopupCallbacks(highlight, panToFitPopup, getMap, getMarkerRadius);
-  initSelectionCallbacks(getMap, getMarkerLayerId);
   initMeasure(getMap, getMarkerLayerId);
   initFit(getMap);
 
@@ -162,10 +153,8 @@ export function initMap() {
   map.on('load', () => {
     addGpxLayers();
     addPhotoLayers();
-    addSelectionLayer();
     addMeasureLayers();
     setupMarkerInteractions();
-    setupRectangularSelection();
 
     updateMapData();
     restoreHighlight();
@@ -239,7 +228,6 @@ export function changeMapStyle(styleKey: string) {
   const applyLayers = () => {
     addGpxLayers();
     addPhotoLayers();
-    addSelectionLayer();
     addMeasureLayers();
     setupMarkerInteractions();
     updateMapData();
@@ -296,20 +284,6 @@ function setupMarkerInteractions() {
     const feature = e.features[0]!;
     const clickedIndex = feature.properties.index as number | undefined;
 
-    // Check if part of cluster
-    const popup = getCurrentPopup();
-    const clusterPhotos = getClusterPhotos();
-    if (popup !== null && clusterPhotos.length > 1) {
-      const groupIndex = clusterPhotos.findIndex(
-        (p) => p._index === clickedIndex
-      );
-      if (groupIndex !== -1) {
-        selectGroupPhotoFromPopup(groupIndex);
-        scrollToActiveThumbnail();
-        return;
-      }
-    }
-
     const geom = feature.geometry as Point;
     const coords: [number, number] = [
       geom.coordinates[0]!,
@@ -341,10 +315,6 @@ function setupMarkerInteractions() {
       });
       if (features.length > 0) return;
     }
-    const selectionFeatures = map.queryRenderedFeatures(e.point, {
-      layers: ['selection-fill']
-    });
-    if (selectionFeatures.length > 0) return;
     const popup = getCurrentPopup();
     if (popup !== null) {
       popup.remove();
@@ -365,4 +335,3 @@ function setupMarkerInteractions() {
 }
 
 export { fitToPhotos };
-export { selectGroupPhotoFromPopup as selectGroupPhoto };

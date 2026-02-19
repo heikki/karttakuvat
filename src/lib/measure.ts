@@ -226,8 +226,7 @@ export function exitMeasureMode() {
   map.off('click', onMapClick);
   document.removeEventListener('keydown', onKeyDown);
 
-  // Update button state
-  document.getElementById('measure-btn')?.classList.remove('active');
+  document.dispatchEvent(new Event('measure-mode-exited'));
 }
 
 export function toggleMeasureMode() {

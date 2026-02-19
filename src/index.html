@@ -17,134 +17,13 @@
   <body>
     <div id="map"></div>
 
-    <div class="stats-panel" id="stats-panel">
-      <div class="panel-header" id="panel-header">
-        <h2>Karttakuvat</h2>
-        <p id="count-label">0 photos found</p>
-      </div>
-      <div class="panel-body" id="panel-body">
-        <div class="filter-section">
-          <label for="year-select">Year</label>
-          <select id="year-select">
-            <option value="all">All</option>
-          </select>
-          <label for="album-select">Album</label>
-          <select id="album-select">
-            <option value="all">All</option>
-          </select>
-          <label for="camera-select">Camera</label>
-          <select id="camera-select">
-            <option value="all">All</option>
-          </select>
-          <label>Media</label>
-          <div class="filter-buttons" id="media-buttons">
-            <button class="filter-btn active" data-value="photo">Photos</button>
-            <button class="filter-btn active" data-value="video">Videos</button>
-          </div>
-          <label>Location</label>
-          <div class="filter-buttons" id="gps-buttons">
-            <button
-              class="filter-btn active"
-              data-value="exif"
-              style="--btn-color: #3b82f6"
-            >
-              Exif
-            </button>
-            <button
-              class="filter-btn active"
-              data-value="inferred"
-              style="--btn-color: #f59e0b"
-            >
-              Inferred
-            </button>
-            <button
-              class="filter-btn active"
-              data-value="user"
-              style="--btn-color: #22c55e"
-            >
-              User
-            </button>
-            <button
-              class="filter-btn active"
-              data-value="none"
-              style="--btn-color: #9ca3af"
-            >
-              None
-            </button>
-          </div>
-          <label>Map</label>
-          <div class="map-type-buttons" id="map-type-buttons">
-            <button class="map-type-btn active" data-style="satellite">
-              Aerial
-            </button>
-            <button class="map-type-btn" data-style="topo">Topo</button>
-            <button class="map-type-btn" data-style="mml_maastokartta">
-              Maasto
-            </button>
-            <button class="map-type-btn" data-style="mml_ortokuva">Orto</button>
-          </div>
-          <label>Markers</label>
-          <div class="map-type-buttons" id="marker-style-buttons">
-            <button class="map-type-btn" data-style="points">Points</button>
-            <button class="map-type-btn active" data-style="classic">
-              Classic
-            </button>
-          </div>
-        </div>
-        <div class="view-buttons">
-          <button class="view-btn" id="fit-view-btn">Fit</button>
-          <button class="view-btn" id="reset-btn">Reset</button>
-          <button class="view-btn" id="measure-btn">Measure</button>
-        </div>
-        <div class="view-buttons">
-          <button class="view-btn active" id="tracks-btn">Tracks</button>
-        </div>
-        <div class="view-buttons">
-          <button class="view-btn" id="apple-maps-btn">Apple Maps</button>
-          <button class="view-btn" id="google-maps-btn">Google Maps</button>
-        </div>
-        <div class="edit-section" id="edit-section" style="display: none">
-          <span id="pending-count">0</span> pending edits
-          <div class="edit-buttons">
-            <button id="save-edits-btn">Save to Photos</button>
-            <button id="discard-edits-btn" class="secondary">Discard</button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <filter-panel id="filter-panel"></filter-panel>
 
-    <div class="lightbox" id="lightbox">
-      <div class="lightbox-image-wrap" id="lightbox-image-wrap">
-        <img id="lightbox-img" src="" alt="" />
-        <div class="camera-overlay" id="lightbox-camera"></div>
-        <div class="play-overlay" id="lightbox-play"></div>
-        <div class="overlay-buttons">
-          <button
-            id="lightbox-info-btn"
-            class="overlay-btn info-btn"
-            tabindex="-1"
-          ></button>
-          <a
-            id="lightbox-photos-link"
-            class="overlay-btn photos-btn"
-            href="#"
-            target="_blank"
-            tabindex="-1"
-          ></a>
-        </div>
-        <div class="info" id="lightbox-info"></div>
-      </div>
-    </div>
+    <photo-lightbox id="lightbox"></photo-lightbox>
 
-    <div class="metadata-modal" id="metadata-modal">
-      <div class="metadata-content">
-        <div class="metadata-header">
-          <span>Metadata</span>
-          <span class="metadata-close" id="metadata-close">&times;</span>
-        </div>
-        <div class="metadata-body" id="metadata-body"></div>
-      </div>
-    </div>
+    <metadata-modal id="metadata-modal"></metadata-modal>
+
+    <placement-panel id="placement-panel"></placement-panel>
 
     <!-- Bundled Script -->
     <script type="module" src="./index.ts"></script>

@@ -2,11 +2,15 @@ import type { Map as MapGL } from 'maplibre-gl';
 
 import { addPendingEdit, state } from './data';
 import { getCurrentPopup, showPopup } from './popup';
-import { formatDate, getThumbUrl } from './utils';
+import type { PlacementPanel } from '../components/placement-panel';
 
 let placementPhotoIndex: number | null = null;
 // eslint-disable-next-line @typescript-eslint/no-empty-function -- set in setupPlacement
 let markerVisibility: (visible: boolean) => void = () => {};
+
+function getPanel(): PlacementPanel {
+  return document.getElementById('placement-panel') as unknown as PlacementPanel;
+}
 
 export function isInPlacementMode(): boolean {
   return placementPhotoIndex !== null;
@@ -15,20 +19,14 @@ export function isInPlacementMode(): boolean {
 function showPlacementPanel(photoIndex: number) {
   const photo = state.filteredPhotos[photoIndex];
   if (photo === undefined) return;
-
-  let panel = document.getElementById('placement-panel');
-  if (panel === null) {
-    panel = document.createElement('div');
-    panel.id = 'placement-panel';
-    document.body.appendChild(panel);
-  }
-
-  panel.innerHTML = `<img src="${getThumbUrl(photo)}" alt="" /><div class="placement-panel-info">${formatDate(photo.date, photo.tz)}</div><div class="placement-panel-hint">Click map to set location. Esc to cancel.</div>`;
-  panel.classList.add('active');
+  const panel = getPanel();
+  panel.photo = photo;
+  panel.active = true;
 }
 
 function hidePlacementPanel() {
-  document.getElementById('placement-panel')?.classList.remove('active');
+  const panel = getPanel();
+  panel.active = false;
 }
 
 function exitPlacementMode(map: MapGL) {

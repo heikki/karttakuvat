@@ -271,11 +271,8 @@ function updateSources(): void {
     (wptSrc as GeoJSONSource).setData(fc);
   }
 
-  const btn = document.getElementById('tracks-btn');
-  if (btn !== null) {
-    const hasData = trackFeatures.length > 0 || waypointFeatures.length > 0;
-    btn.style.display = hasData ? '' : 'none';
-  }
+  const hasData = trackFeatures.length > 0 || waypointFeatures.length > 0;
+  document.dispatchEvent(new CustomEvent('gpx-data-changed', { detail: hasData }));
 }
 
 export function setGpxVisible(v: boolean): void {
