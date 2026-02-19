@@ -13,6 +13,10 @@ body {
   width: 100%;
   position: relative;
 }
+#map:focus,
+.maplibregl-canvas:focus {
+  outline: none;
+}
 #globe-bg {
   position: absolute;
   top: 0;
