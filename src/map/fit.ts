@@ -4,13 +4,11 @@ import type { Map as MapGL } from 'maplibre-gl';
 import { getEffectiveCoords, state } from '@common/data';
 import { getCurrentPopup, showPopup } from './popup';
 
-type GetMap = () => MapGL;
-
 // eslint-disable-next-line @typescript-eslint/init-declarations -- set in initFit
-let getMap: GetMap;
+let map: MapGL;
 
-export function initFit(getter: GetMap) {
-  getMap = getter;
+export function initFit(m: MapGL) {
+  map = m;
 }
 
 function showFirstPopup() {
@@ -34,7 +32,6 @@ function isSinglePointBounds(bounds: LngLatBounds): boolean {
 }
 
 function applyFitCallback(animate: boolean, selectFirst: boolean) {
-  const map = getMap();
   if (animate && selectFirst) {
     void map.once('moveend', showFirstPopup);
   } else if (selectFirst) {
@@ -43,7 +40,6 @@ function applyFitCallback(animate: boolean, selectFirst: boolean) {
 }
 
 function computeTopPadding(): number {
-  const map = getMap();
   if (map.getProjection().type !== 'globe') return 350;
   const popupEl = getCurrentPopup()?.getElement();
   if (popupEl === undefined) return 50;
@@ -52,7 +48,6 @@ function computeTopPadding(): number {
 
 export function fitToPhotos(animate = false, selectFirst = false) {
   if (state.filteredPhotos.length === 0) return;
-  const map = getMap();
   const bounds = computePhotoBounds();
   const duration = animate ? 500 : 0;
 

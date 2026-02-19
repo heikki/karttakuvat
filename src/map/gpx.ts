@@ -20,7 +20,7 @@ const ALL_LAYERS = [
 const ALL_SOURCES = [TRACK_SOURCE, WAYPOINT_SOURCE];
 
 // Module state
-let getMapFn: (() => MapGL) | null = null;
+let map: MapGL | null = null;
 let visible = true;
 let currentAlbum: string | null = null;
 let trackFeatures: Array<Feature<LineString>> = [];
@@ -39,13 +39,12 @@ const TRACK_COLORS = [
 ];
 let colorIndex = 0;
 
-export function initGpx(getMap: () => MapGL): void {
-  getMapFn = getMap;
+export function initGpx(m: MapGL): void {
+  map = m;
 }
 
 export function addGpxLayers(): void {
-  const map = getMapFn?.();
-  if (map === undefined) return;
+  if (map === null) return;
 
   for (const id of ALL_LAYERS) {
     if (map.getLayer(id) !== undefined) map.removeLayer(id);
@@ -250,8 +249,7 @@ function computeElevation(elevations: number[]): {
 }
 
 function updateSources(): void {
-  const map = getMapFn?.();
-  if (map === undefined) return;
+  if (map === null) return;
 
   const trackSrc = map.getSource(TRACK_SOURCE);
   if (trackSrc !== undefined) {
@@ -291,8 +289,7 @@ export function isGpxVisible(): boolean {
 }
 
 function setLayerVisibility(show: boolean): void {
-  const map = getMapFn?.();
-  if (map === undefined) return;
+  if (map === null) return;
   const v = show ? 'visible' : 'none';
   for (const id of ALL_LAYERS) {
     if (map.getLayer(id) !== undefined) {

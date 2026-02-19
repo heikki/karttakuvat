@@ -122,9 +122,9 @@ export function initMap() {
   };
   const getMarkerRadius = (zoom: number) =>
     currentLayer?.markerRadius(zoom) ?? 0;
-  initPopupCallbacks(highlight, panToFitPopup, getMap, getMarkerRadius);
-  initMeasure(getMap, getMarkerLayerId);
-  initFit(getMap);
+  initPopupCallbacks(map, highlight, panToFitPopup, getMarkerRadius);
+  initMeasure(map, getMarkerLayerId);
+  initFit(map);
 
   // Init globe background shader
   initGlobeBackground(map.getContainer());

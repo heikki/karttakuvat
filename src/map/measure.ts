@@ -1,11 +1,9 @@
 import turfDistance from '@turf/distance';
 import { point } from '@turf/helpers';
-import type { GeoJSONSource, MapMouseEvent } from 'maplibre-gl';
-
-import type { getMap as GetMapFn } from '.';
+import type { GeoJSONSource, Map as MapGL, MapMouseEvent } from 'maplibre-gl';
 
 // eslint-disable-next-line @typescript-eslint/init-declarations -- initialized in initMeasure() before any usage
-let getMap: typeof GetMapFn;
+let map: MapGL;
 let getMarkerLayerIdFn: () => string | null = () => null;
 let active = false;
 const coords: Array<[number, number]> = [];
@@ -22,16 +20,14 @@ export function isMeasureMode(): boolean {
 }
 
 export function initMeasure(
-  getMapFn: typeof GetMapFn,
+  m: MapGL,
   getMarkerLayerId: () => string | null
 ) {
-  getMap = getMapFn;
+  map = m;
   getMarkerLayerIdFn = getMarkerLayerId;
 }
 
 export function addMeasureLayers() {
-  const map = getMap();
-
   if (map.getLayer(POINT_LAYER) !== undefined) map.removeLayer(POINT_LAYER);
   if (map.getLayer(LINE_LAYER) !== undefined) map.removeLayer(LINE_LAYER);
   if (map.getSource(POINT_SOURCE) !== undefined) {
@@ -80,8 +76,6 @@ export function addMeasureLayers() {
 }
 
 function updateSources() {
-  const map = getMap();
-
   const pointSource = map.getSource(POINT_SOURCE);
   if (pointSource !== undefined) {
     (pointSource as GeoJSONSource).setData({
@@ -153,7 +147,6 @@ function removeOverlay() {
 }
 
 function setLayerVisibility(visible: boolean) {
-  const map = getMap();
   const v = visible ? 'visible' : 'none';
   for (const id of [POINT_LAYER, LINE_LAYER]) {
     if (map.getLayer(id) !== undefined) {
@@ -163,8 +156,6 @@ function setLayerVisibility(visible: boolean) {
 }
 
 function onMapClick(e: MapMouseEvent) {
-  const map = getMap();
-
   // Check if clicking on an existing measure point to remove it
   const features = map.queryRenderedFeatures(e.point, {
     layers: [POINT_LAYER]
@@ -200,7 +191,6 @@ function enterMeasureMode() {
   active = true;
   coords.length = 0;
 
-  const map = getMap();
   map.getCanvas().classList.add('crosshair');
   setLayerVisibility(true);
   updateSources();
@@ -217,7 +207,6 @@ export function exitMeasureMode() {
   active = false;
   coords.length = 0;
 
-  const map = getMap();
   map.getCanvas().classList.remove('crosshair');
   updateSources();
   setLayerVisibility(false);

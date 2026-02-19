@@ -2,7 +2,7 @@ import type { Map as MapGL } from 'maplibre-gl';
 
 const WHEEL_ZOOM_RATE = 1 / 300;
 
-let getMapFn: () => MapGL | undefined = () => undefined;
+let map: MapGL | null = null;
 let getMarkerCoordsFn: () => [number, number] | null = () => null;
 let canvasWheelHandler: ((e: WheelEvent) => void) | null = null;
 
@@ -14,16 +14,15 @@ let mouseHandlers: Array<{
 }> = [];
 
 export function initPopupZoom(
-  getMap: () => MapGL | undefined,
+  m: MapGL,
   getMarkerCoords: () => [number, number] | null
 ) {
-  getMapFn = getMap;
+  map = m;
   getMarkerCoordsFn = getMarkerCoords;
 }
 
 function zoomAroundPopup(e: WheelEvent) {
-  const map = getMapFn();
-  if (map === undefined) return;
+  if (map === null) return;
   const coords = getMarkerCoordsFn();
   if (coords === null) return;
   e.preventDefault();
@@ -67,8 +66,7 @@ function removePopupEvents() {
 
 export function setupPopupEvents(popupEl: HTMLElement) {
   removePopupEvents();
-  const map = getMapFn();
-  if (map === undefined) return;
+  if (map === null) return;
   const canvas = map.getCanvas();
   attachedEl = popupEl;
   popupEl.addEventListener('wheel', zoomAroundPopup);
@@ -85,8 +83,7 @@ export function setupPopupEvents(popupEl: HTMLElement) {
 }
 
 export function installCanvasZoomOverride() {
-  const map = getMapFn();
-  if (map === undefined) return;
+  if (map === null) return;
   map.scrollZoom.disable();
   const canvas = map.getCanvas();
   canvasWheelHandler = zoomAroundPopup;
@@ -94,8 +91,7 @@ export function installCanvasZoomOverride() {
 }
 
 export function removeCanvasZoomOverride() {
-  const map = getMapFn();
-  if (map === undefined) return;
+  if (map === null) return;
   if (canvasWheelHandler !== null) {
     map.getCanvas().removeEventListener('wheel', canvasWheelHandler);
     canvasWheelHandler = null;

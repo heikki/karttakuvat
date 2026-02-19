@@ -44,10 +44,9 @@ let highlightFn: (photo: Photo | null) => void = () => {
 let panToFitPopupFn: (coords: [number, number]) => void = () => {
   /* noop */
 };
-let getMapFn: () => MapGL | undefined = () => undefined;
+let map: MapGL | null = null;
 let getMarkerRadiusFn: (zoom: number) => number = () => 0;
 function popupOffset(): [number, number] {
-  const map = getMapFn();
   const zoom = map?.getZoom() ?? 10;
   const radius = getMarkerRadiusFn(zoom);
   return [0, -(radius * 1.3 + 5)];
@@ -64,8 +63,7 @@ function getSelectedMarkerCoords(): [number, number] | null {
 
 export function reanchorPopup() {
   if (currentPopup === null) return;
-  const map = getMapFn();
-  if (map === undefined) return;
+  if (map === null) return;
   if (!currentPopup.isOpen()) return;
   const lngLat = currentPopup.getLngLat();
   reanchoring = true;
@@ -77,18 +75,17 @@ export function reanchorPopup() {
 }
 
 export function initPopupCallbacks(
+  m: MapGL,
   highlight: (photo: Photo | null) => void,
   panToFitPopup: (coords: [number, number]) => void,
-  getMap: () => MapGL,
   getMarkerRadius: (zoom: number) => number
 ) {
+  map = m;
   highlightFn = highlight;
   panToFitPopupFn = panToFitPopup;
-  getMapFn = getMap;
   getMarkerRadiusFn = getMarkerRadius;
-  initPopupZoom(getMap, getSelectedMarkerCoords);
-  const map = getMap();
-  map.on('zoomend', reanchorPopup);
+  initPopupZoom(m, getSelectedMarkerCoords);
+  m.on('zoomend', reanchorPopup);
 }
 
 export function getCurrentPopup(): Popup | null {
@@ -146,8 +143,7 @@ export function showPopup(props: FeatureProps, coords: [number, number]) {
     currentPopup.remove();
   }
 
-  const map = getMapFn();
-  if (map === undefined) return;
+  if (map === null) return;
 
   const index = props.index;
   const photo = state.filteredPhotos[index];

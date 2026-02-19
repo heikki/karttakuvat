@@ -277,7 +277,7 @@ document.addEventListener('DOMContentLoaded', () => {
   void (async () => {
     await loadPhotos();
     initMap();
-    initGpx(getMap);
+    initGpx(getMap());
     setOnPhotoChange(photoToUrl);
     getFilterPanel().applyInitialFilters();
     reopenPopup(photoFromUrl());
