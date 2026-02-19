@@ -1,6 +1,8 @@
 import { LitElement, css, html, nothing } from 'lit';
 import { customElement, property, state as litState } from 'lit/decorators.js';
 
+import { ShowMetadataEvent } from '@common/events';
+
 function escapeHtml(s: string): string {
   return s.replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
@@ -196,13 +198,19 @@ export class MetadataModal extends LitElement {
     super.connectedCallback();
     this.addEventListener('click', this._handleHostClick);
     document.addEventListener('keydown', this._handleKeydown, true);
+    document.addEventListener(ShowMetadataEvent.type, this._handleShowMetadata);
   }
 
   override disconnectedCallback() {
     super.disconnectedCallback();
     this.removeEventListener('click', this._handleHostClick);
     document.removeEventListener('keydown', this._handleKeydown, true);
+    document.removeEventListener(ShowMetadataEvent.type, this._handleShowMetadata);
   }
+
+  private readonly _handleShowMetadata = (e: Event) => {
+    this.loadMetadata((e as ShowMetadataEvent).uuid);
+  };
 
   private readonly _handleHostClick = (e: Event) => {
     // Backdrop click: if click is directly on the host element

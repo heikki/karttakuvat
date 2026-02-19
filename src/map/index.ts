@@ -24,7 +24,8 @@ import {
   stopGlobeBackground
 } from './background';
 import { addGpxLayers } from './gpx';
-import { addMeasureLayers, initMeasure } from './measure';
+import { EnterPlacementEvent } from '@common/events';
+import { addMeasureLayers, exitMeasureMode, initMeasure, isMeasureMode } from './measure';
 import { createPanToFitPopup } from './pan';
 import {
   enterPlacementMode as enterPlacement,
@@ -74,6 +75,13 @@ function setMarkerVisibility(visible: boolean) {
 
 export function enterPlacementMode(photoIndex: number) {
   enterPlacement(map, photoIndex);
+}
+
+export function resetMap() {
+  getCurrentPopup()?.remove();
+  if (isMeasureMode()) exitMeasureMode();
+  changeMapStyle('satellite');
+  fitToPhotos(true);
 }
 
 function withGlobe(style: StyleSpecification): StyleSpecification {
@@ -200,6 +208,10 @@ export function initMap() {
   });
 
   setupPlacement(map, setMarkerVisibility);
+
+  document.addEventListener(EnterPlacementEvent.type, (e: Event) => {
+    enterPlacementMode((e as EnterPlacementEvent).index);
+  });
 }
 
 function updateMapData() {

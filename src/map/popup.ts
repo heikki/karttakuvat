@@ -12,6 +12,15 @@ import {
   setPendingTimeEdit,
   state
 } from '@common/data';
+import {
+  AdjustTimeEvent,
+  ApplyManualDateEvent,
+  CopyDateEvent,
+  CopyLocationEvent,
+  PasteDateEvent,
+  PasteLocationEvent,
+  ToggleDateEditEvent
+} from '@common/events';
 import type { Photo } from '@common/types';
 import {
   computeFullDatetimeOffsetHours,
@@ -86,6 +95,29 @@ export function initPopupCallbacks(
   getMarkerRadiusFn = getMarkerRadius;
   initPopupZoom(m, getSelectedMarkerCoords);
   m.on('zoomend', reanchorPopup);
+
+  document.addEventListener(CopyLocationEvent.type, () => {
+    copyLocationFromPopup();
+  });
+  document.addEventListener(PasteLocationEvent.type, () => {
+    pasteLocation();
+  });
+  document.addEventListener(AdjustTimeEvent.type, (e: Event) => {
+    const uuid = getCurrentPhotoUuid();
+    if (uuid !== null) adjustTime(uuid, (e as AdjustTimeEvent).hours);
+  });
+  document.addEventListener(CopyDateEvent.type, () => {
+    copyDateFromPopup();
+  });
+  document.addEventListener(PasteDateEvent.type, () => {
+    pasteDateToPhoto();
+  });
+  document.addEventListener(ToggleDateEditEvent.type, () => {
+    toggleDateEdit();
+  });
+  document.addEventListener(ApplyManualDateEvent.type, (e: Event) => {
+    applyManualDate((e as ApplyManualDateEvent).dateValue);
+  });
 }
 
 export function getCurrentPopup(): Popup | null {

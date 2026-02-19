@@ -1,7 +1,7 @@
 import { LitElement, css, html, nothing } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 
-import { ShowMetadataEvent } from '@common/events';
+import { ShowLightboxEvent, ShowMetadataEvent } from '@common/events';
 import { state } from '@common/data';
 import { getEffectiveDate, getEffectiveLocation } from '@common/photo-utils';
 import type { Photo } from '@common/types';
@@ -174,12 +174,18 @@ export class PhotoLightbox extends LitElement {
   override connectedCallback() {
     super.connectedCallback();
     document.addEventListener('keydown', this._handleKeydown);
+    document.addEventListener(ShowLightboxEvent.type, this._handleShowLightbox);
   }
 
   override disconnectedCallback() {
     super.disconnectedCallback();
     document.removeEventListener('keydown', this._handleKeydown);
+    document.removeEventListener(ShowLightboxEvent.type, this._handleShowLightbox);
   }
+
+  private readonly _handleShowLightbox = (e: Event) => {
+    this.show((e as ShowLightboxEvent).index);
+  };
 
   private readonly _handleKeydown = (e: KeyboardEvent) => {
     if (!this.active) return;

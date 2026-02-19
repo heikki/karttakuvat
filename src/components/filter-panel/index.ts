@@ -1,13 +1,21 @@
 import { LitElement, css, html, nothing } from 'lit';
 import { customElement, property, state as litState } from 'lit/decorators.js';
 
-import { applyFilters } from '@common/data';
+import { applyFilters, clearPendingEdits, state } from '@common/data';
 import {
   filtersFromUrl, filtersToUrl, mapStyleFromUrl, mapStyleToUrl,
   markerStyleFromUrl, markerStyleToUrl, tracksVisibleFromUrl, tracksVisibleToUrl
 } from '@common/filter-url';
-import { StoreController } from './store-controller';
+import { getEffectiveLocation } from '@common/photo-utils';
 import { getYear, isVideo } from '@common/utils';
+import {
+  changeMapStyle, changeMarkerStyle, fitToPhotos, getMap, resetMap
+} from '../../map';
+import { setGpxVisible } from '../../map/gpx';
+import { toggleMeasureMode } from '../../map/measure';
+import { getCurrentPhotoUuid } from '../../map/popup';
+import { saveEdits } from '../../save';
+import { StoreController } from './store-controller';
 
 const DEFAULT_GPS = ['exif', 'inferred', 'user', 'none'];
 const DEFAULT_MEDIA = ['photo', 'video'];
@@ -20,6 +28,35 @@ function renderSelect(label: string, options: string[], value: string, onChange:
       ${options.map((o) => html`<option value=${o} ?selected=${o === value}>${o}</option>`)}
     </select>
   `;
+}
+
+function getMapContext() {
+  const map = getMap();
+  const c = map.getCenter();
+  const z = Math.round(map.getZoom());
+  const uuid = getCurrentPhotoUuid();
+  if (uuid === null) return { c, z, loc: undefined };
+  const photo = state.filteredPhotos.find((p) => p.uuid === uuid);
+  if (photo === undefined) return { c, z, loc: undefined };
+  return { c, z, loc: getEffectiveLocation(photo) ?? undefined };
+}
+
+function openAppleMaps() {
+  const { c, z, loc } = getMapContext();
+  const url =
+    loc === undefined
+      ? `maps://?ll=${c.lat},${c.lng}&z=${z}&t=k`
+      : `maps://?ll=${loc.lat},${loc.lon}&q=${loc.lat},${loc.lon}&z=${z}&t=k`;
+  window.open(url, '_blank');
+}
+
+function openGoogleMaps() {
+  const { c, z, loc } = getMapContext();
+  const url =
+    loc === undefined
+      ? `https://www.google.com/maps/@${c.lat},${c.lng},${z}z`
+      : `https://www.google.com/maps?q=${loc.lat},${loc.lon}&z=${z}`;
+  window.open(url, '_blank');
 }
 
 function renderStyleBtns(items: Array<{ style: string; label: string }>, active: string, onClick: (s: string) => void) {
@@ -154,17 +191,9 @@ export class FilterPanel extends LitElement {
     const co = this._getCameraOptions();
     if (this._camera !== 'all' && !co.includes(this._camera)) this._camera = 'all';
     this._applyFilters();
-    this._dispatch('map-style-change', this._mapStyle);
-    this._dispatch('marker-style-change', this._markerStyle);
-    this._dispatch('toggle-tracks', this._tracksVisible);
-  }
-
-  private _dispatch(type: string, detail?: unknown) {
-    this.dispatchEvent(
-      detail === undefined
-        ? new Event(type, { bubbles: true, composed: true })
-        : new CustomEvent(type, { bubbles: true, composed: true, detail })
-    );
+    changeMapStyle(this._mapStyle);
+    changeMarkerStyle(this._markerStyle);
+    setGpxVisible(this._tracksVisible);
   }
 
   private _getYearPhotos() {
@@ -261,7 +290,7 @@ export class FilterPanel extends LitElement {
     this._measureActive = false;
     this._applyFilters();
     history.replaceState(null, '', location.pathname);
-    this._dispatch('reset-app');
+    resetMap();
   }
 
   private _renderStats() {
@@ -313,19 +342,19 @@ export class FilterPanel extends LitElement {
           ${renderStyleBtns(
             [{ style: 'satellite', label: 'Aerial' }, { style: 'topo', label: 'Topo' },
              { style: 'mml_maastokartta', label: 'Maasto' }, { style: 'mml_ortokuva', label: 'Orto' }],
-            this._mapStyle, (s) => { this._mapStyle = s; mapStyleToUrl(s); this._dispatch('map-style-change', s); }
+            this._mapStyle, (s) => { this._mapStyle = s; mapStyleToUrl(s); changeMapStyle(s); }
           )}
           <label>Markers</label>
           ${renderStyleBtns(
             [{ style: 'points', label: 'Points' }, { style: 'classic', label: 'Classic' }],
-            this._markerStyle, (s) => { this._markerStyle = s; markerStyleToUrl(s); this._dispatch('marker-style-change', s); }
+            this._markerStyle, (s) => { this._markerStyle = s; markerStyleToUrl(s); changeMarkerStyle(s); }
           )}
           <div class="view-buttons">
-            <button class="view-btn" @click=${() => { this._dispatch('fit-view'); }}>Fit</button>
+            <button class="view-btn" @click=${() => { fitToPhotos(true, true); }}>Fit</button>
             <button class="view-btn" @click=${() => { this._onReset(); }}>Reset</button>
             <button class="view-btn ${this._measureActive ? 'active' : ''}" @click=${() => {
               this._measureActive = !this._measureActive;
-              this._dispatch('toggle-measure', this._measureActive);
+              toggleMeasureMode();
             }}>Measure</button>
           </div>
           ${this._tracksAvailable ? html`
@@ -333,20 +362,20 @@ export class FilterPanel extends LitElement {
               <button class="view-btn ${this._tracksVisible ? 'active' : ''}" @click=${() => {
                 this._tracksVisible = !this._tracksVisible;
                 tracksVisibleToUrl(this._tracksVisible);
-                this._dispatch('toggle-tracks', this._tracksVisible);
+                setGpxVisible(this._tracksVisible);
               }}>Tracks</button>
             </div>` : nothing}
           <div class="view-buttons">
-            <button class="view-btn" @click=${() => { this._dispatch('open-apple-maps'); }}>Apple Maps</button>
-            <button class="view-btn" @click=${() => { this._dispatch('open-google-maps'); }}>Google Maps</button>
+            <button class="view-btn" @click=${() => { openAppleMaps(); }}>Apple Maps</button>
+            <button class="view-btn" @click=${() => { openGoogleMaps(); }}>Google Maps</button>
           </div>
           ${ec > 0 ? html`
             <div class="edit-section">
               <span class="count">${ec}</span> pending edits
               <div class="edit-buttons">
-                <button ?disabled=${this.saving} @click=${() => { this._dispatch('save-edits'); }}>
+                <button ?disabled=${this.saving} @click=${() => { void saveEdits(); }}>
                   ${this.saving ? 'Saving...' : 'Save to Photos'}</button>
-                <button class="secondary" @click=${() => { this._dispatch('discard-edits'); }}>Discard</button>
+                <button class="secondary" @click=${() => { clearPendingEdits(); }}>Discard</button>
               </div>
             </div>` : nothing}
         </div>
