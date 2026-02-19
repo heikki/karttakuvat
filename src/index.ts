@@ -7,7 +7,7 @@ import {
   loadPhotos,
   state,
   subscribe
-} from './common/data';
+} from '@common/data';
 import {
   AdjustTimeEvent,
   ApplyManualDateEvent,
@@ -19,8 +19,8 @@ import {
   ShowLightboxEvent,
   ShowMetadataEvent,
   ToggleDateEditEvent
-} from './common/events';
-import { photoFromUrl, photoToUrl } from './common/filter-url';
+} from '@common/events';
+import { photoFromUrl, photoToUrl } from '@common/filter-url';
 import { initGpx, loadGpxForAlbum, setGpxVisible } from './map/gpx';
 import {
   changeMapStyle,
@@ -35,9 +35,9 @@ import {
   isMeasureMode,
   toggleMeasureMode
 } from './map/measure';
-import type { FilterPanel } from './components/filter-panel';
-import type { MetadataModal } from './components/metadata-modal';
-import type { PhotoLightbox } from './components/photo-lightbox';
+import type { FilterPanel } from '@components/filter-panel';
+import type { MetadataModal } from '@components/metadata-modal';
+import type { PhotoLightbox } from '@components/photo-lightbox';
 import {
   adjustTime,
   applyManualDate,
@@ -53,8 +53,8 @@ import {
   setOnPhotoChange,
   showPopup,
   toggleDateEdit
-} from './components/photo-popup/popup';
-import { getEffectiveLocation } from './components/photo-popup/popup-utils';
+} from '@components/photo-popup/popup';
+import { getEffectiveLocation } from '@components/photo-popup/popup-utils';
 
 function getLightbox(): PhotoLightbox {
   return document.getElementById('lightbox') as unknown as PhotoLightbox;

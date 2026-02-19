@@ -6,8 +6,8 @@ import type {
   Map as MapGL
 } from 'maplibre-gl';
 
-import { getEffectiveCoords } from '../../common/data';
-import type { MarkerLayer, Photo } from '../../common/types';
+import { getEffectiveCoords } from '@common/data';
+import type { MarkerLayer, Photo } from '@common/types';
 
 const gpsColor = [
   'match',

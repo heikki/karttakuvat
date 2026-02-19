@@ -5,6 +5,11 @@
     "lib": ["ESNext", "DOM"],
     "types": ["bun"],
     "experimentalDecorators": true,
-    "useDefineForClassFields": false
+    "useDefineForClassFields": false,
+    "baseUrl": ".",
+    "paths": {
+      "@common/*": ["src/common/*"],
+      "@components/*": ["src/components/*"]
+    }
   }
 }

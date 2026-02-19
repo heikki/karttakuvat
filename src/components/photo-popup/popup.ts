@@ -11,13 +11,13 @@ import {
   getEffectiveCoords,
   setPendingTimeEdit,
   state
-} from '../../common/data';
-import type { Photo } from '../../common/types';
+} from '@common/data';
+import type { Photo } from '@common/types';
 import {
   computeFullDatetimeOffsetHours,
   parseExifDate,
   parseUserDatetime
-} from '../../common/utils';
+} from '@common/utils';
 import type { PhotoPopup } from './index';
 import { computeManualDateOffset, getEffectiveDate, getEffectiveLocation } from './popup-utils';
 import {

@@ -1,8 +1,8 @@
 import { LitElement, css, html, nothing } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 
-import { getThumbUrl, formatDate } from '../../common/utils';
-import type { Photo } from '../../common/types';
+import { getThumbUrl, formatDate } from '@common/utils';
+import type { Photo } from '@common/types';
 
 @customElement('placement-panel')
 export class PlacementPanel extends LitElement {

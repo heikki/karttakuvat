@@ -1,9 +1,9 @@
-import { applyHourOffset, getEffectiveCoords, state } from '../../common/data';
-import type { Photo } from '../../common/types';
+import { applyHourOffset, getEffectiveCoords, state } from '@common/data';
+import type { Photo } from '@common/types';
 import {
   computeDateOffsetHours,
   computeFullDatetimeOffsetHours
-} from '../../common/utils';
+} from '@common/utils';
 
 export function getEffectiveDate(photo: Photo): string {
   const offset = state.pendingTimeEdits.get(photo.uuid) ?? 0;
