@@ -163,8 +163,6 @@ export function initMap() {
   map.on('error', () => {
     /* ignore */
   });
-  window.map = map;
-
   const panToFitPopup = createPanToFitPopup(map);
   const highlight = (photo: Photo | null) => {
     currentLayer?.highlight(photo);
