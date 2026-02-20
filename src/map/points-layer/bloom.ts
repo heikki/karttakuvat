@@ -1,10 +1,11 @@
-import { toUtcSortKey } from '@common/utils';
 import { createTileMesh, MercatorCoordinate } from 'maplibre-gl';
 import type {
   CustomLayerInterface,
   CustomRenderMethodInput,
   Map as MapGL
 } from 'maplibre-gl';
+
+import { toUtcSortKey } from '@common/utils';
 
 import {
   buildMips,

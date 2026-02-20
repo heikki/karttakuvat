@@ -1,3 +1,6 @@
+import { css, html, LitElement, nothing } from 'lit';
+import { customElement, property } from 'lit/decorators.js';
+
 import { getCopiedDate, getCopiedLocation } from '@common/data';
 import {
   AdjustTimeEvent,
@@ -23,8 +26,6 @@ import {
   getThumbUrl,
   isVideo
 } from '@common/utils';
-import { css, html, LitElement, nothing } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
 
 @customElement('photo-popup')
 export class PhotoPopup extends LitElement {

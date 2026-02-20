@@ -1,14 +1,3 @@
-import { getEffectiveCoords, state, subscribe } from '@common/data';
-import {
-  ChangeMapStyleEvent,
-  ChangeMarkerStyleEvent,
-  EnterPlacementEvent,
-  OpenExternalMapEvent,
-  ResetMapEvent
-} from '@common/events';
-import { mapViewFromUrl, mapViewToUrl } from '@common/filter-url';
-import { getEffectiveLocation } from '@common/photo-utils';
-import type { MapStyles, MarkerLayer, Photo } from '@common/types';
 import type { Point } from 'geojson';
 import {
   GlobeControl,
@@ -21,6 +10,18 @@ import type {
   MapMouseEvent,
   StyleSpecification
 } from 'maplibre-gl';
+
+import { getEffectiveCoords, state, subscribe } from '@common/data';
+import {
+  ChangeMapStyleEvent,
+  ChangeMarkerStyleEvent,
+  EnterPlacementEvent,
+  OpenExternalMapEvent,
+  ResetMapEvent
+} from '@common/events';
+import { mapViewFromUrl, mapViewToUrl } from '@common/filter-url';
+import { getEffectiveLocation } from '@common/photo-utils';
+import type { MapStyles, MarkerLayer, Photo } from '@common/types';
 
 import {
   initGlobeBackground,

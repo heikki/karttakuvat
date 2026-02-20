@@ -5,7 +5,13 @@ const config = {
   singleQuote: true,
   trailingComma: 'none',
   plugins: ['@ianvs/prettier-plugin-sort-imports'],
-  importOrder: ['<THIRD_PARTY_MODULES>', '', '^@repo/.*$', '^[./]'],
+  importOrder: [
+    '<THIRD_PARTY_MODULES>',
+    '',
+    '^@(common|components)/.*$',
+    '',
+    '^[./]'
+  ],
   importOrderParserPlugins: ['typescript', 'decorators']
 };
 

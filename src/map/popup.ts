@@ -1,3 +1,6 @@
+import { Popup } from 'maplibre-gl';
+import type { Map as MapGL } from 'maplibre-gl';
+
 import {
   addPendingEdit,
   addPendingTimeEdit,
@@ -32,8 +35,6 @@ import {
   parseUserDatetime
 } from '@common/utils';
 import type { PhotoPopup } from '@components/photo-popup';
-import { Popup } from 'maplibre-gl';
-import type { Map as MapGL } from 'maplibre-gl';
 
 import {
   initPopupZoom,

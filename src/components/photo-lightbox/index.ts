@@ -1,10 +1,11 @@
+import { css, html, LitElement, nothing } from 'lit';
+import { customElement, property } from 'lit/decorators.js';
+
 import { state } from '@common/data';
 import { ShowLightboxEvent, ShowMetadataEvent } from '@common/events';
 import { getEffectiveDate, getEffectiveLocation } from '@common/photo-utils';
 import type { Photo } from '@common/types';
 import { formatCoords, formatDate, getFullUrl, isVideo } from '@common/utils';
-import { css, html, LitElement, nothing } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
 
 function stopPropagation(e: Event) {
   e.stopPropagation();

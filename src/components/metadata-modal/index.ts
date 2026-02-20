@@ -1,6 +1,7 @@
-import { ShowMetadataEvent } from '@common/events';
 import { css, html, LitElement, nothing } from 'lit';
 import { customElement, state as litState, property } from 'lit/decorators.js';
+
+import { ShowMetadataEvent } from '@common/events';
 
 function escapeHtml(s: string): string {
   return s.replace(/</g, '&lt;').replace(/>/g, '&gt;');

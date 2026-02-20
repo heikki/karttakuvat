@@ -158,4 +158,3 @@ export function tracksVisibleToUrl(visible: boolean): void {
 export function tracksVisibleFromUrl(): boolean {
   return new URLSearchParams(location.search).get('tracks') !== '0';
 }
-

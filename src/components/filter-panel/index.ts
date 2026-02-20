@@ -1,3 +1,6 @@
+import { html, LitElement, nothing } from 'lit';
+import { customElement, state as litState } from 'lit/decorators.js';
+
 import { applyFilters, clearPendingEdits } from '@common/data';
 import {
   ChangeMapStyleEvent,
@@ -22,8 +25,6 @@ import {
   tracksVisibleToUrl
 } from '@common/filter-url';
 import { getYear, isVideo } from '@common/utils';
-import { html, LitElement, nothing } from 'lit';
-import { customElement, state as litState } from 'lit/decorators.js';
 
 import { StoreController } from './store-controller';
 import { styles } from './styles';

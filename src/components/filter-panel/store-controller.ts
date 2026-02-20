@@ -1,6 +1,7 @@
+import type { ReactiveController, ReactiveControllerHost } from 'lit';
+
 import { state, subscribe, subscribeEdits } from '@common/data';
 import type { Photo } from '@common/types';
-import type { ReactiveController, ReactiveControllerHost } from 'lit';
 
 export class StoreController implements ReactiveController {
   private readonly host: ReactiveControllerHost;

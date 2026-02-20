@@ -1,9 +1,10 @@
-import { state, subscribe } from '@common/data';
-import { GpxDataChangedEvent, SetGpxVisibleEvent } from '@common/events';
 import turfDistance from '@turf/distance';
 import { point } from '@turf/helpers';
 import type { Feature, FeatureCollection, LineString, Point } from 'geojson';
 import type { GeoJSONSource, Map as MapGL } from 'maplibre-gl';
+
+import { state, subscribe } from '@common/data';
+import { GpxDataChangedEvent, SetGpxVisibleEvent } from '@common/events';
 
 // Sources and layers
 const TRACK_SOURCE = 'gpx-tracks';

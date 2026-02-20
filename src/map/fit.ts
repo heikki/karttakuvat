@@ -1,7 +1,8 @@
-import { getEffectiveCoords, state } from '@common/data';
-import { FitToPhotosEvent } from '@common/events';
 import { LngLatBounds } from 'maplibre-gl';
 import type { Map as MapGL } from 'maplibre-gl';
+
+import { getEffectiveCoords, state } from '@common/data';
+import { FitToPhotosEvent } from '@common/events';
 
 import { getCurrentPopup, showPopup } from './popup';
 
