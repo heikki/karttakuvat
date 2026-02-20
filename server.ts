@@ -376,13 +376,8 @@ function logRequest(
         ? '\x1b[33m' // yellow
         : '\x1b[31m'; // red
 
-  const isApi = pathname.startsWith('/api/');
-  const pathDisplay = isApi
-    ? `\x1b[1m${pathname}${reset}`
-    : `${dim}${pathname}${reset}`;
-
-  const timing =
-    ms < 10 ? `${dim}${ms.toFixed(0)}ms${reset}` : `${ms.toFixed(0)}ms`;
+  const pathDisplay = pathname;
+  const timing = `${dim}${ms.toFixed(0)}ms${reset}`;
 
   const labelDisplay =
     requestLabel === '' ? '' : ` ${dim}(${requestLabel})${reset}`;
