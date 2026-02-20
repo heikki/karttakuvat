@@ -12,16 +12,7 @@ import {
   setPendingTimeEdit,
   state
 } from '@common/data';
-import {
-  AdjustTimeEvent,
-  ApplyManualDateEvent,
-  CopyDateEvent,
-  CopyLocationEvent,
-  PasteDateEvent,
-  PasteLocationEvent,
-  ShowLightboxEvent,
-  ToggleDateEditEvent
-} from '@common/events';
+import { ShowLightboxEvent } from '@common/events';
 import { photoFromUrl, photoToUrl } from '@common/filter-url';
 import {
   computeManualDateOffset,
@@ -34,7 +25,7 @@ import {
   parseExifDate,
   parseUserDatetime
 } from '@common/utils';
-import type { PhotoPopup } from '@components/photo-popup';
+import type { PopupActions, PhotoPopup } from '@components/photo-popup';
 
 import {
   initPopupZoom,
@@ -128,6 +119,31 @@ function handleKeydown(e: KeyboardEvent) {
   }
 }
 
+const popupActions: PopupActions = {
+  copyLocation: () => {
+    copyLocationFromPopup();
+  },
+  pasteLocation: () => {
+    pasteLocation();
+  },
+  copyDate: () => {
+    copyDateFromPopup();
+  },
+  pasteDate: () => {
+    pasteDateToPhoto();
+  },
+  toggleDateEdit: () => {
+    toggleDateEdit();
+  },
+  adjustTime: (hours) => {
+    const uuid = getCurrentPhotoUuid();
+    if (uuid !== null) adjustTime(uuid, hours);
+  },
+  applyManualDate: (value) => {
+    applyManualDate(value);
+  }
+};
+
 export function initPopupCallbacks(
   m: MapGL,
   highlight: (photo: Photo | null) => void,
@@ -140,29 +156,6 @@ export function initPopupCallbacks(
   getMarkerRadiusFn = getMarkerRadius;
   initPopupZoom(m, getSelectedMarkerCoords);
   m.on('zoomend', reanchorPopup);
-
-  document.addEventListener(CopyLocationEvent.type, () => {
-    copyLocationFromPopup();
-  });
-  document.addEventListener(PasteLocationEvent.type, () => {
-    pasteLocation();
-  });
-  document.addEventListener(AdjustTimeEvent.type, (e) => {
-    const uuid = getCurrentPhotoUuid();
-    if (uuid !== null) adjustTime(uuid, e.hours);
-  });
-  document.addEventListener(CopyDateEvent.type, () => {
-    copyDateFromPopup();
-  });
-  document.addEventListener(PasteDateEvent.type, () => {
-    pasteDateToPhoto();
-  });
-  document.addEventListener(ToggleDateEditEvent.type, () => {
-    toggleDateEdit();
-  });
-  document.addEventListener(ApplyManualDateEvent.type, (e) => {
-    applyManualDate(e.dateValue);
-  });
 
   document.addEventListener('keydown', handleKeydown);
 }
@@ -190,12 +183,34 @@ function getCurrentPhoto(): Photo | undefined {
   return undefined;
 }
 
+function computePasteState(photo: Photo): {
+  showPasteLocation: boolean;
+  showPasteDate: boolean;
+} {
+  let showPasteLocation = false;
+  const copiedLoc = getCopiedLocation();
+  if (copiedLoc !== null) {
+    const loc = getEffectiveLocation(photo);
+    showPasteLocation = copiedLoc.lat !== loc?.lat || copiedLoc.lon !== loc.lon;
+  }
+  let showPasteDate = false;
+  const copiedDate = getCopiedDate();
+  if (copiedDate !== null) {
+    const effectiveDate = getEffectiveDate(photo);
+    showPasteDate = effectiveDate !== '' && effectiveDate !== copiedDate;
+  }
+  return { showPasteLocation, showPasteDate };
+}
+
 function createPopupElement(photo: Photo, index: number): PhotoPopup {
   const el = document.createElement('photo-popup') as PhotoPopup;
   el.photo = photo;
   el.index = index;
   el.dateEditMode = dateEditMode;
-  el.refreshPasteState();
+  el.actions = popupActions;
+  const paste = computePasteState(photo);
+  el.showPasteLocation = paste.showPasteLocation;
+  el.showPasteDate = paste.showPasteDate;
   return el;
 }
 
@@ -206,7 +221,9 @@ function refreshPopupElement() {
   currentPopupElement.photo = photo;
   currentPopupElement.index = currentSinglePhotoIndex;
   currentPopupElement.dateEditMode = dateEditMode;
-  currentPopupElement.refreshPasteState();
+  const paste = computePasteState(photo);
+  currentPopupElement.showPasteLocation = paste.showPasteLocation;
+  currentPopupElement.showPasteDate = paste.showPasteDate;
   currentPopupElement.requestUpdate();
 }
 
