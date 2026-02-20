@@ -288,16 +288,6 @@ export function setGpxVisible(v: boolean): void {
   setLayerVisibility(visible);
 }
 
-export function toggleGpxVisibility(): boolean {
-  visible = !visible;
-  setLayerVisibility(visible);
-  return visible;
-}
-
-export function isGpxVisible(): boolean {
-  return visible;
-}
-
 function setLayerVisibility(show: boolean): void {
   if (map === null) return;
   const v = show ? 'visible' : 'none';

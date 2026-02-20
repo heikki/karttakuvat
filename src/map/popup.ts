@@ -135,7 +135,7 @@ export function getCurrentPhotoUuid(): string | null {
   return currentPhotoUuid;
 }
 
-export function reopenPopup(uuid: string | null) {
+function reopenPopup(uuid: string | null) {
   if (uuid === null) return;
   const newIndex = state.filteredPhotos.findIndex((p) => p.uuid === uuid);
   if (newIndex === -1) return;
@@ -159,7 +159,7 @@ function getCurrentPhoto(): Photo | undefined {
   return undefined;
 }
 
-export interface FeatureProps {
+interface FeatureProps {
   index: number;
 }
 

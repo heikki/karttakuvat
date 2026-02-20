@@ -54,20 +54,9 @@ import {
   showPopup
 } from './popup';
 
-// Declare window augmentation for map
-declare global {
-  interface Window {
-    map?: MapGL;
-  }
-}
-
 // Global map variable (local to module)
 // eslint-disable-next-line @typescript-eslint/init-declarations -- map is initialized in initMap() which is called before any other usage
 let map: MapGL;
-
-export function getMap(): MapGL {
-  return map;
-}
 
 const markerStyles: Record<string, () => MarkerLayer> = {
   points: () => new PointsLayer(),
@@ -84,10 +73,6 @@ function getMarkerLayerId(): string | null {
 
 function setMarkerVisibility(visible: boolean) {
   currentLayer?.toggle(visible);
-}
-
-export function enterPlacementMode(photoIndex: number) {
-  enterPlacement(map, photoIndex);
 }
 
 function resetMap() {
@@ -250,7 +235,7 @@ export function initMap() {
   setupPlacement(map, setMarkerVisibility);
 
   document.addEventListener(EnterPlacementEvent.type, (e: Event) => {
-    enterPlacementMode((e as EnterPlacementEvent).index);
+    enterPlacement(map, (e as EnterPlacementEvent).index);
   });
   document.addEventListener(ChangeMapStyleEvent.type, (e) => {
     changeMapStyle(e.style);

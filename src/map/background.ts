@@ -406,31 +406,6 @@ export function stopGlobeBackground() {
   }
 }
 
-export function destroyGlobeBackground() {
-  stopGlobeBackground();
-  if (resizeObserver !== null) {
-    resizeObserver.disconnect();
-    resizeObserver = null;
-  }
-  if (gl !== null) {
-    if (nebulaProgram !== null) gl.deleteProgram(nebulaProgram);
-    if (blitProgram !== null) gl.deleteProgram(blitProgram);
-    if (fbo !== null) gl.deleteFramebuffer(fbo);
-    if (fboTexture !== null) gl.deleteTexture(fboTexture);
-    nebulaProgram = null;
-    blitProgram = null;
-    fbo = null;
-    fboTexture = null;
-    fboWidth = 0;
-    fboHeight = 0;
-    gl = null;
-  }
-  if (canvas !== null) {
-    canvas.remove();
-    canvas = null;
-  }
-}
-
 export function initGlobeBackground(container: HTMLElement) {
   if (!initGL(container)) {
     console.warn('Globe background: WebGL2 not available');

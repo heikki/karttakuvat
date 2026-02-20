@@ -12,13 +12,6 @@ export function toUtcSortKey(date: string, tz: string | null): string {
   return new Date(iso + (tz ?? 'Z')).toISOString();
 }
 
-export function compareDates(a: Photo, b: Photo): number {
-  if (a.date === '' && b.date === '') return 0;
-  if (a.date === '') return 1;
-  if (b.date === '') return -1;
-  return toUtcSortKey(a.date, a.tz).localeCompare(toUtcSortKey(b.date, b.tz));
-}
-
 /** Sort photos in-place using precomputed sort keys (avoids repeated Date allocations). */
 export function sortByDate(photos: Photo[]): void {
   const keys = new Map<Photo, string>();

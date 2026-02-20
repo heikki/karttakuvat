@@ -84,22 +84,6 @@ export class ShowMetadataEvent extends Event {
   }
 }
 
-export class NavigatePhotoEvent extends Event {
-  static readonly type = 'navigate-photo';
-  readonly direction: 'prev' | 'next';
-  constructor(direction: 'prev' | 'next') {
-    super(NavigatePhotoEvent.type, opts);
-    this.direction = direction;
-  }
-}
-
-export class CloseLightboxEvent extends Event {
-  static readonly type = 'close-lightbox';
-  constructor() {
-    super(CloseLightboxEvent.type, opts);
-  }
-}
-
 /* ── Map command events (filter-panel → map) ── */
 
 export class ChangeMapStyleEvent extends Event {
@@ -200,8 +184,6 @@ declare global {
     [ToggleDateEditEvent.type]: ToggleDateEditEvent;
     [ApplyManualDateEvent.type]: ApplyManualDateEvent;
     [ShowMetadataEvent.type]: ShowMetadataEvent;
-    [NavigatePhotoEvent.type]: NavigatePhotoEvent;
-    [CloseLightboxEvent.type]: CloseLightboxEvent;
   }
   interface DocumentEventMap {
     [ChangeMapStyleEvent.type]: ChangeMapStyleEvent;

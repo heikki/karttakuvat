@@ -35,9 +35,6 @@ export class StoreController implements ReactiveController {
   get filteredPhotos(): Photo[] {
     return state.filteredPhotos;
   }
-  get filters() {
-    return state.filters;
-  }
   get editCount(): number {
     return state.pendingEdits.size + state.pendingTimeEdits.size;
   }
