@@ -40,7 +40,7 @@ export function computeManualDateOffset(
     parseInt(dayParts[2]!, 10),
     timeParts[0] ?? 0,
     timeParts[1] ?? 0,
-    0
+    timeParts[2] ?? 0
   );
   return computeFullDatetimeOffsetHours(originalDate, target);
 }
@@ -53,7 +53,8 @@ export function editableDateStr(exifDate: string): string {
   if (parts.length < 3) return '';
   const d = `${parseInt(parts[2]!, 10)}.${parseInt(parts[1]!, 10)}.${parts[0]!}`;
   if (timePart === undefined) return d;
-  const [h, m] = timePart.split(':');
+  const [h, m, s] = timePart.split(':');
   if (h === undefined || m === undefined) return d;
-  return `${d} ${h}:${m}`;
+  if (s === undefined) return `${d} ${h}:${m}`;
+  return `${d} ${h}:${m}:${s}`;
 }

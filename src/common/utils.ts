@@ -162,7 +162,7 @@ export function computeFullDatetimeOffsetHours(
 }
 
 const userDatePattern =
-  /^(?<dy>\d{1,2})\.(?<mo>\d{1,2})\.(?<yr>\d{4})?\s*(?<tm>\d{1,2}:\d{2})?$/;
+  /^(?<dy>\d{1,2})\.(?<mo>\d{1,2})\.(?<yr>\d{4})?\s*(?<tm>\d{1,2}:\d{2}(?::\d{2})?)?$/;
 
 export function parseUserDatetime(
   input: string,
