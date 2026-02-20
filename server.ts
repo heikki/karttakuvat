@@ -207,7 +207,8 @@ async function processTimeEdits(
       return {
         uuid: edit.uuid,
         date: datePart.replaceAll(':', '-'),
-        time: timePart
+        time: timePart,
+        tz: item.tz
       };
     })
     .filter((e) => e !== undefined);

@@ -3,9 +3,11 @@
 Set photo dates in Apple Photos using osxphotos timewarp.
 
 Reads JSON array of edits from stdin:
-    [{"uuid": "...", "date": "YYYY-MM-DD", "time": "HH:MM:SS"}, ...]
+    [{"uuid": "...", "date": "YYYY-MM-DD", "time": "HH:MM:SS", "tz": "+03:00"}, ...]
 
 Sets each photo's date and time to the specified values.
+Falls back to JXA (JavaScript for Automation) if osxphotos crashes
+(e.g. photos with no timezone set).
 
 Requirements:
     - osxphotos: pipx install osxphotos
@@ -23,6 +25,35 @@ import sys
 OSXPHOTOS = shutil.which("osxphotos") or os.path.expanduser("~/.local/bin/osxphotos")
 
 
+def set_date_jxa(uuid, date, time):
+    """Fallback: set photo date via JXA (JavaScript for Automation)."""
+    script = f"""
+        const Photos = Application("Photos");
+        const item = Photos.mediaItems.byId("{uuid}");
+        item.date = new Date("{date}T{time}");
+    """
+    return subprocess.run(
+        ["osascript", "-l", "JavaScript", "-e", script],
+        capture_output=True,
+        text=True,
+    )
+
+
+def set_date_osxphotos(uuid, date, time, tz):
+    """Primary: set photo date via osxphotos timewarp."""
+    cmd = [
+        OSXPHOTOS,
+        "timewarp",
+        "--date", date,
+        "--time", time,
+        "--uuid", uuid,
+        "--force",
+    ]
+    if tz:
+        cmd.extend(["--timezone", tz])
+    return subprocess.run(cmd, capture_output=True, text=True)
+
+
 def main():
     data = sys.stdin.read()
     edits = json.loads(data)
@@ -36,22 +67,17 @@ def main():
         uuid = edit["uuid"]
         date = edit["date"]
         time = edit["time"]
+        tz = edit.get("tz")
 
         try:
-            result = subprocess.run(
-                [
-                    OSXPHOTOS,
-                    "timewarp",
-                    "--date", date,
-                    "--time", time,
-                    "--uuid", uuid,
-                    "--force",
-                ],
-                capture_output=True,
-                text=True,
-            )
+            result = set_date_osxphotos(uuid, date, time, tz)
             if result.returncode != 0:
-                results.append({"uuid": uuid, "ok": False, "error": result.stderr.strip()})
+                # Try JXA fallback
+                fallback = set_date_jxa(uuid, date, time)
+                if fallback.returncode != 0:
+                    results.append({"uuid": uuid, "ok": False, "error": result.stderr.strip()})
+                else:
+                    results.append({"uuid": uuid, "ok": True})
             else:
                 results.append({"uuid": uuid, "ok": True})
         except Exception as e:
