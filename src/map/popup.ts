@@ -286,7 +286,6 @@ function copyLocationFromPopup() {
   const loc = getEffectiveLocation(photo);
   if (loc === null) return;
   copyLocation(loc.lat, loc.lon);
-  refreshPopupElement();
 }
 
 function pasteLocation() {
@@ -305,7 +304,6 @@ function copyDateFromPopup() {
   const effectiveDate = getEffectiveDate(photo);
   if (effectiveDate === '') return;
   copyDate(effectiveDate);
-  refreshPopupElement();
 }
 
 function pasteDateToPhoto() {
