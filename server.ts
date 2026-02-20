@@ -224,7 +224,7 @@ async function processTimeEdits(
   const result = await runScript(
     ['python3', 'scripts/set_times.py'],
     JSON.stringify(timeEditsWithTarget),
-    '🕐'
+    '⏰'
   );
   if ('error' in result) return result.error;
   return null;
