@@ -7,8 +7,6 @@ import {
 } from '@common/data';
 import { SaveEditsEvent } from '@common/events';
 
-import { getCurrentPhotoUuid, getCurrentPopup, reopenPopup } from './map/popup';
-
 async function saveEdits() {
   const edits = getPendingEdits();
   const timeEdits = getPendingTimeEdits();
@@ -26,11 +24,8 @@ async function saveEdits() {
       const text = await response.text();
       throw new Error(text);
     }
-    const reopenUuid = getCurrentPhotoUuid();
-    getCurrentPopup()?.remove();
     await loadPhotos();
     clearPendingEdits();
-    reopenPopup(reopenUuid);
   } catch (err) {
     console.error('Failed to save edits:', err);
     // eslint-disable-next-line no-alert -- user needs feedback on save failure
