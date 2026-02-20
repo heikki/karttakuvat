@@ -284,8 +284,8 @@ function updateSources(): void {
   document.dispatchEvent(new GpxDataChangedEvent(hasData));
 }
 
-export function setGpxVisible(v: boolean): void {
-  visible = v;
+export function setGpxVisible(show: boolean): void {
+  visible = show;
   setLayerVisibility(visible);
 }
 

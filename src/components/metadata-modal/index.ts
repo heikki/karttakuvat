@@ -240,33 +240,33 @@ export class MetadataModal extends LitElement {
 
   override connectedCallback() {
     super.connectedCallback();
-    this.addEventListener('click', this._handleHostClick);
-    document.addEventListener('keydown', this._handleKeydown, true);
-    document.addEventListener(ShowMetadataEvent.type, this._handleShowMetadata);
+    this.addEventListener('click', this._onHostClick);
+    document.addEventListener('keydown', this._onKeydown, true);
+    document.addEventListener(ShowMetadataEvent.type, this._onShowMetadata);
   }
 
   override disconnectedCallback() {
     super.disconnectedCallback();
-    this.removeEventListener('click', this._handleHostClick);
-    document.removeEventListener('keydown', this._handleKeydown, true);
+    this.removeEventListener('click', this._onHostClick);
+    document.removeEventListener('keydown', this._onKeydown, true);
     document.removeEventListener(
       ShowMetadataEvent.type,
-      this._handleShowMetadata
+      this._onShowMetadata
     );
   }
 
-  private readonly _handleShowMetadata = (e: ShowMetadataEvent) => {
+  private readonly _onShowMetadata = (e: ShowMetadataEvent) => {
     this.loadMetadata(e.uuid);
   };
 
-  private readonly _handleHostClick = (e: Event) => {
+  private readonly _onHostClick = (e: Event) => {
     // Backdrop click: if click is directly on the host element
     if (e.target === this) {
       this._close();
     }
   };
 
-  private readonly _handleKeydown = (e: KeyboardEvent) => {
+  private readonly _onKeydown = (e: KeyboardEvent) => {
     if (!this.active) return;
     if (e.key === 'Escape') {
       e.preventDefault();

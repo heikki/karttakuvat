@@ -3,11 +3,11 @@ import type { Map as MapGL } from 'maplibre-gl';
 import { addPendingEdit, state } from '@common/data';
 import type { PlacementPanel } from '@components/placement-panel';
 
-import { getCurrentPopup, showPopup } from './popup';
+import { getPopup, showPopup } from './popup';
 
 let placementPhotoIndex: number | null = null;
 // eslint-disable-next-line @typescript-eslint/no-empty-function -- set in setupPlacement
-let markerVisibility: (visible: boolean) => void = () => {};
+let markerVisibilityFn: (visible: boolean) => void = () => {};
 
 function getPanel(): PlacementPanel {
   return document.getElementById(
@@ -36,7 +36,7 @@ function exitPlacementMode(map: MapGL) {
   placementPhotoIndex = null;
   map.getCanvas().classList.remove('crosshair');
   hidePlacementPanel();
-  markerVisibility(true);
+  markerVisibilityFn(true);
 }
 
 function finishPlacement(
@@ -53,18 +53,18 @@ function finishPlacement(
 }
 
 export function enterPlacementMode(map: MapGL, photoIndex: number) {
-  getCurrentPopup()?.remove();
+  getPopup()?.remove();
   placementPhotoIndex = photoIndex;
   map.getCanvas().classList.add('crosshair');
   showPlacementPanel(photoIndex);
-  markerVisibility(false);
+  markerVisibilityFn(false);
 }
 
 export function setupPlacement(
   map: MapGL,
   setVisibility: (visible: boolean) => void
 ) {
-  markerVisibility = setVisibility;
+  markerVisibilityFn = setVisibility;
 
   map.on('click', (e) => {
     if (placementPhotoIndex === null) return;

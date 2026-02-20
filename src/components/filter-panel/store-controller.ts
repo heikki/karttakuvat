@@ -39,8 +39,8 @@ export class StoreController implements ReactiveController {
   get editCount(): number {
     return state.pendingEdits.size + state.pendingTimeEdits.size;
   }
-  get saving(): boolean {
-    return state.saving;
+  get isSaving(): boolean {
+    return state.isSaving;
   }
   /* eslint-enable @typescript-eslint/class-methods-use-this */
 }

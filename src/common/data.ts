@@ -13,7 +13,7 @@ export const state = {
   },
   pendingEdits: new Map<string, { lat: number; lon: number }>(),
   pendingTimeEdits: new Map<string, number>(),
-  saving: false
+  isSaving: false
 };
 
 type Listener = (filtered: Photo[]) => void;
@@ -71,8 +71,8 @@ function notifyEdits() {
   });
 }
 
-export function setSaving(v: boolean) {
-  state.saving = v;
+export function setSaving(isSaving: boolean) {
+  state.isSaving = isSaving;
   notifyEdits();
 }
 

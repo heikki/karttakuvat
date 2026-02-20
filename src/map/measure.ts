@@ -7,7 +7,7 @@ import { MeasureModeExitedEvent, ToggleMeasureModeEvent } from '@common/events';
 // eslint-disable-next-line @typescript-eslint/init-declarations -- initialized in initMeasure() before any usage
 let map: MapGL;
 let getMarkerLayerIdFn: () => string | null = () => null;
-let active = false;
+let isMeasureActive = false;
 const coords: Array<[number, number]> = [];
 
 const POINT_SOURCE = 'measure-points';
@@ -18,7 +18,7 @@ const LINE_LAYER = 'measure-line-layer';
 let overlay: HTMLElement | null = null;
 
 export function isMeasureMode(): boolean {
-  return active;
+  return isMeasureActive;
 }
 
 export function initMeasure(m: MapGL, getMarkerLayerId: () => string | null) {
@@ -57,7 +57,7 @@ export function addMeasureLayers() {
       'line-dasharray': [3, 2]
     },
     layout: {
-      visibility: active ? 'visible' : 'none'
+      visibility: isMeasureActive ? 'visible' : 'none'
     }
   });
 
@@ -72,7 +72,7 @@ export function addMeasureLayers() {
       'circle-stroke-color': '#fff'
     },
     layout: {
-      visibility: active ? 'visible' : 'none'
+      visibility: isMeasureActive ? 'visible' : 'none'
     }
   });
 }
@@ -189,8 +189,8 @@ function onKeyDown(e: KeyboardEvent) {
 }
 
 function enterMeasureMode() {
-  if (active) return;
-  active = true;
+  if (isMeasureActive) return;
+  isMeasureActive = true;
   coords.length = 0;
 
   map.getCanvas().classList.add('crosshair');
@@ -205,8 +205,8 @@ function enterMeasureMode() {
 }
 
 export function exitMeasureMode() {
-  if (!active) return;
-  active = false;
+  if (!isMeasureActive) return;
+  isMeasureActive = false;
   coords.length = 0;
 
   map.getCanvas().classList.remove('crosshair');
@@ -221,7 +221,7 @@ export function exitMeasureMode() {
 }
 
 export function toggleMeasureMode() {
-  if (active) {
+  if (isMeasureActive) {
     exitMeasureMode();
   } else {
     enterMeasureMode();

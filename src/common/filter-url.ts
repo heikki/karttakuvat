@@ -18,32 +18,32 @@ function currentParams(): URLSearchParams {
   return new URLSearchParams(location.search);
 }
 
-export function filtersToUrl(f: SavedFilters): void {
+export function filtersToUrl(filters: SavedFilters): void {
   const params = currentParams();
   // Clear filter params but preserve non-filter params (like photo)
   for (const key of ['year', 'album', 'camera', 'gps', 'media']) {
     params.delete(key);
   }
-  if (f.year !== 'all') {
-    params.set('year', f.year);
+  if (filters.year !== 'all') {
+    params.set('year', filters.year);
   }
-  if (f.album !== 'all') {
-    params.set('album', f.album);
+  if (filters.album !== 'all') {
+    params.set('album', filters.album);
   }
-  if (f.camera !== 'all') {
-    params.set('camera', f.camera);
-  }
-  if (
-    f.gps.length !== ALL_GPS.length ||
-    !ALL_GPS.every((v) => f.gps.includes(v))
-  ) {
-    params.set('gps', f.gps.join(','));
+  if (filters.camera !== 'all') {
+    params.set('camera', filters.camera);
   }
   if (
-    f.media.length !== ALL_MEDIA.length ||
-    !ALL_MEDIA.every((v) => f.media.includes(v))
+    filters.gps.length !== ALL_GPS.length ||
+    !ALL_GPS.every((v) => filters.gps.includes(v))
   ) {
-    params.set('media', f.media.join(','));
+    params.set('gps', filters.gps.join(','));
+  }
+  if (
+    filters.media.length !== ALL_MEDIA.length ||
+    !ALL_MEDIA.every((v) => filters.media.includes(v))
+  ) {
+    params.set('media', filters.media.join(','));
   }
   updateUrl(params);
 }
@@ -92,11 +92,11 @@ interface MapView {
   zoom: number;
 }
 
-export function mapViewToUrl(v: MapView): void {
+export function mapViewToUrl(view: MapView): void {
   const params = currentParams();
-  params.set('lat', v.lat.toFixed(5));
-  params.set('lon', v.lon.toFixed(5));
-  params.set('z', v.zoom.toFixed(2));
+  params.set('lat', view.lat.toFixed(5));
+  params.set('lon', view.lon.toFixed(5));
+  params.set('z', view.zoom.toFixed(2));
   updateUrl(params);
 }
 

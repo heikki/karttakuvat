@@ -140,18 +140,18 @@ export class FilterPanel extends LitElement {
       if (saved.gps !== undefined) this._gps = saved.gps;
       if (saved.media !== undefined) this._media = saved.media;
     }
-    const ms = mapStyleFromUrl();
-    if (ms !== null) this._mapStyle = ms;
-    const mk = markerStyleFromUrl();
-    if (mk !== null) this._markerStyle = mk;
+    const mapStyle = mapStyleFromUrl();
+    if (mapStyle !== null) this._mapStyle = mapStyle;
+    const markerStyle = markerStyleFromUrl();
+    if (markerStyle !== null) this._markerStyle = markerStyle;
     this._tracksVisible = tracksVisibleFromUrl();
   }
 
   private _applyInitialFilters() {
-    const ao = this._getAlbumOptions();
-    if (this._album !== 'all' && !ao.includes(this._album)) this._album = 'all';
-    const co = this._getCameraOptions();
-    if (this._camera !== 'all' && !co.includes(this._camera)) {
+    const albumOpts = this._getAlbumOptions();
+    if (this._album !== 'all' && !albumOpts.includes(this._album)) this._album = 'all';
+    const cameraOpts = this._getCameraOptions();
+    if (this._camera !== 'all' && !cameraOpts.includes(this._camera)) {
       this._camera = 'all';
     }
     this._applyFilters();
@@ -171,10 +171,10 @@ export class FilterPanel extends LitElement {
   }
 
   private _getAlbumPhotos() {
-    const yp = this._getYearPhotos();
+    const yearPhotos = this._getYearPhotos();
     return this._album === 'all'
-      ? yp
-      : yp.filter((p) => p.albums.includes(this._album));
+      ? yearPhotos
+      : yearPhotos.filter((p) => p.albums.includes(this._album));
   }
 
   private _getCameraOptions() {
@@ -184,10 +184,10 @@ export class FilterPanel extends LitElement {
   }
 
   private _getCameraPhotos() {
-    const ap = this._getAlbumPhotos();
+    const albumPhotos = this._getAlbumPhotos();
     return this._camera === 'all'
-      ? ap
-      : ap.filter((p) => (p.camera ?? '(unknown)') === this._camera);
+      ? albumPhotos
+      : albumPhotos.filter((p) => (p.camera ?? '(unknown)') === this._camera);
   }
 
   private _applyFilters() {
@@ -212,10 +212,10 @@ export class FilterPanel extends LitElement {
 
   private readonly _onYearChange = (e: Event) => {
     this._year = (e.target as HTMLSelectElement).value;
-    const ao = this._getAlbumOptions();
-    if (this._album !== 'all' && !ao.includes(this._album)) this._album = 'all';
-    const co = this._getCameraOptions();
-    if (this._camera !== 'all' && !co.includes(this._camera)) {
+    const albumOpts = this._getAlbumOptions();
+    if (this._album !== 'all' && !albumOpts.includes(this._album)) this._album = 'all';
+    const cameraOpts = this._getCameraOptions();
+    if (this._camera !== 'all' && !cameraOpts.includes(this._camera)) {
       this._camera = 'all';
     }
     this._applyFilters();
@@ -223,8 +223,8 @@ export class FilterPanel extends LitElement {
 
   private readonly _onAlbumChange = (e: Event) => {
     this._album = (e.target as HTMLSelectElement).value;
-    const co = this._getCameraOptions();
-    if (this._camera !== 'all' && !co.includes(this._camera)) {
+    const cameraOpts = this._getCameraOptions();
+    if (this._camera !== 'all' && !cameraOpts.includes(this._camera)) {
       this._camera = 'all';
     }
     this._applyFilters();
@@ -351,7 +351,7 @@ export class FilterPanel extends LitElement {
         this._store.photos.map(getYear).filter((y): y is string => y !== null)
       )
     ].sort();
-    const ec = this._store.editCount;
+    const editCount = this._store.editCount;
     return html`
       <div class="wrapper">
         <div
@@ -483,17 +483,17 @@ export class FilterPanel extends LitElement {
                     Google Maps
                   </button>
                 </div>
-                ${ec > 0
+                ${editCount > 0
                   ? html` <div class="edit-section">
-                      <span class="count">${ec}</span> pending edits
+                      <span class="count">${editCount}</span> pending edits
                       <div class="edit-buttons">
                         <button
-                          ?disabled=${this._store.saving}
+                          ?disabled=${this._store.isSaving}
                           @click=${() => {
                             document.dispatchEvent(new SaveEditsEvent());
                           }}
                         >
-                          ${this._store.saving ? 'Saving...' : 'Save to Photos'}
+                          ${this._store.isSaving ? 'Saving...' : 'Save to Photos'}
                         </button>
                         <button
                           class="secondary"

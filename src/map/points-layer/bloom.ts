@@ -150,7 +150,7 @@ export class BloomLayer implements CustomLayerInterface {
     map.on('projectiontransition', this.projectionHandler);
   }
 
-  private cached(key: string, create: () => Shader): Shader {
+  private getOrCreate(key: string, create: () => Shader): Shader {
     let s = this.shaders.get(key);
     if (s === undefined) {
       s = create();
@@ -205,7 +205,7 @@ export class BloomLayer implements CustomLayerInterface {
       return;
     }
     this.buildNightMesh(gl);
-    const s = this.cached(`night-${options.shaderData.variantName}`, () =>
+    const s = this.getOrCreate(`night-${options.shaderData.variantName}`, () =>
       createNightShader(gl, options.shaderData)
     );
     gl.useProgram(s.program);
@@ -232,7 +232,7 @@ export class BloomLayer implements CustomLayerInterface {
     sun: { lng: number; lat: number }
   ) {
     const { width: w, height: h } = this.map!.getCanvas();
-    const s = this.cached(`point-${options.shaderData.variantName}`, () =>
+    const s = this.getOrCreate(`point-${options.shaderData.variantName}`, () =>
       createPointShader(gl, options.shaderData)
     );
     this.ensureFbos(gl, w, h);

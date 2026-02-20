@@ -47,8 +47,8 @@ import {
 } from './placement';
 import { PointsLayer } from './points-layer';
 import {
-  getCurrentPhotoUuid,
-  getCurrentPopup,
+  getPhotoUuid,
+  getPopup,
   initPopupCallbacks,
   reopenPopupFromUrl,
   showPopup
@@ -76,7 +76,7 @@ function setMarkerVisibility(visible: boolean) {
 }
 
 function resetMap() {
-  getCurrentPopup()?.remove();
+  getPopup()?.remove();
   if (isMeasureMode()) exitMeasureMode();
   changeMapStyle('satellite');
   fitToPhotos(true);
@@ -93,7 +93,7 @@ function withGlobe(style: StyleSpecification): StyleSpecification {
 function openExternalMap(target: 'apple' | 'google') {
   const c = map.getCenter();
   const z = Math.round(map.getZoom());
-  const uuid = getCurrentPhotoUuid();
+  const uuid = getPhotoUuid();
   const photo =
     uuid === null
       ? undefined
@@ -189,7 +189,7 @@ export function initMap() {
     addMeasureLayers();
     setupMarkerInteractions();
 
-    updateMapData();
+    updateMarkers();
     reopenPopupFromUrl();
     if (savedView === null && state.filteredPhotos.length > 0) {
       fitToPhotos();
@@ -202,9 +202,9 @@ export function initMap() {
     } else {
       stopGlobeBackground();
     }
-    const popup = getCurrentPopup();
+    const popup = getPopup();
     if (popup === null) return;
-    const uuid = getCurrentPhotoUuid();
+    const uuid = getPhotoUuid();
     if (uuid === null) return;
     const index = state.filteredPhotos.findIndex((p) => p.uuid === uuid);
     if (index === -1) return;
@@ -213,9 +213,9 @@ export function initMap() {
 
   subscribe(() => {
     if (currentLayer === null) return;
-    const uuid = getCurrentPhotoUuid();
-    updateMapData();
-    const popup = getCurrentPopup();
+    const uuid = getPhotoUuid();
+    updateMarkers();
+    const popup = getPopup();
     if (popup !== null) {
       if (uuid !== null) {
         const newIndex = state.filteredPhotos.findIndex((p) => p.uuid === uuid);
@@ -247,12 +247,12 @@ export function initMap() {
   });
 }
 
-function updateMapData() {
+function updateMarkers() {
   currentLayer?.setMarkers(state.filteredPhotos);
 }
 
-function restoreHighlight() {
-  const uuid = getCurrentPhotoUuid();
+function reopenPopup() {
+  const uuid = getPhotoUuid();
   if (uuid === null) return;
   const index = state.filteredPhotos.findIndex((p) => p.uuid === uuid);
   if (index === -1) return;
@@ -273,11 +273,11 @@ function changeMapStyle(styleKey: string) {
     addPhotoLayers();
     addMeasureLayers();
     setupMarkerInteractions();
-    updateMapData();
+    updateMarkers();
     if (isInPlacementMode()) {
       currentLayer?.toggle(false);
     } else {
-      restoreHighlight();
+      reopenPopup();
     }
   };
 
@@ -291,11 +291,11 @@ function changeMarkerStyle(styleKey: string) {
   if (currentLayer === null) return;
   addPhotoLayers();
   setupMarkerInteractions();
-  updateMapData();
+  updateMarkers();
   if (isInPlacementMode()) {
     currentLayer.toggle(false);
   } else {
-    restoreHighlight();
+    reopenPopup();
   }
 }
 
@@ -353,7 +353,7 @@ function setupMarkerInteractions() {
       });
       if (features.length > 0) return;
     }
-    const popup = getCurrentPopup();
+    const popup = getPopup();
     if (popup !== null) {
       popup.remove();
     }

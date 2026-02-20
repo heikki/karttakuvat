@@ -170,24 +170,24 @@ export class PhotoLightbox extends LitElement {
 
   override connectedCallback() {
     super.connectedCallback();
-    document.addEventListener('keydown', this._handleKeydown);
-    document.addEventListener(ShowLightboxEvent.type, this._handleShowLightbox);
+    document.addEventListener('keydown', this._onKeydown);
+    document.addEventListener(ShowLightboxEvent.type, this._onShowLightbox);
   }
 
   override disconnectedCallback() {
     super.disconnectedCallback();
-    document.removeEventListener('keydown', this._handleKeydown);
+    document.removeEventListener('keydown', this._onKeydown);
     document.removeEventListener(
       ShowLightboxEvent.type,
-      this._handleShowLightbox
+      this._onShowLightbox
     );
   }
 
-  private readonly _handleShowLightbox = (e: ShowLightboxEvent) => {
+  private readonly _onShowLightbox = (e: ShowLightboxEvent) => {
     this.show(e.index);
   };
 
-  private readonly _handleKeydown = (e: KeyboardEvent) => {
+  private readonly _onKeydown = (e: KeyboardEvent) => {
     if (!this.active) return;
     if (e.key === 'Escape') {
       e.preventDefault();

@@ -95,9 +95,9 @@ export class SaveEditsEvent extends Event {
 export class OpenExternalMapEvent extends Event {
   static readonly type = 'open-external-map';
   readonly provider: 'apple' | 'google';
-  constructor(target: 'apple' | 'google') {
+  constructor(provider: 'apple' | 'google') {
     super(OpenExternalMapEvent.type);
-    this.provider = target;
+    this.provider = provider;
   }
 }
 

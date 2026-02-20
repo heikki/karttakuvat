@@ -4,7 +4,7 @@ import type { Map as MapGL } from 'maplibre-gl';
 import { state } from '@common/data';
 import { FitToPhotosEvent } from '@common/events';
 
-import { getCurrentPopup, showPopup } from './popup';
+import { getPopup, showPopup } from './popup';
 
 // eslint-disable-next-line @typescript-eslint/init-declarations -- set in initFit
 let map: MapGL;
@@ -34,7 +34,7 @@ function isSinglePointBounds(bounds: LngLatBounds): boolean {
   );
 }
 
-function applyFitCallback(animate: boolean, selectFirst: boolean) {
+function triggerPostFitActions(animate: boolean, selectFirst: boolean) {
   if (animate && selectFirst) {
     void map.once('moveend', showFirstPopup);
   } else if (selectFirst) {
@@ -44,7 +44,7 @@ function applyFitCallback(animate: boolean, selectFirst: boolean) {
 
 function computeTopPadding(): number {
   if (map.getProjection().type !== 'globe') return 350;
-  const popupEl = getCurrentPopup()?.getElement();
+  const popupEl = getPopup()?.getElement();
   if (popupEl === undefined) return 50;
   return Math.max(50, popupEl.getBoundingClientRect().height + 60);
 }
@@ -57,7 +57,7 @@ export function fitToPhotos(animate = false, selectFirst = false) {
   if (isSinglePointBounds(bounds)) {
     const center = bounds.getCenter();
     map.flyTo({ center: [center.lng, center.lat], zoom: 14, duration });
-    applyFitCallback(animate, selectFirst);
+    triggerPostFitActions(animate, selectFirst);
     return;
   }
 
@@ -66,5 +66,5 @@ export function fitToPhotos(animate = false, selectFirst = false) {
     maxZoom: 18,
     duration
   });
-  applyFitCallback(animate, selectFirst);
+  triggerPostFitActions(animate, selectFirst);
 }
