@@ -75,7 +75,7 @@ function bufferScriptOutput(
       } else {
         const error = typeof rec.error === 'string' ? rec.error : 'failed';
         scriptLogBuffer.push(
-          `  ${label} \x1b[31m✗${reset} ${dim}${id}${reset} ${dim}${error}${reset}`
+          `  ${label} \x1b[31m✗${reset} ${dim}${id}${reset}\n       ${dim}${error}${reset}`
         );
       }
     }
