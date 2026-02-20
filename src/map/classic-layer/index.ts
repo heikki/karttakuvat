@@ -71,6 +71,18 @@ const selectedStroke: ExpressionSpecification = [
   2
 ];
 
+const hitAreaRadius: ExpressionSpecification = [
+  'interpolate',
+  ['linear'],
+  ['zoom'],
+  2,
+  6,
+  8,
+  10,
+  14,
+  16
+];
+
 const sortKey = [
   '-',
   ['*', -1000000, ['get', 'lat']],
@@ -79,6 +91,7 @@ const sortKey = [
 
 const SOURCE = 'classic-source';
 const LAYERS = [
+  'classic-hit-area',
   'classic-outlines',
   'classic-markers',
   'classic-selected-highlight',
@@ -86,7 +99,7 @@ const LAYERS = [
 ] as const;
 
 export class ClassicLayer implements MarkerLayer {
-  readonly id = 'classic-markers';
+  readonly id = 'classic-hit-area';
   private map: MapGL | null = null;
 
   install(map: MapGL) {
@@ -96,6 +109,20 @@ export class ClassicLayer implements MarkerLayer {
       type: 'geojson',
       data: { type: 'FeatureCollection', features: [] },
       maxzoom: 22
+    });
+
+    // Transparent hit area — larger than visible markers for easier clicking
+    map.addLayer({
+      id: 'classic-hit-area',
+      type: 'circle',
+      source: SOURCE,
+      layout: { 'circle-sort-key': sortKey },
+      paint: {
+        'circle-color': 'transparent',
+        'circle-radius': hitAreaRadius,
+        'circle-opacity': 0,
+        'circle-pitch-alignment': 'map'
+      }
     });
 
     // Outline layer — white rings behind all fills
@@ -210,8 +237,8 @@ export class ClassicLayer implements MarkerLayer {
 }
 
 function classicMarkerRadius(zoom: number): number {
-  // Matches outlineRadius stops (visual edge of marker) + extra padding
-  const stops = [2, 4, 8, 7.5, 14, 12];
+  // Matches hitAreaRadius stops
+  const stops = [2, 6, 8, 10, 14, 16];
   return lerpStops(zoom, stops);
 }
 
