@@ -23,11 +23,7 @@ const datePattern =
 
 function dateToUtc(dateStr: string, tz: string | null): string {
   if (dateStr === '' || tz === null || tz === '') return dateStr;
-  const sign = tz.startsWith('+') ? 1 : -1;
-  const h = parseInt(tz.slice(1, 3), 10);
-  const m = parseInt(tz.slice(4, 6), 10);
-  const offsetHours = sign * (h + m / 60);
-  return applyHourOffset(dateStr, -offsetHours);
+  return applyHourOffset(dateStr, -tzOffsetHours(tz));
 }
 
 function applyHourOffset(dateStr: string, hours: number): string {
@@ -128,6 +124,14 @@ interface ScriptResult {
   error?: string;
 }
 
+function tzOffsetHours(tz: string | null): number {
+  if (tz === null || tz === '') return 0;
+  const sign = tz.startsWith('+') ? 1 : -1;
+  const h = parseInt(tz.slice(1, 3), 10);
+  const m = parseInt(tz.slice(4, 6), 10);
+  return sign * (h + m / 60);
+}
+
 function applyLocationEdits(
   items: ItemRecord[],
   edits: LocationEdit[],
@@ -140,9 +144,13 @@ function applyLocationEdits(
       item.lon = edit.lon;
       item.gps = 'user';
       item.gps_accuracy = 1;
-      const tz = tzResults.get(edit.uuid);
-      if (tz !== undefined) {
-        item.tz = tz;
+      const newTz = tzResults.get(edit.uuid);
+      if (newTz !== undefined && newTz !== item.tz) {
+        // Convert local time: preserve UTC instant across timezone change
+        const oldOffset = tzOffsetHours(item.tz);
+        const newOffset = tzOffsetHours(newTz);
+        item.date = applyHourOffset(item.date, newOffset - oldOffset);
+        item.tz = newTz;
       }
     }
   }
