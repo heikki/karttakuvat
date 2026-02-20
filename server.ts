@@ -58,7 +58,7 @@ function bufferScriptOutput(
 ): void {
   if (stderr !== '') {
     scriptLogBuffer.push(
-      `  \x1b[2m╰ ${label}\x1b[0m \x1b[31m${stderr.trim()}\x1b[0m`
+      `  \x1b[2m╰\x1b[0m ${label} \x1b[31m${stderr.trim()}\x1b[0m`
     );
   }
   if (stdout === '') return;
@@ -74,11 +74,11 @@ function bufferScriptOutput(
         .map(([k, v]) => `${k}=${String(v)}`)
         .join(' ');
       scriptLogBuffer.push(
-        `  \x1b[2m╰ ${label}\x1b[0m ${icon} ${id} ${extras === '' ? '' : `\x1b[2m${extras}\x1b[0m`}`
+        `  \x1b[2m╰\x1b[0m ${label} ${icon} ${id} ${extras === '' ? '' : `\x1b[2m${extras}\x1b[0m`}`
       );
     }
   } catch {
-    scriptLogBuffer.push(`  \x1b[2m╰ ${label}\x1b[0m ${stdout.trim()}`);
+    scriptLogBuffer.push(`  \x1b[2m╰\x1b[0m ${label} ${stdout.trim()}`);
   }
 }
 
@@ -172,7 +172,7 @@ async function processLocationEdits(
   const result = await runScript(
     ['python3', 'scripts/set_locations.py'],
     JSON.stringify(editsWithDates),
-    'set_locations.py'
+    '📍'
   );
   if ('error' in result) return { error: result.error, tzResults };
 
@@ -215,7 +215,7 @@ async function processTimeEdits(
   const result = await runScript(
     ['python3', 'scripts/set_times.py'],
     JSON.stringify(timeEditsWithTarget),
-    'set_times.py'
+    '🕐'
   );
   if ('error' in result) return result.error;
   return null;
