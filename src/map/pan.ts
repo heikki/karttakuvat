@@ -80,35 +80,54 @@ export function createPanToFitPopup(map: MapGL) {
 }
 
 /**
- * Fly the map to center on coordinates, then fine-tune to fit the popup.
+ * Navigate to coordinates, fitting the popup into view.
+ * If the popup is already fully visible, does nothing.
+ * If it's partially off-screen, pans minimally.
+ * If it's completely off-screen, eases to center first.
  * Used for arrow-key navigation between photos.
  */
 export function createFlyToPopup(map: MapGL) {
   return (coords: [number, number]) => {
-    // First, ease to the target coordinates so the marker is centered
-    try {
-      map.stop();
-      map.easeTo({
-        center: coords,
-        duration: 300
-      });
-    } catch {
-      return;
-    }
+    afterPopupLayout(map, () => {
+      const rects = getPopupRect(map);
+      if (rects === null) return;
+      const { panX, panY } = calculatePanOffset(
+        rects.mapRect,
+        rects.popupRect
+      );
 
-    // After the ease animation completes, fine-tune pan for popup fit
-    const onMoveEnd = () => {
-      map.off('moveend', onMoveEnd);
-      afterPopupLayout(map, () => {
-        const rects = getPopupRect(map);
-        if (rects === null) return;
-        const { panX, panY } = calculatePanOffset(
-          rects.mapRect,
-          rects.popupRect
-        );
-        panBy(map, panX, panY, 200);
-      });
-    };
-    map.on('moveend', onMoveEnd);
+      // Popup already fits — no movement needed
+      if (panX === 0 && panY === 0) return;
+
+      // Check if the popup is completely off-screen
+      const offScreen =
+        rects.popupRect.bottom < rects.mapRect.top ||
+        rects.popupRect.top > rects.mapRect.bottom ||
+        rects.popupRect.right < rects.mapRect.left ||
+        rects.popupRect.left > rects.mapRect.right;
+
+      if (offScreen) {
+        // Ease to center, then fine-tune
+        try {
+          map.stop();
+          map.easeTo({ center: coords, duration: 300 });
+        } catch {
+          return;
+        }
+        const onMoveEnd = () => {
+          map.off('moveend', onMoveEnd);
+          afterPopupLayout(map, () => {
+            const r = getPopupRect(map);
+            if (r === null) return;
+            const adj = calculatePanOffset(r.mapRect, r.popupRect);
+            panBy(map, adj.panX, adj.panY, 200);
+          });
+        };
+        map.on('moveend', onMoveEnd);
+      } else {
+        // Partially off-screen — minimal pan
+        panBy(map, panX, panY, 300);
+      }
+    });
   };
 }
