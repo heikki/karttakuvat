@@ -352,12 +352,7 @@ export function navigateSinglePhoto(newIndex: number) {
   highlightFn(photo);
   onPhotoChangeFn(photo.uuid);
 
-  if (currentPopupElement !== null) {
-    currentPopupElement.photo = photo;
-    currentPopupElement.index = newIndex;
-    currentPopupElement.dateEditMode = dateEditMode;
-    currentPopupElement.refreshPasteState();
-  }
+  refreshPopupElement();
 
   const loc = getEffectiveLocation(photo);
   const lng = loc?.lon ?? 0;
