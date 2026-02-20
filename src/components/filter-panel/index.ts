@@ -414,8 +414,8 @@ export class FilterPanel extends LitElement {
                 <label>Markers</label>
                 ${renderStyleBtns(
                   [
-                    { style: 'points', label: 'Points' },
-                    { style: 'classic', label: 'Classic' }
+                    { style: 'classic', label: 'Classic' },
+                    { style: 'points', label: 'Points' }
                   ],
                   this._markerStyle,
                   (s) => {
