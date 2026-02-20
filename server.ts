@@ -413,4 +413,4 @@ const server = serve({
   }
 });
 
-console.log(`🚀 Server running on ${server.url.toString()}`);
+console.log(`🚀 Server running on ${server.url.toString()}\n`);
