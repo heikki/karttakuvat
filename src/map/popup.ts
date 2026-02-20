@@ -48,6 +48,9 @@ let highlightFn: (photo: Photo | null) => void = () => {
 let panToFitPopupFn: (coords: [number, number]) => void = () => {
   /* noop */
 };
+let flyToPopupFn: (coords: [number, number]) => void = () => {
+  /* noop */
+};
 let map: MapGL | null = null;
 let getMarkerRadiusFn: (zoom: number) => number = () => 0;
 function popupOffset(): [number, number] {
@@ -55,6 +58,7 @@ function popupOffset(): [number, number] {
   const radius = getMarkerRadiusFn(zoom);
   return [0, -(radius * 1.3 + 5)];
 }
+
 
 let reanchoring = false;
 
@@ -148,11 +152,13 @@ export function initPopupCallbacks(
   m: MapGL,
   highlight: (photo: Photo | null) => void,
   panToFitPopup: (coords: [number, number]) => void,
+  flyToPopup: (coords: [number, number]) => void,
   getMarkerRadius: (zoom: number) => number
 ) {
   map = m;
   highlightFn = highlight;
   panToFitPopupFn = panToFitPopup;
+  flyToPopupFn = flyToPopup;
   getMarkerRadiusFn = getMarkerRadius;
   initPopupZoom(m, getSelectedMarkerCoords);
   m.on('zoomend', reanchorPopup);
@@ -358,5 +364,5 @@ export function navigateToPhoto(newIndex: number) {
   const lng = loc?.lon ?? 0;
   const lat = loc?.lat ?? 0;
   popup.setLngLat([lng, lat]);
-  panToFitPopupFn([lng, lat]);
+  flyToPopupFn([lng, lat]);
 }

@@ -39,7 +39,7 @@ import {
   initMeasure,
   isMeasureMode
 } from './measure';
-import { createPanToFitPopup } from './pan';
+import { createFlyToPopup, createPanToFitPopup } from './pan';
 import {
   enterPlacementMode as enterPlacement,
   isInPlacementMode,
@@ -149,12 +149,13 @@ export function initMap() {
     /* ignore */
   });
   const panToFitPopup = createPanToFitPopup(map);
+  const flyToPopup = createFlyToPopup(map);
   const highlight = (photo: Photo | null) => {
     currentLayer?.highlight(photo);
   };
   const getMarkerRadius = (zoom: number) =>
     currentLayer?.markerRadius(zoom) ?? 0;
-  initPopupCallbacks(map, highlight, panToFitPopup, getMarkerRadius);
+  initPopupCallbacks(map, highlight, panToFitPopup, flyToPopup, getMarkerRadius);
   initMeasure(map, getMarkerLayerId);
   initFit(map);
   initGpx(map);
