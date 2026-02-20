@@ -220,6 +220,7 @@ function refreshPopupElement() {
   currentPopupElement.index = currentSinglePhotoIndex;
   currentPopupElement.dateEditMode = dateEditMode;
   currentPopupElement.refreshPasteState();
+  currentPopupElement.requestUpdate();
 }
 
 export function showPopup(props: FeatureProps, coords: [number, number]) {
