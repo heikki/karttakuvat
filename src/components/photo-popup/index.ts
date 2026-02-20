@@ -119,13 +119,13 @@ export class PhotoPopup extends LitElement {
     .info-btn {
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cline x1='12' y1='16' x2='12' y2='12'/%3E%3Cline x1='12' y1='8' x2='12.01' y2='8'/%3E%3C/svg%3E");
     }
-    .time-adjust-buttons {
+    .action-buttons {
       display: inline-flex;
       gap: 2px;
       margin-left: 4px;
       vertical-align: middle;
     }
-    .time-btn {
+    .action-btn {
       padding: 1px 5px;
       font-size: 10px;
       border: 1px solid #ddd;
@@ -135,27 +135,7 @@ export class PhotoPopup extends LitElement {
       cursor: pointer;
       line-height: 1.2;
     }
-    .time-btn:hover {
-      background: #e0e0e0;
-      border-color: #bbb;
-    }
-    .loc-buttons {
-      display: inline-flex;
-      gap: 2px;
-      margin-left: 4px;
-      vertical-align: middle;
-    }
-    .loc-btn {
-      padding: 1px 5px;
-      font-size: 10px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      background: #f5f5f5;
-      color: #666;
-      cursor: pointer;
-      line-height: 1.2;
-    }
-    .loc-btn:hover {
+    .action-btn:hover {
       background: #e0e0e0;
       border-color: #bbb;
     }
@@ -239,13 +219,7 @@ export class PhotoPopup extends LitElement {
 
   private _onDateInputKey(e: KeyboardEvent) {
     if (e.key === 'Enter') {
-      e.preventDefault();
-      const input = this.shadowRoot?.getElementById(
-        'date-input'
-      ) as HTMLInputElement | null;
-      if (input !== null) {
-        this.dispatchEvent(new ApplyManualDateEvent(input.value));
-      }
+      this._onApplyManualDate(e);
     } else if (e.key === 'Escape') {
       e.preventDefault();
       this.dispatchEvent(new ToggleDateEditEvent());
@@ -289,9 +263,9 @@ export class PhotoPopup extends LitElement {
       const inputVal = editableDateStr(effectiveDate);
       return html`
         ${dateText}
-        <span class="time-adjust-buttons">
+        <span class="action-buttons">
           <button
-            class="time-btn"
+            class="action-btn"
             @click=${(e: Event) => {
               this._onAdjustTime(-24, e);
             }}
@@ -299,7 +273,7 @@ export class PhotoPopup extends LitElement {
             -1d
           </button>
           <button
-            class="time-btn"
+            class="action-btn"
             @click=${(e: Event) => {
               this._onAdjustTime(24, e);
             }}
@@ -307,7 +281,7 @@ export class PhotoPopup extends LitElement {
             +1d
           </button>
           <button
-            class="time-btn"
+            class="action-btn"
             @click=${(e: Event) => {
               this._onAdjustTime(-1, e);
             }}
@@ -315,7 +289,7 @@ export class PhotoPopup extends LitElement {
             -1h
           </button>
           <button
-            class="time-btn"
+            class="action-btn"
             @click=${(e: Event) => {
               this._onAdjustTime(1, e);
             }}
@@ -323,7 +297,7 @@ export class PhotoPopup extends LitElement {
             +1h
           </button>
           <button
-            class="time-btn"
+            class="action-btn"
             @click=${(e: Event) => {
               this._onToggleDateEdit(e);
             }}
@@ -342,7 +316,7 @@ export class PhotoPopup extends LitElement {
             }}
           />
           <button
-            class="time-btn"
+            class="action-btn"
             @click=${(e: Event) => {
               this._onApplyManualDate(e);
             }}
@@ -355,9 +329,9 @@ export class PhotoPopup extends LitElement {
 
     return html`
       ${dateText}
-      <span class="time-adjust-buttons">
+      <span class="action-buttons">
         <button
-          class="time-btn"
+          class="action-btn"
           @click=${(e: Event) => {
             this._onCopyDate(e);
           }}
@@ -365,7 +339,7 @@ export class PhotoPopup extends LitElement {
           copy
         </button>
         <button
-          class="time-btn"
+          class="action-btn"
           @click=${(e: Event) => {
             this._onPasteDate(e);
           }}
@@ -374,7 +348,7 @@ export class PhotoPopup extends LitElement {
           paste
         </button>
         <button
-          class="time-btn"
+          class="action-btn"
           @click=${(e: Event) => {
             this._onToggleDateEdit(e);
           }}
@@ -391,9 +365,9 @@ export class PhotoPopup extends LitElement {
 
     return html`
       ${formatLocation(photo)}
-      <span class="loc-buttons">
+      <span class="action-buttons">
         <button
-          class="loc-btn"
+          class="action-btn"
           @click=${(e: Event) => {
             this._onPlacement(e);
           }}
@@ -403,7 +377,7 @@ export class PhotoPopup extends LitElement {
         ${loc === null
           ? nothing
           : html`<button
-              class="loc-btn"
+              class="action-btn"
               @click=${(e: Event) => {
                 this._onCopyLocation(e);
               }}
@@ -411,7 +385,7 @@ export class PhotoPopup extends LitElement {
               copy
             </button>`}
         <button
-          class="loc-btn"
+          class="action-btn"
           @click=${(e: Event) => {
             this._onPasteLocation(e);
           }}

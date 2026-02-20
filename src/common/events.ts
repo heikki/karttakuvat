@@ -186,6 +186,16 @@ declare global {
     [ShowMetadataEvent.type]: ShowMetadataEvent;
   }
   interface DocumentEventMap {
+    [ShowLightboxEvent.type]: ShowLightboxEvent;
+    [EnterPlacementEvent.type]: EnterPlacementEvent;
+    [AdjustTimeEvent.type]: AdjustTimeEvent;
+    [CopyLocationEvent.type]: CopyLocationEvent;
+    [PasteLocationEvent.type]: PasteLocationEvent;
+    [CopyDateEvent.type]: CopyDateEvent;
+    [PasteDateEvent.type]: PasteDateEvent;
+    [ToggleDateEditEvent.type]: ToggleDateEditEvent;
+    [ApplyManualDateEvent.type]: ApplyManualDateEvent;
+    [ShowMetadataEvent.type]: ShowMetadataEvent;
     [ChangeMapStyleEvent.type]: ChangeMapStyleEvent;
     [ChangeMarkerStyleEvent.type]: ChangeMarkerStyleEvent;
     [FitToPhotosEvent.type]: FitToPhotosEvent;

@@ -20,7 +20,7 @@ function showFirstPopup() {
   const photo = state.filteredPhotos[0];
   if (photo === undefined) return;
   const { lon, lat } = getEffectiveCoords(photo);
-  showPopup({ index: 0 }, [lon, lat]);
+  showPopup(0, [lon, lat]);
 }
 
 function computePhotoBounds(): LngLatBounds {

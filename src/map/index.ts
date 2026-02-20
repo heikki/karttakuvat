@@ -211,7 +211,7 @@ export function initMap() {
     if (index === -1) return;
     const photo = state.filteredPhotos[index]!;
     const { lon, lat } = getEffectiveCoords(photo);
-    showPopup({ index }, [lon, lat]);
+    showPopup(index, [lon, lat]);
   });
 
   subscribe(() => {
@@ -225,7 +225,7 @@ export function initMap() {
         if (newIndex !== -1) {
           const photo = state.filteredPhotos[newIndex]!;
           const { lon, lat } = getEffectiveCoords(photo);
-          showPopup({ index: newIndex }, [lon, lat]);
+          showPopup(newIndex, [lon, lat]);
           return;
         }
       }
@@ -235,8 +235,8 @@ export function initMap() {
 
   setupPlacement(map, setMarkerVisibility);
 
-  document.addEventListener(EnterPlacementEvent.type, (e: Event) => {
-    enterPlacement(map, (e as EnterPlacementEvent).index);
+  document.addEventListener(EnterPlacementEvent.type, (e) => {
+    enterPlacement(map, e.index);
   });
   document.addEventListener(ChangeMapStyleEvent.type, (e) => {
     changeMapStyle(e.style);
@@ -263,7 +263,7 @@ function restoreHighlight() {
   if (index === -1) return;
   const photo = state.filteredPhotos[index]!;
   const { lon, lat } = getEffectiveCoords(photo);
-  showPopup({ index }, [lon, lat]);
+  showPopup(index, [lon, lat]);
 }
 
 function changeMapStyle(styleKey: string) {
@@ -340,7 +340,7 @@ function setupMarkerInteractions() {
       geom.coordinates[1]!
     ];
     if (clickedIndex === undefined) return;
-    showPopup({ index: clickedIndex }, coords);
+    showPopup(clickedIndex, coords);
   };
 
   const onMouseEnter = () => {

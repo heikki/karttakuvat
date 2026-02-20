@@ -255,8 +255,8 @@ export class MetadataModal extends LitElement {
     );
   }
 
-  private readonly _handleShowMetadata = (e: Event) => {
-    this.loadMetadata((e as ShowMetadataEvent).uuid);
+  private readonly _handleShowMetadata = (e: ShowMetadataEvent) => {
+    this.loadMetadata(e.uuid);
   };
 
   private readonly _handleHostClick = (e: Event) => {

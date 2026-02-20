@@ -183,8 +183,8 @@ export class PhotoLightbox extends LitElement {
     );
   }
 
-  private readonly _handleShowLightbox = (e: Event) => {
-    this.show((e as ShowLightboxEvent).index);
+  private readonly _handleShowLightbox = (e: ShowLightboxEvent) => {
+    this.show(e.index);
   };
 
   private readonly _handleKeydown = (e: KeyboardEvent) => {

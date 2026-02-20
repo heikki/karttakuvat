@@ -49,7 +49,7 @@ function finishPlacement(
   if (photo === undefined) return;
   addPendingEdit(photo.uuid, lat, lon);
   exitPlacementMode(map);
-  showPopup({ index: photoIndex }, [lon, lat]);
+  showPopup(photoIndex, [lon, lat]);
 }
 
 export function enterPlacementMode(map: MapGL, photoIndex: number) {

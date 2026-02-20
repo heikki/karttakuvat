@@ -49,7 +49,6 @@ let currentPopupElement: PhotoPopup | null = null;
 let currentSinglePhotoIndex: number | null = null;
 let currentPhotoUuid: string | null = null;
 let dateEditMode = false;
-const onPhotoChangeFn: (uuid: string | null) => void = photoToUrl;
 
 // Callbacks that will be set by map.ts
 let highlightFn: (photo: Photo | null) => void = () => {
@@ -148,9 +147,9 @@ export function initPopupCallbacks(
   document.addEventListener(PasteLocationEvent.type, () => {
     pasteLocation();
   });
-  document.addEventListener(AdjustTimeEvent.type, (e: Event) => {
+  document.addEventListener(AdjustTimeEvent.type, (e) => {
     const uuid = getCurrentPhotoUuid();
-    if (uuid !== null) adjustTime(uuid, (e as AdjustTimeEvent).hours);
+    if (uuid !== null) adjustTime(uuid, e.hours);
   });
   document.addEventListener(CopyDateEvent.type, () => {
     copyDateFromPopup();
@@ -161,8 +160,8 @@ export function initPopupCallbacks(
   document.addEventListener(ToggleDateEditEvent.type, () => {
     toggleDateEdit();
   });
-  document.addEventListener(ApplyManualDateEvent.type, (e: Event) => {
-    applyManualDate((e as ApplyManualDateEvent).dateValue);
+  document.addEventListener(ApplyManualDateEvent.type, (e) => {
+    applyManualDate(e.dateValue);
   });
 
   document.addEventListener('keydown', handleKeydown);
@@ -182,15 +181,11 @@ function reopenPopup(uuid: string | null) {
   if (newIndex === -1) return;
   const photo = state.filteredPhotos[newIndex]!;
   const { lon, lat } = getEffectiveCoords(photo);
-  showPopup({ index: newIndex }, [lon, lat]);
+  showPopup(newIndex, [lon, lat]);
 }
 
 export function reopenPopupFromUrl() {
   reopenPopup(photoFromUrl());
-}
-
-export function isDateEditMode(): boolean {
-  return dateEditMode;
 }
 
 function getCurrentPhoto(): Photo | undefined {
@@ -198,10 +193,6 @@ function getCurrentPhoto(): Photo | undefined {
     return state.filteredPhotos[currentSinglePhotoIndex];
   }
   return undefined;
-}
-
-interface FeatureProps {
-  index: number;
 }
 
 function createPopupElement(photo: Photo, index: number): PhotoPopup {
@@ -224,14 +215,13 @@ function refreshPopupElement() {
   currentPopupElement.requestUpdate();
 }
 
-export function showPopup(props: FeatureProps, coords: [number, number]) {
+export function showPopup(index: number, coords: [number, number]) {
   if (currentPopup !== null) {
     currentPopup.remove();
   }
 
   if (map === null) return;
 
-  const index = props.index;
   const photo = state.filteredPhotos[index];
   if (photo === undefined) return;
 
@@ -241,7 +231,7 @@ export function showPopup(props: FeatureProps, coords: [number, number]) {
   currentSinglePhotoIndex = index;
   currentPhotoUuid = photo.uuid;
   highlightFn(photo);
-  onPhotoChangeFn(photo.uuid);
+  photoToUrl(photo.uuid);
 
   currentPopupElement = createPopupElement(photo, index);
 
@@ -267,7 +257,7 @@ export function showPopup(props: FeatureProps, coords: [number, number]) {
     currentSinglePhotoIndex = null;
     currentPhotoUuid = null;
     currentPopupElement = null;
-    onPhotoChangeFn(null);
+    photoToUrl(null);
   });
 
   panToFitPopupFn([lon, lat]);
@@ -294,7 +284,7 @@ export function pasteLocation() {
   if (photo === undefined || copied === null) return;
 
   addPendingEdit(photo.uuid, copied.lat, copied.lon);
-  showPopup({ index: currentSinglePhotoIndex }, [copied.lon, copied.lat]);
+  showPopup(currentSinglePhotoIndex, [copied.lon, copied.lat]);
 }
 
 export function copyDateFromPopup() {
@@ -350,7 +340,7 @@ export function navigateSinglePhoto(newIndex: number) {
   currentSinglePhotoIndex = newIndex;
   currentPhotoUuid = photo.uuid;
   highlightFn(photo);
-  onPhotoChangeFn(photo.uuid);
+  photoToUrl(photo.uuid);
 
   refreshPopupElement();
 
