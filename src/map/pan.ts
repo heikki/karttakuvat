@@ -2,7 +2,25 @@ import type { Map as MapGL } from 'maplibre-gl';
 
 import { getPopup } from './popup';
 
-const PADDING = { top: 10, bottom: 10, left: 10, right: 10 };
+const BASE_PADDING = 10;
+
+function getPadding(mapRect: DOMRect) {
+  const padding = {
+    top: BASE_PADDING,
+    bottom: BASE_PADDING,
+    left: BASE_PADDING,
+    right: BASE_PADDING
+  };
+  const panel = document.getElementById('filter-panel');
+  if (panel !== null) {
+    const panelRect = panel.getBoundingClientRect();
+    // Only add right padding if the panel overlaps the map area
+    if (panelRect.left < mapRect.right && panelRect.right > mapRect.left) {
+      padding.right = mapRect.right - panelRect.left + BASE_PADDING;
+    }
+  }
+  return padding;
+}
 
 function getPopupRect(map: MapGL): {
   mapRect: DOMRect;
@@ -26,19 +44,20 @@ function calculatePanOffset(
   mapRect: DOMRect,
   popupRect: DOMRect
 ): { panX: number; panY: number } {
+  const padding = getPadding(mapRect);
   let panX = 0;
   let panY = 0;
 
-  if (popupRect.top < mapRect.top + PADDING.top) {
-    panY = popupRect.top - mapRect.top - PADDING.top;
-  } else if (popupRect.bottom > mapRect.bottom - PADDING.bottom) {
-    panY = popupRect.bottom - mapRect.bottom + PADDING.bottom;
+  if (popupRect.top < mapRect.top + padding.top) {
+    panY = popupRect.top - mapRect.top - padding.top;
+  } else if (popupRect.bottom > mapRect.bottom - padding.bottom) {
+    panY = popupRect.bottom - mapRect.bottom + padding.bottom;
   }
 
-  if (popupRect.left < mapRect.left + PADDING.left) {
-    panX = popupRect.left - mapRect.left - PADDING.left;
-  } else if (popupRect.right > mapRect.right - PADDING.right) {
-    panX = popupRect.right - mapRect.right + PADDING.right;
+  if (popupRect.left < mapRect.left + padding.left) {
+    panX = popupRect.left - mapRect.left - padding.left;
+  } else if (popupRect.right > mapRect.right - padding.right) {
+    panX = popupRect.right - mapRect.right + padding.right;
   }
 
   return { panX, panY };
