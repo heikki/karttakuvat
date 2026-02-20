@@ -1,7 +1,7 @@
 import { LngLatBounds } from 'maplibre-gl';
 import type { Map as MapGL } from 'maplibre-gl';
 
-import { getEffectiveCoords, state } from '@common/data';
+import { state } from '@common/data';
 import { FitToPhotosEvent } from '@common/events';
 
 import { getCurrentPopup, showPopup } from './popup';
@@ -17,10 +17,8 @@ export function initFit(m: MapGL) {
 }
 
 function showFirstPopup() {
-  const photo = state.filteredPhotos[0];
-  if (photo === undefined) return;
-  const { lon, lat } = getEffectiveCoords(photo);
-  showPopup(0, [lon, lat]);
+  if (state.filteredPhotos[0] === undefined) return;
+  showPopup(0);
 }
 
 function computePhotoBounds(): LngLatBounds {

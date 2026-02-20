@@ -1,4 +1,3 @@
-import type { Point } from 'geojson';
 import {
   GlobeControl,
   Map as MapGL,
@@ -11,7 +10,7 @@ import type {
   StyleSpecification
 } from 'maplibre-gl';
 
-import { getEffectiveCoords, state, subscribe } from '@common/data';
+import { state, subscribe } from '@common/data';
 import {
   ChangeMapStyleEvent,
   ChangeMarkerStyleEvent,
@@ -209,9 +208,7 @@ export function initMap() {
     if (uuid === null) return;
     const index = state.filteredPhotos.findIndex((p) => p.uuid === uuid);
     if (index === -1) return;
-    const photo = state.filteredPhotos[index]!;
-    const { lon, lat } = getEffectiveCoords(photo);
-    showPopup(index, [lon, lat]);
+    showPopup(index);
   });
 
   subscribe(() => {
@@ -223,9 +220,7 @@ export function initMap() {
       if (uuid !== null) {
         const newIndex = state.filteredPhotos.findIndex((p) => p.uuid === uuid);
         if (newIndex !== -1) {
-          const photo = state.filteredPhotos[newIndex]!;
-          const { lon, lat } = getEffectiveCoords(photo);
-          showPopup(newIndex, [lon, lat]);
+          showPopup(newIndex);
           return;
         }
       }
@@ -261,9 +256,7 @@ function restoreHighlight() {
   if (uuid === null) return;
   const index = state.filteredPhotos.findIndex((p) => p.uuid === uuid);
   if (index === -1) return;
-  const photo = state.filteredPhotos[index]!;
-  const { lon, lat } = getEffectiveCoords(photo);
-  showPopup(index, [lon, lat]);
+  showPopup(index);
 }
 
 function changeMapStyle(styleKey: string) {
@@ -334,13 +327,8 @@ function setupMarkerInteractions() {
     const feature = e.features[0]!;
     const clickedIndex = feature.properties.index as number | undefined;
 
-    const geom = feature.geometry as Point;
-    const coords: [number, number] = [
-      geom.coordinates[0]!,
-      geom.coordinates[1]!
-    ];
     if (clickedIndex === undefined) return;
-    showPopup(clickedIndex, coords);
+    showPopup(clickedIndex);
   };
 
   const onMouseEnter = () => {

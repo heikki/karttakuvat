@@ -87,14 +87,6 @@ export function reanchorPopup() {
   reanchoring = false;
 }
 
-function handleEscape() {
-  if (dateEditMode) {
-    toggleDateEdit();
-  } else if (currentPopup !== null) {
-    currentPopup.remove();
-  }
-}
-
 function handleArrowNav(key: string) {
   if (currentSinglePhotoIndex === null) return false;
   const total = state.filteredPhotos.length;
@@ -102,6 +94,14 @@ function handleArrowNav(key: string) {
     (currentSinglePhotoIndex + (key === 'ArrowLeft' ? -1 : 1) + total) % total;
   navigateSinglePhoto(newIdx);
   return true;
+}
+
+function handleEscape() {
+  if (dateEditMode) {
+    toggleDateEdit();
+  } else if (currentPopup !== null) {
+    currentPopup.remove();
+  }
 }
 
 function handleKeydown(e: KeyboardEvent) {
@@ -175,17 +175,12 @@ export function getCurrentPhotoUuid(): string | null {
   return currentPhotoUuid;
 }
 
-function reopenPopup(uuid: string | null) {
-  if (uuid === null) return;
-  const newIndex = state.filteredPhotos.findIndex((p) => p.uuid === uuid);
-  if (newIndex === -1) return;
-  const photo = state.filteredPhotos[newIndex]!;
-  const { lon, lat } = getEffectiveCoords(photo);
-  showPopup(newIndex, [lon, lat]);
-}
-
 export function reopenPopupFromUrl() {
-  reopenPopup(photoFromUrl());
+  const uuid = photoFromUrl();
+  if (uuid === null) return;
+  const index = state.filteredPhotos.findIndex((p) => p.uuid === uuid);
+  if (index === -1) return;
+  showPopup(index);
 }
 
 function getCurrentPhoto(): Photo | undefined {
@@ -215,7 +210,7 @@ function refreshPopupElement() {
   currentPopupElement.requestUpdate();
 }
 
-export function showPopup(index: number, coords: [number, number]) {
+export function showPopup(index: number) {
   if (currentPopup !== null) {
     currentPopup.remove();
   }
@@ -263,12 +258,12 @@ export function showPopup(index: number, coords: [number, number]) {
   panToFitPopupFn([lon, lat]);
 }
 
-export function adjustTime(uuid: string, hours: number) {
+function adjustTime(uuid: string, hours: number) {
   addPendingTimeEdit(uuid, hours);
   refreshPopupElement();
 }
 
-export function copyLocationFromPopup() {
+function copyLocationFromPopup() {
   const photo = getCurrentPhoto();
   if (photo === undefined) return;
   const loc = getEffectiveLocation(photo);
@@ -277,17 +272,17 @@ export function copyLocationFromPopup() {
   refreshPopupElement();
 }
 
-export function pasteLocation() {
+function pasteLocation() {
   if (currentSinglePhotoIndex === null) return;
   const photo = state.filteredPhotos[currentSinglePhotoIndex];
   const copied = getCopiedLocation();
   if (photo === undefined || copied === null) return;
 
   addPendingEdit(photo.uuid, copied.lat, copied.lon);
-  showPopup(currentSinglePhotoIndex, [copied.lon, copied.lat]);
+  showPopup(currentSinglePhotoIndex);
 }
 
-export function copyDateFromPopup() {
+function copyDateFromPopup() {
   const photo = getCurrentPhoto();
   if (photo === undefined) return;
   const effectiveDate = getEffectiveDate(photo);
@@ -296,7 +291,7 @@ export function copyDateFromPopup() {
   refreshPopupElement();
 }
 
-export function pasteDateToPhoto() {
+function pasteDateToPhoto() {
   const photo = getCurrentPhoto();
   if (photo === undefined) return;
   const copied = getCopiedDate();
@@ -309,12 +304,12 @@ export function pasteDateToPhoto() {
   refreshPopupElement();
 }
 
-export function toggleDateEdit() {
+function toggleDateEdit() {
   dateEditMode = !dateEditMode;
   refreshPopupElement();
 }
 
-export function applyManualDate(dateValue: string) {
+function applyManualDate(dateValue: string) {
   const photo = getCurrentPhoto();
   if (photo === undefined) return;
   if (dateValue.trim() === '') return;
