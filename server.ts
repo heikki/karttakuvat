@@ -49,8 +49,6 @@ function applyHourOffset(dateStr: string, hours: number): string {
 }
 
 const scriptLogBuffer: string[] = [];
-let requestLabel = '';
-
 function bufferScriptOutput(
   label: string,
   stdout: string,
@@ -272,13 +270,6 @@ async function handleSaveEdits(req: Request): Promise<Response> {
       return new Response('No edits provided', { status: 400 });
     }
 
-    const parts: string[] = [];
-    if (locationEdits.length > 0) {
-      parts.push(`${locationEdits.length} location`);
-    }
-    if (timeEdits.length > 0) parts.push(`${timeEdits.length} time`);
-    requestLabel = parts.join(', ');
-
     // Load items to get dates for timezone lookup
     const itemsFile = Bun.file('public/items.json');
     const items = (await itemsFile.json()) as ItemRecord[];
@@ -379,12 +370,8 @@ function logRequest(
   const pathDisplay = pathname;
   const timing = `${dim}${ms.toFixed(0)}ms${reset}`;
 
-  const labelDisplay =
-    requestLabel === '' ? '' : ` ${dim}(${requestLabel})${reset}`;
-  requestLabel = '';
-
   console.log(
-    `  ${methodColor}${method.padEnd(4)}${reset} ${pathDisplay}${labelDisplay} ${statusColor}${status}${reset} ${timing}`
+    `  ${methodColor}${method.padEnd(4)}${reset} ${pathDisplay} ${statusColor}${status}${reset} ${timing}`
   );
 }
 
