@@ -6,7 +6,7 @@ export const state = {
   filteredPhotos: [] as Photo[],
   filters: {
     year: 'all',
-    gps: ['exif', 'inferred', 'user', 'none'] as string[],
+    gps: ['exif', 'inferred', 'user'] as string[],
     media: ['photo', 'video'] as string[],
     album: 'all',
     camera: 'all'

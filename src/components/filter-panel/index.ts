@@ -29,7 +29,7 @@ import { getYear, isVideo } from '@common/utils';
 import { StoreController } from './store-controller';
 import { styles } from './styles';
 
-const DEFAULT_GPS = ['exif', 'inferred', 'user', 'none'];
+const DEFAULT_GPS = ['exif', 'inferred', 'user'];
 const DEFAULT_MEDIA = ['photo', 'video'];
 
 function renderSelect(
