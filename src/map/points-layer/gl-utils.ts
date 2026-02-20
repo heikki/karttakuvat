@@ -53,21 +53,21 @@ export function deleteMips(gl: WebGL2RenderingContext, mips: MipLevel[]) {
 export function buildMips(
   gl: WebGL2RenderingContext,
   opts: {
-    brightTex: WebGLTexture;
-    brightFbo: WebGLFramebuffer;
+    sourceTex: WebGLTexture;
+    sourceFbo: WebGLFramebuffer;
     oldMips: MipLevel[];
     w: number;
     h: number;
   }
 ): MipLevel[] {
-  const { brightTex, brightFbo, oldMips, w, h } = opts;
-  initTex(gl, brightTex, w, h);
-  gl.bindFramebuffer(gl.FRAMEBUFFER, brightFbo);
+  const { sourceTex, sourceFbo, oldMips, w, h } = opts;
+  initTex(gl, sourceTex, w, h);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, sourceFbo);
   gl.framebufferTexture2D(
     gl.FRAMEBUFFER,
     gl.COLOR_ATTACHMENT0,
     gl.TEXTURE_2D,
-    brightTex,
+    sourceTex,
     0
   );
   deleteMips(gl, oldMips);

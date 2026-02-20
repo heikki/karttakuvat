@@ -183,7 +183,7 @@ function getPhoto(): Photo | undefined {
   return undefined;
 }
 
-function computePasteState(photo: Photo): {
+function computePasteVisibility(photo: Photo): {
   showPasteLocation: boolean;
   showPasteDate: boolean;
 } {
@@ -208,7 +208,7 @@ function createPopupElement(photo: Photo, index: number): PhotoPopup {
   el.index = index;
   el.dateEditMode = dateEditMode;
   el.actions = popupActions;
-  const paste = computePasteState(photo);
+  const paste = computePasteVisibility(photo);
   el.showPasteLocation = paste.showPasteLocation;
   el.showPasteDate = paste.showPasteDate;
   return el;
@@ -221,7 +221,7 @@ function syncPopupElement() {
   popupElement.photo = photo;
   popupElement.index = popupPhotoIndex;
   popupElement.dateEditMode = dateEditMode;
-  const paste = computePasteState(photo);
+  const paste = computePasteVisibility(photo);
   popupElement.showPasteLocation = paste.showPasteLocation;
   popupElement.showPasteDate = paste.showPasteDate;
   popupElement.requestUpdate();

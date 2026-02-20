@@ -82,7 +82,7 @@ function resetMap() {
   fitToPhotos(true);
 }
 
-function withGlobe(style: StyleSpecification): StyleSpecification {
+function applyGlobeProjection(style: StyleSpecification): StyleSpecification {
   return {
     ...style,
     projection: { type: 'globe' },
@@ -125,7 +125,7 @@ export function initMap() {
   const zoom = savedView === null ? 10 : savedView.zoom;
   map = new MapGL({
     container: 'map',
-    style: withGlobe(mapStyles().satellite as StyleSpecification),
+    style: applyGlobeProjection(mapStyles().satellite as StyleSpecification),
     center,
     zoom,
     minZoom: 1,
@@ -282,7 +282,7 @@ function changeMapStyle(styleKey: string) {
   };
 
   void map.once('style.load', applyLayers);
-  map.setStyle(withGlobe(style));
+  map.setStyle(applyGlobeProjection(style));
 }
 
 function changeMarkerStyle(styleKey: string) {

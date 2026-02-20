@@ -40,7 +40,7 @@ const TRACK_COLORS = [
   '#fab1a0',
   '#81ecec'
 ];
-let colorIndex = 0;
+let nextColorIndex = 0;
 
 export function initGpx(m: MapGL): void {
   map = m;
@@ -140,7 +140,7 @@ export async function loadGpxForAlbum(album: string | null): Promise<void> {
       const res = await fetch(`/api/gpx/${encodeURIComponent(album)}`);
       if (res.ok) {
         const files = (await res.json()) as string[];
-        const color = TRACK_COLORS[colorIndex++ % TRACK_COLORS.length]!;
+        const color = TRACK_COLORS[nextColorIndex++ % TRACK_COLORS.length]!;
         await Promise.all(files.map((f) => loadGpxFile(album, f, color)));
       }
     } catch {
@@ -210,7 +210,7 @@ function extractTrackPoints(trk: Element): {
   return { coords, elevations };
 }
 
-function parseEle(el: Element): number | null {
+function parseElevation(el: Element): number | null {
   const text = el.querySelector('ele')?.textContent ?? null;
   if (text === null) return null;
   const v = parseFloat(text);
@@ -224,7 +224,7 @@ function parseWaypoints(doc: Document, color: string): void {
     const lon = parseFloat(wpt.getAttribute('lon') ?? '');
     if (isNaN(lat) || isNaN(lon)) continue;
     const name = wpt.querySelector('name')?.textContent ?? '';
-    const ele = parseEle(wpt);
+    const ele = parseElevation(wpt);
     const props: Record<string, unknown> = { name, color };
     if (ele !== null) props.ele = ele;
     waypointFeatures.push({

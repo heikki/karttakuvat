@@ -83,9 +83,9 @@ const PROJ_U = [
   'u_projection_transition'
 ];
 
-function prelude(sd: ShaderData): string {
-  if (sd.vertexShaderPrelude.length > 0) {
-    return `${sd.vertexShaderPrelude}\n${sd.define}`;
+function projectionPrelude(shaderData: ShaderData): string {
+  if (shaderData.vertexShaderPrelude.length > 0) {
+    return `${shaderData.vertexShaderPrelude}\n${shaderData.define}`;
   }
   return 'uniform mat4 u_matrix;\nvec4 projectTile(vec2 p){return u_matrix*vec4(p,0.,1.);}';
 }
@@ -139,7 +139,7 @@ export function createNightShader(
     `#version 300 es
 precision highp float;
 in vec2 a_pos; out vec2 v_pos;
-${prelude(sd)}
+${projectionPrelude(sd)}
 uniform vec2 u_viewport;
 void main(){
   vec4 p=projectTile(a_pos);
@@ -173,7 +173,7 @@ precision highp float;
 in vec3 a_photo_pos; in vec2 a_lnglat;
 uniform vec2 u_viewport; uniform float u_zoom; uniform float u_point_size;
 uniform vec3 u_sun_dir; out float v_night;
-${prelude(sd)}
+${projectionPrelude(sd)}
 void main(){
   gl_Position=projectTile(a_photo_pos.xy);
   vec3 d=vec3(cos(a_lnglat.y)*cos(a_lnglat.x),cos(a_lnglat.y)*sin(a_lnglat.x),sin(a_lnglat.y));

@@ -25,7 +25,7 @@ import {
   type Shader
 } from './shaders';
 
-const BLUR_ITERS = 2;
+const BLUR_ITERATIONS = 2;
 const STRIDE = 5 * 4;
 const DEG2RAD = Math.PI / 180;
 const MIP_W = new Float32Array([1.0, 0.8, 0.5, 0.3]);
@@ -164,8 +164,8 @@ export class BloomLayer implements CustomLayerInterface {
     this.fbW = w;
     this.fbH = h;
     this.mips = buildMips(gl, {
-      brightTex: this.brightTex!,
-      brightFbo: this.brightFbo!,
+      sourceTex: this.brightTex!,
+      sourceFbo: this.brightFbo!,
       oldMips: this.mips,
       w,
       h
@@ -291,7 +291,7 @@ export class BloomLayer implements CustomLayerInterface {
       gl.viewport(0, 0, mip.w, mip.h);
       gl.uniform2f(b.u('u_res'), mip.w, mip.h);
       let read = src;
-      for (let j = 0; j < BLUR_ITERS; j++) {
+      for (let j = 0; j < BLUR_ITERATIONS; j++) {
         gl.bindFramebuffer(gl.FRAMEBUFFER, mip.pingFbo);
         gl.bindTexture(gl.TEXTURE_2D, read);
         gl.uniform2f(b.u('u_dir'), 1, 0);
