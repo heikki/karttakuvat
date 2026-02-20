@@ -177,10 +177,7 @@ export class PhotoLightbox extends LitElement {
   override disconnectedCallback() {
     super.disconnectedCallback();
     document.removeEventListener('keydown', this._onKeydown);
-    document.removeEventListener(
-      ShowLightboxEvent.type,
-      this._onShowLightbox
-    );
+    document.removeEventListener(ShowLightboxEvent.type, this._onShowLightbox);
   }
 
   private readonly _onShowLightbox = (e: ShowLightboxEvent) => {

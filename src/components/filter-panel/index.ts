@@ -149,7 +149,9 @@ export class FilterPanel extends LitElement {
 
   private _applyInitialFilters() {
     const albumOpts = this._getAlbumOptions();
-    if (this._album !== 'all' && !albumOpts.includes(this._album)) this._album = 'all';
+    if (this._album !== 'all' && !albumOpts.includes(this._album)) {
+      this._album = 'all';
+    }
     const cameraOpts = this._getCameraOptions();
     if (this._camera !== 'all' && !cameraOpts.includes(this._camera)) {
       this._camera = 'all';
@@ -213,7 +215,9 @@ export class FilterPanel extends LitElement {
   private readonly _onYearChange = (e: Event) => {
     this._year = (e.target as HTMLSelectElement).value;
     const albumOpts = this._getAlbumOptions();
-    if (this._album !== 'all' && !albumOpts.includes(this._album)) this._album = 'all';
+    if (this._album !== 'all' && !albumOpts.includes(this._album)) {
+      this._album = 'all';
+    }
     const cameraOpts = this._getCameraOptions();
     if (this._camera !== 'all' && !cameraOpts.includes(this._camera)) {
       this._camera = 'all';
@@ -493,7 +497,9 @@ export class FilterPanel extends LitElement {
                             document.dispatchEvent(new SaveEditsEvent());
                           }}
                         >
-                          ${this._store.isSaving ? 'Saving...' : 'Save to Photos'}
+                          ${this._store.isSaving
+                            ? 'Saving...'
+                            : 'Save to Photos'}
                         </button>
                         <button
                           class="secondary"

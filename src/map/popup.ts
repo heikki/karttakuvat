@@ -25,7 +25,7 @@ import {
   parseExifDate,
   parseUserDatetime
 } from '@common/utils';
-import type { PopupActions, PhotoPopup } from '@components/photo-popup';
+import type { PhotoPopup, PopupActions } from '@components/photo-popup';
 
 import {
   initPopupZoom,

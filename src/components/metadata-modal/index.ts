@@ -249,10 +249,7 @@ export class MetadataModal extends LitElement {
     super.disconnectedCallback();
     this.removeEventListener('click', this._onHostClick);
     document.removeEventListener('keydown', this._onKeydown, true);
-    document.removeEventListener(
-      ShowMetadataEvent.type,
-      this._onShowMetadata
-    );
+    document.removeEventListener(ShowMetadataEvent.type, this._onShowMetadata);
   }
 
   private readonly _onShowMetadata = (e: ShowMetadataEvent) => {
