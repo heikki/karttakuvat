@@ -17,12 +17,6 @@ export class PhotoLightbox extends LitElement {
   @property({ type: Number }) currentIndex = 0;
   @property({ type: Number }) totalCount = 0;
 
-  private _onNavigate: ((index: number) => void) | null = null;
-
-  setNavigateCallback(fn: (index: number) => void) {
-    this._onNavigate = fn;
-  }
-
   show(index: number) {
     this.currentIndex = index;
     const photo = state.filteredPhotos[index];
@@ -48,7 +42,6 @@ export class PhotoLightbox extends LitElement {
     this.currentIndex = newIndex;
     this.photo = state.filteredPhotos[newIndex] ?? null;
     this.totalCount = total;
-    this._onNavigate?.(newIndex);
   }
 
   static override styles = css`
@@ -203,6 +196,11 @@ export class PhotoLightbox extends LitElement {
     }
     if (e.key === 'ArrowRight') this._navigate(1);
     if (e.key === 'ArrowLeft') this._navigate(-1);
+    if (e.key === ' ') {
+      e.preventDefault();
+      this.hide();
+      e.stopImmediatePropagation();
+    }
   };
 
   private _onBackdropClick() {

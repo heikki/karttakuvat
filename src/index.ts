@@ -2,7 +2,6 @@ import { loadPhotos } from '@common/data';
 
 import './components';
 
-import { initKeyboard } from './keyboard';
 import { initMap } from './map';
 import { initSave } from './save';
 
@@ -26,6 +25,5 @@ document.addEventListener('DOMContentLoaded', () => {
     initMap();
     initSave();
     await loadPhotos();
-    initKeyboard();
   })();
 });

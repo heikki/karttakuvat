@@ -16,6 +16,7 @@ import {
   CopyLocationEvent,
   PasteDateEvent,
   PasteLocationEvent,
+  ShowLightboxEvent,
   ToggleDateEditEvent
 } from '@common/events';
 import { photoFromUrl, photoToUrl } from '@common/filter-url';
@@ -86,6 +87,47 @@ export function reanchorPopup() {
   reanchoring = false;
 }
 
+function handleEscape() {
+  if (dateEditMode) {
+    toggleDateEdit();
+  } else if (currentPopup !== null) {
+    currentPopup.remove();
+  }
+}
+
+function handleArrowNav(key: string) {
+  if (currentSinglePhotoIndex === null) return false;
+  const total = state.filteredPhotos.length;
+  const newIdx =
+    (currentSinglePhotoIndex + (key === 'ArrowLeft' ? -1 : 1) + total) % total;
+  navigateSinglePhoto(newIdx);
+  return true;
+}
+
+function handleKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    handleEscape();
+    return;
+  }
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+    if (handleArrowNav(e.key)) e.preventDefault();
+    return;
+  }
+  if (e.key === ' ') {
+    if (
+      e.target instanceof HTMLInputElement ||
+      e.target instanceof HTMLTextAreaElement
+    ) {
+      return;
+    }
+    if (currentSinglePhotoIndex !== null) {
+      e.preventDefault();
+      document.dispatchEvent(new ShowLightboxEvent(currentSinglePhotoIndex));
+    }
+  }
+}
+
 export function initPopupCallbacks(
   m: MapGL,
   highlight: (photo: Photo | null) => void,
@@ -121,14 +163,12 @@ export function initPopupCallbacks(
   document.addEventListener(ApplyManualDateEvent.type, (e: Event) => {
     applyManualDate((e as ApplyManualDateEvent).dateValue);
   });
+
+  document.addEventListener('keydown', handleKeydown);
 }
 
 export function getCurrentPopup(): Popup | null {
   return currentPopup;
-}
-
-export function getCurrentSinglePhotoIndex(): number | null {
-  return currentSinglePhotoIndex;
 }
 
 export function getCurrentPhotoUuid(): string | null {
