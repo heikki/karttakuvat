@@ -56,9 +56,11 @@ function bufferScriptOutput(
   stdout: string,
   stderr: string
 ): void {
+  const dim = '\x1b[2m';
+  const reset = '\x1b[0m';
   if (stderr !== '') {
     scriptLogBuffer.push(
-      `  \x1b[2m╰\x1b[0m ${label} \x1b[31m${stderr.trim()}\x1b[0m`
+      `  ${label} \x1b[31m${stderr.trim()}${reset}`
     );
   }
   if (stdout === '') return;
@@ -68,17 +70,17 @@ function bufferScriptOutput(
     for (const r of results) {
       const rec = r as Record<string, unknown>;
       const id = typeof rec.uuid === 'string' ? rec.uuid : '?';
-      const icon = rec.ok === true ? '\x1b[32m✓\x1b[0m' : '\x1b[31m✗\x1b[0m';
-      const extras = Object.entries(rec)
-        .filter(([k]) => k !== 'uuid' && k !== 'ok' && k !== 'tz')
-        .map(([k, v]) => `${k}=${String(v)}`)
-        .join(' ');
-      scriptLogBuffer.push(
-        `  \x1b[2m╰\x1b[0m ${label} ${icon} ${id} ${extras === '' ? '' : `\x1b[2m${extras}\x1b[0m`}`
-      );
+      if (rec.ok === true) {
+        scriptLogBuffer.push(`  ${label} ${dim}${id}${reset}`);
+      } else {
+        const error = typeof rec.error === 'string' ? rec.error : 'failed';
+        scriptLogBuffer.push(
+          `  ${label} \x1b[31m✗${reset} ${dim}${id}${reset} ${dim}${error}${reset}`
+        );
+      }
     }
   } catch {
-    scriptLogBuffer.push(`  \x1b[2m╰\x1b[0m ${label} ${stdout.trim()}`);
+    scriptLogBuffer.push(`  ${label} ${dim}${stdout.trim()}${reset}`);
   }
 }
 
