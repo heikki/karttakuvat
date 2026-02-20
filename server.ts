@@ -60,7 +60,7 @@ function bufferScriptOutput(
   const reset = '\x1b[0m';
   if (stderr !== '') {
     scriptLogBuffer.push(
-      `  ${label} \x1b[31m${stderr.trim()}${reset}`
+      `    ${label} \x1b[31m${stderr.trim()}${reset}`
     );
   }
   if (stdout === '') return;
@@ -71,16 +71,16 @@ function bufferScriptOutput(
       const rec = r as Record<string, unknown>;
       const id = typeof rec.uuid === 'string' ? rec.uuid : '?';
       if (rec.ok === true) {
-        scriptLogBuffer.push(`  ${label} ${dim}${id}${reset}`);
+        scriptLogBuffer.push(`    ${label} ${dim}${id}${reset}`);
       } else {
         const error = typeof rec.error === 'string' ? rec.error : 'failed';
         scriptLogBuffer.push(
-          `  ${label} \x1b[31m✗${reset} ${dim}${id}${reset}\n       ${dim}${error}${reset}`
+          `    ${label} \x1b[31m✗${reset} ${dim}${id}${reset}\n         ${dim}${error}${reset}`
         );
       }
     }
   } catch {
-    scriptLogBuffer.push(`  ${label} ${dim}${stdout.trim()}${reset}`);
+    scriptLogBuffer.push(`    ${label} ${dim}${stdout.trim()}${reset}`);
   }
 }
 
