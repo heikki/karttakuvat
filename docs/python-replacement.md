@@ -147,6 +147,25 @@ This keeps the surface area small and catches breakage immediately rather than p
 - `sips` — image conversion and thumbnail generation
 - `qlmanage` — video frame extraction via Quick Look
 
+## Future: Electrobun Packaging
+
+Phases 1-3 are a prerequisite for packaging as a native macOS app with [Electrobun](https://blackboard.sh/electrobun/docs/). Electrobun uses Bun as its runtime, so all our TypeScript code runs as-is.
+
+**What works out of the box:**
+- `bun:sqlite` for Photos.sqlite reads/writes
+- `Bun.spawn()` for `osascript`, `sips`, `qlmanage` calls
+- `geo-tz` and all npm dependencies
+- MapLibre + Lit UI in Electrobun's system webview
+- 14MB app bundle, <50ms startup
+
+**What Electrobun's native ObjC bindings could improve:**
+- Replace `osascript` → direct PhotoKit calls for location/date/time writes (faster, no Photos.app window needed)
+- Replace `sips` → native image APIs for HEIC→JPEG and thumbnails
+- Replace `qlmanage` → native AVFoundation for video frame extraction
+- Truly headless operation — no Photos.app launch required
+
+**Not required for phases 1-3** but a natural next step once Python is eliminated.
+
 ## Scripts to Delete
 
 One-off fix scripts and rarely-used utilities that have served their purpose:
