@@ -46,8 +46,8 @@ MapLibre GL JS with raster tile sources. Style switching via buttons:
 
 - **Aerial** (default): Google Satellite
 - **Topo**: Thunderforest Outdoors (requires API key)
-- **Maasto**: MML Maastokartta over Thunderforest Outdoors (requires API keys)
-- **Orto**: MML Ortokuva over Google Satellite (requires API key)
+- **Maasto**: MML Maastokartta over white background (requires MML API key)
+- **Orto**: MML Ortokuva over white background (requires MML API key)
 
 Selected map style is persisted in URL params (default `satellite` is omitted from URL). Style switching tears down and re-adds all layers (GPX, photo, measure) after the new style loads.
 
@@ -140,7 +140,7 @@ Shown on marker click:
 - Video indicator overlay (play icon) for video items
 - Overlay buttons on image: info button (opens metadata modal), Photos.app link
 - Date line with time adjustment controls:
-  - Normal mode: formatted date + duration (for videos) + copy/paste/edit buttons
+  - Normal mode: formatted date + copy/paste/edit buttons
   - Edit mode: ±1d, ±1h buttons + done button + manual date input field
 - Location line: formatted coordinates + set/copy/paste buttons
 - Arrow keys navigate to next/prev photo in the filtered set (wrapping), moving the popup to each marker
@@ -265,14 +265,21 @@ A single `Bun.serve({ port: 0 })` instance serves both bundled view files and AP
 
 ### Application Menu
 
-- **Karttakuvat**: About, Quit (Cmd+Q)
-- **Edit**: standard Undo/Redo/Cut/Copy/Paste/Select All
-- **Photos**: Export Photos (shows new photo count), Export Photos (Full), Refresh Edited, Sync Metadata
+- **Karttakuvat**: About Karttakuvat, Quit (Cmd+Q)
+- **Photos**: Sync Photos, Clear Cache
 - **Window**: Minimize, Close
 
 ### Script Runner
 
-Menu actions trigger scripts (`export.ts`, `sync.ts`) via `Bun.spawn()`. Progress is shown in the window title (with ANSI escape code stripping and carriage return handling for live updates). Only one script runs at a time. On completion, a success/error dialog shows the last few output lines, the menu refreshes (re-counts new photos), and the webview reloads.
+Menu actions trigger scripts (`sync.ts`) via `Bun.spawn()`. Progress is shown in the window title (with ANSI escape code stripping and carriage return handling for live updates). Only one script runs at a time. On completion, a success/error dialog shows the last few output lines, and the webview reloads.
+
+### Auto-Sync on Startup
+
+On launch, the app automatically runs a quiet sync (`sync.ts`) in the background. Progress is shown in the window title. On success, the webview reloads silently. On failure, the error is logged but no dialog is shown.
+
+### Image Cache
+
+Images are served through a caching layer. Full-size and thumbnail images are cached in `{dataDir}/cache/full/` and `{dataDir}/cache/thumb/` respectively. The "Clear Cache" menu action deletes both cache directories and reloads the webview.
 
 ### Window State Persistence
 
