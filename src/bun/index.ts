@@ -312,7 +312,8 @@ async function runScript(name: string, scriptFile: string, args: string[] = []) 
       const parts = text.split(/[\r\n]/);
       partial = parts.pop() ?? '';
       for (const line of parts) {
-        const trimmed = line.trim();
+        // Strip ANSI escape codes (colors, cursor control, clear-line, etc.)
+        const trimmed = line.replace(/\x1b\[[0-9;]*[A-Za-z]/g, '').trim();
         if (trimmed !== '') {
           outputLines.push(trimmed);
           console.log(`[${name}] ${trimmed}`);
