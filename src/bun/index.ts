@@ -267,15 +267,15 @@ function extractUrl(event: ElectrobunEvent): string {
   return '';
 }
 
-win.webview.on('will-navigate', (event: ElectrobunEvent) => {
-  const url = extractUrl(event);
+win.webview.on('will-navigate', (event: unknown) => {
+  const url = extractUrl(event as ElectrobunEvent);
   if (url !== '' && !url.startsWith(baseUrl)) {
     openInSystem(url);
   }
 });
 // @ts-expect-error -- new-window-open not in BrowserView.on() types
-win.webview.on('new-window-open', (event: ElectrobunEvent) => {
-  openInSystem(extractUrl(event));
+win.webview.on('new-window-open', (event: unknown) => {
+  openInSystem(extractUrl(event as ElectrobunEvent));
 });
 
 // Run a script from the scripts/ directory, show progress in window title
@@ -468,14 +468,15 @@ function clearCache() {
   void Utils.showMessageBox({
     type: 'info',
     title: 'Cache Cleared',
-    message: 'Image cache has been cleared. Images will be re-cached on demand.',
+    message:
+      'Image cache has been cleared. Images will be re-cached on demand.',
     buttons: ['OK']
   });
 }
 
 // Handle menu actions
-ApplicationMenu.on('application-menu-clicked', (event: ElectrobunEvent) => {
-  const action = event.data?.action ?? '';
+ApplicationMenu.on('application-menu-clicked', (event: unknown) => {
+  const action = (event as ElectrobunEvent).data?.action ?? '';
   switch (action) {
     case 'quit':
       process.exit(0);
