@@ -10,7 +10,6 @@ import {
   existsSync,
   mkdirSync,
   readdirSync,
-  rmSync,
   statSync,
   unlinkSync,
   utimesSync
@@ -18,6 +17,11 @@ import {
 import { homedir } from 'node:os';
 import { basename, extname, join } from 'node:path';
 
+import {
+  convertToJpeg,
+  extractVideoFrame,
+  resizeToJpeg
+} from '../native/native-bridge';
 import type { AssetRecord } from './photos-db';
 
 export interface ImageCacheConfig {
@@ -30,86 +34,14 @@ export interface ImageCache {
     uuid: string,
     size: 'full' | 'thumb',
     asset: AssetRecord
-  ) => Promise<string | null>;
+  ) => string | null;
   invalidate: (uuid: string) => void;
 }
 
-// ---------- Shell helpers ----------
+// ---------- Image helpers ----------
 
-async function run(cmd: string[]): Promise<boolean> {
-  const proc = Bun.spawn(cmd, { stdout: 'ignore', stderr: 'ignore' });
-  return (await proc.exited) === 0;
-}
-
-async function sipsConvert(
-  input: string,
-  output: string,
-  quality = '90'
-): Promise<boolean> {
-  return await run([
-    'sips',
-    '-s',
-    'format',
-    'jpeg',
-    '-s',
-    'formatOptions',
-    quality,
-    input,
-    '--out',
-    output
-  ]);
-}
-
-async function createThumbnail(
-  fullPath: string,
-  thumbPath: string
-): Promise<boolean> {
-  return await run([
-    'sips',
-    '-Z',
-    '400',
-    '-s',
-    'format',
-    'jpeg',
-    '-s',
-    'formatOptions',
-    '80',
-    fullPath,
-    '--out',
-    thumbPath
-  ]);
-}
-
-async function qlmanageToJpeg(
-  inputPath: string,
-  outputJpeg: string,
-  tmpDir: string
-): Promise<boolean> {
-  mkdirSync(tmpDir, { recursive: true });
-  const ok = await run([
-    'qlmanage',
-    '-t',
-    '-s',
-    '1920',
-    '-o',
-    tmpDir,
-    inputPath
-  ]);
-  if (ok) {
-    const files = readdirSync(tmpDir);
-    const imgFile = files.find((f) => /\.(?:png|jpe?g)$/i.test(f));
-    if (imgFile !== undefined) {
-      const imgPath = join(tmpDir, imgFile);
-      const ext = extname(imgFile).toLowerCase();
-      const isJpeg = ext === '.jpg' || ext === '.jpeg';
-      if (isJpeg) copyFileSync(imgPath, outputJpeg);
-      const result = isJpeg || (await sipsConvert(imgPath, outputJpeg));
-      rmSync(tmpDir, { recursive: true, force: true });
-      return result;
-    }
-  }
-  rmSync(tmpDir, { recursive: true, force: true });
-  return false;
+function createThumbnail(fullPath: string, thumbPath: string): boolean {
+  return resizeToJpeg(fullPath, thumbPath, 400);
 }
 
 // ---------- Path resolution ----------
@@ -182,12 +114,12 @@ function getSourceMtime(
 
 // ---------- Conversion ----------
 
-async function convertEditedPhoto(
+function convertEditedPhoto(
   libraryPath: string,
   directory: string | null,
   filename: string | null,
   outputPath: string
-): Promise<boolean> {
+): boolean {
   const renderedPath = resolveEditedPath(libraryPath, directory, filename);
   if (renderedPath !== null) {
     const ext = extname(renderedPath).toLowerCase();
@@ -195,65 +127,45 @@ async function convertEditedPhoto(
       copyFileSync(renderedPath, outputPath);
       return true;
     }
-    if (await sipsConvert(renderedPath, outputPath)) return true;
+    if (convertToJpeg(renderedPath, outputPath)) return true;
   }
   const originalPath = resolveOriginalPath(libraryPath, directory, filename);
   if (originalPath === null) return false;
-  return await qlmanageToJpeg(originalPath, outputPath, `${outputPath}.ql_tmp`);
+  return convertToJpeg(originalPath, outputPath);
 }
 
-async function convertOriginalPhoto(
+function convertOriginalPhoto(
   originalPath: string,
   outputPath: string
-): Promise<boolean> {
+): boolean {
   const ext = extname(originalPath).toLowerCase();
   if (ext === '.jpg' || ext === '.jpeg') {
     copyFileSync(originalPath, outputPath);
     return true;
   }
-  if (ext === '.heic' || ext === '.heif') {
-    const tmpPath = `${outputPath}.heic`;
-    copyFileSync(originalPath, tmpPath);
-    const ok = await sipsConvert(tmpPath, outputPath);
-    try {
-      unlinkSync(tmpPath);
-    } catch {
-      /* ignore */
-    }
-    return ok;
-  }
-  return await sipsConvert(originalPath, outputPath);
+  return convertToJpeg(originalPath, outputPath);
 }
 
-async function convertFull(
+function convertFull(
   libraryPath: string,
   asset: AssetRecord,
   outputPath: string
-): Promise<boolean> {
+): boolean {
   const { directory, filename } = asset;
 
   if (asset.type === 'video') {
     const originalPath = resolveOriginalPath(libraryPath, directory, filename);
     if (originalPath === null) return false;
-    return await qlmanageToJpeg(
-      originalPath,
-      outputPath,
-      `${outputPath}.ql_tmp`
-    );
+    return extractVideoFrame(originalPath, outputPath);
   }
 
   if (asset.hasEdits) {
-    return await convertEditedPhoto(
-      libraryPath,
-      directory,
-      filename,
-      outputPath
-    );
+    return convertEditedPhoto(libraryPath, directory, filename, outputPath);
   }
 
   const originalPath = resolveOriginalPath(libraryPath, directory, filename);
   if (originalPath === null) return false;
-  return await convertOriginalPhoto(originalPath, outputPath);
+  return convertOriginalPhoto(originalPath, outputPath);
 }
 
 // ---------- Cache ----------
@@ -269,9 +181,6 @@ export function createImageCache(config: ImageCacheConfig): ImageCache {
   mkdirSync(fullDir, { recursive: true });
   mkdirSync(thumbDir, { recursive: true });
 
-  // Per-UUID locks to prevent duplicate concurrent conversions
-  const locks = new Map<string, Promise<string | null>>();
-
   function isCacheValid(cachedPath: string, sourceMtime: number): boolean {
     try {
       const cachedMtime = statSync(cachedPath).mtimeMs;
@@ -281,11 +190,11 @@ export function createImageCache(config: ImageCacheConfig): ImageCache {
     }
   }
 
-  async function resolveImpl(
+  function resolveImpl(
     uuid: string,
     size: 'full' | 'thumb',
     asset: AssetRecord
-  ): Promise<string | null> {
+  ): string | null {
     const cachedFull = join(fullDir, `${uuid}.jpg`);
     const cachedThumb = join(thumbDir, `${uuid}.jpg`);
     const cachedPath = size === 'full' ? cachedFull : cachedThumb;
@@ -301,7 +210,7 @@ export function createImageCache(config: ImageCacheConfig): ImageCache {
 
     // Need to convert full-size first (thumb depends on it)
     if (!isCacheValid(cachedFull, sourceMtime)) {
-      const ok = await convertFull(libraryPath, asset, cachedFull);
+      const ok = convertFull(libraryPath, asset, cachedFull);
       if (!ok) return null;
       // Stamp cached file mtime to match source
       const now = new Date();
@@ -316,7 +225,7 @@ export function createImageCache(config: ImageCacheConfig): ImageCache {
 
     // Generate thumbnail if needed
     if (size === 'thumb' && !existsSync(cachedThumb)) {
-      const ok = await createThumbnail(cachedFull, cachedThumb);
+      const ok = createThumbnail(cachedFull, cachedThumb);
       if (!ok) return null;
       const now = new Date();
       utimesSync(cachedThumb, now, new Date(sourceMtime));
@@ -325,20 +234,12 @@ export function createImageCache(config: ImageCacheConfig): ImageCache {
     return cachedPath;
   }
 
-  async function resolve(
+  function resolve(
     uuid: string,
     size: 'full' | 'thumb',
     asset: AssetRecord
-  ): Promise<string | null> {
-    const key = `${uuid}:${size}`;
-    const existing = locks.get(key);
-    if (existing !== undefined) return await existing;
-
-    const promise = resolveImpl(uuid, size, asset).finally(() => {
-      locks.delete(key);
-    });
-    locks.set(key, promise);
-    return await promise;
+  ): string | null {
+    return resolveImpl(uuid, size, asset);
   }
 
   function invalidate(uuid: string): void {

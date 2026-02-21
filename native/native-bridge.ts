@@ -9,11 +9,14 @@ import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 function findDylib(): string {
-  // 1. Relative to this script's source location (bun dev + bundled scripts)
+  const argv0Dir = dirname(process.argv[0] ?? '.');
   const candidates = [
+    // 1. native/ next to this source file (bun scripts/... from project root)
     join(dirname(import.meta.path), 'libkarttakuvat.dylib'),
-    // 2. Relative to process.argv[0] for installed app (electrobun)
-    join(dirname(process.argv[0] ?? '.'), 'libkarttakuvat.dylib')
+    // 2. Electrobun installed: Contents/MacOS/../Resources/app/
+    join(argv0Dir, '..', 'Resources', 'app', 'libkarttakuvat.dylib'),
+    // 3. Electrobun dev: Contents/MacOS → up 5 levels → project root/native/
+    join(argv0Dir, '..', '..', '..', '..', '..', 'native', 'libkarttakuvat.dylib')
   ];
   for (const path of candidates) {
     if (existsSync(path)) return path;

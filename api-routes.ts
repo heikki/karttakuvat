@@ -300,17 +300,17 @@ export function createApiHandler(
   }
 
   /** Serve an image via on-demand conversion + cache. */
-  async function handleImageRequest(
+  function handleImageRequest(
     uuid: string,
     size: 'full' | 'thumb'
-  ): Promise<Response | null> {
+  ): Response | null {
     if (imageCache === undefined) return null;
 
     const asset = getAssetIndex().get(uuid);
     if (asset === undefined) return null;
 
     try {
-      const cachedPath = await imageCache.resolve(uuid, size, asset);
+      const cachedPath = imageCache.resolve(uuid, size, asset);
       if (cachedPath === null) return null;
       return new Response(Bun.file(cachedPath));
     } catch (err) {
