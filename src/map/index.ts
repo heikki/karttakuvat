@@ -155,7 +155,13 @@ export function initMap() {
   };
   const getMarkerRadius = (zoom: number) =>
     currentLayer?.markerRadius(zoom) ?? 0;
-  initPopupCallbacks(map, highlight, panToFitPopup, flyToPopup, getMarkerRadius);
+  initPopupCallbacks(
+    map,
+    highlight,
+    panToFitPopup,
+    flyToPopup,
+    getMarkerRadius
+  );
   initMeasure(map, getMarkerLayerId);
   initFit(map);
   initGpx(map);

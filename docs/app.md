@@ -257,16 +257,16 @@ On startup, saved URL state is restored: filters are applied, map view is positi
 
 ## Keyboard Shortcuts
 
-| Key        | Context             | Action                          |
-| ---------- | ------------------- | ------------------------------- |
-| Escape     | Metadata modal open | Close metadata modal            |
-| Escape     | Date edit mode      | Exit date edit mode             |
-| Escape     | Measure mode        | Exit measurement mode           |
-| Escape     | Placement mode      | Cancel placement mode           |
-| Escape     | Lightbox open       | Close lightbox                  |
-| Escape     | Popup open          | Close popup                     |
-| Space      | Lightbox open       | Close lightbox                  |
-| Space      | Popup open          | Open lightbox                   |
-| Left/Right | Lightbox open       | Navigate photos                 |
-| Left/Right | Popup open          | Navigate photos (all filtered)  |
-| Enter      | Date input focused  | Apply manual date               |
+| Key        | Context             | Action                         |
+| ---------- | ------------------- | ------------------------------ |
+| Escape     | Metadata modal open | Close metadata modal           |
+| Escape     | Date edit mode      | Exit date edit mode            |
+| Escape     | Measure mode        | Exit measurement mode          |
+| Escape     | Placement mode      | Cancel placement mode          |
+| Escape     | Lightbox open       | Close lightbox                 |
+| Escape     | Popup open          | Close popup                    |
+| Space      | Lightbox open       | Close lightbox                 |
+| Space      | Popup open          | Open lightbox                  |
+| Left/Right | Lightbox open       | Navigate photos                |
+| Left/Right | Popup open          | Navigate photos (all filtered) |
+| Enter      | Date input focused  | Apply manual date              |

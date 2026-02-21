@@ -7,11 +7,11 @@
  * - Timezone lookup: geo-tz package
  */
 
-import { Database } from "bun:sqlite";
-import { spawn } from "bun";
-import { find as geoTzFind } from "geo-tz";
-import { homedir } from "node:os";
-import { join } from "node:path";
+import { homedir } from 'node:os';
+import { join } from 'node:path';
+import { spawn } from 'bun';
+import { Database } from 'bun:sqlite';
+import { find as geoTzFind } from 'geo-tz';
 
 export interface EditResult {
   uuid: string;
@@ -24,9 +24,9 @@ export interface EditResult {
 
 async function runAppleScript(script: string): Promise<void> {
   const proc = spawn({
-    cmd: ["osascript", "-e", script],
-    stdout: "pipe",
-    stderr: "pipe",
+    cmd: ['osascript', '-e', script],
+    stdout: 'pipe',
+    stderr: 'pipe'
   });
   const exitCode = await proc.exited;
   if (exitCode !== 0) {
@@ -59,7 +59,7 @@ export async function setDateTime(
 // ---------- SQLite timezone write ----------
 
 function defaultLibraryPath(): string {
-  return join(homedir(), "Pictures/Photos Library.photoslibrary");
+  return join(homedir(), 'Pictures/Photos Library.photoslibrary');
 }
 
 /** Set timezone via direct SQLite write (safe — no triggers on these columns). */
@@ -71,11 +71,11 @@ export function setTimezone(
 ): void {
   const dbPath = join(
     libraryPath ?? defaultLibraryPath(),
-    "database/Photos.sqlite"
+    'database/Photos.sqlite'
   );
   const db = new Database(dbPath, { readwrite: true });
   try {
-    db.run("BEGIN IMMEDIATE");
+    db.run('BEGIN IMMEDIATE');
     const result = db.run(
       `UPDATE ZADDITIONALASSETATTRIBUTES
        SET ZTIMEZONEOFFSET = ?, ZTIMEZONENAME = ?
@@ -83,13 +83,13 @@ export function setTimezone(
       [offsetSeconds, tzName, uuid]
     );
     if (result.changes === 0) {
-      db.run("ROLLBACK");
+      db.run('ROLLBACK');
       throw new Error(`No row found for UUID ${uuid}`);
     }
-    db.run("COMMIT");
+    db.run('COMMIT');
   } catch (err) {
     try {
-      db.run("ROLLBACK");
+      db.run('ROLLBACK');
     } catch {
       // already rolled back
     }
@@ -122,7 +122,7 @@ export function tzOffsetFromCoords(
   lon: number,
   dateStr: string
 ): string | null {
-  if (dateStr === "") return null;
+  if (dateStr === '') return null;
   const tzName = tzNameFromCoords(lat, lon);
   if (tzName === null) return null;
   return tzOffsetFromTzName(tzName, dateStr);
@@ -139,34 +139,34 @@ export function tzOffsetFromTzName(
   try {
     // Parse "YYYY:MM:DD HH:MM:SS" into components
     const match =
-      /^(?<yr>\d{4}):(?<mo>\d{2}):(?<dy>\d{2}) (?<hr>\d{2}):(?<mi>\d{2}):(?<sc>\d{2})$/v.exec(dateStr);
+      /^(?<yr>\d{4}):(?<mo>\d{2}):(?<dy>\d{2}) (?<hr>\d{2}):(?<mi>\d{2}):(?<sc>\d{2})$/v.exec(
+        dateStr
+      );
     if (match?.groups === undefined) return null;
     const { yr, mo, dy, hr, mi } = match.groups;
 
     // Use Intl.DateTimeFormat to get the UTC offset at this date in the timezone
-    const formatter = new Intl.DateTimeFormat("en-US", {
+    const formatter = new Intl.DateTimeFormat('en-US', {
       timeZone: tzName,
-      timeZoneName: "longOffset",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
+      timeZoneName: 'longOffset',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
     });
 
     // Create a date in the target timezone by interpreting as UTC first,
     // then using the formatter to extract the offset
-    const utcDate = new Date(
-      `${yr}-${mo}-${dy}T${hr}:${mi}:00Z`
-    );
+    const utcDate = new Date(`${yr}-${mo}-${dy}T${hr}:${mi}:00Z`);
     const parts = formatter.formatToParts(utcDate);
-    const tzPart = parts.find((p) => p.type === "timeZoneName");
+    const tzPart = parts.find((p) => p.type === 'timeZoneName');
     if (tzPart === undefined) return null;
 
     // tzPart.value is like "GMT+03:00" or "GMT-05:00" or "GMT"
     const gmtMatch = /^GMT(?<offset>[+-]\d{2}:\d{2})?$/v.exec(tzPart.value);
     if (gmtMatch === null) return null;
-    return gmtMatch.groups?.offset ?? "+00:00";
+    return gmtMatch.groups?.offset ?? '+00:00';
   } catch {
     return null;
   }
@@ -176,7 +176,7 @@ export function tzOffsetFromTzName(
  * Convert UTC offset string like "+03:00" to seconds.
  */
 export function tzOffsetToSeconds(offset: string): number {
-  const sign = offset.startsWith("+") ? 1 : -1;
+  const sign = offset.startsWith('+') ? 1 : -1;
   const h = parseInt(offset.slice(1, 3), 10);
   const m = parseInt(offset.slice(4, 6), 10);
   return sign * (h * 3600 + m * 60);

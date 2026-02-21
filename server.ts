@@ -1,6 +1,5 @@
 import { serve } from 'bun';
 
-import indexHtml from './src/index.html';
 import { openPhotosDb, queryOne } from './scripts/photos-db';
 import {
   quitPhotosApp,
@@ -11,6 +10,7 @@ import {
   tzOffsetFromCoords,
   tzOffsetToSeconds
 } from './scripts/photos-edit';
+import indexHtml from './src/index.html';
 
 interface LocationEdit {
   uuid: string;

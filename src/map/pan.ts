@@ -110,10 +110,7 @@ export function createFlyToPopup(map: MapGL) {
     afterPopupLayout(map, () => {
       const rects = getPopupRect(map);
       if (rects === null) return;
-      const { panX, panY } = calculatePanOffset(
-        rects.mapRect,
-        rects.popupRect
-      );
+      const { panX, panY } = calculatePanOffset(rects.mapRect, rects.popupRect);
 
       // Popup already fits — no movement needed
       if (panX === 0 && panY === 0) return;
