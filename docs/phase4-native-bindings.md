@@ -8,7 +8,7 @@ Current subprocess calls to replace:
 
 - ~~`sips` — HEIC→JPEG conversion, thumbnail generation~~ **Done (4A)**
 - ~~`qlmanage` — video frame extraction~~ **Done (4A)**
-- `osascript` — set photo location/date, quit Photos.app (`scripts/photos-edit.ts:30-122`)
+- ~~`osascript` — set photo location/date, quit Photos.app~~ **Done (4B)**
 
 Keep as-is:
 
@@ -38,26 +38,27 @@ Replaced `sips` and `qlmanage` with native ImageIO/AVFoundation via `bun:ffi`.
 
 Build: `bun run build:native` compiles the dylib. Wired into `build:app` and `build:app:stable`.
 
-## Sub-Phase 4B: AppleScript via NSAppleScript (osascript → in-process)
+## Sub-Phase 4B: AppleScript via NSAppleScript — DONE
 
-Same AppleScript, no process spawn. Better error capture via error buffer pattern.
+Replaced `osascript` subprocess spawning with in-process `NSAppleScript` via the existing dylib.
 
-**Add to `native/karttakuvat-bridge.mm`:**
+**`native/karttakuvat-bridge.mm`** — one generic function:
 
-- `int photosSetLocation(const char* uuid, double lat, double lon, char* errBuf, int errBufLen)`
-- `int photosSetDateTime(const char* uuid, int yr, int mo, int dy, int hr, int mi, int sc, char* errBuf, int errBufLen)`
-- `int photosQuit(char* errBuf, int errBufLen)`
+- `runAppleScript(const char* script, char* errBuf, int errBufLen)` — `NSAppleScript executeAndReturnError:`. Returns 0 on success, 1 on error with message in errBuf. Covers all three use cases (setLocation, setDateTime, quit) since the AppleScript strings are built in TypeScript.
 
-All use `NSAppleScript executeAndReturnError:` internally.
+**`native/native-bridge.ts`** — FFI binding + typed wrapper:
 
-**Modify: `scripts/photos-edit.ts`**
+- `runAppleScript(script: string): void` — allocates 1024-byte error buffer, throws on failure with the error message.
 
-- Replace `runAppleScript()` + `spawn(['osascript'])` with FFI calls
-- `setLocation`, `setDateTime`, `quitPhotosApp` become synchronous
+**`scripts/photos-edit.ts`**:
 
-**Modify: `api-routes.ts`**
+- `setLocation`, `setDateTime`, `quitPhotosApp` are now synchronous — call native `runAppleScript()` directly
+- Removed `spawn` import and async `runAppleScript()` helper
 
-- Drop `await` on `setLocation`/`setDateTime`/`quitPhotosApp` calls
+**`api-routes.ts`**:
+
+- `processLocationEdits()`, `processTimeEdits()` are no longer async
+- `handleSaveEdits()` calls them synchronously (no `await`)
 
 ## Build Pipeline
 
@@ -70,16 +71,18 @@ Electrobun config copy: `'native/libkarttakuvat.dylib': 'libkarttakuvat.dylib'`
 
 ## Files
 
-| New                            | Purpose                                        |
-| ------------------------------ | ---------------------------------------------- |
-| `native/karttakuvat-bridge.mm` | ObjC++ — ImageIO, AVFoundation                 |
-| `native/native-bridge.ts`      | TypeScript FFI wrapper (dlopen + typed exports) |
+| New                            | Purpose                                                  |
+| ------------------------------ | -------------------------------------------------------- |
+| `native/karttakuvat-bridge.mm` | ObjC++ — ImageIO, AVFoundation, NSAppleScript            |
+| `native/native-bridge.ts`      | TypeScript FFI wrapper (dlopen + typed exports)          |
 
-| Modified                 | Change                                              |
-| ------------------------ | --------------------------------------------------- |
-| `scripts/image-cache.ts` | Native FFI calls instead of sips/qlmanage           |
-| `electrobun.config.ts`   | Copy dylib into app bundle                          |
-| `package.json`           | Add build:native script                             |
+| Modified                  | Change                                             |
+| ------------------------- | -------------------------------------------------- |
+| `scripts/image-cache.ts`  | Native FFI calls instead of sips/qlmanage          |
+| `scripts/photos-edit.ts`  | Native FFI calls instead of osascript subprocess   |
+| `api-routes.ts`           | Sync edit pipeline (no async/await for AppleScript)|
+| `electrobun.config.ts`    | Copy dylib into app bundle                         |
+| `package.json`            | Add build:native script                            |
 
 | Removed             | Reason                                  |
 | ------------------- | --------------------------------------- |

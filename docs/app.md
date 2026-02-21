@@ -1,6 +1,6 @@
 # App Specification
 
-Karttakuvat displays geotagged photographs and videos on an interactive map. Metadata is synced from the Apple Photos SQLite database; images are converted on demand via a native ObjC++ dylib (ImageIO/AVFoundation) loaded through `bun:ffi`. The dev server and desktop app provide API endpoints for editing metadata back into Photos.app.
+Karttakuvat displays geotagged photographs and videos on an interactive map. Metadata is synced from the Apple Photos SQLite database; images are converted on demand via a native ObjC++ dylib (ImageIO/AVFoundation) loaded through `bun:ffi`. The dev server and desktop app provide API endpoints for editing metadata back into Photos.app via in-process NSAppleScript (loaded through the same native dylib).
 
 ## Architecture
 

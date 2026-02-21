@@ -6,7 +6,7 @@ Geotagged photo map viewer with Apple Photos integration.
 
 - **TypeScript files**: 32
 - **Lines of code**: 6,849
-- **Total commits**: 396
+- **Total commits**: 414
 - **Total tokens**: 845M | **Total cost**: $527.69
 
 ## Updating This Diary
@@ -27,6 +27,12 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 - Focus on significant features and fixes, skip minor tweaks
 - Describe final outcomes, not intermediate attempts that were reverted
 
+## 21.02.2026 — Phase 4B: Native AppleScript
+
+- Replaced `osascript` subprocess spawning with in-process `NSAppleScript` via native dylib (`bun:ffi`)
+- Added generic `runAppleScript()` to the ObjC++ bridge — one function covers location, date/time, and quit
+- Edit pipeline (`setLocation`, `setDateTime`, `quitPhotosApp`) is now fully synchronous
+
 ## 21.02.2026 — Lint & Formatting
 
 - Fixed ESLint flat config: added node_modules to ignores (was linting 70k+ dependency files)
@@ -36,7 +42,7 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 
 **Tokens**: 142M | **Cost**: $81.63
 
-- Replaced all Python scripts with TypeScript: SQLite reads via `bun:sqlite`, AppleScript writes via `osascript`, export pipeline using `sips`/`qlmanage`
+- Replaced all Python scripts with TypeScript: SQLite reads via `bun:sqlite`, AppleScript writes via `osascript` (later moved to native NSAppleScript in Phase 4B), export pipeline using `sips`/`qlmanage`
 - Built Electrobun desktop app with application menu, window state persistence, script runner with progress in title bar
 - Added Full Disk Access dialog for Photos.sqlite permission errors
 - Added app icon from favicon SVG
