@@ -1,7 +1,7 @@
 import { join, resolve, dirname } from 'node:path';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 
-const { BrowserView, BrowserWindow, ApplicationMenu } = await import(
+const { BrowserView, BrowserWindow, ApplicationMenu, Utils } = await import(
   'electrobun/bun'
 );
 
@@ -84,6 +84,24 @@ ApplicationMenu.on('application-menu-clicked', (event: any) => {
   }
 });
 
+// Full Disk Access dialog — shown once per session when Photos.sqlite can't be read
+let fullDiskAccessShown = false;
+function showFullDiskAccessDialog() {
+  if (fullDiskAccessShown) return;
+  fullDiskAccessShown = true;
+  Utils.showMessageBox({
+    type: 'warning',
+    title: 'Full Disk Access Required',
+    message: 'Karttakuvat needs Full Disk Access to read photo metadata from Photos.sqlite.',
+    detail: 'Open System Settings > Privacy & Security > Full Disk Access, then enable access for Karttakuvat.\n\nRestart the app after granting access.',
+    buttons: ['Open System Settings', 'OK']
+  }).then(({ response }: { response: number }) => {
+    if (response === 0) {
+      Bun.spawn(['open', 'x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles']);
+    }
+  });
+}
+
 // Start local server that serves both API and view files
 const server = Bun.serve({
   port: 0,
@@ -96,6 +114,13 @@ const server = Bun.serve({
       const response = await apiResponse;
       for (const line of flushLogBuffer()) {
         console.log(line);
+      }
+      // Detect Full Disk Access errors from Photos.sqlite
+      if (response.status === 500 && url.pathname.startsWith('/api/metadata/')) {
+        const body = await response.clone().text();
+        if (body.includes('CANTOPEN') || body.includes('unable to open') || body.includes('not found')) {
+          showFullDiskAccessDialog();
+        }
       }
       return response;
     }
