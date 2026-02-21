@@ -127,18 +127,17 @@ function applyTimeEdits(items: ItemRecord[], edits: TimeEdit[]) {
 }
 
 // eslint-disable-next-line complexity -- sequential edits with tz lookup
-async function processLocationEdits(
+function processLocationEdits(
   edits: LocationEdit[],
   itemsByUuid: Map<string, ItemRecord>
-): Promise<{ error?: Response; tzResults: Map<string, string | null> }> {
+): { error?: Response; tzResults: Map<string, string | null> } {
   const tzResults = new Map<string, string | null>();
   if (edits.length === 0) return { tzResults };
 
   for (const edit of edits) {
     const item = itemsByUuid.get(edit.uuid);
     try {
-      // eslint-disable-next-line no-await-in-loop -- sequential AppleScript calls
-      await setLocation(edit.uuid, edit.lat, edit.lon);
+      setLocation(edit.uuid, edit.lat, edit.lon);
 
       const dateStr = item?.date ?? '';
       const oldTz = item?.tz ?? null;
@@ -161,10 +160,10 @@ async function processLocationEdits(
   return { tzResults };
 }
 
-async function processTimeEdits(
+function processTimeEdits(
   edits: TimeEdit[],
   itemsByUuid: Map<string, ItemRecord>
-): Promise<Response | null> {
+): Response | null {
   if (edits.length === 0) return null;
 
   for (const edit of edits) {
@@ -175,8 +174,7 @@ async function processTimeEdits(
     if (datePart === undefined || timePart === undefined) continue;
 
     try {
-      // eslint-disable-next-line no-await-in-loop -- sequential AppleScript calls
-      await setDateTime(edit.uuid, datePart.replaceAll(':', '-'), timePart);
+      setDateTime(edit.uuid, datePart.replaceAll(':', '-'), timePart);
       logEditResult('⏰', edit.uuid);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -262,14 +260,14 @@ export function createApiHandler(
       const items = (await itemsFile.json()) as ItemRecord[];
       const itemsByUuid = new Map(items.map((i) => [i.uuid, i]));
 
-      const locResult = await processLocationEdits(locationEdits, itemsByUuid);
+      const locResult = processLocationEdits(locationEdits, itemsByUuid);
       if (locResult.error !== undefined) return locResult.error;
 
-      const timeError = await processTimeEdits(timeEdits, itemsByUuid);
+      const timeError = processTimeEdits(timeEdits, itemsByUuid);
       if (timeError !== null) return timeError;
 
       if (locationEdits.length > 0 || timeEdits.length > 0) {
-        await quitPhotosApp();
+        quitPhotosApp();
       }
 
       applyLocationEdits(items, locationEdits, locResult.tzResults);

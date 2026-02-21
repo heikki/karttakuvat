@@ -42,6 +42,10 @@ const lib = dlopen(findDylib(), {
   extractVideoFrame: {
     args: [FFIType.ptr, FFIType.ptr, FFIType.i32],
     returns: FFIType.i32
+  },
+  runAppleScript: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.i32],
+    returns: FFIType.i32
   }
 });
 
@@ -66,6 +70,19 @@ export function resizeToJpeg(
   return (
     lib.symbols.resizeToJpeg(ptr(inBuf), ptr(outBuf), maxDim, quality) === 0
   );
+}
+
+const ERR_BUF_LEN = 1024;
+
+export function runAppleScript(script: string): void {
+  const scriptBuf = toCString(script);
+  const errBuf = new Uint8Array(ERR_BUF_LEN);
+  const rc = lib.symbols.runAppleScript(ptr(scriptBuf), ptr(errBuf), ERR_BUF_LEN);
+  if (rc !== 0) {
+    const nullIdx = errBuf.indexOf(0);
+    const msg = new TextDecoder().decode(errBuf.subarray(0, nullIdx === -1 ? undefined : nullIdx));
+    throw new Error(`AppleScript failed: ${msg}`);
+  }
 }
 
 export function extractVideoFrame(

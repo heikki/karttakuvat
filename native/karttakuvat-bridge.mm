@@ -143,3 +143,22 @@ extern "C" int extractVideoFrame(const char* videoPath, const char* outPath, int
         return ok ? 0 : 3;
     }
 }
+
+// ---------- runAppleScript ----------
+
+extern "C" int runAppleScript(const char* script, char* errBuf, int errBufLen) {
+    @autoreleasepool {
+        NSString* source = [NSString stringWithUTF8String:script];
+        NSAppleScript* appleScript = [[NSAppleScript alloc] initWithSource:source];
+        NSDictionary* errorInfo = nil;
+        [appleScript executeAndReturnError:&errorInfo];
+        if (errorInfo != nil) {
+            NSString* msg = errorInfo[NSAppleScriptErrorMessage]
+                            ?: [errorInfo description];
+            const char* utf8 = [msg UTF8String];
+            strlcpy(errBuf, utf8, errBufLen);
+            return 1;
+        }
+        return 0;
+    }
+}

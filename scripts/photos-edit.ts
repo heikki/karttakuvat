@@ -9,8 +9,8 @@
 
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { spawn } from 'bun';
 import { Database } from 'bun:sqlite';
+import { runAppleScript } from '../native/native-bridge';
 
 // Use require() for geo-tz: its CJS build declares ESM exports incorrectly,
 // causing bundler failures in Electrobun's Bun version.
@@ -26,35 +26,14 @@ export interface EditResult {
 
 // ---------- AppleScript helpers ----------
 
-async function runAppleScript(script: string): Promise<void> {
-  const proc = spawn({
-    cmd: ['osascript', '-e', script],
-    stdout: 'pipe',
-    stderr: 'pipe'
-  });
-  const exitCode = await proc.exited;
-  if (exitCode !== 0) {
-    const stderr = await new Response(proc.stderr).text();
-    throw new Error(`AppleScript failed: ${stderr.trim()}`);
-  }
-}
-
 /** Set location via AppleScript (Photos.app must be running). */
-export async function setLocation(
-  uuid: string,
-  lat: number,
-  lon: number
-): Promise<void> {
+export function setLocation(uuid: string, lat: number, lon: number): void {
   const script = `tell application "Photos" to set the location of media item id "${uuid}" to {${lat}, ${lon}}`;
-  await runAppleScript(script);
+  runAppleScript(script);
 }
 
 /** Set date/time via AppleScript. date: "YYYY-MM-DD", time: "HH:MM:SS" */
-export async function setDateTime(
-  uuid: string,
-  date: string,
-  time: string
-): Promise<void> {
+export function setDateTime(uuid: string, date: string, time: string): void {
   // Build date from components to avoid locale-dependent string parsing.
   // AppleScript's `date "..."` coercion is locale-sensitive and breaks
   // on non-US systems (e.g. Finnish expects "10.12.2014 klo 11.33.29").
@@ -70,7 +49,7 @@ export async function setDateTime(
     `set seconds of d to ${sc}`,
     `tell application "Photos" to set the date of media item id "${uuid}" to d`
   ].join('\n');
-  await runAppleScript(script);
+  runAppleScript(script);
 }
 
 // ---------- SQLite timezone write ----------
@@ -118,8 +97,8 @@ export function setTimezone(
 
 // ---------- Quit Photos.app ----------
 
-export async function quitPhotosApp(): Promise<void> {
-  await runAppleScript('tell application "Photos" to quit');
+export function quitPhotosApp(): void {
+  runAppleScript('tell application "Photos" to quit');
 }
 
 // ---------- Timezone helpers ----------
