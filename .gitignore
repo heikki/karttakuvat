@@ -4,6 +4,7 @@ node_modules
 public/full
 public/thumb
 public/cache
+public/items.json
 dist
 build
 artifacts
