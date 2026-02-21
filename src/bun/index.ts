@@ -327,10 +327,9 @@ async function runScript(name: string, scriptFile: string, args: string[] = []) 
 
   const lastLines = outputLines.slice(-8).join('\n');
   if (exitCode === 0) {
-    // Refresh menu to update new photos count after export
-    if (scriptFile.startsWith('export')) {
-      refreshPhotosMenu();
-    }
+    // Refresh menu and reload webview after export/sync
+    refreshPhotosMenu();
+    win.webview.loadURL(baseUrl);
     Utils.showMessageBox({
       type: 'info',
       title: `${name} Complete`,
