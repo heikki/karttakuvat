@@ -285,8 +285,10 @@ async function runScript(name: string, scriptFile: string, args: string[] = []) 
   console.log(`[main] Running ${name}: bun ${scriptFile} ${[...args, ...extraArgs].join(' ')}`);
   win.setTitle(`Karttakuvat — ${name}...`);
 
-  // Use system bun (not bundled) so scripts can resolve node_modules in dev
-  const bunPath = Bun.which('bun') ?? 'bun';
+  // Dev: use system bun (needs node_modules). Installed: use bundled bun.
+  const bunPath = projectRoot !== null
+    ? (Bun.which('bun') ?? 'bun')
+    : resolve(dirname(process.argv0), 'bun');
   const proc = Bun.spawn([bunPath, scriptPath, ...args, ...extraArgs], {
     cwd: projectRoot ?? dataDir,
     stdout: 'pipe',
