@@ -1,0 +1,19 @@
+diff --git a/dist/api/bun/proc/native.ts b/dist/api/bun/proc/native.ts
+index dfeff8e45a113b93e3e101928357929311f29841..aeb2c740b26a36e8963c94d1e29cf4877d3af13e 100644
+--- a/dist/api/bun/proc/native.ts
++++ b/dist/api/bun/proc/native.ts
+@@ -1100,9 +1100,12 @@ window.__electrobunBunBridge = window.__electrobunBunBridge || window.webkit?.me
+ 		},
+ 		setApplicationMenu: (params: { menuConfig: string }): void => {
+ 			const { menuConfig } = params;
+-
++			// Prevent GC from freeing the buffer before dispatch_async runs on main thread
++			// See: https://github.com/blackboardsh/electrobun/issues/160
++			const buf = Buffer.from(menuConfig + "\0", "utf8");
++			(globalThis as any).__electrobun_menuConfigBuf = buf;
+ 			native.symbols.setApplicationMenu(
+-				toCString(menuConfig),
++				ptr(buf),
+ 				applicationMenuHandler,
+ 			);
+ 		},
