@@ -112,10 +112,27 @@ Port `export.py` and `sync.py`.
 | 3 | Export pipeline | ~2-3 days | No Python for batch export |
 | **Total** | | **~4-6 days** | |
 
+## Schema Validation
+
+Photos.sqlite schema changes across macOS versions. Dynamic join tables use numbered prefixes (e.g. `Z_33ASSETS`) that change between versions.
+
+**Tables and columns we depend on (~5 tables, ~15-20 columns):**
+- `ZASSET` — ZUUID, ZDATECREATED, ZLATITUDE, ZLONGITUDE, ZDIRECTORY, ZFILENAME, ZDURATION, local availability flag
+- `ZADDITIONALASSETATTRIBUTES` — ZGPSHORIZONTALACCURACY, camera model, timezone offset
+- `ZGENERICALBUM` — album names
+- `Z_nnASSETS` (dynamic prefix) — album↔asset join
+- `ZEXTENDEDATTRIBUTES` — original filename
+
+**Runtime validation approach:**
+1. On startup, use `PRAGMA table_info()` to verify expected columns exist
+2. Discover dynamic join tables via `SELECT name FROM sqlite_master WHERE name LIKE 'Z_%ASSETS'`
+3. On mismatch, fail with a clear error: "Photos.sqlite schema changed (macOS update?). Column X missing from Y."
+
+This keeps the surface area small and catches breakage immediately rather than producing wrong results.
+
 ## Risks
 
-1. **SQLite schema stability** — Apple may change Photos.sqlite schema in macOS updates. osxphotos community tracks these; we'd maintain our own queries.
-2. **Write safety** — Direct SQLite writes to Photos.sqlite are untested. May need JXA fallback.
+1. **Write safety** — Direct SQLite writes to Photos.sqlite are untested. May need JXA fallback.
 
 ## New Dependencies
 
