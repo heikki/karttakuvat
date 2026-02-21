@@ -109,12 +109,6 @@ function handleKeydown(e: KeyboardEvent) {
     return;
   }
   if (e.key === ' ') {
-    if (
-      e.target instanceof HTMLInputElement ||
-      e.target instanceof HTMLTextAreaElement
-    ) {
-      return;
-    }
     if (popupPhotoIndex !== null) {
       e.preventDefault();
       document.dispatchEvent(new ShowLightboxEvent(popupPhotoIndex));

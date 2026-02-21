@@ -72,8 +72,6 @@ export function setupPopupEvents(popupEl: HTMLElement) {
   popupEl.addEventListener('wheel', zoomAroundPopup);
   for (const type of ['mousedown', 'mousemove', 'mouseup'] as const) {
     const handler = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.closest('button, a, input, .thumb-strip') !== null) return;
       e.preventDefault();
       canvas.dispatchEvent(new MouseEvent(type, e));
     };

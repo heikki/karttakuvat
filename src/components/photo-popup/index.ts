@@ -195,6 +195,9 @@ export class PhotoPopup extends LitElement {
     } else if (e.key === 'Escape') {
       this.actions?.toggleDateEdit();
     }
+    // Stop all keydown propagation so external handlers (arrow nav, spacebar)
+    // don't intercept keys meant for this input.
+    e.stopPropagation();
   }
 
   override updated(changed: Map<string, unknown>) {
@@ -265,6 +268,15 @@ export class PhotoPopup extends LitElement {
             id="date-input"
             @keydown=${(e: KeyboardEvent) => {
               this._onDateInputKey(e);
+            }}
+            @mousedown=${(e: Event) => {
+              e.stopPropagation();
+            }}
+            @mousemove=${(e: Event) => {
+              e.stopPropagation();
+            }}
+            @mouseup=${(e: Event) => {
+              e.stopPropagation();
             }}
           />
           <button
