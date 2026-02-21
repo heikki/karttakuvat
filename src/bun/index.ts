@@ -6,6 +6,7 @@ const { BrowserView, BrowserWindow, ApplicationMenu, Utils } = await import(
 );
 
 const { createApiHandler, flushLogBuffer } = await import('../../api-routes');
+const { openPhotosDb, countAssets } = await import('../../scripts/photos-db');
 type AppRPC = typeof import('../rpc-types').AppRPC;
 
 // Detect dev build from version.json
@@ -18,15 +19,24 @@ try {
   // ignore
 }
 
+// Find the project root (where scripts/ and public/ live)
+function findProjectRoot(): string | null {
+  if (isDev) {
+    const root = resolve(resourcesDir, '..', '..', '..', '..', '..');
+    if (existsSync(join(root, 'scripts'))) return root;
+  }
+  return null;
+}
+
+const projectRoot = findProjectRoot();
+
 // Data directory: in dev builds, use public/ next to the project root
 function findDataDir(): string {
   if (process.env.KARTTAKUVAT_DATA_DIR) {
     return resolve(process.env.KARTTAKUVAT_DATA_DIR);
   }
 
-  if (isDev) {
-    // Walk up from the build dir to find the project root (where public/ lives)
-    const projectRoot = resolve(resourcesDir, '..', '..', '..', '..', '..');
+  if (projectRoot !== null) {
     const publicDir = join(projectRoot, 'public');
     if (existsSync(publicDir)) {
       return publicDir;
@@ -45,44 +55,83 @@ const { routeApiRequest } = createApiHandler(dataDir);
 const appDir = join(resourcesDir, 'app');
 const viewsDir = join(appDir, 'views', 'app');
 
-// App menu with Cmd+Q
-ApplicationMenu.setApplicationMenu([
-  {
-    label: 'Karttakuvat',
-    submenu: [
-      { label: 'About Karttakuvat', action: 'about' },
-      { type: 'divider' },
-      { label: 'Quit Karttakuvat', action: 'quit', accelerator: 'CmdOrCtrl+Q' }
-    ]
-  },
-  {
-    label: 'Edit',
-    submenu: [
-      { role: 'undo', accelerator: 'CmdOrCtrl+Z' },
-      { role: 'redo', accelerator: 'CmdOrCtrl+Shift+Z' },
-      { type: 'divider' },
-      { role: 'cut', accelerator: 'CmdOrCtrl+X' },
-      { role: 'copy', accelerator: 'CmdOrCtrl+C' },
-      { role: 'paste', accelerator: 'CmdOrCtrl+V' },
-      { role: 'selectAll', accelerator: 'CmdOrCtrl+A' }
-    ]
-  },
-  {
-    label: 'Window',
-    submenu: [
-      { role: 'minimize', accelerator: 'CmdOrCtrl+M' },
-      { role: 'close', accelerator: 'CmdOrCtrl+W' }
-    ]
+// Detect new photos in library vs exported
+function countNewPhotos(): number | null {
+  try {
+    const itemsFile = join(dataDir, 'items.json');
+    if (!existsSync(itemsFile)) return null;
+    const items = JSON.parse(readFileSync(itemsFile, 'utf8')) as unknown[];
+    const db = openPhotosDb();
+    const { photos, videos } = countAssets(db);
+    db.close();
+    const libraryTotal = photos + videos;
+    const exportedTotal = items.length;
+    const diff = libraryTotal - exportedTotal;
+    if (diff > 0) {
+      console.log(`[main] ${diff} new photos detected (library: ${libraryTotal}, exported: ${exportedTotal})`);
+      return diff;
+    }
+    return null;
+  } catch (err) {
+    console.log(`[main] Could not check for new photos: ${err}`);
+    return null;
   }
-]);
+}
 
-// Handle menu actions
-ApplicationMenu.on('application-menu-clicked', (event: any) => {
-  const action = event?.data?.action ?? '';
-  if (action === 'quit') {
-    process.exit(0);
-  }
-});
+// App menu
+function buildMenu() {
+  const nc = projectRoot !== null ? countNewPhotos() : null;
+  const exportLabel = nc !== null ? `Export Photos (${nc} new)` : 'Export Photos';
+  const photosMenuItems = projectRoot !== null ? [
+    {
+      label: 'Photos',
+      submenu: [
+        { label: exportLabel, action: 'export' },
+        { label: 'Export Photos (Full)', action: 'export-full' },
+        { label: 'Refresh Edited', action: 'export-edited' },
+        { type: 'divider' },
+        { label: 'Sync Metadata', action: 'sync' }
+      ]
+    }
+  ] : [];
+
+  ApplicationMenu.setApplicationMenu([
+    {
+      label: 'Karttakuvat',
+      submenu: [
+        { label: 'About Karttakuvat', action: 'about' },
+        { type: 'divider' },
+        { label: 'Quit Karttakuvat', action: 'quit', accelerator: 'CmdOrCtrl+Q' }
+      ]
+    },
+    {
+      label: 'Edit',
+      submenu: [
+        { role: 'undo', accelerator: 'CmdOrCtrl+Z' },
+        { role: 'redo', accelerator: 'CmdOrCtrl+Shift+Z' },
+        { type: 'divider' },
+        { role: 'cut', accelerator: 'CmdOrCtrl+X' },
+        { role: 'copy', accelerator: 'CmdOrCtrl+C' },
+        { role: 'paste', accelerator: 'CmdOrCtrl+V' },
+        { role: 'selectAll', accelerator: 'CmdOrCtrl+A' }
+      ]
+    },
+    ...photosMenuItems,
+    {
+      label: 'Window',
+      submenu: [
+        { role: 'minimize', accelerator: 'CmdOrCtrl+M' },
+        { role: 'close', accelerator: 'CmdOrCtrl+W' }
+      ]
+    }
+  ]);
+}
+
+function refreshPhotosMenu() {
+  buildMenu();
+}
+
+buildMenu();
 
 // Full Disk Access dialog — shown once per session when Photos.sqlite can't be read
 let fullDiskAccessShown = false;
@@ -197,5 +246,129 @@ function debouncedSave() {
 
 win.on('move', debouncedSave);
 win.on('resize', debouncedSave);
+
+// Run a script from the scripts/ directory, show progress in window title
+let runningScript: { proc: ReturnType<typeof Bun.spawn>; name: string } | null = null;
+
+async function runScript(name: string, scriptFile: string, args: string[] = []) {
+  if (projectRoot === null) return;
+  if (runningScript !== null) {
+    Utils.showMessageBox({
+      type: 'warning',
+      title: 'Script Running',
+      message: `"${runningScript.name}" is still running. Please wait for it to finish.`,
+      buttons: ['OK']
+    });
+    return;
+  }
+
+  const scriptPath = join(projectRoot, 'scripts', scriptFile);
+  if (!existsSync(scriptPath)) {
+    Utils.showMessageBox({
+      type: 'error',
+      title: 'Script Not Found',
+      message: `Could not find ${scriptFile}`,
+      buttons: ['OK']
+    });
+    return;
+  }
+
+  console.log(`[main] Running ${name}: bun ${scriptFile} ${args.join(' ')}`);
+  win.setTitle(`Karttakuvat — ${name}...`);
+
+  // Use system bun (not bundled) so scripts can resolve node_modules
+  const bunPath = Bun.which('bun') ?? 'bun';
+  const proc = Bun.spawn([bunPath, scriptPath, ...args], {
+    cwd: projectRoot,
+    stdout: 'pipe',
+    stderr: 'pipe'
+  });
+
+  runningScript = { proc, name };
+
+  // Stream stdout for progress updates in title
+  const outputLines: string[] = [];
+  const reader = proc.stdout.getReader();
+  const decoder = new TextDecoder();
+  let partial = '';
+
+  (async () => {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const text = partial + decoder.decode(value, { stream: true });
+      // Handle \r (carriage return) progress updates
+      const parts = text.split(/[\r\n]/);
+      partial = parts.pop() ?? '';
+      for (const line of parts) {
+        const trimmed = line.trim();
+        if (trimmed !== '') {
+          outputLines.push(trimmed);
+          console.log(`[${name}] ${trimmed}`);
+          win.setTitle(`Karttakuvat — ${trimmed}`);
+        }
+      }
+    }
+    if (partial.trim() !== '') {
+      outputLines.push(partial.trim());
+    }
+  })();
+
+  // Capture stderr
+  const stderrText = await new Response(proc.stderr).text();
+  if (stderrText.trim() !== '') {
+    console.log(`[${name} stderr] ${stderrText.trim()}`);
+    outputLines.push(stderrText.trim());
+  }
+
+  const exitCode = await proc.exited;
+  runningScript = null;
+  win.setTitle('Karttakuvat');
+
+  const lastLines = outputLines.slice(-8).join('\n');
+  if (exitCode === 0) {
+    // Refresh menu to update new photos count after export
+    if (scriptFile.startsWith('export')) {
+      refreshPhotosMenu();
+    }
+    Utils.showMessageBox({
+      type: 'info',
+      title: `${name} Complete`,
+      message: `${name} finished successfully.`,
+      detail: lastLines,
+      buttons: ['OK']
+    });
+  } else {
+    Utils.showMessageBox({
+      type: 'error',
+      title: `${name} Failed`,
+      message: `${name} exited with code ${exitCode}.`,
+      detail: lastLines,
+      buttons: ['OK']
+    });
+  }
+}
+
+// Handle menu actions
+ApplicationMenu.on('application-menu-clicked', (event: any) => {
+  const action = event?.data?.action ?? '';
+  switch (action) {
+    case 'quit':
+      process.exit(0);
+      break;
+    case 'export':
+      void runScript('Export', 'export.ts');
+      break;
+    case 'export-full':
+      void runScript('Full Export', 'export.ts', ['--full']);
+      break;
+    case 'export-edited':
+      void runScript('Refresh Edited', 'export.ts', ['--refresh-edited']);
+      break;
+    case 'sync':
+      void runScript('Sync Metadata', 'sync.ts');
+      break;
+  }
+});
 
 console.log('[main] Initialization complete');

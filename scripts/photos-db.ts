@@ -367,6 +367,17 @@ function loadAlbums(
 
 // ---------- Public query functions ----------
 
+/** Fast count of visible photos + videos in the library. */
+export function countAssets(db: Database): { photos: number; videos: number } {
+  const row = db.query<{ photos: number; videos: number }, []>(
+    `SELECT
+      SUM(CASE WHEN ZKIND = 0 THEN 1 ELSE 0 END) AS photos,
+      SUM(CASE WHEN ZKIND = 1 THEN 1 ELSE 0 END) AS videos
+    FROM ZASSET WHERE ZHIDDEN = 0 AND ZTRASHEDSTATE = 0`
+  ).get()!;
+  return { photos: row.photos ?? 0, videos: row.videos ?? 0 };
+}
+
 export function queryPhotos(db: Database): PhotoRecord[] {
   const joinTable = discoverJoinTable(db);
   const rows = db
