@@ -132,6 +132,24 @@ Photos.sqlite schema changes across macOS versions. Dynamic join tables use numb
 
 This keeps the surface area small and catches breakage immediately rather than producing wrong results.
 
+## Safety
+
+**Before starting:**
+- Verify Time Machine backup is current and includes Photos library
+- Create a small test Photos library (`Photos > File > New Library` while holding Option at launch) — develop and test against that, not the real library
+
+**Development order:**
+1. Implement reads first (Phase 2) — validate SQLite queries return correct data by comparing against osxphotos output
+2. Then writes (Phase 1) — test on test library first
+3. Single-item test before batch — verify each write operation on one photo in Photos.app UI before running on multiple
+
+**In the code:**
+- `--dry-run` flag on all write operations — log what would change without touching anything
+- Log old and new values before every write
+- Wrap SQLite writes in transactions — rollback on error
+- Re-read values after write to confirm they took effect
+- Keep osxphotos installed during transition — run both old and new code in parallel, compare results
+
 ## Risks
 
 1. **Timezone SQLite writes** — Photos.sqlite is a Core Data database with triggers that block normal UPDATE statements. osxphotos uses a hacky custom sqlite wrapper to bypass these. Need to verify `bun:sqlite` can do the same. Location and date/time writes are safe (AppleScript).
