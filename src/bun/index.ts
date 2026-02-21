@@ -1,5 +1,5 @@
 import { join, resolve, dirname } from 'node:path';
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 
 const { BrowserView, BrowserWindow, ApplicationMenu } = await import(
   'electrobun/bun'
@@ -125,6 +125,24 @@ const server = Bun.serve({
 const baseUrl = `http://127.0.0.1:${server.port}`;
 console.log(`[main] Server running on ${baseUrl}`);
 
+// Window state persistence
+const configDir = join(process.env.HOME!, 'Library/Application Support/Karttakuvat');
+const stateFile = join(configDir, 'window-state.json');
+const defaultFrame = { x: 100, y: 100, width: 1200, height: 800 };
+
+function loadWindowState(): { x: number; y: number; width: number; height: number } {
+  try {
+    return JSON.parse(readFileSync(stateFile, 'utf8'));
+  } catch {
+    return defaultFrame;
+  }
+}
+
+function saveWindowState(frame: { x: number; y: number; width: number; height: number }) {
+  mkdirSync(configDir, { recursive: true });
+  writeFileSync(stateFile, JSON.stringify(frame));
+}
+
 // Create browser window
 const rpc = BrowserView.defineRPC<AppRPC>({
   handlers: {
@@ -133,11 +151,26 @@ const rpc = BrowserView.defineRPC<AppRPC>({
   }
 });
 
+const savedFrame = loadWindowState();
+
 const win = new BrowserWindow<typeof rpc>({
   title: 'Karttakuvat',
   url: baseUrl,
-  frame: { x: 0, y: 0, width: 1200, height: 800 },
+  frame: savedFrame,
   rpc
 });
+
+// Save window state on move/resize
+let saveTimer: ReturnType<typeof setTimeout> | null = null;
+function debouncedSave() {
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    const frame = win.getFrame();
+    saveWindowState(frame);
+  }, 500);
+}
+
+win.on('move', debouncedSave);
+win.on('resize', debouncedSave);
 
 console.log('[main] Initialization complete');
