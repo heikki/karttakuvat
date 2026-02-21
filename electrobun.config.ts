@@ -81,6 +81,7 @@ export default {
     },
 
     mac: {
+      icons: 'icon.iconset',
       defaultRenderer: 'native'
     }
   }
