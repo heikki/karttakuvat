@@ -152,8 +152,12 @@ export async function writeItemsJson(
   jsonPath: string
 ): Promise<void> {
   await Bun.write(jsonPath, `${JSON.stringify(entries, null, 2)}\n`);
-  const prettier = await import('prettier');
-  const raw = await Bun.file(jsonPath).text();
-  const formatted = await prettier.format(raw, { parser: 'json' });
-  await Bun.write(jsonPath, formatted);
+  try {
+    const prettier = await import('prettier');
+    const raw = await Bun.file(jsonPath).text();
+    const formatted = await prettier.format(raw, { parser: 'json' });
+    await Bun.write(jsonPath, formatted);
+  } catch {
+    // prettier not available in bundled builds — JSON.stringify formatting is fine
+  }
 }

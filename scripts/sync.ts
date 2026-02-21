@@ -23,7 +23,8 @@ import {
 import { openPhotosDb, queryByUuids } from './photos-db';
 
 const PROJECT_ROOT = join(import.meta.dir, '..');
-const PUBLIC_DIR = join(PROJECT_ROOT, 'public');
+const dataDirArg = process.argv.find((a) => a.startsWith('--data-dir='));
+const PUBLIC_DIR = dataDirArg ? dataDirArg.split('=')[1]! : join(PROJECT_ROOT, 'public');
 const FULL_DIR = join(PUBLIC_DIR, 'full');
 const THUMB_DIR = join(PUBLIC_DIR, 'thumb');
 const JSON_PATH = join(PUBLIC_DIR, 'items.json');

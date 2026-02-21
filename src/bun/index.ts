@@ -78,11 +78,16 @@ function countNewPhotos(): number | null {
   }
 }
 
+// Script directory: dev builds use project root, installed builds use bundled scripts
+const scriptsDir = projectRoot !== null
+  ? join(projectRoot, 'scripts')
+  : join(appDir, 'scripts');
+
 // App menu
 function buildMenu() {
-  const nc = projectRoot !== null ? countNewPhotos() : null;
+  const nc = countNewPhotos();
   const exportLabel = nc !== null ? `Export Photos (${nc} new)` : 'Export Photos';
-  const photosMenuItems = projectRoot !== null ? [
+  const photosMenuItems = [
     {
       label: 'Photos',
       submenu: [
@@ -93,7 +98,7 @@ function buildMenu() {
         { label: 'Sync Metadata', action: 'sync' }
       ]
     }
-  ] : [];
+  ];
 
   ApplicationMenu.setApplicationMenu([
     {
@@ -251,7 +256,6 @@ win.on('resize', debouncedSave);
 let runningScript: { proc: ReturnType<typeof Bun.spawn>; name: string } | null = null;
 
 async function runScript(name: string, scriptFile: string, args: string[] = []) {
-  if (projectRoot === null) return;
   if (runningScript !== null) {
     Utils.showMessageBox({
       type: 'warning',
@@ -262,7 +266,9 @@ async function runScript(name: string, scriptFile: string, args: string[] = []) 
     return;
   }
 
-  const scriptPath = join(projectRoot, 'scripts', scriptFile);
+  // In dev builds, run .ts source; in installed builds, run bundled .js
+  const ext = projectRoot !== null ? '.ts' : '.js';
+  const scriptPath = join(scriptsDir, scriptFile.replace(/\.ts$/, ext));
   if (!existsSync(scriptPath)) {
     Utils.showMessageBox({
       type: 'error',
@@ -273,13 +279,16 @@ async function runScript(name: string, scriptFile: string, args: string[] = []) 
     return;
   }
 
-  console.log(`[main] Running ${name}: bun ${scriptFile} ${args.join(' ')}`);
+  // Installed builds pass --data-dir so scripts know where to write
+  const extraArgs = projectRoot === null ? [`--data-dir=${dataDir}`] : [];
+
+  console.log(`[main] Running ${name}: bun ${scriptFile} ${[...args, ...extraArgs].join(' ')}`);
   win.setTitle(`Karttakuvat — ${name}...`);
 
-  // Use system bun (not bundled) so scripts can resolve node_modules
+  // Use system bun (not bundled) so scripts can resolve node_modules in dev
   const bunPath = Bun.which('bun') ?? 'bun';
-  const proc = Bun.spawn([bunPath, scriptPath, ...args], {
-    cwd: projectRoot,
+  const proc = Bun.spawn([bunPath, scriptPath, ...args, ...extraArgs], {
+    cwd: projectRoot ?? dataDir,
     stdout: 'pipe',
     stderr: 'pipe'
   });

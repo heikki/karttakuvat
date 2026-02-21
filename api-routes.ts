@@ -252,10 +252,14 @@ export function createApiHandler(dataDir: string) {
 
       await Bun.write(`${dataDir}/items.json`, JSON.stringify(items, null, 2));
 
-      const prettier = await import('prettier');
-      const raw = await Bun.file(`${dataDir}/items.json`).text();
-      const formatted = await prettier.format(raw, { parser: 'json' });
-      await Bun.write(`${dataDir}/items.json`, formatted);
+      try {
+        const prettier = await import('prettier');
+        const raw = await Bun.file(`${dataDir}/items.json`).text();
+        const formatted = await prettier.format(raw, { parser: 'json' });
+        await Bun.write(`${dataDir}/items.json`, formatted);
+      } catch {
+        // prettier not available in bundled builds
+      }
 
       return Response.json({ ok: true });
     } catch (err) {

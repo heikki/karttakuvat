@@ -77,7 +77,9 @@ export default {
       'src/index.html': 'views/app/index.html',
       'src/styles.css': 'views/app/styles.css',
       'node_modules/maplibre-gl/dist/maplibre-gl.css':
-        'views/app/maplibre-gl.css'
+        'views/app/maplibre-gl.css',
+      'build/scripts/export.js': 'scripts/export.js',
+      'build/scripts/sync.js': 'scripts/sync.js'
     },
 
     mac: {
