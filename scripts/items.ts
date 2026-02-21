@@ -5,7 +5,7 @@
  */
 
 import type { PhotoRecord } from './photos-db';
-import { tzOffsetFromTzName } from './photos-edit';
+import { tzOffsetFromCoords, tzOffsetFromTzName } from './photos-edit';
 
 export interface ItemEntry {
   uuid: string;
@@ -29,7 +29,7 @@ const DEFAULT_ALBUM_UUID = '81938C84-C5B0-4258-BC19-0B3EFA9BF296';
 /** Format duration in seconds to "M:SS" or "H:MM:SS". */
 export function formatDuration(seconds: number | null): string | null {
   if (seconds === null || seconds === 0) return null;
-  const s = Math.round(seconds);
+  const s = Math.trunc(seconds);
   if (s < 3600) {
     return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
   }
@@ -71,19 +71,38 @@ export function dateToUtc(dateStr: string, tz: string | null): string {
   }
 }
 
+/** Sort albums and albumUuids together alphabetically by album name. */
+function sortedAlbums(record: PhotoRecord): { albums: string[]; albumUuids: string[] } {
+  const pairs = record.albums.map((name, i) => ({
+    name: name.normalize('NFC'),
+    uuid: record.albumUuids[i] ?? DEFAULT_ALBUM_UUID,
+  }));
+  pairs.sort((a, b) => a.name.localeCompare(b.name));
+  return {
+    albums: pairs.map((p) => p.name),
+    albumUuids: pairs.map((p) => p.uuid),
+  };
+}
+
 /** Build a single items.json entry from a PhotoRecord. */
 export function buildItemEntry(record: PhotoRecord): ItemEntry {
-  const albumUuid = record.albumUuids[0] ?? DEFAULT_ALBUM_UUID;
+  const sorted = sortedAlbums(record);
+  const albumUuid = sorted.albumUuids[0] ?? DEFAULT_ALBUM_UUID;
   const photosUrl = `photos:albums?albumUuid=${albumUuid}&assetUuid=${record.uuid}`;
 
-  // Fall back to Europe/Helsinki if tz is missing but date exists
-  const tz =
-    record.tz ??
-    (record.date === ''
-      ? null
-      : tzOffsetFromTzName('Europe/Helsinki', record.date));
+  // Compute timezone from coordinates (matches Python behavior).
+  // The database stores raw GPS-derived offsets that aren't proper IANA
+  // timezone offsets, so we always recompute from coords when available.
+  // Fall back to Europe/Helsinki for items without coordinates.
+  let tz: string | null = null;
+  if (record.date !== '') {
+    if (record.lat !== null && record.lon !== null) {
+      tz = tzOffsetFromCoords(record.lat, record.lon, record.date);
+    }
+    tz ??= tzOffsetFromTzName('Europe/Helsinki', record.date);
+  }
 
-  const entry: ItemEntry = {
+  const base = {
     uuid: record.uuid,
     type: record.type,
     full: `full/${record.uuid}.jpg`,
@@ -93,16 +112,19 @@ export function buildItemEntry(record: PhotoRecord): ItemEntry {
     date: record.date,
     tz,
     camera: record.camera,
+  };
+
+  const tail = {
     gps: record.gps,
     gps_accuracy: record.gps_accuracy,
-    albums: record.albums,
-    photos_url: photosUrl
+    albums: sorted.albums,
+    photos_url: photosUrl,
   };
 
   if (record.type === 'video') {
-    entry.duration = formatDuration(record.duration);
+    return { ...base, duration: formatDuration(record.duration), ...tail };
   }
-
+  const entry: ItemEntry = { ...base, ...tail };
   return entry;
 }
 
