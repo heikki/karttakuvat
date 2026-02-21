@@ -78,7 +78,8 @@ export default {
       'node_modules/maplibre-gl/dist/maplibre-gl.css':
         'views/app/maplibre-gl.css',
       'build/scripts/export.js': 'scripts/export.js',
-      'build/scripts/sync.js': 'scripts/sync.js'
+      'build/scripts/sync.js': 'scripts/sync.js',
+      'native/libkarttakuvat.dylib': 'libkarttakuvat.dylib'
     },
 
     mac: {

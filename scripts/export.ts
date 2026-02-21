@@ -2,8 +2,8 @@
 /**
  * Export photos and videos from Apple Photos library.
  *
- * Replaces export.py — uses photos-db.ts for metadata and macOS tools
- * (sips, qlmanage) for file operations.
+ * Replaces export.py — uses photos-db.ts for metadata and native
+ * ImageIO/AVFoundation via bun:ffi for file operations.
  *
  * Usage:
  *   bun scripts/export.ts                    # Incremental update
@@ -21,12 +21,16 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
-  rmSync,
   unlinkSync
 } from 'node:fs';
 import { homedir } from 'node:os';
 import { extname, join } from 'node:path';
 
+import {
+  convertToJpeg,
+  extractVideoFrame,
+  resizeToJpeg
+} from '../native/native-bridge';
 import { resolveEditedPath, resolveOriginalPath } from './image-cache';
 import {
   buildItemEntry,
@@ -120,72 +124,15 @@ function resolveEdited(
   return resolveEditedPath(libraryPath, record.directory, record.filename);
 }
 
-// ---------- Shell helpers ----------
-
-async function run(cmd: string[]): Promise<boolean> {
-  const proc = Bun.spawn(cmd, { stdout: 'ignore', stderr: 'ignore' });
-  const code = await proc.exited;
-  return code === 0;
-}
-
-async function sipsConvert(
-  input: string,
-  output: string,
-  quality = '90'
-): Promise<boolean> {
-  return await run([
-    'sips',
-    '-s',
-    'format',
-    'jpeg',
-    '-s',
-    'formatOptions',
-    quality,
-    input,
-    '--out',
-    output
-  ]);
-}
-
-async function qlmanageToJpeg(
-  inputPath: string,
-  outputJpeg: string,
-  tmpDir: string
-): Promise<boolean> {
-  mkdirSync(tmpDir, { recursive: true });
-  const ok = await run([
-    'qlmanage',
-    '-t',
-    '-s',
-    '1920',
-    '-o',
-    tmpDir,
-    inputPath
-  ]);
-  if (ok) {
-    const files = readdirSync(tmpDir);
-    const imgFile = files.find((f) => /\.(?:png|jpe?g)$/i.test(f));
-    if (imgFile !== undefined) {
-      const imgPath = join(tmpDir, imgFile);
-      const ext = extname(imgFile).toLowerCase();
-      const isJpeg = ext === '.jpg' || ext === '.jpeg';
-      if (isJpeg) copyFileSync(imgPath, outputJpeg);
-      const result = isJpeg || (await sipsConvert(imgPath, outputJpeg));
-      rmSync(tmpDir, { recursive: true, force: true });
-      return result;
-    }
-  }
-  rmSync(tmpDir, { recursive: true, force: true });
-  return false;
-}
+// ---------- Image helpers ----------
 
 // ---------- Export functions ----------
 
-async function exportPhoto(
+function exportPhoto(
   record: PhotoRecord,
   fullDir: string,
   libraryPath: string
-): Promise<boolean> {
+): boolean {
   const outputPath = join(fullDir, `${record.uuid}.jpg`);
   const originalPath = resolveOriginal(libraryPath, record);
   if (originalPath === null) return false;
@@ -195,25 +142,14 @@ async function exportPhoto(
     copyFileSync(originalPath, outputPath);
     return true;
   }
-  if (ext === '.heic' || ext === '.heif') {
-    const tmpPath = join(fullDir, `${record.uuid}.heic`);
-    copyFileSync(originalPath, tmpPath);
-    const ok = await sipsConvert(tmpPath, outputPath);
-    try {
-      unlinkSync(tmpPath);
-    } catch {
-      /* ignore */
-    }
-    return ok;
-  }
-  return await sipsConvert(originalPath, outputPath);
+  return convertToJpeg(originalPath, outputPath);
 }
 
-async function exportEditedPhoto(
+function exportEditedPhoto(
   record: PhotoRecord,
   fullDir: string,
   libraryPath: string
-): Promise<boolean> {
+): boolean {
   const outputPath = join(fullDir, `${record.uuid}.jpg`);
   const renderedPath = resolveEdited(libraryPath, record);
   if (renderedPath !== null) {
@@ -222,50 +158,26 @@ async function exportEditedPhoto(
       copyFileSync(renderedPath, outputPath);
       return true;
     }
-    if (await sipsConvert(renderedPath, outputPath)) return true;
+    if (convertToJpeg(renderedPath, outputPath)) return true;
   }
 
   const originalPath = resolveOriginal(libraryPath, record);
   if (originalPath === null) return false;
-  return await qlmanageToJpeg(
-    originalPath,
-    outputPath,
-    join(fullDir, `.ql_tmp_${record.uuid}`)
-  );
+  return convertToJpeg(originalPath, outputPath);
 }
 
-async function exportVideoFrame(
+function exportVideoFrame(
   record: PhotoRecord,
   fullDir: string,
   libraryPath: string
-): Promise<boolean> {
+): boolean {
   const originalPath = resolveOriginal(libraryPath, record);
   if (originalPath === null) return false;
-  return await qlmanageToJpeg(
-    originalPath,
-    join(fullDir, `${record.uuid}.jpg`),
-    join(fullDir, `.ql_tmp_${record.uuid}`)
-  );
+  return extractVideoFrame(originalPath, join(fullDir, `${record.uuid}.jpg`));
 }
 
-async function createThumbnail(
-  fullPath: string,
-  thumbPath: string
-): Promise<boolean> {
-  return await run([
-    'sips',
-    '-Z',
-    '400',
-    '-s',
-    'format',
-    'jpeg',
-    '-s',
-    'formatOptions',
-    '80',
-    fullPath,
-    '--out',
-    thumbPath
-  ]);
+function createThumbnail(fullPath: string, thumbPath: string): boolean {
+  return resizeToJpeg(fullPath, thumbPath, 400);
 }
 
 // ---------- Export pipeline ----------
@@ -299,10 +211,10 @@ interface ExportBatchOpts {
   libraryPath: string;
   existingUuids: Set<string>;
   label: string;
-  exportFn: (r: PhotoRecord, d: string, l: string) => Promise<boolean>;
+  exportFn: (r: PhotoRecord, d: string, l: string) => boolean;
 }
 
-async function exportBatch(opts: ExportBatchOpts): Promise<void> {
+function exportBatch(opts: ExportBatchOpts): void {
   const { records, fullDir, libraryPath, existingUuids, label, exportFn } =
     opts;
   const toExport = records.filter((r) => !existingUuids.has(r.uuid));
@@ -318,8 +230,7 @@ async function exportBatch(opts: ExportBatchOpts): Promise<void> {
 
   for (let i = 0; i < toExport.length; i++) {
     const record = toExport[i]!;
-    // eslint-disable-next-line no-await-in-loop -- sequential file operations
-    const ok = await exportFn(record, fullDir, libraryPath);
+    const ok = exportFn(record, fullDir, libraryPath);
     if (ok) {
       exported++;
     } else if (resolveOriginal(libraryPath, record) === null) {
@@ -333,10 +244,7 @@ async function exportBatch(opts: ExportBatchOpts): Promise<void> {
   progress.done(formatSuffix(exported, icloud, errors));
 }
 
-async function createThumbnails(
-  fullDir: string,
-  thumbDir: string
-): Promise<void> {
+function createThumbnails(fullDir: string, thumbDir: string): void {
   const fullFiles = readdirSync(fullDir).filter((f) => f.endsWith('.jpg'));
   const thumbSet = new Set(
     readdirSync(thumbDir).filter((f) => f.endsWith('.jpg'))
@@ -351,8 +259,7 @@ async function createThumbnails(
   let errors = 0;
   for (let i = 0; i < toCreate.length; i++) {
     const file = toCreate[i]!;
-    // eslint-disable-next-line no-await-in-loop -- sequential sips calls
-    const ok = await createThumbnail(join(fullDir, file), join(thumbDir, file));
+    const ok = createThumbnail(join(fullDir, file), join(thumbDir, file));
     if (!ok) {
       process.stdout.write(`\n  Error: ${file}`);
       errors++;
@@ -362,11 +269,11 @@ async function createThumbnails(
   progress.done(errors > 0 ? `${errors} errors` : '');
 }
 
-async function refreshEdited(
+function refreshEdited(
   fullDir: string,
   thumbDir: string,
   libraryPath: string
-): Promise<void> {
+): void {
   const db = openPhotosDb(libraryPath);
   const edited = queryEdited(db);
   db.close();
@@ -382,8 +289,7 @@ async function refreshEdited(
   let replaced = 0;
   for (let i = 0; i < toRefresh.length; i++) {
     const record = toRefresh[i]!;
-    // eslint-disable-next-line no-await-in-loop -- sequential file operations
-    const ok = await exportEditedPhoto(record, fullDir, libraryPath);
+    const ok = exportEditedPhoto(record, fullDir, libraryPath);
     if (ok) {
       try {
         unlinkSync(join(thumbDir, `${record.uuid}.jpg`));
@@ -517,7 +423,7 @@ async function runExport(): Promise<void> {
     r.hasEdits ? exportEditedPhoto(r, d, l) : exportPhoto(r, d, l);
 
   if (filtered.photos.length > 0) {
-    await exportBatch({
+    exportBatch({
       records: filtered.photos,
       fullDir: FULL_DIR,
       libraryPath,
@@ -527,10 +433,10 @@ async function runExport(): Promise<void> {
     });
   }
   if (args.includes('--refresh-edited')) {
-    await refreshEdited(FULL_DIR, THUMB_DIR, libraryPath);
+    refreshEdited(FULL_DIR, THUMB_DIR, libraryPath);
   }
   if (filtered.videos.length > 0) {
-    await exportBatch({
+    exportBatch({
       records: filtered.videos,
       fullDir: FULL_DIR,
       libraryPath,
@@ -540,7 +446,7 @@ async function runExport(): Promise<void> {
     });
   }
 
-  await createThumbnails(FULL_DIR, THUMB_DIR);
+  createThumbnails(FULL_DIR, THUMB_DIR);
 
   if (album === undefined) {
     const entries = buildItemsJson(allPhotos, allVideos, FULL_DIR);
