@@ -8,3 +8,4 @@ dist
 __pycache__
 osxphotos_crash.log
 .env
+test.photoslibrary
