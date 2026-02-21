@@ -43,4 +43,5 @@ Geolocation photo visualization web app displaying geotagged photographs on an i
 
 - `docs/app.md` — current app behavior spec
 - `docs/flows.md` — user interaction flows
-- `docs/timeline.md` — timeline & route feature plan
+- `docs/diary.md` — development diary and project stats
+- `docs/phase4-native-bindings.md` — native ObjC bindings plan
