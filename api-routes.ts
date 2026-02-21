@@ -211,7 +211,9 @@ export function createApiHandler(
   function getAssetIndex(): Map<string, AssetRecord> {
     if (assetIndex === null) {
       assetIndex = queryAssetIndex(getPhotosDb());
-      console.log(`[image-cache] Loaded ${assetIndex.size} assets from Photos.sqlite`);
+      console.log(
+        `[image-cache] Loaded ${assetIndex.size} assets from Photos.sqlite`
+      );
     }
     return assetIndex;
   }
@@ -245,6 +247,7 @@ export function createApiHandler(
     }
   }
 
+  // eslint-disable-next-line complexity -- sequential edit pipeline
   async function handleSaveEdits(req: Request): Promise<Response> {
     try {
       const body = (await req.json()) as SetLocationsBody;

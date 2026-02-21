@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- Single-DB-module: queries + formatters are tightly coupled */
 /**
  * Read-only access to Apple Photos SQLite database using bun:sqlite.
  *
@@ -369,12 +370,15 @@ function loadAlbums(
 
 /** Fast count of visible photos + videos in the library. */
 export function countAssets(db: Database): { photos: number; videos: number } {
-  const row = db.query<{ photos: number; videos: number }, []>(
-    `SELECT
+  const row = db
+    .query<{ photos: number; videos: number }, []>(
+      `SELECT
       SUM(CASE WHEN ZKIND = 0 THEN 1 ELSE 0 END) AS photos,
       SUM(CASE WHEN ZKIND = 1 THEN 1 ELSE 0 END) AS videos
     FROM ZASSET WHERE ZHIDDEN = 0 AND ZTRASHEDSTATE = 0`
-  ).get()!;
+    )
+    .get()!;
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- SQLite SUM() returns null for empty result sets
   return { photos: row.photos ?? 0, videos: row.videos ?? 0 };
 }
 
@@ -423,7 +427,13 @@ export interface AssetRecord {
 export function queryAssetIndex(db: Database): Map<string, AssetRecord> {
   const rows = db
     .query<
-      { ZUUID: string; ZKIND: number; ZDIRECTORY: string | null; ZFILENAME: string | null; ZADJUSTMENTSSTATE: number },
+      {
+        ZUUID: string;
+        ZKIND: number;
+        ZDIRECTORY: string | null;
+        ZFILENAME: string | null;
+        ZADJUSTMENTSSTATE: number;
+      },
       []
     >(
       `SELECT ZUUID, ZKIND, ZDIRECTORY, ZFILENAME, ZADJUSTMENTSSTATE
@@ -465,13 +475,160 @@ export function queryOne(db: Database, uuid: string): PhotoRecord | null {
   return records[0] ?? null;
 }
 
+// ---------- Metadata helpers ----------
+
+type MetaRow = Record<string, unknown>;
+type SetFn = (key: string, val: unknown) => void;
+
+function metaSet(result: Record<string, unknown>, key: string, val: unknown): void {
+  if (val !== null && val !== undefined && val !== '' && val !== -180.0) {
+    result[key] = val; // eslint-disable-line no-param-reassign -- intentional accumulator mutation
+  }
+}
+
+function fmtCoreDataDate(v: unknown): string | null {
+  if (typeof v !== 'number') return null;
+  const d = new Date((v + CORE_DATA_EPOCH) * 1000);
+  return d
+    .toISOString()
+    .replace('T', ' ')
+    .replace(/\.\d+Z$/, '');
+}
+
+function formatMetaDimensions(row: MetaRow, set: SetFn): void {
+  const w = row.original_width ?? row.width;
+  const h = row.original_height ?? row.height;
+  if (typeof w === 'number' && typeof h === 'number' && w > 0 && h > 0) {
+    set('width', w);
+    set('height', h);
+  }
+  if (typeof row.original_filesize === 'number' && row.original_filesize > 0) {
+    const mb = row.original_filesize / 1024 / 1024;
+    set('original_filesize', `${mb.toFixed(1)} MB`);
+  }
+}
+
+function formatMetaDuration(row: MetaRow, set: SetFn): void {
+  if (typeof row.duration === 'number' && row.duration > 0) {
+    const mins = Math.floor(row.duration / 60);
+    const secs = Math.floor(row.duration % 60);
+    set('duration', `${mins}:${secs.toString().padStart(2, '0')}`);
+  }
+}
+
+function formatMetaFlags(row: MetaRow, set: SetFn): void {
+  set('favorite', row.favorite === 1 ? 'Yes' : null);
+  set('hidden', row.hidden === 1 ? 'Yes' : null);
+  set('ismovie', row.kind === 1 ? 'Yes' : null);
+  set('screenshot', row.screenshot === 1 ? 'Yes' : null);
+  set('hdr', typeof row.hdr === 'number' && row.hdr > 0 ? 'Yes' : null);
+}
+
+function formatMetaCamera(row: MetaRow, set: SetFn): void {
+  const make = typeof row.camera_make === 'string' ? row.camera_make : null;
+  const model = typeof row.camera_model === 'string' ? row.camera_model : null;
+  if (make !== null || model !== null) {
+    const camera =
+      model !== null && make !== null && !model.startsWith(make)
+        ? `${make} ${model}`
+        : (model ?? make);
+    set('camera', camera);
+  }
+  set('lens', row.lens_model);
+}
+
+function formatMetaExposure(row: MetaRow, set: SetFn): void {
+  if (typeof row.aperture === 'number') {
+    set('aperture', `f/${row.aperture.toFixed(1)}`);
+  }
+  if (typeof row.shutter_speed === 'number') {
+    const ss = row.shutter_speed;
+    set('shutter_speed', ss >= 1 ? `${ss}s` : `1/${Math.round(1 / ss)}s`);
+  }
+  if (typeof row.iso === 'number') {
+    set('iso', `ISO ${row.iso}`);
+  }
+  if (typeof row.focal_length === 'number') {
+    let fl = `${row.focal_length.toFixed(0)}mm`;
+    if (typeof row.focal_length_35mm === 'number') {
+      fl += ` (${row.focal_length_35mm.toFixed(0)}mm eq.)`;
+    }
+    set('focal_length', fl);
+  }
+  set('flash', row.flash === 1 ? 'Yes' : row.flash === 0 ? 'No' : null);
+}
+
+function formatMetaTimezone(row: MetaRow, set: SetFn): void {
+  if (typeof row.tz_name === 'string' && row.tz_name !== '') {
+    set('timezone', row.tz_name);
+  } else if (typeof row.tz_offset === 'number') {
+    const h = Math.floor(Math.abs(row.tz_offset) / 3600);
+    const m = Math.floor((Math.abs(row.tz_offset) % 3600) / 60);
+    set(
+      'timezone',
+      `UTC${row.tz_offset >= 0 ? '+' : '-'}${h}:${m.toString().padStart(2, '0')}`
+    );
+  }
+}
+
+function formatMetaGpsAccuracy(row: MetaRow, set: SetFn): void {
+  set(
+    'gps_accuracy',
+    typeof row.gps_accuracy === 'number' && row.gps_accuracy >= 0
+      ? `${row.gps_accuracy.toFixed(1)}m`
+      : null
+  );
+}
+
+function queryMetaRelations(
+  db: Database,
+  uuid: string,
+  set: SetFn
+): void {
+  const keywords = db
+    .query<{ ZTITLE: string }, [string]>(
+      `SELECT k.ZTITLE FROM ZKEYWORD k
+       JOIN Z_1KEYWORDS jk ON k.Z_PK = jk.Z_52KEYWORDS
+       JOIN ZADDITIONALASSETATTRIBUTES aa ON aa.Z_PK = jk.Z_1ASSETATTRIBUTES
+       JOIN ZASSET a ON a.Z_PK = aa.ZASSET
+       WHERE a.ZUUID = ?`
+    )
+    .all(uuid)
+    .map((r) => r.ZTITLE);
+  if (keywords.length > 0) set('keywords', keywords.join(', '));
+
+  const joinTable = discoverJoinTable(db);
+  const albums = db
+    .query<{ ZTITLE: string }, [string]>(
+      `SELECT g.ZTITLE FROM ZGENERICALBUM g
+       JOIN ${joinTable.tableName} j ON g.Z_PK = j.${joinTable.albumColumn}
+       JOIN ZASSET a ON a.Z_PK = j.${joinTable.assetColumn}
+       WHERE a.ZUUID = ? AND g.ZTITLE IS NOT NULL AND g.ZKIND = 2`
+    )
+    .all(uuid)
+    .map((r) => r.ZTITLE);
+  if (albums.length > 0) set('albums', albums.join(', '));
+
+  const persons = db
+    .query<{ name: string }, [string]>(
+      `SELECT COALESCE(p.ZDISPLAYNAME, p.ZFULLNAME) AS name
+       FROM ZPERSON p
+       JOIN ZDETECTEDFACE df ON df.ZPERSONFORFACE = p.Z_PK
+       JOIN ZASSET a ON a.Z_PK = df.ZASSETFORFACE
+       WHERE a.ZUUID = ? AND (p.ZDISPLAYNAME IS NOT NULL OR p.ZFULLNAME IS NOT NULL)`
+    )
+    .all(uuid)
+    .map((r) => r.name);
+  if (persons.length > 0) set('persons', [...new Set(persons)].join(', '));
+}
+
 /** Rich metadata for a single asset — used by the metadata modal. */
 export function queryMetadata(
   db: Database,
   uuid: string
 ): Record<string, unknown> | null {
   const row = db
-    .query<Record<string, unknown>, [string]>(
+    .query<MetaRow, [string]>(
       `SELECT
         a.ZUUID AS uuid,
         a.ZFILENAME AS filename,
@@ -517,139 +674,29 @@ export function queryMetadata(
 
   if (row === null) return null;
 
-  // Convert Core Data dates
-  const EPOCH = 978307200;
-  const fmtDate = (v: unknown): string | null => {
-    if (typeof v !== 'number') return null;
-    const d = new Date((v + EPOCH) * 1000);
-    return d.toISOString().replace('T', ' ').replace(/\.\d+Z$/, '');
-  };
-
   const result: Record<string, unknown> = {};
-  const set = (key: string, val: unknown) => {
-    if (val !== null && val !== undefined && val !== '' && val !== -180.0) {
-      result[key] = val;
-    }
-  };
+  const set: SetFn = (key, val) => { metaSet(result, key, val); };
 
   set('uuid', row.uuid);
   set('filename', row.filename);
   set('original_filename', row.original_filename);
-  set('date', fmtDate(row.date_created));
-  set('date_added', fmtDate(row.date_added));
-  set('date_modified', fmtDate(row.date_modified));
+  set('date', fmtCoreDataDate(row.date_created));
+  set('date_added', fmtCoreDataDate(row.date_added));
+  set('date_modified', fmtCoreDataDate(row.date_modified));
   set('title', row.title);
   set('description', row.description);
 
-  // Dimensions
-  const w = row.original_width ?? row.width;
-  const h = row.original_height ?? row.height;
-  if (typeof w === 'number' && typeof h === 'number' && w > 0 && h > 0) {
-    set('width', w);
-    set('height', h);
-  }
-
-  if (typeof row.original_filesize === 'number' && row.original_filesize > 0) {
-    const mb = (row.original_filesize as number) / 1024 / 1024;
-    set('original_filesize', `${mb.toFixed(1)} MB`);
-  }
-
+  formatMetaDimensions(row, set);
   set('uti', row.uti);
   set('latitude', row.latitude);
   set('longitude', row.longitude);
-
-  if (typeof row.duration === 'number' && row.duration > 0) {
-    const mins = Math.floor(row.duration as number / 60);
-    const secs = Math.floor(row.duration as number % 60);
-    set('duration', `${mins}:${secs.toString().padStart(2, '0')}`);
-  }
-
-  set('favorite', row.favorite === 1 ? 'Yes' : null);
-  set('hidden', row.hidden === 1 ? 'Yes' : null);
-  set('ismovie', row.kind === 1 ? 'Yes' : null);
-  set('screenshot', row.screenshot === 1 ? 'Yes' : null);
-  set('hdr', (row.hdr as number) > 0 ? 'Yes' : null);
-
-  // Camera
-  const make = row.camera_make as string | null;
-  const model = row.camera_model as string | null;
-  if (make || model) {
-    const camera = model && make && !model.startsWith(make)
-      ? `${make} ${model}` : (model ?? make);
-    set('camera', camera);
-  }
-  set('lens', row.lens_model);
-
-  // Exposure
-  if (typeof row.aperture === 'number') {
-    set('aperture', `f/${(row.aperture as number).toFixed(1)}`);
-  }
-  if (typeof row.shutter_speed === 'number') {
-    const ss = row.shutter_speed as number;
-    set('shutter_speed', ss >= 1 ? `${ss}s` : `1/${Math.round(1 / ss)}s`);
-  }
-  if (typeof row.iso === 'number') {
-    set('iso', `ISO ${row.iso}`);
-  }
-  if (typeof row.focal_length === 'number') {
-    let fl = `${(row.focal_length as number).toFixed(0)}mm`;
-    if (typeof row.focal_length_35mm === 'number') {
-      fl += ` (${(row.focal_length_35mm as number).toFixed(0)}mm eq.)`;
-    }
-    set('focal_length', fl);
-  }
-  set('flash', row.flash === 1 ? 'Yes' : row.flash === 0 ? 'No' : null);
-
-  // Timezone
-  if (row.tz_name) {
-    set('timezone', row.tz_name);
-  } else if (typeof row.tz_offset === 'number') {
-    const h = Math.floor(Math.abs(row.tz_offset as number) / 3600);
-    const m = Math.floor((Math.abs(row.tz_offset as number) % 3600) / 60);
-    set('timezone', `UTC${(row.tz_offset as number) >= 0 ? '+' : '-'}${h}:${m.toString().padStart(2, '0')}`);
-  }
-
-  set('gps_accuracy', typeof row.gps_accuracy === 'number' && (row.gps_accuracy as number) >= 0
-    ? `${(row.gps_accuracy as number).toFixed(1)}m` : null);
-
-  // Keywords
-  const keywords = db
-    .query<{ ZTITLE: string }, [string]>(
-      `SELECT k.ZTITLE FROM ZKEYWORD k
-       JOIN Z_1KEYWORDS jk ON k.Z_PK = jk.Z_52KEYWORDS
-       JOIN ZADDITIONALASSETATTRIBUTES aa ON aa.Z_PK = jk.Z_1ASSETATTRIBUTES
-       JOIN ZASSET a ON a.Z_PK = aa.ZASSET
-       WHERE a.ZUUID = ?`
-    )
-    .all(uuid)
-    .map((r) => r.ZTITLE);
-  if (keywords.length > 0) set('keywords', keywords.join(', '));
-
-  // Albums
-  const joinTable = discoverJoinTable(db);
-  const albums = db
-    .query<{ ZTITLE: string }, [string]>(
-      `SELECT g.ZTITLE FROM ZGENERICALBUM g
-       JOIN ${joinTable.tableName} j ON g.Z_PK = j.${joinTable.albumColumn}
-       JOIN ZASSET a ON a.Z_PK = j.${joinTable.assetColumn}
-       WHERE a.ZUUID = ? AND g.ZTITLE IS NOT NULL AND g.ZKIND = 2`
-    )
-    .all(uuid)
-    .map((r) => r.ZTITLE);
-  if (albums.length > 0) set('albums', albums.join(', '));
-
-  // Persons (named faces)
-  const persons = db
-    .query<{ name: string }, [string]>(
-      `SELECT COALESCE(p.ZDISPLAYNAME, p.ZFULLNAME) AS name
-       FROM ZPERSON p
-       JOIN ZDETECTEDFACE df ON df.ZPERSONFORFACE = p.Z_PK
-       JOIN ZASSET a ON a.Z_PK = df.ZASSETFORFACE
-       WHERE a.ZUUID = ? AND (p.ZDISPLAYNAME IS NOT NULL OR p.ZFULLNAME IS NOT NULL)`
-    )
-    .all(uuid)
-    .map((r) => r.name);
-  if (persons.length > 0) set('persons', [...new Set(persons)].join(', '));
+  formatMetaDuration(row, set);
+  formatMetaFlags(row, set);
+  formatMetaCamera(row, set);
+  formatMetaExposure(row, set);
+  formatMetaTimezone(row, set);
+  formatMetaGpsAccuracy(row, set);
+  queryMetaRelations(db, uuid, set);
 
   return result;
 }

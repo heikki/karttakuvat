@@ -24,7 +24,9 @@ import { openPhotosDb, queryPhotos, queryVideos } from './photos-db';
 
 const PROJECT_ROOT = join(import.meta.dir, '..');
 const dataDirArg = process.argv.find((a) => a.startsWith('--data-dir='));
-const PUBLIC_DIR = dataDirArg ? dataDirArg.split('=')[1]! : join(PROJECT_ROOT, 'public');
+const PUBLIC_DIR = dataDirArg === undefined
+  ? join(PROJECT_ROOT, 'public')
+  : dataDirArg.split('=')[1]!;
 const CACHE_FULL_DIR = join(PUBLIC_DIR, 'cache', 'full');
 const CACHE_THUMB_DIR = join(PUBLIC_DIR, 'cache', 'thumb');
 const JSON_PATH = join(PUBLIC_DIR, 'items.json');
@@ -184,9 +186,7 @@ async function main(): Promise<void> {
   // Clean up cache entries for photos deleted from library
   const entryUuids = new Set(entries.map((e) => e.uuid));
   const oldUuids = new Set(oldItems.keys());
-  const orphanUuids = new Set(
-    [...oldUuids].filter((u) => !entryUuids.has(u))
-  );
+  const orphanUuids = new Set([...oldUuids].filter((u) => !entryUuids.has(u)));
   if (orphanUuids.size > 0) cleanOrphans(orphanUuids, oldItems);
 
   reportLocationChanges(locationChanges);
