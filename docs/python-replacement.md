@@ -45,9 +45,23 @@ Two queries already bypass osxphotos and read `Photos.sqlite` directly:
 
 ## Replacement Strategy
 
-### Phase 1: Server Scripts → TypeScript
+### Phase 1: Read Queries → bun:sqlite
 
-Port `set_locations.py` and `set_times.py` to eliminate Python from interactive use.
+Replace `osxphotos query` with direct SQLite reads. This is the safest starting point — read-only, and results can be validated against osxphotos output.
+
+**What's needed:**
+- Reverse-engineer the osxphotos JSON output format (joins ~5-10 tables)
+- Key tables: `ZASSET`, `ZADDITIONALASSETATTRIBUTES`, `ZEXTENDEDATTRIBUTES`, `Z_26ASSETS` (album join), `ZGENERICALBUM`
+- Fields needed: uuid, date, latitude, longitude, albums, camera model, timezone offset, original filename
+
+**Files to create:**
+- New: `scripts/photos-db.ts` — SQLite query module for Photos.sqlite
+
+**Effort:** ~1-2 days
+
+### Phase 2: Server Scripts → TypeScript
+
+Port `set_locations.py` and `set_times.py` to eliminate Python from interactive use. Test on a test Photos library first.
 
 **Replace:**
 - `osxphotos batch-edit --location` → AppleScript: `set location of media item id "UUID" to {lat, lon}`
@@ -65,20 +79,6 @@ All AppleScript calls via `osascript` from `Bun.spawn()`. Photos.app restart aft
 **Risk:** Timezone SQLite writes use the same undocumented approach as osxphotos (direct write to Core Data database). Photos.sqlite has triggers that block normal UPDATE statements — osxphotos works around this with a custom sqlite wrapper. We'd need a similar workaround or use `bun:sqlite` with WAL mode. Location and date/time edits are safe (AppleScript, the supported path).
 
 **Effort:** ~1 day
-
-### Phase 2: Read Queries → bun:sqlite
-
-Replace `osxphotos query` with direct SQLite reads.
-
-**What's needed:**
-- Reverse-engineer the osxphotos JSON output format (joins ~5-10 tables)
-- Key tables: `ZASSET`, `ZADDITIONALASSETATTRIBUTES`, `ZEXTENDEDATTRIBUTES`, `Z_26ASSETS` (album join), `ZGENERICALBUM`
-- Fields needed: uuid, date, latitude, longitude, albums, camera model, timezone offset, original filename
-
-**Files to create:**
-- New: `scripts/photos-db.ts` — SQLite query module for Photos.sqlite
-
-**Effort:** ~1-2 days
 
 ### Phase 3: Export Pipeline → TypeScript
 
@@ -109,8 +109,8 @@ Port `export.py` and `sync.py`.
 
 | Phase | Scope | Effort | Impact |
 |---|---|---|---|
-| 1 | Server scripts | ~1 day | No Python for interactive use |
-| 2 | Read queries | ~1-2 days | No Python for metadata reads |
+| 1 | Read queries | ~1-2 days | No Python for metadata reads |
+| 2 | Server scripts | ~1 day | No Python for interactive use |
 | 3 | Export pipeline | ~2-3 days | No Python for batch export |
 | **Total** | | **~4-6 days** | |
 
@@ -139,8 +139,8 @@ This keeps the surface area small and catches breakage immediately rather than p
 - Create a small test Photos library (`Photos > File > New Library` while holding Option at launch) — develop and test against that, not the real library
 
 **Development order:**
-1. Implement reads first (Phase 2) — validate SQLite queries return correct data by comparing against osxphotos output
-2. Then writes (Phase 1) — test on test library first
+1. Implement reads first (Phase 1) — validate SQLite queries return correct data by comparing against osxphotos output
+2. Then writes (Phase 2) — test on test library first
 3. Single-item test before batch — verify each write operation on one photo in Photos.app UI before running on multiple
 
 **In the code:**
