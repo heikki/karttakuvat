@@ -93,9 +93,10 @@ class Progress {
 
 const PROJECT_ROOT = join(import.meta.dir, '..');
 const dataDirArg = process.argv.find((a) => a.startsWith('--data-dir='));
-const PUBLIC_DIR = dataDirArg === undefined
-  ? join(PROJECT_ROOT, 'public')
-  : dataDirArg.split('=')[1]!;
+const PUBLIC_DIR =
+  dataDirArg === undefined
+    ? join(PROJECT_ROOT, 'public')
+    : dataDirArg.split('=')[1]!;
 const FULL_DIR = join(PUBLIC_DIR, 'full');
 const THUMB_DIR = join(PUBLIC_DIR, 'thumb');
 const JSON_PATH = join(PUBLIC_DIR, 'items.json');

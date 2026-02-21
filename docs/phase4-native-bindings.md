@@ -5,11 +5,13 @@ Replace subprocess calls (`osascript`, `sips`, `qlmanage`) with a compiled `.dyl
 ## Context
 
 Current subprocess calls to replace:
+
 - `sips` — HEIC→JPEG conversion, thumbnail generation (`scripts/export.ts:147-284`)
 - `qlmanage` — video frame extraction (`scripts/export.ts:166-195`)
 - `osascript` — set photo location/date, quit Photos.app (`scripts/photos-edit.ts:30-122`)
 
 Keep as-is:
+
 - `Bun.spawn(['open', url])` — negligible overhead, no benefit from FFI
 - Direct Photos.sqlite reads via `bun:sqlite` — PhotoKit doesn't expose timezone, keep SQLite
 - `setTimezone()` direct SQLite write — no PhotoKit equivalent
@@ -21,6 +23,7 @@ No authorization needed. Highest value — eliminates temp dirs and multi-proces
 **New file: `native/karttakuvat-bridge.mm`**
 
 `extern "C"` functions:
+
 - `int convertToJpeg(const char* in, const char* out, float quality)` — CGImageSource → CGImageDestination with kUTTypeJPEG. Replaces `sipsConvert()`.
 - `int resizeToJpeg(const char* in, const char* out, int maxDim, float quality)` — CGContext resize + JPEG write. Replaces `createThumbnail()`.
 - `int extractVideoFrame(const char* video, const char* out, int maxDim)` — AVAssetImageGenerator.copyCGImage(at:). Replaces `qlmanageToJpeg()`.
@@ -28,10 +31,12 @@ No authorization needed. Highest value — eliminates temp dirs and multi-proces
 **New file: `native/native-bridge.ts`**
 
 TypeScript FFI wrapper using `dlopen`. Dylib discovery:
+
 1. `${Resources}/app/libkarttakuvat.dylib` (electrobun dev + installed)
 2. `${projectRoot}/native/libkarttakuvat.dylib` (bun dev)
 
 **Modify: `scripts/export.ts`**
+
 - Replace `sipsConvert()` → `convertToJpeg()`
 - Replace `createThumbnail()` → `resizeToJpeg()`
 - Replace `qlmanageToJpeg()` → `extractVideoFrame()`
@@ -42,6 +47,7 @@ TypeScript FFI wrapper using `dlopen`. Dylib discovery:
 Same AppleScript, no process spawn. Better error capture via error buffer pattern.
 
 **Add to `native/karttakuvat-bridge.mm`:**
+
 - `int photosSetLocation(const char* uuid, double lat, double lon, char* errBuf, int errBufLen)`
 - `int photosSetDateTime(const char* uuid, int yr, int mo, int dy, int hr, int mi, int sc, char* errBuf, int errBufLen)`
 - `int photosQuit(char* errBuf, int errBufLen)`
@@ -49,10 +55,12 @@ Same AppleScript, no process spawn. Better error capture via error buffer patter
 All use `NSAppleScript executeAndReturnError:` internally.
 
 **Modify: `scripts/photos-edit.ts`**
+
 - Replace `runAppleScript()` + `spawn(['osascript'])` with FFI calls
 - `setLocation`, `setDateTime`, `quitPhotosApp` become synchronous
 
 **Modify: `api-routes.ts`**
+
 - Drop `await` on `setLocation`/`setDateTime`/`quitPhotosApp` calls
 
 ## Build Pipeline
@@ -78,18 +86,18 @@ Electrobun config copy: `'native/libkarttakuvat.dylib': 'libkarttakuvat.dylib'`
 
 ## Files
 
-| New | Purpose |
-|-----|---------|
-| `native/karttakuvat-bridge.mm` | ObjC++ — ImageIO, AVFoundation, NSAppleScript |
-| `native/native-bridge.ts` | TypeScript FFI wrapper (dlopen + typed exports) |
+| New                            | Purpose                                         |
+| ------------------------------ | ----------------------------------------------- |
+| `native/karttakuvat-bridge.mm` | ObjC++ — ImageIO, AVFoundation, NSAppleScript   |
+| `native/native-bridge.ts`      | TypeScript FFI wrapper (dlopen + typed exports) |
 
-| Modified | Change |
-|----------|--------|
-| `scripts/export.ts` | Replace sips/qlmanage with native FFI calls |
-| `scripts/photos-edit.ts` | Replace osascript with native NSAppleScript FFI |
-| `api-routes.ts` | Sync calls to setLocation/setDateTime/quitPhotosApp |
-| `electrobun.config.ts` | Copy dylib into app bundle |
-| `package.json` | Add build:native script |
+| Modified                 | Change                                              |
+| ------------------------ | --------------------------------------------------- |
+| `scripts/export.ts`      | Replace sips/qlmanage with native FFI calls         |
+| `scripts/photos-edit.ts` | Replace osascript with native NSAppleScript FFI     |
+| `api-routes.ts`          | Sync calls to setLocation/setDateTime/quitPhotosApp |
+| `electrobun.config.ts`   | Copy dylib into app bundle                          |
+| `package.json`           | Add build:native script                             |
 
 ## Risks
 

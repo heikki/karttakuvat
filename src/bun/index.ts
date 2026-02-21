@@ -15,7 +15,9 @@ const resourcesDir = resolve(dirname(process.argv0), '..', 'Resources');
 let isDev = false;
 try {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Bun.file().json() returns any
-  const versionInfo: { channel?: string } = await Bun.file(join(resourcesDir, 'version.json')).json();
+  const versionInfo: { channel?: string } = await Bun.file(
+    join(resourcesDir, 'version.json')
+  ).json();
   isDev = versionInfo.channel === 'dev';
 } catch {
   // ignore
@@ -34,7 +36,10 @@ const projectRoot = findProjectRoot();
 
 // Data directory: in dev builds, use public/ next to the project root
 function findDataDir(): string {
-  if (process.env.KARTTAKUVAT_DATA_DIR !== undefined && process.env.KARTTAKUVAT_DATA_DIR !== '') {
+  if (
+    process.env.KARTTAKUVAT_DATA_DIR !== undefined &&
+    process.env.KARTTAKUVAT_DATA_DIR !== ''
+  ) {
     return resolve(process.env.KARTTAKUVAT_DATA_DIR);
   }
 
@@ -218,7 +223,9 @@ const server = Bun.serve({
 
     // Serve bundled view files, then static data files
     const decodedPath = decodeURIComponent(url.pathname);
-    return serveStaticFile(decodedPath) ?? new Response('Not Found', { status: 404 });
+    return (
+      serveStaticFile(decodedPath) ?? new Response('Not Found', { status: 404 })
+    );
   }
 });
 
@@ -240,7 +247,12 @@ function loadWindowState(): {
   height: number;
 } {
   try {
-    return JSON.parse(readFileSync(stateFile, 'utf8')) as { x: number; y: number; width: number; height: number };
+    return JSON.parse(readFileSync(stateFile, 'utf8')) as {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    };
   } catch {
     return defaultFrame;
   }
@@ -411,7 +423,11 @@ async function runScript(
   runningScript = { proc, name };
 
   const outputLines: string[] = [];
-  void streamStdout(proc.stdout as ReadableStream<Uint8Array>, name, outputLines);
+  void streamStdout(
+    proc.stdout as ReadableStream<Uint8Array>,
+    name,
+    outputLines
+  );
 
   // Capture stderr
   const stderrText = await new Response(proc.stderr).text();

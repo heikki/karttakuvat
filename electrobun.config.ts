@@ -15,7 +15,12 @@ function resolveWithExtensions(basePath: string): string {
 // Inline plugin to resolve @common/* and @components/* path aliases
 const pathAliasPlugin = {
   name: 'tsconfig-paths',
-  setup(build: { onResolve: (opts: { filter: RegExp }, cb: (args: { path: string }) => { path: string }) => void }) {
+  setup(build: {
+    onResolve: (
+      opts: { filter: RegExp },
+      cb: (args: { path: string }) => { path: string }
+    ) => void;
+  }) {
     build.onResolve({ filter: /^@common\// }, (args: { path: string }) => ({
       path: resolveWithExtensions(
         resolve(baseDir, 'src/common', args.path.replace('@common/', ''))

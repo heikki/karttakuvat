@@ -480,7 +480,11 @@ export function queryOne(db: Database, uuid: string): PhotoRecord | null {
 type MetaRow = Record<string, unknown>;
 type SetFn = (key: string, val: unknown) => void;
 
-function metaSet(result: Record<string, unknown>, key: string, val: unknown): void {
+function metaSet(
+  result: Record<string, unknown>,
+  key: string,
+  val: unknown
+): void {
   if (val !== null && val !== undefined && val !== '' && val !== -180.0) {
     result[key] = val; // eslint-disable-line no-param-reassign -- intentional accumulator mutation
   }
@@ -580,11 +584,7 @@ function formatMetaGpsAccuracy(row: MetaRow, set: SetFn): void {
   );
 }
 
-function queryMetaRelations(
-  db: Database,
-  uuid: string,
-  set: SetFn
-): void {
+function queryMetaRelations(db: Database, uuid: string, set: SetFn): void {
   const keywords = db
     .query<{ ZTITLE: string }, [string]>(
       `SELECT k.ZTITLE FROM ZKEYWORD k
@@ -675,7 +675,9 @@ export function queryMetadata(
   if (row === null) return null;
 
   const result: Record<string, unknown> = {};
-  const set: SetFn = (key, val) => { metaSet(result, key, val); };
+  const set: SetFn = (key, val) => {
+    metaSet(result, key, val);
+  };
 
   set('uuid', row.uuid);
   set('filename', row.filename);

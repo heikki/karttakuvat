@@ -27,6 +27,11 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 - Focus on significant features and fixes, skip minor tweaks
 - Describe final outcomes, not intermediate attempts that were reverted
 
+## 21.02.2026 — Lint & Formatting
+
+- Fixed ESLint flat config: added node_modules to ignores (was linting 70k+ dependency files)
+- Resolved all 43 lint errors: unsafe any types, floating promises, negated conditions, complexity extraction
+
 ## 21.02.2026 — Python Replacement & Electrobun Desktop App
 
 **Tokens**: 142M | **Cost**: $81.63
@@ -36,7 +41,7 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 - Added Full Disk Access dialog for Photos.sqlite permission errors
 - Added app icon from favicon SVG
 - Enriched metadata modal with EXIF fields (lens, aperture, shutter speed, ISO, focal length, flash)
-- External links (target=_blank, window.open) open in system browser
+- External links (target=\_blank, window.open) open in system browser
 - Fixed script runner: use bundled Bun for installed app, strip ANSI codes from output
 - Added Phase 4 native ObjC bindings plan (sips/qlmanage/osascript → FFI dylib)
 

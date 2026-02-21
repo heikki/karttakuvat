@@ -199,11 +199,7 @@ async function convertEditedPhoto(
   }
   const originalPath = resolveOriginalPath(libraryPath, directory, filename);
   if (originalPath === null) return false;
-  return await qlmanageToJpeg(
-    originalPath,
-    outputPath,
-    `${outputPath}.ql_tmp`
-  );
+  return await qlmanageToJpeg(originalPath, outputPath, `${outputPath}.ql_tmp`);
 }
 
 async function convertOriginalPhoto(
@@ -247,7 +243,12 @@ async function convertFull(
   }
 
   if (asset.hasEdits) {
-    return await convertEditedPhoto(libraryPath, directory, filename, outputPath);
+    return await convertEditedPhoto(
+      libraryPath,
+      directory,
+      filename,
+      outputPath
+    );
   }
 
   const originalPath = resolveOriginalPath(libraryPath, directory, filename);
