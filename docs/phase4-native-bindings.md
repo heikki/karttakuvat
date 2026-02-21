@@ -6,8 +6,8 @@ Replace subprocess calls (`osascript`, `sips`, `qlmanage`) with a compiled `.dyl
 
 Current subprocess calls to replace:
 
-- `sips` — HEIC→JPEG conversion, thumbnail generation (`scripts/export.ts:147-284`)
-- `qlmanage` — video frame extraction (`scripts/export.ts:166-195`)
+- ~~`sips` — HEIC→JPEG conversion, thumbnail generation~~ **Done (4A)**
+- ~~`qlmanage` — video frame extraction~~ **Done (4A)**
 - `osascript` — set photo location/date, quit Photos.app (`scripts/photos-edit.ts:30-122`)
 
 Keep as-is:
@@ -16,31 +16,27 @@ Keep as-is:
 - Direct Photos.sqlite reads via `bun:sqlite` — PhotoKit doesn't expose timezone, keep SQLite
 - `setTimezone()` direct SQLite write — no PhotoKit equivalent
 
-## Sub-Phase 4A: Image Processing (sips + qlmanage → ImageIO + AVFoundation)
+## Sub-Phase 4A: Image Processing — DONE
 
-No authorization needed. Highest value — eliminates temp dirs and multi-process overhead.
+Replaced `sips` and `qlmanage` with native ImageIO/AVFoundation via `bun:ffi`.
 
-**New file: `native/karttakuvat-bridge.mm`**
+**`native/karttakuvat-bridge.mm`** — ObjC++ dylib with three `extern "C"` functions:
 
-`extern "C"` functions:
+- `convertToJpeg()` — CGImageSource → CGImageDestination. Handles HEIC, TIFF, PNG, etc.
+- `resizeToJpeg()` — CGImageSource thumbnail API → CGImageDestination. 400px max edge for thumbnails.
+- `extractVideoFrame()` — AVAssetImageGenerator → CGImageDestination. First frame at max 1920px.
 
-- `int convertToJpeg(const char* in, const char* out, float quality)` — CGImageSource → CGImageDestination with kUTTypeJPEG. Replaces `sipsConvert()`.
-- `int resizeToJpeg(const char* in, const char* out, int maxDim, float quality)` — CGContext resize + JPEG write. Replaces `createThumbnail()`.
-- `int extractVideoFrame(const char* video, const char* out, int maxDim)` — AVAssetImageGenerator.copyCGImage(at:). Replaces `qlmanageToJpeg()`.
+**`native/native-bridge.ts`** — TypeScript FFI wrapper using `dlopen`. Dylib search order:
 
-**New file: `native/native-bridge.ts`**
+1. `native/libkarttakuvat.dylib` next to source file (bun dev)
+2. `Resources/app/libkarttakuvat.dylib` (electrobun installed)
+3. Project root `native/` via path traversal (electrobun dev)
 
-TypeScript FFI wrapper using `dlopen`. Dylib discovery:
+**`scripts/image-cache.ts`** — on-demand image conversion now uses native functions. All conversion functions are synchronous (no subprocess spawning, no temp directories).
 
-1. `${Resources}/app/libkarttakuvat.dylib` (electrobun dev + installed)
-2. `${projectRoot}/native/libkarttakuvat.dylib` (bun dev)
+**`scripts/export.ts`** — removed. All image serving is on-demand via the image cache.
 
-**Modify: `scripts/export.ts`**
-
-- Replace `sipsConvert()` → `convertToJpeg()`
-- Replace `createThumbnail()` → `resizeToJpeg()`
-- Replace `qlmanageToJpeg()` → `extractVideoFrame()`
-- Remove `run()` shell helper, temp dir management
+Build: `bun run build:native` compiles the dylib. Wired into `build:app` and `build:app:stable`.
 
 ## Sub-Phase 4B: AppleScript via NSAppleScript (osascript → in-process)
 
@@ -66,51 +62,32 @@ All use `NSAppleScript executeAndReturnError:` internally.
 ## Build Pipeline
 
 ```
-"build:native": "clang++ -shared -fPIC -O2 -fobjc-arc -framework Foundation -framework ImageIO -framework AVFoundation -framework CoreGraphics -o native/libkarttakuvat.dylib native/karttakuvat-bridge.mm"
+"build:native": "clang++ -shared -fPIC -O2 -fobjc-arc -Wno-deprecated-declarations -framework Foundation -framework ImageIO -framework AVFoundation -framework CoreGraphics -framework CoreMedia -o native/libkarttakuvat.dylib native/karttakuvat-bridge.mm"
 "build:app": "bun run build:native && bun run bundle:scripts && electrobun build"
 ```
 
 Electrobun config copy: `'native/libkarttakuvat.dylib': 'libkarttakuvat.dylib'`
 
-## Implementation Order
-
-1. Create `native/karttakuvat-bridge.mm` with image functions
-2. Create `native/native-bridge.ts` with FFI wrapper
-3. Add `build:native` to package.json, verify compilation
-4. Update `scripts/export.ts` to use native functions
-5. Test: run full export, compare output to sips/qlmanage results
-6. Add AppleScript functions to bridge
-7. Update `scripts/photos-edit.ts` and `api-routes.ts`
-8. Test: location/time edits from app UI
-9. Bundle dylib into electrobun app, test dev + installed
-
 ## Files
 
-| New                            | Purpose                                         |
-| ------------------------------ | ----------------------------------------------- |
-| `native/karttakuvat-bridge.mm` | ObjC++ — ImageIO, AVFoundation, NSAppleScript   |
+| New                            | Purpose                                        |
+| ------------------------------ | ---------------------------------------------- |
+| `native/karttakuvat-bridge.mm` | ObjC++ — ImageIO, AVFoundation                 |
 | `native/native-bridge.ts`      | TypeScript FFI wrapper (dlopen + typed exports) |
 
 | Modified                 | Change                                              |
 | ------------------------ | --------------------------------------------------- |
-| `scripts/export.ts`      | Replace sips/qlmanage with native FFI calls         |
-| `scripts/photos-edit.ts` | Replace osascript with native NSAppleScript FFI     |
-| `api-routes.ts`          | Sync calls to setLocation/setDateTime/quitPhotosApp |
+| `scripts/image-cache.ts` | Native FFI calls instead of sips/qlmanage           |
 | `electrobun.config.ts`   | Copy dylib into app bundle                          |
 | `package.json`           | Add build:native script                             |
 
+| Removed             | Reason                                  |
+| ------------------- | --------------------------------------- |
+| `scripts/export.ts` | Replaced by on-demand image cache       |
+
 ## Risks
 
-- **FFI string lifetime**: Use `Buffer.from(str + "\0")` pattern (same as Electrobun GC patch)
+- **FFI string lifetime**: Use `TextEncoder.encode(str + "\0")` pattern to ensure null-terminated C strings stay alive during FFI calls
 - **HEIC support**: ImageIO on macOS natively reads HEIC since 10.13 — no issue
 - **AVAssetImageGenerator threading**: copyCGImage(at:) is thread-safe for reads
-- **Bundled scripts + FFI**: `bun build --target bun` inlines native-bridge.ts; dlopen resolves at runtime via process.argv0
-
-## Verification
-
-1. `bun run build:native` compiles without errors
-2. Full export produces identical JPEGs to sips/qlmanage output
-3. Thumbnail dimensions match (400px max edge)
-4. Video frames extracted correctly
-5. Location/date edits work from app UI
-6. `electrobun dev` and installed app both find dylib
+- **Dylib discovery**: Three search paths cover bun dev, electrobun dev, and installed app contexts

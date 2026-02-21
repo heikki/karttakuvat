@@ -1,6 +1,6 @@
 # App Specification
 
-Karttakuvat displays geotagged photographs and videos on an interactive map. Items are exported from Apple Photos via Python scripts and served as static files. The dev server provides API endpoints for editing metadata back into Photos.app.
+Karttakuvat displays geotagged photographs and videos on an interactive map. Metadata is synced from the Apple Photos SQLite database; images are converted on demand via a native ObjC++ dylib (ImageIO/AVFoundation) loaded through `bun:ffi`. The dev server and desktop app provide API endpoints for editing metadata back into Photos.app.
 
 ## Architecture
 
@@ -261,7 +261,7 @@ The app is packaged as a native macOS desktop app using Electrobun (Bun + system
 
 ### Architecture
 
-A single `Bun.serve({ port: 0 })` instance serves both bundled view files and API routes on the same origin. The webview loads from `http://127.0.0.1:PORT`. In dev builds, scripts run from the project `scripts/` directory using system Bun; in installed builds, bundled `.js` scripts run via the bundled Bun binary.
+A single `Bun.serve({ port: 0 })` instance serves both bundled view files and API routes on the same origin. The webview loads from `http://127.0.0.1:PORT`. Images are converted on demand via the native bridge (`libkarttakuvat.dylib`). In dev builds, scripts run from the project `scripts/` directory using system Bun; in installed builds, bundled `.js` scripts run via the bundled Bun binary.
 
 ### Application Menu
 
@@ -279,7 +279,7 @@ On launch, the app automatically runs a quiet sync (`sync.ts`) in the background
 
 ### Image Cache
 
-Images are served through a caching layer. Full-size and thumbnail images are cached in `{dataDir}/cache/full/` and `{dataDir}/cache/thumb/` respectively. The "Clear Cache" menu action deletes both cache directories and reloads the webview.
+Images are converted on demand from the Apple Photos library using a native ObjC++ dylib (`libkarttakuvat.dylib`) loaded via `bun:ffi`. The dylib uses ImageIO for HEIC/JPEG conversion and thumbnailing, and AVFoundation for video frame extraction — no subprocess spawning or temp directories needed. Full-size and thumbnail images are cached in `{dataDir}/cache/full/` and `{dataDir}/cache/thumb/` respectively, validated by source file mtime. The "Clear Cache" menu action deletes both cache directories and reloads the webview.
 
 ### Window State Persistence
 
