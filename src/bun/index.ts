@@ -1,4 +1,10 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync
+} from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 
 import type { AppRPC } from '../rpc-types';
@@ -8,7 +14,6 @@ const { BrowserView, BrowserWindow, ApplicationMenu, Utils } =
 
 const { createApiHandler, flushLogBuffer } = await import('../../api-routes');
 const { createImageCache } = await import('../../scripts/image-cache');
-const { openPhotosDb, countAssets } = await import('../../scripts/photos-db');
 
 // Detect dev build from version.json
 const resourcesDir = resolve(dirname(process.argv0), '..', 'Resources');
@@ -63,94 +68,39 @@ const { routeApiRequest } = createApiHandler(dataDir, { imageCache });
 const appDir = join(resourcesDir, 'app');
 const viewsDir = join(appDir, 'views', 'app');
 
-// Detect new photos in library vs exported
-function countNewPhotos(): number | null {
-  try {
-    const itemsFile = join(dataDir, 'items.json');
-    if (!existsSync(itemsFile)) return null;
-    const items = JSON.parse(readFileSync(itemsFile, 'utf8')) as unknown[];
-    const db = openPhotosDb();
-    const { photos, videos } = countAssets(db);
-    db.close();
-    const libraryTotal = photos + videos;
-    const exportedTotal = items.length;
-    const diff = libraryTotal - exportedTotal;
-    if (diff > 0) {
-      console.log(
-        `[main] ${diff} new photos detected (library: ${libraryTotal}, exported: ${exportedTotal})`
-      );
-      return diff;
-    }
-    return null;
-  } catch (err) {
-    console.log(`[main] Could not check for new photos: ${String(err)}`);
-    return null;
-  }
-}
-
 // Script directory: dev builds use project root, installed builds use bundled scripts
 const scriptsDir =
   projectRoot === null ? join(appDir, 'scripts') : join(projectRoot, 'scripts');
 
 // App menu
-function buildMenu() {
-  const nc = countNewPhotos();
-  const exportLabel =
-    nc === null ? 'Export Photos' : `Export Photos (${nc} new)`;
-  const photosMenuItems = [
-    {
-      label: 'Photos',
-      submenu: [
-        { label: exportLabel, action: 'export' },
-        { label: 'Export Photos (Full)', action: 'export-full' },
-        { label: 'Refresh Edited', action: 'export-edited' },
-        { type: 'divider' },
-        { label: 'Sync Metadata', action: 'sync' }
-      ]
-    }
-  ];
-
-  ApplicationMenu.setApplicationMenu([
-    {
-      label: 'Karttakuvat',
-      submenu: [
-        { label: 'About Karttakuvat', action: 'about' },
-        { type: 'divider' },
-        {
-          label: 'Quit Karttakuvat',
-          action: 'quit',
-          accelerator: 'CmdOrCtrl+Q'
-        }
-      ]
-    },
-    {
-      label: 'Edit',
-      submenu: [
-        { role: 'undo', accelerator: 'CmdOrCtrl+Z' },
-        { role: 'redo', accelerator: 'CmdOrCtrl+Shift+Z' },
-        { type: 'divider' },
-        { role: 'cut', accelerator: 'CmdOrCtrl+X' },
-        { role: 'copy', accelerator: 'CmdOrCtrl+C' },
-        { role: 'paste', accelerator: 'CmdOrCtrl+V' },
-        { role: 'selectAll', accelerator: 'CmdOrCtrl+A' }
-      ]
-    },
-    ...photosMenuItems,
-    {
-      label: 'Window',
-      submenu: [
-        { role: 'minimize', accelerator: 'CmdOrCtrl+M' },
-        { role: 'close', accelerator: 'CmdOrCtrl+W' }
-      ]
-    }
-  ]);
-}
-
-function refreshPhotosMenu() {
-  buildMenu();
-}
-
-buildMenu();
+ApplicationMenu.setApplicationMenu([
+  {
+    label: 'Karttakuvat',
+    submenu: [
+      { label: 'About Karttakuvat', action: 'about' },
+      { type: 'divider' },
+      {
+        label: 'Quit Karttakuvat',
+        action: 'quit',
+        accelerator: 'CmdOrCtrl+Q'
+      }
+    ]
+  },
+  {
+    label: 'Photos',
+    submenu: [
+      { label: 'Re-sync', action: 'resync' },
+      { label: 'Clear Cache', action: 'clear-cache' }
+    ]
+  },
+  {
+    label: 'Window',
+    submenu: [
+      { role: 'minimize', accelerator: 'CmdOrCtrl+M' },
+      { role: 'close', accelerator: 'CmdOrCtrl+W' }
+    ]
+  }
+]);
 
 // Full Disk Access dialog — shown once per session when Photos.sqlite can't be read
 let fullDiskAccessShown = false;
@@ -442,7 +392,6 @@ async function runScript(
 
   const lastLines = outputLines.slice(-8).join('\n');
   if (exitCode === 0) {
-    refreshPhotosMenu();
     win.webview.loadURL(baseUrl);
     void Utils.showMessageBox({
       type: 'info',
@@ -462,6 +411,65 @@ async function runScript(
   }
 }
 
+/** Run sync quietly — no success/error dialogs, just reload webview on completion. */
+async function runSyncQuiet() {
+  const scriptPath = resolveScriptPath('sync.ts');
+  if (scriptPath === null) return;
+
+  if (runningScript !== null) return;
+
+  const extraArgs = projectRoot === null ? [`--data-dir=${dataDir}`] : [];
+  const bunPath =
+    projectRoot === null
+      ? resolve(dirname(process.argv0), 'bun')
+      : (Bun.which('bun') ?? 'bun');
+
+  console.log('[main] Running quiet sync');
+  const proc = Bun.spawn([bunPath, scriptPath, ...extraArgs], {
+    cwd: projectRoot ?? dataDir,
+    stdout: 'pipe',
+    stderr: 'pipe'
+  });
+
+  runningScript = { proc, name: 'Sync' };
+
+  const outputLines: string[] = [];
+  void streamStdout(
+    proc.stdout as ReadableStream<Uint8Array>,
+    'Sync',
+    outputLines
+  );
+
+  await new Response(proc.stderr).text();
+  const exitCode = await proc.exited;
+  runningScript = null; // eslint-disable-line require-atomic-updates -- intentional sequential reset
+  win.setTitle('Karttakuvat');
+
+  if (exitCode === 0) {
+    win.webview.loadURL(baseUrl);
+  } else {
+    console.log(`[main] Quiet sync failed with exit code ${exitCode}`);
+  }
+}
+
+/** Delete cached images and reload webview. */
+function clearCache() {
+  const cacheFullDir = join(dataDir, 'cache', 'full');
+  const cacheThumbDir = join(dataDir, 'cache', 'thumb');
+
+  if (existsSync(cacheFullDir)) rmSync(cacheFullDir, { recursive: true });
+  if (existsSync(cacheThumbDir)) rmSync(cacheThumbDir, { recursive: true });
+
+  console.log('[main] Cache cleared');
+  win.webview.loadURL(baseUrl);
+  void Utils.showMessageBox({
+    type: 'info',
+    title: 'Cache Cleared',
+    message: 'Image cache has been cleared. Images will be re-cached on demand.',
+    buttons: ['OK']
+  });
+}
+
 // Handle menu actions
 ApplicationMenu.on('application-menu-clicked', (event: ElectrobunEvent) => {
   const action = event.data?.action ?? '';
@@ -469,25 +477,16 @@ ApplicationMenu.on('application-menu-clicked', (event: ElectrobunEvent) => {
     case 'quit':
       process.exit(0);
       break;
-    case 'export':
-      void runScript('Export', 'export.ts');
-      break;
-    case 'export-full':
-      void runScript('Full Export', 'export.ts', ['--full']);
-      break;
-    case 'export-edited':
-      void runScript('Refresh Edited', 'export.ts', ['--refresh-edited']);
-      break;
-    case 'sync':
+    case 'resync':
       void runScript('Sync Metadata', 'sync.ts');
+      break;
+    case 'clear-cache':
+      clearCache();
       break;
   }
 });
 
-// Auto-sync on first launch (when items.json doesn't exist yet)
-if (!existsSync(join(dataDir, 'items.json'))) {
-  console.log('[main] No items.json found — running initial sync');
-  void runScript('Initial Sync', 'sync.ts');
-}
+// Auto-sync on startup
+void runSyncQuiet();
 
 console.log('[main] Initialization complete');
