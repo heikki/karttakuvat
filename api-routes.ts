@@ -1,4 +1,4 @@
-import { openPhotosDb, queryOne } from './scripts/photos-db';
+import { openPhotosDb, queryMetadata } from './scripts/photos-db';
 import {
   quitPhotosApp,
   setDateTime,
@@ -207,7 +207,7 @@ export function createApiHandler(dataDir: string) {
 
   function handleGetMetadata(uuid: string): Response {
     try {
-      const record = queryOne(getPhotosDb(), uuid);
+      const record = queryMetadata(getPhotosDb(), uuid);
       if (record === null) {
         return new Response('Not found', { status: 404 });
       }
