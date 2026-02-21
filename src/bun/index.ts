@@ -1,23 +1,88 @@
 import { join, resolve, dirname } from 'node:path';
+import { existsSync } from 'node:fs';
 
-const { BrowserView, BrowserWindow } = await import('electrobun/bun');
+const { BrowserView, BrowserWindow, ApplicationMenu } = await import(
+  'electrobun/bun'
+);
 
 const { createApiHandler, flushLogBuffer } = await import('../../api-routes');
 type AppRPC = typeof import('../rpc-types').AppRPC;
 
-// Data directory: env override or default Application Support location
-const dataDir = resolve(
-  process.env.KARTTAKUVAT_DATA_DIR ??
-    join(process.env.HOME!, 'Library/Application Support/Karttakuvat')
-);
+// Detect dev build from version.json
+const resourcesDir = resolve(dirname(process.argv0), '..', 'Resources');
+let isDev = false;
+try {
+  const versionInfo = await Bun.file(join(resourcesDir, 'version.json')).json();
+  isDev = versionInfo.channel === 'dev';
+} catch {
+  // ignore
+}
 
+// Data directory: in dev builds, use public/ next to the project root
+function findDataDir(): string {
+  if (process.env.KARTTAKUVAT_DATA_DIR) {
+    return resolve(process.env.KARTTAKUVAT_DATA_DIR);
+  }
+
+  if (isDev) {
+    // Walk up from the build dir to find the project root (where public/ lives)
+    const projectRoot = resolve(resourcesDir, '..', '..', '..', '..', '..');
+    const publicDir = join(projectRoot, 'public');
+    if (existsSync(publicDir)) {
+      return publicDir;
+    }
+  }
+
+  return join(process.env.HOME!, 'Library/Application Support/Karttakuvat');
+}
+
+const dataDir = findDataDir();
 console.log(`[main] Data directory: ${dataDir}`);
 
 const { routeApiRequest } = createApiHandler(dataDir);
 
 // Locate bundled view files
-const appDir = resolve(dirname(process.argv0), '..', 'Resources', 'app');
+const appDir = join(resourcesDir, 'app');
 const viewsDir = join(appDir, 'views', 'app');
+
+// App menu with Cmd+Q
+ApplicationMenu.setApplicationMenu([
+  {
+    label: 'Karttakuvat',
+    submenu: [
+      { label: 'About Karttakuvat', action: 'about' },
+      { type: 'divider' },
+      { label: 'Quit Karttakuvat', action: 'quit', accelerator: 'CmdOrCtrl+Q' }
+    ]
+  },
+  {
+    label: 'Edit',
+    submenu: [
+      { role: 'undo', accelerator: 'CmdOrCtrl+Z' },
+      { role: 'redo', accelerator: 'CmdOrCtrl+Shift+Z' },
+      { type: 'divider' },
+      { role: 'cut', accelerator: 'CmdOrCtrl+X' },
+      { role: 'copy', accelerator: 'CmdOrCtrl+C' },
+      { role: 'paste', accelerator: 'CmdOrCtrl+V' },
+      { role: 'selectAll', accelerator: 'CmdOrCtrl+A' }
+    ]
+  },
+  {
+    label: 'Window',
+    submenu: [
+      { role: 'minimize', accelerator: 'CmdOrCtrl+M' },
+      { role: 'close', accelerator: 'CmdOrCtrl+W' }
+    ]
+  }
+]);
+
+// Handle menu actions
+ApplicationMenu.on('application-menu-clicked', (event: any) => {
+  const action = event?.detail?.action ?? '';
+  if (action.includes('quit')) {
+    process.exit(0);
+  }
+});
 
 // Start local server that serves both API and view files
 const server = Bun.serve({
