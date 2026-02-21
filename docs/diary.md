@@ -6,8 +6,8 @@ Geotagged photo map viewer with Apple Photos integration.
 
 - **TypeScript files**: 32
 - **Lines of code**: 6,934
-- **Total commits**: 415
-- **Total tokens**: 888M | **Total cost**: $552.98
+- **Total commits**: 416
+- **Total tokens**: 889M | **Total cost**: $553.47
 
 ## Updating This Diary
 
@@ -27,29 +27,15 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 - Focus on significant features and fixes, skip minor tweaks
 - Describe final outcomes, not intermediate attempts that were reverted
 
-## 21.02.2026 — Phase 4B: Native AppleScript
+## 21.02.2026 — Python Replacement, Electrobun Desktop App & Native AppleScript
 
-- Replaced `osascript` subprocess spawning with in-process `NSAppleScript` via native dylib (`bun:ffi`)
-- Added generic `runAppleScript()` to the ObjC++ bridge — one function covers location, date/time, and quit
-- Edit pipeline (`setLocation`, `setDateTime`, `quitPhotosApp`) is now fully synchronous
+**Tokens**: 186M | **Cost**: $107.41
 
-## 21.02.2026 — Lint & Formatting
-
-- Fixed ESLint flat config: added node_modules to ignores (was linting 70k+ dependency files)
-- Resolved all 43 lint errors: unsafe any types, floating promises, negated conditions, complexity extraction
-
-## 21.02.2026 — Python Replacement & Electrobun Desktop App
-
-**Tokens**: 142M | **Cost**: $81.63
-
-- Replaced all Python scripts with TypeScript: SQLite reads via `bun:sqlite`, AppleScript writes via `osascript` (later moved to native NSAppleScript in Phase 4B), export pipeline using `sips`/`qlmanage`
-- Built Electrobun desktop app with application menu, window state persistence, script runner with progress in title bar
-- Added Full Disk Access dialog for Photos.sqlite permission errors
-- Added app icon from favicon SVG
+- Replaced all Python scripts with TypeScript: SQLite reads via `bun:sqlite`, export pipeline using `sips`/`qlmanage`
+- Built Electrobun desktop app with application menu, window state persistence, script runner with progress
 - Enriched metadata modal with EXIF fields (lens, aperture, shutter speed, ISO, focal length, flash)
-- External links (target=\_blank, window.open) open in system browser
-- Fixed script runner: use bundled Bun for installed app, strip ANSI codes from output
-- Added Phase 4 native ObjC bindings plan (sips/qlmanage/osascript → FFI dylib)
+- Replaced `osascript` subprocess spawning with in-process `NSAppleScript` via native dylib (`bun:ffi`)
+- Fixed ESLint config and resolved all 43 lint errors
 
 ## 20.02.2026 — Code Quality & Bug Fixes
 
