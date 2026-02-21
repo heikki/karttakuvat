@@ -88,7 +88,7 @@ Clicking "Discard" clears all pending location and time edits. Markers return to
 
 ## View photo metadata
 
-The user clicks the info button (on a popup image or in the lightbox). A modal appears showing detailed metadata fetched from Photos.app: filename, dates, title, description, keywords, albums, persons, labels, AI caption, dimensions, location, EXIF data, and more. The UUID has a copy button. Close with X, backdrop click, or Escape.
+The user clicks the info button (on a popup image or in the lightbox). A modal appears showing detailed metadata fetched from Photos.sqlite: filename, original filename, dates, timezone, title, description, keywords, albums, persons, camera/lens/EXIF settings, dimensions, file size, coordinates, GPS accuracy, and various flags. The UUID has a copy button. Close with X, backdrop click, or Escape.
 
 ## Open a photo in Apple Photos
 

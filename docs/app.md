@@ -187,7 +187,7 @@ Full-screen overlay showing detailed photo metadata from Photos.app (via osxphot
 
 - Activated by info button on popup or lightbox overlay
 - Fetches from `/api/metadata/:uuid`
-- Shows table of metadata fields: filename, dates, title, description, keywords, albums, persons, labels, AI caption, dimensions, file size, location, place, various flags (favorite, HDR, panorama, etc.), EXIF data, score, search info, UUID (with copy button)
+- Shows table of metadata fields: filename, original filename, dates (created/added/modified), timezone, title, description, keywords, albums, persons, camera, lens, aperture, shutter speed, ISO, focal length, flash, dimensions, file size, duration, UTI, coordinates, GPS accuracy, flags (favorite, hidden, video, HDR, screenshot), UUID (with copy button)
 - Empty/false fields are hidden
 - Close with X button, backdrop click, or Escape
 - Blocks all keyboard events except Escape while open
@@ -254,6 +254,41 @@ App state is persisted in URL query parameters:
 - **Tracks**: `tracks` (e.g. `0` for hidden). Default visible is omitted.
 
 On startup, saved URL state is restored: filters are applied, map view is positioned, map style is set, marker style is set, tracks visibility is restored, and the selected photo popup is reopened. The Reset button clears all URL params.
+
+## Desktop App (Electrobun)
+
+The app is packaged as a native macOS desktop app using Electrobun (Bun + system webview). Entry point: `src/bun/index.ts`.
+
+### Architecture
+
+A single `Bun.serve({ port: 0 })` instance serves both bundled view files and API routes on the same origin. The webview loads from `http://127.0.0.1:PORT`. In dev builds, scripts run from the project `scripts/` directory using system Bun; in installed builds, bundled `.js` scripts run via the bundled Bun binary.
+
+### Application Menu
+
+- **Karttakuvat**: About, Quit (Cmd+Q)
+- **Edit**: standard Undo/Redo/Cut/Copy/Paste/Select All
+- **Photos**: Export Photos (shows new photo count), Export Photos (Full), Refresh Edited, Sync Metadata
+- **Window**: Minimize, Close
+
+### Script Runner
+
+Menu actions trigger scripts (`export.ts`, `sync.ts`) via `Bun.spawn()`. Progress is shown in the window title (with ANSI escape code stripping and carriage return handling for live updates). Only one script runs at a time. On completion, a success/error dialog shows the last few output lines, the menu refreshes (re-counts new photos), and the webview reloads.
+
+### Window State Persistence
+
+Window position and size are saved to `~/Library/Application Support/Karttakuvat/window-state.json` on move/resize (debounced 500ms) and restored on launch.
+
+### External Link Handling
+
+Links with `target="_blank"` and `window.open()` calls are intercepted and opened in the system browser instead of in-app navigation.
+
+### Full Disk Access
+
+If the `/api/metadata/:uuid` endpoint returns a 500 error indicating Photos.sqlite can't be read, a one-per-session dialog prompts the user to grant Full Disk Access in System Settings.
+
+### Data Directory
+
+Dev builds use `public/` in the project root. Installed builds use `~/Library/Application Support/Karttakuvat/` (overridable via `KARTTAKUVAT_DATA_DIR` env var).
 
 ## Keyboard Shortcuts
 

@@ -4,22 +4,6 @@
 
 Add an interactive timeline UI that allows users to visualize and filter photos by date, combined with route/trip visualization that connects photos chronologically on the map.
 
-## Current State
-
-- Items have `date` field in format `"YYYY:MM:DD HH:MM:SS"` with optional `tz` timezone offset
-- Filters: year/album/camera dropdowns (cascading), media/location toggle buttons
-- Items sorted by date in `items.json` (photos and videos)
-- Date range shown in filter panel
-- `formatDate()` handles dates with timezone display
-- `compareDates()` sorts by UTC using timezone offsets
-- Albums already in data, used for album filter
-- Camera info already in data, used for camera filter
-- Date/time editing already works (copy/paste/adjust/manual entry via popups)
-- Location editing already works (placement mode, copy/paste)
-- **GPX track overlay already implemented** — when an album is selected, associated GPX files are loaded and displayed as colored tracks with waypoints on the map (see `src/map/gpx.ts`)
-
----
-
 ## Feature 1: Timeline Bar
 
 ### Design: Horizontal Timeline Bar
@@ -260,24 +244,6 @@ map.addLayer({
 });
 ```
 
-### Export Scripts
-
-Two scripts already exist:
-
-**`scripts/export.py`** (full export, slow)
-
-- Exports full images/videos and thumbnails to `public/`
-- Builds `items.json` with all metadata (albums, camera, type, timezone, etc.)
-- Run when adding new photos
-- Takes minutes to run
-
-**`scripts/sync.py`** (metadata sync, fast)
-
-- Updates metadata in `items.json` without re-exporting images
-- Queries Photos library for current metadata
-- Run after editing metadata in Photos
-- Takes seconds to run
-
 ### Route Generation Function
 
 ```javascript
@@ -363,7 +329,6 @@ function generateRouteGeoJSON(photos) {
 
 ## Files to Modify
 
-- `src/map/` — new module for route logic (GPX already in `src/map/gpx.ts`)
-- `src/index.ts` — wire up new UI components
-- `src/index.html` — add timeline container
+- `src/map/` — new module for route logic (complement `src/map/gpx.ts`)
 - `src/components/filter-panel/` — add trip UI elements and timeline integration
+- `src/index.html` — add timeline container

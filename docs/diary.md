@@ -5,9 +5,9 @@ Geotagged photo map viewer with Apple Photos integration.
 ## Project Stats (as of 21.02.2026)
 
 - **TypeScript files**: 32
-- **Lines of code**: 6,385
-- **Total commits**: 349
-- **Total tokens**: 703M | **Total cost**: $446.39
+- **Lines of code**: 6,849
+- **Total commits**: 396
+- **Total tokens**: 845M | **Total cost**: $527.69
 
 ## Updating This Diary
 
@@ -26,6 +26,19 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 - Use flat bullet lists (no bold subsections or nested structure)
 - Focus on significant features and fixes, skip minor tweaks
 - Describe final outcomes, not intermediate attempts that were reverted
+
+## 21.02.2026 — Python Replacement & Electrobun Desktop App
+
+**Tokens**: 142M | **Cost**: $81.63
+
+- Replaced all Python scripts with TypeScript: SQLite reads via `bun:sqlite`, AppleScript writes via `osascript`, export pipeline using `sips`/`qlmanage`
+- Built Electrobun desktop app with application menu, window state persistence, script runner with progress in title bar
+- Added Full Disk Access dialog for Photos.sqlite permission errors
+- Added app icon from favicon SVG
+- Enriched metadata modal with EXIF fields (lens, aperture, shutter speed, ISO, focal length, flash)
+- External links (target=_blank, window.open) open in system browser
+- Fixed script runner: use bundled Bun for installed app, strip ANSI codes from output
+- Added Phase 4 native ObjC bindings plan (sips/qlmanage/osascript → FFI dylib)
 
 ## 20.02.2026 — Code Quality & Bug Fixes
 
