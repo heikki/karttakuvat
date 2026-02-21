@@ -47,7 +47,14 @@ export function dateToUtc(dateStr: string, tz: string | null): string {
         dateStr
       );
     if (match?.groups === undefined) return dateStr;
-    const { yr, mo, dy, hr, mi, sc } = match.groups;
+    const g = match.groups as {
+      yr: string;
+      mo: string;
+      dy: string;
+      hr: string;
+      mi: string;
+      sc: string;
+    };
     const sign = tz.startsWith('+') ? 1 : -1;
     const tzH = parseInt(tz.slice(1, 3), 10);
     const tzM = parseInt(tz.slice(4, 6), 10);
@@ -55,12 +62,12 @@ export function dateToUtc(dateStr: string, tz: string | null): string {
 
     const d = new Date(
       Date.UTC(
-        parseInt(yr, 10),
-        parseInt(mo, 10) - 1,
-        parseInt(dy, 10),
-        parseInt(hr, 10),
-        parseInt(mi, 10),
-        parseInt(sc, 10)
+        parseInt(g.yr, 10),
+        parseInt(g.mo, 10) - 1,
+        parseInt(g.dy, 10),
+        parseInt(g.hr, 10),
+        parseInt(g.mi, 10),
+        parseInt(g.sc, 10)
       ) - offsetMs
     );
 
@@ -72,15 +79,18 @@ export function dateToUtc(dateStr: string, tz: string | null): string {
 }
 
 /** Sort albums and albumUuids together alphabetically by album name. */
-function sortedAlbums(record: PhotoRecord): { albums: string[]; albumUuids: string[] } {
+function sortedAlbums(record: PhotoRecord): {
+  albums: string[];
+  albumUuids: string[];
+} {
   const pairs = record.albums.map((name, i) => ({
     name: name.normalize('NFC'),
-    uuid: record.albumUuids[i] ?? DEFAULT_ALBUM_UUID,
+    uuid: record.albumUuids[i] ?? DEFAULT_ALBUM_UUID
   }));
   pairs.sort((a, b) => a.name.localeCompare(b.name));
   return {
     albums: pairs.map((p) => p.name),
-    albumUuids: pairs.map((p) => p.uuid),
+    albumUuids: pairs.map((p) => p.uuid)
   };
 }
 
@@ -111,14 +121,14 @@ export function buildItemEntry(record: PhotoRecord): ItemEntry {
     lon: record.lon,
     date: record.date,
     tz,
-    camera: record.camera,
+    camera: record.camera
   };
 
   const tail = {
     gps: record.gps,
     gps_accuracy: record.gps_accuracy,
     albums: sorted.albums,
-    photos_url: photosUrl,
+    photos_url: photosUrl
   };
 
   if (record.type === 'video') {

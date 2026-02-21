@@ -64,7 +64,7 @@ export async function setDateTime(
     `set hours of d to ${hr}`,
     `set minutes of d to ${mi}`,
     `set seconds of d to ${sc}`,
-    `tell application "Photos" to set the date of media item id "${uuid}" to d`,
+    `tell application "Photos" to set the date of media item id "${uuid}" to d`
   ].join('\n');
   await runAppleScript(script);
 }
