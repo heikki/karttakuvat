@@ -252,6 +252,23 @@ function debouncedSave() {
 win.on('move', debouncedSave);
 win.on('resize', debouncedSave);
 
+// Open external links (target="_blank", window.open) in system browser
+win.webview.on('will-navigate', (event: any) => {
+  const url = typeof event?.data?.detail === 'string' ? event.data.detail : '';
+  if (url !== '' && !url.startsWith(baseUrl)) {
+    event.response = { allow: false };
+    Utils.openExternal({ url });
+  }
+});
+// @ts-expect-error -- new-window-open not in BrowserView.on() types
+win.webview.on('new-window-open', (event: any) => {
+  const detail = event?.data?.detail;
+  const url = typeof detail === 'string' ? detail : detail?.url;
+  if (typeof url === 'string' && url !== '') {
+    Utils.openExternal({ url });
+  }
+});
+
 // Run a script from the scripts/ directory, show progress in window title
 let runningScript: { proc: ReturnType<typeof Bun.spawn>; name: string } | null = null;
 
