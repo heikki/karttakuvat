@@ -6,7 +6,7 @@
  * Images are converted on demand by the server — no pre-export needed.
  *
  * Usage:
- *   bun scripts/sync.ts
+ *   bun src/server/sync.ts
  *
  * Requirements:
  *   - Full Disk Access for Terminal in System Settings
@@ -22,11 +22,11 @@ import {
 } from './items';
 import { openPhotosDb, queryPhotos, queryVideos } from './photos-db';
 
-const PROJECT_ROOT = join(import.meta.dir, '..');
+const PROJECT_ROOT = join(import.meta.dir, '..', '..');
 const dataDirArg = process.argv.find((a) => a.startsWith('--data-dir='));
 const PUBLIC_DIR =
   dataDirArg === undefined
-    ? join(PROJECT_ROOT, 'public')
+    ? join(PROJECT_ROOT, 'data')
     : dataDirArg.split('=')[1]!;
 const CACHE_FULL_DIR = join(PUBLIC_DIR, 'cache', 'full');
 const CACHE_THUMB_DIR = join(PUBLIC_DIR, 'cache', 'thumb');

@@ -23,7 +23,7 @@ const pathAliasPlugin = {
   }) {
     build.onResolve({ filter: /^@common\// }, (args: { path: string }) => ({
       path: resolveWithExtensions(
-        resolve(baseDir, 'src/common', args.path.replace('@common/', ''))
+        resolve(baseDir, 'src/client/common', args.path.replace('@common/', ''))
       )
     }));
 
@@ -31,7 +31,7 @@ const pathAliasPlugin = {
       path: resolveWithExtensions(
         resolve(
           baseDir,
-          'src/components',
+          'src/client/components',
           args.path.replace('@components/', '')
         )
       )
@@ -52,14 +52,14 @@ export default {
 
   build: {
     bun: {
-      entrypoint: 'src/bun/index.ts',
+      entrypoint: 'src/app/index.ts',
       external: ['prettier'],
       plugins: [pathAliasPlugin]
     },
 
     views: {
       app: {
-        entrypoint: 'src/index.ts',
+        entrypoint: 'src/client/index.ts',
         plugins: [pathAliasPlugin],
         define: {
           'process.env.PUBLIC_MML_API_KEY': JSON.stringify(
@@ -73,16 +73,16 @@ export default {
     },
 
     copy: {
-      'src/index.html': 'views/app/index.html',
-      'src/styles.css': 'views/app/styles.css',
+      'src/client/index.html': 'views/app/index.html',
+      'src/client/styles.css': 'views/app/styles.css',
       'node_modules/maplibre-gl/dist/maplibre-gl.css':
         'views/app/maplibre-gl.css',
       'build/scripts/sync.js': 'scripts/sync.js',
-      'native/libkarttakuvat.dylib': 'libkarttakuvat.dylib'
+      'resources/native/libkarttakuvat.dylib': 'libkarttakuvat.dylib'
     },
 
     mac: {
-      icons: 'icon.iconset',
+      icons: 'resources/icon.iconset',
       defaultRenderer: 'native'
     }
   }

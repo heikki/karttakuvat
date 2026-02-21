@@ -11,12 +11,12 @@ import { dirname, join } from 'node:path';
 function findDylib(): string {
   const argv0Dir = dirname(process.argv[0] ?? '.');
   const candidates = [
-    // 1. native/ next to this source file (bun scripts/... from project root)
+    // 1. resources/native/ next to this source file (bun dev from project root)
     join(dirname(import.meta.path), 'libkarttakuvat.dylib'),
     // 2. Electrobun installed: Contents/MacOS/../Resources/app/
     join(argv0Dir, '..', 'Resources', 'app', 'libkarttakuvat.dylib'),
-    // 3. Electrobun dev: Contents/MacOS → up 5 levels → project root/native/
-    join(argv0Dir, '..', '..', '..', '..', '..', 'native', 'libkarttakuvat.dylib')
+    // 3. Electrobun dev: Contents/MacOS → up 5 levels → project root/resources/native/
+    join(argv0Dir, '..', '..', '..', '..', '..', 'resources', 'native', 'libkarttakuvat.dylib')
   ];
   for (const path of candidates) {
     if (existsSync(path)) return path;

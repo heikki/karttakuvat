@@ -2,13 +2,13 @@ import { existsSync } from 'node:fs';
 import { serve } from 'bun';
 
 import { createApiHandler, flushLogBuffer } from './api-routes';
-import { createImageCache } from './scripts/image-cache';
-import indexHtml from './src/index.html';
+import { createImageCache } from './image-cache';
+import indexHtml from '../client/index.html';
 
 // Auto-sync when items.json is missing
-if (!existsSync('public/items.json')) {
+if (!existsSync('data/items.json')) {
   console.log('No items.json found — running sync...');
-  const proc = Bun.spawnSync(['bun', 'scripts/sync.ts'], {
+  const proc = Bun.spawnSync(['bun', 'src/server/sync.ts'], {
     stdio: ['inherit', 'inherit', 'inherit']
   });
   if (proc.exitCode !== 0) {
@@ -17,8 +17,8 @@ if (!existsSync('public/items.json')) {
   }
 }
 
-const imageCache = createImageCache({ cacheDir: 'public/cache' });
-const { routeApiRequest } = createApiHandler('public', { imageCache });
+const imageCache = createImageCache({ cacheDir: 'data/cache' });
+const { routeApiRequest } = createApiHandler('data', { imageCache });
 
 async function routeRequest(req: Request, url: URL): Promise<Response> {
   const apiResponse = routeApiRequest(req, url.pathname);
@@ -29,14 +29,14 @@ async function routeRequest(req: Request, url: URL): Promise<Response> {
 
   const decodedPath = decodeURIComponent(url.pathname);
 
-  // Check public directory first
-  let file = Bun.file(`public${decodedPath}`);
+  // Check data directory first
+  let file = Bun.file(`data${decodedPath}`);
   if (file.size > 0) {
     return new Response(file);
   }
 
-  // Check src directory (for CSS, etc.)
-  file = Bun.file(`src${decodedPath}`);
+  // Check src/client directory (for CSS, etc.)
+  file = Bun.file(`src/client${decodedPath}`);
   if (file.size > 0) {
     return new Response(file);
   }

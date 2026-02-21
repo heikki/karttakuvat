@@ -3,7 +3,7 @@
  * Read-only access to Apple Photos SQLite database using bun:sqlite.
  *
  * Replaces osxphotos query calls with direct SQL queries.
- * Run standalone: bun scripts/photos-db.ts [--library PATH] [--uuid UUID]
+ * Run standalone: bun src/server/photos-db.ts [--library PATH] [--uuid UUID]
  */
 
 import { existsSync } from 'node:fs';

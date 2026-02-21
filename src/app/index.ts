@@ -7,13 +7,13 @@ import {
 } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 
-import type { AppRPC } from '../rpc-types';
-
 const { BrowserView, BrowserWindow, ApplicationMenu, Utils } =
   await import('electrobun/bun');
 
-const { createApiHandler, flushLogBuffer } = await import('../../api-routes');
-const { createImageCache } = await import('../../scripts/image-cache');
+const { createApiHandler, flushLogBuffer } = await import(
+  '../server/api-routes'
+);
+const { createImageCache } = await import('../server/image-cache');
 
 // Detect dev build from version.json
 const resourcesDir = resolve(dirname(process.argv0), '..', 'Resources');
@@ -28,18 +28,18 @@ try {
   // ignore
 }
 
-// Find the project root (where scripts/ and public/ live)
+// Find the project root (where src/server/ and data/ live)
 function findProjectRoot(): string | null {
   if (isDev) {
     const root = resolve(resourcesDir, '..', '..', '..', '..', '..');
-    if (existsSync(join(root, 'scripts'))) return root;
+    if (existsSync(join(root, 'src', 'server'))) return root;
   }
   return null;
 }
 
 const projectRoot = findProjectRoot();
 
-// Data directory: in dev builds, use public/ next to the project root
+// Data directory: in dev builds, use data/ next to the project root
 function findDataDir(): string {
   if (
     process.env.KARTTAKUVAT_DATA_DIR !== undefined &&
@@ -49,9 +49,9 @@ function findDataDir(): string {
   }
 
   if (projectRoot !== null) {
-    const publicDir = join(projectRoot, 'public');
-    if (existsSync(publicDir)) {
-      return publicDir;
+    const dataPath = join(projectRoot, 'data');
+    if (existsSync(dataPath)) {
+      return dataPath;
     }
   }
 
@@ -68,9 +68,11 @@ const { routeApiRequest } = createApiHandler(dataDir, { imageCache });
 const appDir = join(resourcesDir, 'app');
 const viewsDir = join(appDir, 'views', 'app');
 
-// Script directory: dev builds use project root, installed builds use bundled scripts
+// Script directory: dev builds use project src/server/, installed builds use bundled scripts
 const scriptsDir =
-  projectRoot === null ? join(appDir, 'scripts') : join(projectRoot, 'scripts');
+  projectRoot === null
+    ? join(appDir, 'scripts')
+    : join(projectRoot, 'src', 'server');
 
 // App menu
 ApplicationMenu.setApplicationMenu([
@@ -218,6 +220,20 @@ function saveWindowState(frame: {
   writeFileSync(stateFile, JSON.stringify(frame));
 }
 
+// RPC type definition for Electrobun communication
+interface AppRPC {
+  bun: {
+    requests: Record<string, never>;
+    messages: Record<string, never>;
+  };
+  webview: {
+    requests: Record<string, never>;
+    messages: {
+      setApiBase: { url: string };
+    };
+  };
+}
+
 // Create browser window
 const rpc = BrowserView.defineRPC<AppRPC>({
   handlers: {
@@ -278,7 +294,7 @@ win.webview.on('new-window-open', (event: unknown) => {
   openInSystem(extractUrl(event as ElectrobunEvent));
 });
 
-// Run a script from the scripts/ directory, show progress in window title
+// Run a script from the server directory, show progress in window title
 let runningScript: { proc: ReturnType<typeof Bun.spawn>; name: string } | null =
   null;
 

@@ -21,7 +21,7 @@ import {
   convertToJpeg,
   extractVideoFrame,
   resizeToJpeg
-} from '../native/native-bridge';
+} from '../../resources/native/native-bridge';
 import type { AssetRecord } from './photos-db';
 
 export interface ImageCacheConfig {

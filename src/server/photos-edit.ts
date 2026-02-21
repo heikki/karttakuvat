@@ -10,7 +10,7 @@
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { Database } from 'bun:sqlite';
-import { runAppleScript } from '../native/native-bridge';
+import { runAppleScript } from '../../resources/native/native-bridge';
 
 // Use require() for geo-tz: its CJS build declares ESM exports incorrectly,
 // causing bundler failures in Electrobun's Bun version.

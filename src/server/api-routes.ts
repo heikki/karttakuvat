@@ -1,10 +1,10 @@
-import type { ImageCache } from './scripts/image-cache';
+import type { ImageCache } from './image-cache';
 import {
   openPhotosDb,
   queryAssetIndex,
   queryMetadata,
   type AssetRecord
-} from './scripts/photos-db';
+} from './photos-db';
 import {
   quitPhotosApp,
   setDateTime,
@@ -13,7 +13,7 @@ import {
   tzNameFromCoords,
   tzOffsetFromCoords,
   tzOffsetToSeconds
-} from './scripts/photos-edit';
+} from './photos-edit';
 
 export interface LocationEdit {
   uuid: string;
