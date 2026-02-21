@@ -253,20 +253,29 @@ win.on('move', debouncedSave);
 win.on('resize', debouncedSave);
 
 // Open external links (target="_blank", window.open) in system browser
-win.webview.on('will-navigate', (event: any) => {
-  const url = typeof event?.data?.detail === 'string' ? event.data.detail : '';
+function openInSystem(url: string) {
   if (url !== '' && !url.startsWith(baseUrl)) {
-    event.response = { allow: false };
-    Utils.openExternal({ url });
+    console.log(`[main] Opening external: ${url}`);
+    Bun.spawn(['open', url]);
+  }
+}
+
+function extractUrl(event: any): string {
+  const detail = event?.data?.detail;
+  if (typeof detail === 'string') return detail;
+  if (typeof detail?.url === 'string') return detail.url;
+  return '';
+}
+
+win.webview.on('will-navigate', (event: any) => {
+  const url = extractUrl(event);
+  if (url !== '' && !url.startsWith(baseUrl)) {
+    openInSystem(url);
   }
 });
 // @ts-expect-error -- new-window-open not in BrowserView.on() types
 win.webview.on('new-window-open', (event: any) => {
-  const detail = event?.data?.detail;
-  const url = typeof detail === 'string' ? detail : detail?.url;
-  if (typeof url === 'string' && url !== '') {
-    Utils.openExternal({ url });
-  }
+  openInSystem(extractUrl(event));
 });
 
 // Run a script from the scripts/ directory, show progress in window title
