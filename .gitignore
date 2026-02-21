@@ -5,6 +5,7 @@ data/cache
 data/items.json
 src/client/maplibre-gl.css
 build
+artifacts
 .env
 *.photoslibrary
 *.dylib
