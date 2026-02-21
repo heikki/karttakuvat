@@ -5,9 +5,9 @@ Geotagged photo map viewer with Apple Photos integration.
 ## Project Stats (as of 21.02.2026)
 
 - **TypeScript files**: 32
-- **Lines of code**: 6,849
-- **Total commits**: 414
-- **Total tokens**: 845M | **Total cost**: $527.69
+- **Lines of code**: 6,934
+- **Total commits**: 415
+- **Total tokens**: 888M | **Total cost**: $552.98
 
 ## Updating This Diary
 
