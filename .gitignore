@@ -4,6 +4,7 @@ node_modules
 public/full
 public/thumb
 dist
+src/maplibre-gl.css
 .osxphotos_export.db
 __pycache__
 osxphotos_crash.log

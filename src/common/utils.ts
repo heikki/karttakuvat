@@ -1,3 +1,4 @@
+import { getApiBase } from './api';
 import type { Photo } from './types';
 
 export function getYear(photo: Photo): string | null {
@@ -103,17 +104,19 @@ export function formatLocation(photo: Photo): string {
 }
 
 export function getThumbUrl(photo: Photo): string {
+  const base = getApiBase();
   if (photo.thumb === '') {
     return photo.filename ?? '';
   }
-  return photo.thumb;
+  return base === '' ? photo.thumb : `${base}/${photo.thumb}`;
 }
 
 export function getFullUrl(photo: Photo): string {
+  const base = getApiBase();
   if (photo.full === '') {
     return photo.filename ?? '';
   }
-  return photo.full;
+  return base === '' ? photo.full : `${base}/${photo.full}`;
 }
 
 const exifDatePattern =

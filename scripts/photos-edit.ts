@@ -11,7 +11,10 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { spawn } from 'bun';
 import { Database } from 'bun:sqlite';
-import { find as geoTzFind } from 'geo-tz';
+// Use require() for geo-tz: its CJS build declares ESM exports incorrectly,
+// causing bundler failures in Electrobun's Bun version.
+// eslint-disable-next-line @typescript-eslint/no-require-imports -- CJS interop
+const { find: geoTzFind } = require('geo-tz') as typeof import('geo-tz');
 
 export interface EditResult {
   uuid: string;

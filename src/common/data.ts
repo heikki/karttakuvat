@@ -1,3 +1,4 @@
+import { apiReady, getApiBase } from './api';
 import type { Photo } from './types';
 import { getYear, sortByDate } from './utils';
 
@@ -35,7 +36,8 @@ function notify() {
 
 export async function loadPhotos() {
   try {
-    const response = await fetch(`items.json?t=${Date.now()}`);
+    await apiReady;
+    const response = await fetch(`${getApiBase()}/items.json?t=${Date.now()}`);
     const data = (await response.json()) as Photo[];
     sortByDate(data);
     state.photos = data;

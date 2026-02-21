@@ -3,6 +3,7 @@ import { point } from '@turf/helpers';
 import type { Feature, FeatureCollection, LineString, Point } from 'geojson';
 import type { GeoJSONSource, Map as MapGL } from 'maplibre-gl';
 
+import { getApiBase } from '@common/api';
 import { state, subscribe } from '@common/data';
 import { GpxDataChangedEvent, SetGpxVisibleEvent } from '@common/events';
 
@@ -137,7 +138,9 @@ export async function loadGpxForAlbum(album: string | null): Promise<void> {
 
   if (album !== null && album !== 'all') {
     try {
-      const res = await fetch(`/api/gpx/${encodeURIComponent(album)}`);
+      const res = await fetch(
+        `${getApiBase()}/api/gpx/${encodeURIComponent(album)}`
+      );
       if (res.ok) {
         const files = (await res.json()) as string[];
         const color = TRACK_COLORS[nextColorIndex++ % TRACK_COLORS.length]!;
@@ -157,7 +160,7 @@ async function loadGpxFile(
   color: string
 ): Promise<void> {
   try {
-    const url = `/albums/${encodeURIComponent(album)}/${encodeURIComponent(filename)}`;
+    const url = `${getApiBase()}/albums/${encodeURIComponent(album)}/${encodeURIComponent(filename)}`;
     const res = await fetch(url);
     if (!res.ok) return;
     const xml = await res.text();
