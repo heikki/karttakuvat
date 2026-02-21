@@ -6,6 +6,14 @@ Eliminate Python as a runtime dependency by replacing `osxphotos` CLI calls and 
 
 ## Current State
 
+All three phases are complete. Python has been fully eliminated as a runtime dependency.
+
+- Phase 1: Read queries replaced with `scripts/photos-db.ts` (bun:sqlite)
+- Phase 2: Server scripts replaced with `scripts/photos-edit.ts` (AppleScript + SQLite)
+- Phase 3: Export pipeline replaced with `scripts/export.ts`, `scripts/sync.ts`, `scripts/items.ts`
+
+### Historical Context (pre-replacement)
+
 - 12 Python scripts in `scripts/`, all depending on `osxphotos` (Python CLI tool installed via pipx)
 - 2 scripts called from the server (`set_locations.py`, `set_times.py`) — interactive edits
 - 2 scripts run from CLI (`export.py`, `sync.py`) — batch operations
@@ -13,33 +21,37 @@ Eliminate Python as a runtime dependency by replacing `osxphotos` CLI calls and 
 ### How osxphotos is Used
 
 **Reads** (query metadata):
+
 - `osxphotos query --not-hidden --only-photos --json` → all photo metadata
 - `osxphotos query --not-hidden --only-movies --json` → all video metadata
 - `osxphotos query --uuid-from-file FILE --json` → metadata for specific UUIDs
 - `osxphotos query --edited --json` → only edited photos
 
 **Writes** (modify Apple Photos) — osxphotos uses a hybrid approach:
+
 - `osxphotos batch-edit --location` → **AppleScript** `set location of media item to {lat, lon}`
 - `osxphotos timewarp --date --time` → **AppleScript** via PhotoScript library
 - `osxphotos timewarp --timezone` → **direct SQLite write** to `ZTIMEZONEOFFSET` + `ZTIMEZONENAME` (hacky, with warnings)
 
 **Exports** (get files out):
+
 - `osxphotos export DIR --convert-to-jpeg --skip-original-if-edited --filename {uuid} --download-missing --update` → batch export as JPEG
 
 ### Direct SQLite Already Used
 
 Two queries already bypass osxphotos and read `Photos.sqlite` directly:
+
 - Video durations: `SELECT ZUUID, ZDURATION FROM ZASSET WHERE ZDURATION > 0`
 - GPS accuracy: `SELECT ZUUID, ZGPSHORIZONTALACCURACY FROM ZASSET JOIN ZADDITIONALASSETATTRIBUTES ...`
 
 ### Other Python Dependencies
 
-| Dependency | Used By | TS Replacement |
-|---|---|---|
-| Pillow | export.py (thumbnails, EXIF rotation) | `sips` (macOS built-in) |
-| timezonefinder | export.py, set_locations.py | `geo-tz` npm package |
-| zoneinfo | Several (DST-aware offsets) | `Intl.DateTimeFormat` |
-| ffmpeg (CLI) | export.py (video frames) | `qlmanage` (macOS built-in) |
+| Dependency     | Used By                               | TS Replacement              |
+| -------------- | ------------------------------------- | --------------------------- |
+| Pillow         | export.py (thumbnails, EXIF rotation) | `sips` (macOS built-in)     |
+| timezonefinder | export.py, set_locations.py           | `geo-tz` npm package        |
+| zoneinfo       | Several (DST-aware offsets)           | `Intl.DateTimeFormat`       |
+| ffmpeg (CLI)   | export.py (video frames)              | `qlmanage` (macOS built-in) |
 
 ---
 
@@ -50,11 +62,13 @@ Two queries already bypass osxphotos and read `Photos.sqlite` directly:
 Replace `osxphotos query` with direct SQLite reads. This is the safest starting point — read-only, and results can be validated against osxphotos output.
 
 **What's needed:**
+
 - Reverse-engineer the osxphotos JSON output format (joins ~5-10 tables)
 - Key tables: `ZASSET`, `ZADDITIONALASSETATTRIBUTES`, `ZEXTENDEDATTRIBUTES`, `Z_26ASSETS` (album join), `ZGENERICALBUM`
 - Fields needed: uuid, date, latitude, longitude, albums, camera model, timezone offset, original filename
 
 **Files to create:**
+
 - New: `scripts/photos-db.ts` — SQLite query module for Photos.sqlite
 
 **Effort:** ~1-2 days
@@ -64,6 +78,7 @@ Replace `osxphotos query` with direct SQLite reads. This is the safest starting 
 Port `set_locations.py` and `set_times.py` to eliminate Python from interactive use. Test on a test Photos library first.
 
 **Replace:**
+
 - `osxphotos batch-edit --location` → AppleScript: `set location of media item id "UUID" to {lat, lon}`
 - `osxphotos timewarp --date --time` → AppleScript: `set date of media item`
 - `osxphotos timewarp --timezone` → direct SQLite write to `ZTIMEZONEOFFSET` + `ZTIMEZONENAME` (same approach as osxphotos)
@@ -72,6 +87,7 @@ Port `set_locations.py` and `set_times.py` to eliminate Python from interactive 
 All AppleScript calls via `osascript` from `Bun.spawn()`. Photos.app restart after edits to clear undo stack (already done today via osascript).
 
 **Files to create/modify:**
+
 - New: `scripts/set-locations.ts` (or inline in `server.ts`)
 - New: `scripts/set-times.ts` (or inline in `server.ts`)
 - Modify: `server.ts` — call TS functions instead of spawning Python
@@ -80,45 +96,47 @@ All AppleScript calls via `osascript` from `Bun.spawn()`. Photos.app restart aft
 
 **Effort:** ~1 day
 
-### Phase 3: Export Pipeline → TypeScript
+### Phase 3: Export Pipeline → TypeScript ✓
 
-Port `export.py` and `sync.py`.
+Port `export.py` and `sync.py`. **Complete.**
 
-**Replace:**
-- `osxphotos export` → direct file copy from Photos library managed storage (`ZDIRECTORY` + `ZFILENAME` in ZASSET)
-- `osxphotos query` → bun:sqlite (from Phase 2)
+**Replaced:**
+
+- `osxphotos export` → direct file copy from `originals/` + `sips` for HEIC→JPEG
+- `osxphotos query` → `photos-db.ts` (bun:sqlite)
 - HEIC→JPEG conversion → `sips -s format jpeg` (macOS built-in)
-- Pillow thumbnails → `sips -Z 512 -s format jpeg` (macOS built-in)
-- ffmpeg video frames → `qlmanage -t -s 1920` + `sips` PNG→JPEG (macOS built-in, first frame)
+- Pillow thumbnails → `sips -Z 400 -s format jpeg` (macOS built-in)
+- ffmpeg video frames → `qlmanage -t -s 1920` + `sips` PNG→JPEG (macOS built-in)
+- Edited photos → rendered JPEG from `resources/renders/` or `qlmanage` fallback
 
-**iCloud-only items:** Only locally downloaded items are exported. iCloud-only items are detected via Photos.sqlite and reported (count + list) so the user can download them manually in Photos.app before re-running.
+**Files created:**
 
-**Hard parts:**
-- Incremental export tracking — reimplement `--update` logic
-- Locating managed storage paths from SQLite fields
+- `scripts/export.ts` — main export CLI (replaces `export.py`)
+- `scripts/sync.ts` — metadata sync CLI (replaces `sync.py`)
+- `scripts/items.ts` — shared items.json building helpers
 
-**Files to create:**
-- New: `scripts/export.ts`
-- New: `scripts/sync.ts`
+**Files deleted:**
 
-**Effort:** ~2-3 days
+- `scripts/export.py`
+- `scripts/sync.py`
 
 ---
 
 ## Total Effort
 
-| Phase | Scope | Effort | Impact |
-|---|---|---|---|
-| 1 | Read queries | ~1-2 days | No Python for metadata reads |
-| 2 | Server scripts | ~1 day | No Python for interactive use |
-| 3 | Export pipeline | ~2-3 days | No Python for batch export |
-| **Total** | | **~4-6 days** | |
+| Phase     | Scope           | Effort        | Impact                        |
+| --------- | --------------- | ------------- | ----------------------------- |
+| 1         | Read queries    | ~1-2 days     | No Python for metadata reads  |
+| 2         | Server scripts  | ~1 day        | No Python for interactive use |
+| 3         | Export pipeline | ~2-3 days     | No Python for batch export    |
+| **Total** |                 | **~4-6 days** |                               |
 
 ## Schema Validation
 
 Photos.sqlite schema changes across macOS versions. Dynamic join tables use numbered prefixes (e.g. `Z_33ASSETS`) that change between versions.
 
 **Tables and columns we depend on (~5 tables, ~15-20 columns):**
+
 - `ZASSET` — ZUUID, ZDATECREATED, ZLATITUDE, ZLONGITUDE, ZDIRECTORY, ZFILENAME, ZDURATION, local availability flag
 - `ZADDITIONALASSETATTRIBUTES` — ZGPSHORIZONTALACCURACY, camera model, timezone offset
 - `ZGENERICALBUM` — album names
@@ -126,6 +144,7 @@ Photos.sqlite schema changes across macOS versions. Dynamic join tables use numb
 - `ZEXTENDEDATTRIBUTES` — original filename
 
 **Runtime validation approach:**
+
 1. On startup, use `PRAGMA table_info()` to verify expected columns exist
 2. Discover dynamic join tables via `SELECT name FROM sqlite_master WHERE name LIKE 'Z_%ASSETS'`
 3. On mismatch, fail with a clear error: "Photos.sqlite schema changed (macOS update?). Column X missing from Y."
@@ -135,15 +154,18 @@ This keeps the surface area small and catches breakage immediately rather than p
 ## Safety
 
 **Before starting:**
+
 - Verify Time Machine backup is current and includes Photos library
 - Create a small test Photos library (`Photos > File > New Library` while holding Option at launch) — develop and test against that, not the real library
 
 **Development order:**
+
 1. Implement reads first (Phase 1) — validate SQLite queries return correct data by comparing against osxphotos output
 2. Then writes (Phase 2) — test on test library first
 3. Single-item test before batch — verify each write operation on one photo in Photos.app UI before running on multiple
 
 **In the code:**
+
 - `--dry-run` flag on all write operations — log what would change without touching anything
 - Log old and new values before every write
 - Wrap SQLite writes in transactions — rollback on error
@@ -170,6 +192,7 @@ This keeps the surface area small and catches breakage immediately rather than p
 Phases 1-3 are a prerequisite for packaging as a native macOS app with [Electrobun](https://blackboard.sh/electrobun/docs/). Electrobun uses Bun as its runtime, so all our TypeScript code runs as-is.
 
 **What works out of the box:**
+
 - `bun:sqlite` for Photos.sqlite reads/writes
 - `Bun.spawn()` for `osascript`, `sips`, `qlmanage` calls
 - `geo-tz` and all npm dependencies
@@ -177,6 +200,7 @@ Phases 1-3 are a prerequisite for packaging as a native macOS app with [Electrob
 - 14MB app bundle, <50ms startup
 
 **What Electrobun's native ObjC bindings could improve:**
+
 - Replace `osascript` → direct PhotoKit calls for location/date/time writes (faster, no Photos.app window needed)
 - Replace `sips` → native image APIs for HEIC→JPEG and thumbnails
 - Replace `qlmanage` → native AVFoundation for video frame extraction
@@ -187,6 +211,7 @@ Phases 1-3 are a prerequisite for packaging as a native macOS app with [Electrob
 ## Scripts to Delete
 
 One-off fix scripts and rarely-used utilities that have served their purpose:
+
 - `fix_atlantti_times.py`, `fix_dominica_times.py` — timezone corrections for specific trips
 - `update_atlantti_locations.py` — location interpolation for a sailing voyage
 - `interpolate_atlantti.py` — coordinate interpolation from logbook data
