@@ -78,8 +78,8 @@ ApplicationMenu.setApplicationMenu([
 
 // Handle menu actions
 ApplicationMenu.on('application-menu-clicked', (event: any) => {
-  const action = event?.detail?.action ?? '';
-  if (action.includes('quit')) {
+  const action = event?.data?.action ?? '';
+  if (action === 'quit') {
     process.exit(0);
   }
 });
