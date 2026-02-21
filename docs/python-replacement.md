@@ -2,21 +2,13 @@
 
 ## Overview
 
-Eliminate Python as a runtime dependency by replacing `osxphotos` CLI calls and Python scripts with TypeScript using `bun:sqlite`, `sharp`, and `osascript`.
+Eliminate Python as a runtime dependency by replacing `osxphotos` CLI calls and Python scripts with TypeScript using `bun:sqlite` and macOS built-in tools (`osascript`, `sips`, `qlmanage`).
 
 ## Current State
 
 - 12 Python scripts in `scripts/`, all depending on `osxphotos` (Python CLI tool installed via pipx)
 - 2 scripts called from the server (`set_locations.py`, `set_times.py`) — interactive edits
 - 2 scripts run from CLI (`export.py`, `sync.py`) — batch operations
-- 4 utility scripts (`set_cameras.py`, `match_stereo.py`, `sync_timezones.py`, `reapply_times.py`)
-
-### Out of Scope
-
-One-off fix scripts that have already served their purpose — no need to port:
-- `fix_atlantti_times.py`, `fix_dominica_times.py` — timezone corrections for specific trips
-- `update_atlantti_locations.py` — location interpolation for a sailing voyage
-- `interpolate_atlantti.py` — coordinate interpolation from logbook data
 
 ### How osxphotos is Used
 
@@ -44,11 +36,10 @@ Two queries already bypass osxphotos and read `Photos.sqlite` directly:
 
 | Dependency | Used By | TS Replacement |
 |---|---|---|
-| Pillow | export.py (thumbnails, EXIF rotation) | `sharp` |
-| timezonefinder | export.py, set_locations.py, sync_timezones.py | `geo-tz` |
+| Pillow | export.py (thumbnails, EXIF rotation) | `sips` (macOS built-in) |
+| timezonefinder | export.py, set_locations.py | `geo-tz` npm package |
 | zoneinfo | Several (DST-aware offsets) | `Intl.DateTimeFormat` |
-| exiftool (CLI) | set_cameras.py | Same CLI from `Bun.spawn()` |
-| ffmpeg (CLI) | export.py (video frames) | Same CLI from `Bun.spawn()` |
+| ffmpeg (CLI) | export.py (video frames) | `qlmanage` (macOS built-in) |
 
 ---
 
@@ -92,32 +83,23 @@ Replace `osxphotos query` with direct SQLite reads.
 Port `export.py` and `sync.py`.
 
 **Replace:**
-- `osxphotos export` → copy files from Photos library managed storage + `sharp` for HEIC→JPEG
+- `osxphotos export` → direct file copy from Photos library managed storage (`ZDIRECTORY` + `ZFILENAME` in ZASSET)
 - `osxphotos query` → bun:sqlite (from Phase 2)
-- Pillow thumbnails → `sharp` resize
-- ffmpeg frame extraction → same CLI call from Bun
+- HEIC→JPEG conversion → `sips -s format jpeg` (macOS built-in)
+- Pillow thumbnails → `sips -Z 512 -s format jpeg` (macOS built-in)
+- ffmpeg video frames → `qlmanage -t -s 1920` + `sips` PNG→JPEG (macOS built-in, first frame)
+
+**iCloud-only items:** Only locally downloaded items are exported. iCloud-only items are detected via Photos.sqlite and reported (count + list) so the user can download them manually in Photos.app before re-running.
 
 **Hard parts:**
-- iCloud download (`--download-missing`) — may need PhotoKit or accept local-only limitation
-- Managed storage paths — need to find where Photos stores originals (`ZDIRECTORY` + `ZFILENAME` in ZASSET)
-- HEIC→JPEG conversion — `sharp` handles this
 - Incremental export tracking — reimplement `--update` logic
+- Locating managed storage paths from SQLite fields
 
 **Files to create:**
 - New: `scripts/export.ts`
 - New: `scripts/sync.ts`
 
 **Effort:** ~2-3 days
-
-### Phase 4: Remaining Utility Scripts (Optional)
-
-These are run rarely and could be left as Python or ported if needed:
-- `set_cameras.py` → TypeScript (calls exiftool CLI, straightforward)
-- `sync_timezones.py` → TypeScript with `geo-tz` + bun:sqlite
-- `match_stereo.py` → TypeScript with bun:sqlite
-- `reapply_times.py` → TypeScript with bun:sqlite
-
-**Effort:** ~1 day
 
 ---
 
@@ -128,18 +110,31 @@ These are run rarely and could be left as Python or ported if needed:
 | 1 | Server scripts | ~1 day | No Python for interactive use |
 | 2 | Read queries | ~1-2 days | No Python for metadata reads |
 | 3 | Export pipeline | ~2-3 days | No Python for batch export |
-| 4 | Utility scripts (optional) | ~1 day | Complete Python elimination |
-| **Total** | | **~4-6 days** (phases 1-3), **~5-7 days** (all) | |
+| **Total** | | **~4-6 days** | |
 
 ## Risks
 
 1. **SQLite schema stability** — Apple may change Photos.sqlite schema in macOS updates. osxphotos community tracks these; we'd maintain our own queries.
 2. **Write safety** — Direct SQLite writes to Photos.sqlite are untested. May need JXA fallback.
-3. **iCloud downloads** — No known way to trigger iCloud photo download from TS without PhotoKit. May need to require local library or keep osxphotos for this one operation.
-4. **HEIC handling** — `sharp` requires `libvips` which handles HEIC, but installation can be tricky on some systems.
 
 ## New Dependencies
 
-- `sharp` — image processing (thumbnails, HEIC→JPEG)
-- `geo-tz` — timezone lookup from coordinates
+- `geo-tz` — timezone lookup from coordinates (only new npm package)
 - `bun:sqlite` — already available (built into Bun)
+
+## macOS Built-in Tools Used
+
+- `osascript` — AppleScript/JXA for Photos.app control (restart after edits)
+- `sips` — image conversion and thumbnail generation
+- `qlmanage` — video frame extraction via Quick Look
+
+## Scripts to Delete
+
+One-off fix scripts and rarely-used utilities that have served their purpose:
+- `fix_atlantti_times.py`, `fix_dominica_times.py` — timezone corrections for specific trips
+- `update_atlantti_locations.py` — location interpolation for a sailing voyage
+- `interpolate_atlantti.py` — coordinate interpolation from logbook data
+- `set_cameras.py` — EXIF camera metadata copier
+- `match_stereo.py` — stereoscopic photo matcher
+- `sync_timezones.py` — timezone sync from coordinates
+- `reapply_times.py` — time mismatch detector/fixer
