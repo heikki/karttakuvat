@@ -1,6 +1,7 @@
 import { serve, spawn } from 'bun';
 
 import indexHtml from './src/index.html';
+import { openPhotosDb, queryOne } from './scripts/photos-db';
 
 interface LocationEdit {
   uuid: string;
@@ -242,28 +243,20 @@ async function handleGetGpxFiles(album: string): Promise<Response> {
   }
 }
 
-async function handleGetMetadata(uuid: string): Promise<Response> {
-  try {
-    const result = await runScript(
-      [
-        `${process.env.HOME}/.local/bin/osxphotos`,
-        'query',
-        '--uuid',
-        uuid,
-        '--json'
-      ],
-      '',
-      'osxphotos query',
-      { quiet: true }
-    );
-    if ('error' in result) return result.error;
+let photosDb: ReturnType<typeof openPhotosDb> | null = null;
 
-    const photos = JSON.parse(result.stdout) as Array<Record<string, unknown>>;
-    if (photos.length === 0) {
+function getPhotosDb() {
+  photosDb ??= openPhotosDb();
+  return photosDb;
+}
+
+function handleGetMetadata(uuid: string): Response {
+  try {
+    const record = queryOne(getPhotosDb(), uuid);
+    if (record === null) {
       return new Response('Not found', { status: 404 });
     }
-
-    return Response.json(photos[0]);
+    return Response.json(record);
   } catch (err) {
     return new Response(`Error: ${String(err)}`, { status: 500 });
   }
@@ -314,7 +307,7 @@ async function handleSaveEdits(req: Request): Promise<Response> {
 function routeApiRequest(
   req: Request,
   pathname: string
-): Promise<Response> | null {
+): Promise<Response> | Response | null {
   if (pathname === '/api/save-edits' && req.method === 'POST') {
     return handleSaveEdits(req);
   }
