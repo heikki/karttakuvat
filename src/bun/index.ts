@@ -89,7 +89,7 @@ ApplicationMenu.setApplicationMenu([
   {
     label: 'Photos',
     submenu: [
-      { label: 'Re-sync', action: 'resync' },
+      { label: 'Sync Photos', action: 'resync' },
       { label: 'Clear Cache', action: 'clear-cache' }
     ]
   },
@@ -460,6 +460,9 @@ function clearCache() {
   if (existsSync(cacheFullDir)) rmSync(cacheFullDir, { recursive: true });
   if (existsSync(cacheThumbDir)) rmSync(cacheThumbDir, { recursive: true });
 
+  mkdirSync(cacheFullDir, { recursive: true });
+  mkdirSync(cacheThumbDir, { recursive: true });
+
   console.log('[main] Cache cleared');
   win.webview.loadURL(baseUrl);
   void Utils.showMessageBox({
@@ -478,7 +481,7 @@ ApplicationMenu.on('application-menu-clicked', (event: ElectrobunEvent) => {
       process.exit(0);
       break;
     case 'resync':
-      void runScript('Sync Metadata', 'sync.ts');
+      void runScript('Sync Photos', 'sync.ts');
       break;
     case 'clear-cache':
       clearCache();
