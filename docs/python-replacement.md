@@ -9,8 +9,14 @@ Eliminate Python as a runtime dependency by replacing `osxphotos` CLI calls and 
 - 12 Python scripts in `scripts/`, all depending on `osxphotos` (Python CLI tool installed via pipx)
 - 2 scripts called from the server (`set_locations.py`, `set_times.py`) — interactive edits
 - 2 scripts run from CLI (`export.py`, `sync.py`) — batch operations
-- 4 one-off trip fixers — already done, no need to port
 - 4 utility scripts (`set_cameras.py`, `match_stereo.py`, `sync_timezones.py`, `reapply_times.py`)
+
+### Out of Scope
+
+One-off fix scripts that have already served their purpose — no need to port:
+- `fix_atlantti_times.py`, `fix_dominica_times.py` — timezone corrections for specific trips
+- `update_atlantti_locations.py` — location interpolation for a sailing voyage
+- `interpolate_atlantti.py` — coordinate interpolation from logbook data
 
 ### How osxphotos is Used
 
@@ -103,9 +109,9 @@ Port `export.py` and `sync.py`.
 
 **Effort:** ~2-3 days
 
-### Phase 4: Remaining Utility Scripts
+### Phase 4: Remaining Utility Scripts (Optional)
 
-Port if still needed:
+These are run rarely and could be left as Python or ported if needed:
 - `set_cameras.py` → TypeScript (calls exiftool CLI, straightforward)
 - `sync_timezones.py` → TypeScript with `geo-tz` + bun:sqlite
 - `match_stereo.py` → TypeScript with bun:sqlite
@@ -122,8 +128,8 @@ Port if still needed:
 | 1 | Server scripts | ~1 day | No Python for interactive use |
 | 2 | Read queries | ~1-2 days | No Python for metadata reads |
 | 3 | Export pipeline | ~2-3 days | No Python for batch export |
-| 4 | Utility scripts | ~1 day | Complete Python elimination |
-| **Total** | | **~5-7 days** | |
+| 4 | Utility scripts (optional) | ~1 day | Complete Python elimination |
+| **Total** | | **~4-6 days** (phases 1-3), **~5-7 days** (all) | |
 
 ## Risks
 
