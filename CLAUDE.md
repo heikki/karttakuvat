@@ -11,11 +11,11 @@ Geolocation photo visualization web app displaying geotagged photographs on an i
 
 ## Commands
 
-- `bun dev` — dev server with hot reload
-- `bun run build` — production build to `dist/`
-- `bun run build:native` — compile native ObjC++ dylib (required before first run)
-- `bun run lint` — ESLint
-- `bun run format` — Prettier
+- `bun dev` — dev server with hot reload (for debugging)
+- `bun build:native` — compile native ObjC++ dylib (required before first run)
+- `bun typecheck` — TypeScript type checking
+- `bun lint` — ESLint
+- `bun format` — Prettier
 
 ## Data Format
 
