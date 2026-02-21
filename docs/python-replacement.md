@@ -18,10 +18,10 @@ Eliminate Python as a runtime dependency by replacing `osxphotos` CLI calls and 
 - `osxphotos query --uuid-from-file FILE --json` → metadata for specific UUIDs
 - `osxphotos query --edited --json` → only edited photos
 
-**Writes** (modify Apple Photos):
-- `osxphotos batch-edit --location LAT LON --uuid UUID` → set GPS coordinates
-- `osxphotos timewarp --date D --time T --uuid UUID --force` → set date/time
-- `osxphotos timewarp --timezone TZ --uuid UUID --force` → set timezone
+**Writes** (modify Apple Photos) — osxphotos uses a hybrid approach:
+- `osxphotos batch-edit --location` → **AppleScript** `set location of media item to {lat, lon}`
+- `osxphotos timewarp --date --time` → **AppleScript** via PhotoScript library
+- `osxphotos timewarp --timezone` → **direct SQLite write** to `ZTIMEZONEOFFSET` + `ZTIMEZONENAME` (hacky, with warnings)
 
 **Exports** (get files out):
 - `osxphotos export DIR --convert-to-jpeg --skip-original-if-edited --filename {uuid} --download-missing --update` → batch export as JPEG
@@ -50,17 +50,19 @@ Two queries already bypass osxphotos and read `Photos.sqlite` directly:
 Port `set_locations.py` and `set_times.py` to eliminate Python from interactive use.
 
 **Replace:**
-- `osxphotos batch-edit --location` → direct SQLite write to `ZASSET` + Photos.app restart
-- `osxphotos timewarp` → direct SQLite write + Photos.app restart
+- `osxphotos batch-edit --location` → AppleScript: `set location of media item id "UUID" to {lat, lon}`
+- `osxphotos timewarp --date --time` → AppleScript: `set date of media item`
+- `osxphotos timewarp --timezone` → direct SQLite write to `ZTIMEZONEOFFSET` + `ZTIMEZONENAME` (same approach as osxphotos)
 - `timezonefinder` → `geo-tz` npm package
-- `osascript` calls → same, already non-Python
+
+All AppleScript calls via `osascript` from `Bun.spawn()`. Photos.app restart after edits to clear undo stack (already done today via osascript).
 
 **Files to create/modify:**
 - New: `scripts/set-locations.ts` (or inline in `server.ts`)
 - New: `scripts/set-times.ts` (or inline in `server.ts`)
 - Modify: `server.ts` — call TS functions instead of spawning Python
 
-**Risk:** Direct SQLite writes may not be picked up by Photos.app after restart. osxphotos may use undocumented mechanisms. Needs testing — if SQLite writes don't work, fall back to JXA/AppleScript via `osascript -l JavaScript`.
+**Risk:** Timezone SQLite writes use the same undocumented approach as osxphotos (direct write to Core Data database). Photos.sqlite has triggers that block normal UPDATE statements — osxphotos works around this with a custom sqlite wrapper. We'd need a similar workaround or use `bun:sqlite` with WAL mode. Location and date/time edits are safe (AppleScript, the supported path).
 
 **Effort:** ~1 day
 
@@ -132,7 +134,7 @@ This keeps the surface area small and catches breakage immediately rather than p
 
 ## Risks
 
-1. **Write safety** — Direct SQLite writes to Photos.sqlite are untested. May need JXA fallback.
+1. **Timezone SQLite writes** — Photos.sqlite is a Core Data database with triggers that block normal UPDATE statements. osxphotos uses a hacky custom sqlite wrapper to bypass these. Need to verify `bun:sqlite` can do the same. Location and date/time writes are safe (AppleScript).
 
 ## New Dependencies
 
@@ -141,7 +143,7 @@ This keeps the surface area small and catches breakage immediately rather than p
 
 ## macOS Built-in Tools Used
 
-- `osascript` — AppleScript/JXA for Photos.app control (restart after edits)
+- `osascript` — AppleScript for Photos.app writes (location, date/time) and restart
 - `sips` — image conversion and thumbnail generation
 - `qlmanage` — video frame extraction via Quick Look
 
