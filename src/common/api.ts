@@ -1,25 +1,13 @@
 /**
- * API base URL management for Electrobun app support.
+ * API base URL management.
  *
- * In dev mode (regular browser), apiReady resolves immediately and getApiBase()
- * returns '' (same-origin requests). In Electrobun mode (views:// protocol),
- * apiReady waits until setApiBase() is called via RPC with the local server URL.
+ * Both dev server and Electrobun app serve everything from the same HTTP origin,
+ * so the base URL is always '' (same-origin requests).
  */
 
 let apiBase = '';
 
-const isElectrobun =
-  typeof location !== 'undefined' && location.protocol === 'views:';
-
-// eslint-disable-next-line @typescript-eslint/no-empty-function -- resolved later by setApiBase
-let _resolve: () => void = () => {};
-
-export const apiReady: Promise<void> = isElectrobun
-  ? // eslint-disable-next-line promise/avoid-new, promise/param-names -- deferred resolve pattern
-    new Promise<void>((r) => {
-      _resolve = r;
-    })
-  : Promise.resolve();
+export const apiReady: Promise<void> = Promise.resolve();
 
 export function getApiBase(): string {
   return apiBase;
@@ -27,5 +15,4 @@ export function getApiBase(): string {
 
 export function setApiBase(base: string) {
   apiBase = base;
-  _resolve();
 }

@@ -1,4 +1,4 @@
-import { join } from 'node:path';
+import { join, resolve, dirname } from 'node:path';
 
 const { BrowserView, BrowserWindow } = await import('electrobun/bun');
 
@@ -6,42 +6,24 @@ const { createApiHandler, flushLogBuffer } = await import('../../api-routes');
 type AppRPC = typeof import('../rpc-types').AppRPC;
 
 // Data directory: env override or default Application Support location
-const dataDir =
+const dataDir = resolve(
   process.env.KARTTAKUVAT_DATA_DIR ??
-  join(process.env.HOME!, 'Library/Application Support/Karttakuvat');
+    join(process.env.HOME!, 'Library/Application Support/Karttakuvat')
+);
 
 console.log(`[main] Data directory: ${dataDir}`);
 
 const { routeApiRequest } = createApiHandler(dataDir);
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type'
-};
+// Locate bundled view files
+const appDir = resolve(dirname(process.argv0), '..', 'Resources', 'app');
+const viewsDir = join(appDir, 'views', 'app');
 
-function addCors(response: Response): Response {
-  const headers = new Headers(response.headers);
-  for (const [k, v] of Object.entries(corsHeaders)) {
-    headers.set(k, v);
-  }
-  return new Response(response.body, {
-    status: response.status,
-    statusText: response.statusText,
-    headers
-  });
-}
-
-// Start local API server on a random port
+// Start local server that serves both API and view files
 const server = Bun.serve({
   port: 0,
   async fetch(req) {
     const url = new URL(req.url);
-
-    // CORS preflight
-    if (req.method === 'OPTIONS') {
-      return new Response(null, { status: 204, headers: corsHeaders });
-    }
 
     // API routes
     const apiResponse = routeApiRequest(req, url.pathname);
@@ -50,24 +32,35 @@ const server = Bun.serve({
       for (const line of flushLogBuffer()) {
         console.log(line);
       }
-      return addCors(response);
+      return response;
+    }
+
+    // Serve bundled view files (index.html, index.js, CSS)
+    const decodedPath = decodeURIComponent(url.pathname);
+
+    if (decodedPath === '/' || decodedPath === '/index.html') {
+      return new Response(Bun.file(join(viewsDir, 'index.html')));
+    }
+
+    const viewFile = Bun.file(join(viewsDir, decodedPath));
+    if (viewFile.size > 0) {
+      return new Response(viewFile);
     }
 
     // Serve static files from data directory (photos, thumbnails, GPX, items.json)
-    const decodedPath = decodeURIComponent(url.pathname);
-    const file = Bun.file(join(dataDir, decodedPath));
-    if (file.size > 0) {
-      return addCors(new Response(file));
+    const dataFile = Bun.file(join(dataDir, decodedPath));
+    if (dataFile.size > 0) {
+      return new Response(dataFile);
     }
 
-    return addCors(new Response('Not Found', { status: 404 }));
+    return new Response('Not Found', { status: 404 });
   }
 });
 
-const apiBase = `http://127.0.0.1:${server.port}`;
-console.log(`[main] API server running on ${apiBase}`);
+const baseUrl = `http://127.0.0.1:${server.port}`;
+console.log(`[main] Server running on ${baseUrl}`);
 
-// Create browser window with RPC
+// Create browser window
 const rpc = BrowserView.defineRPC<AppRPC>({
   handlers: {
     requests: {},
@@ -77,12 +70,9 @@ const rpc = BrowserView.defineRPC<AppRPC>({
 
 const win = new BrowserWindow<typeof rpc>({
   title: 'Karttakuvat',
-  url: 'views://app/index.html',
+  url: baseUrl,
   frame: { x: 0, y: 0, width: 1200, height: 800 },
   rpc
 });
-
-// Send the API base URL to the webview
-win.webview.rpc!.send.setApiBase({ url: apiBase });
 
 console.log('[main] Initialization complete');

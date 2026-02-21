@@ -61,7 +61,15 @@ export default {
     views: {
       app: {
         entrypoint: 'src/index.ts',
-        plugins: [pathAliasPlugin]
+        plugins: [pathAliasPlugin],
+        define: {
+          'process.env.PUBLIC_MML_API_KEY': JSON.stringify(
+            process.env.PUBLIC_MML_API_KEY ?? ''
+          ),
+          'process.env.PUBLIC_THUNDERFOREST_API_KEY': JSON.stringify(
+            process.env.PUBLIC_THUNDERFOREST_API_KEY ?? ''
+          )
+        }
       }
     },
 
