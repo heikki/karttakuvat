@@ -5,6 +5,7 @@ public/full
 public/thumb
 dist
 build
+artifacts
 src/maplibre-gl.css
 .osxphotos_export.db
 __pycache__
