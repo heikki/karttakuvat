@@ -8,6 +8,8 @@
     "dev:app": "electrobun dev",
     "build": "bun build ./src/index.ts --outdir ./dist --minify",
     "build:app": "electrobun build",
+    "build:app:stable": "electrobun build --env=stable",
+    "install:app": "electrobun build --env=stable && cp -r build/stable-macos-arm64/Karttakuvat.app /Applications/",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "format": "prettier --write ."
