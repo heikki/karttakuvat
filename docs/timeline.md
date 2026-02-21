@@ -7,15 +7,16 @@ Add an interactive timeline UI that allows users to visualize and filter photos 
 ## Current State
 
 - Items have `date` field in format `"YYYY:MM:DD HH:MM:SS"` with optional `tz` timezone offset
-- Filters: year/album/camera dropdowns (cascading), media/GPS toggle buttons
+- Filters: year/album/camera dropdowns (cascading), media/location toggle buttons
 - Items sorted by date in `items.json` (photos and videos)
-- Date range shown in stats panel
+- Date range shown in filter panel
 - `formatDate()` handles dates with timezone display
 - `compareDates()` sorts by UTC using timezone offsets
 - Albums already in data, used for album filter
 - Camera info already in data, used for camera filter
 - Date/time editing already works (copy/paste/adjust/manual entry via popups)
 - Location editing already works (placement mode, copy/paste)
+- **GPX track overlay already implemented** — when an album is selected, associated GPX files are loaded and displayed as colored tracks with waypoints on the map (see `src/map/gpx.ts`)
 
 ---
 
@@ -49,6 +50,8 @@ A scrubable bar at the bottom of the screen showing photo density over time.
 
 Trips are user-defined collections (matching Apple Photos albums like "2018 Kuhmo"). When a trip is selected, draw lines connecting photos in chronological order to show the travel route.
 
+**Note:** GPX track overlay for albums is already implemented. This feature would add photo-to-photo route lines as a complement to the GPX tracks.
+
 **Visual:**
 
 ```
@@ -79,7 +82,7 @@ Trips come from Apple Photos albums, exported via `osxphotos`:
 
 ### Trip Selection UI
 
-- Dropdown in stats panel: "Select Trip"
+- Dropdown in filter panel: "Select Trip"
 - Lists all albums that have geotagged photos
 - Selecting a trip:
   1. Filters photos to that album
@@ -193,7 +196,7 @@ Animate through photos chronologically like a slideshow with map panning and rou
 ┌─────────────────────────────────────────────────────────┐
 │                         MAP                             │
 │                                             ┌─────────┐ │
-│      [1]───────[2]                          │ Stats   │ │
+│      [1]───────[2]                          │ Filter  │ │
 │                 \                           │ Panel   │ │
 │                  \───[3]────[4]             │         │ │
 │                              │              │ Trip:   │ │
@@ -220,11 +223,10 @@ Animate through photos chronologically like a slideshow with map panning and rou
 
 ### Phase 2: Trip/Route Visualization
 
-1. Create `sync_metadata.py` for fast metadata updates (albums, location, date)
-2. Add trip dropdown to stats panel
-3. Add MapLibre line layer for routes
-4. Generate route from trip photos (grouped by day)
-5. Style lines with day-based colors
+1. Add trip dropdown to filter panel
+2. Add MapLibre line layer for photo-to-photo routes (complement existing GPX tracks)
+3. Generate route from trip photos (grouped by day)
+4. Style lines with day-based colors
 
 ### Phase 3: Playback Animation
 
@@ -307,7 +309,7 @@ function generateRouteGeoJSON(photos) {
   position: absolute;
   bottom: 20px;
   left: 20px;
-  right: 270px; /* Account for stats panel */
+  right: 270px; /* Account for filter panel */
   height: 70px;
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
@@ -357,10 +359,11 @@ function generateRouteGeoJSON(photos) {
 3. **Colors**: Use colorblind-friendly palette for multi-day routes
 4. **Album naming**: Trips are identified by album name pattern (could filter to "YYYY\*" pattern)
 5. **No album**: Photos without albums still show on map but aren't part of any trip
+6. **GPX complement**: Photo-to-photo routes would complement the existing GPX track overlay, showing actual GPS tracks alongside inferred travel routes
 
 ## Files to Modify
 
-- `src/lib/` — new module(s) for timeline and route logic
+- `src/map/` — new module for route logic (GPX already in `src/map/gpx.ts`)
 - `src/index.ts` — wire up new UI components
-- `src/index.html` — add timeline container and trip UI elements
-- `src/styles/main.css` — timeline and route styles
+- `src/index.html` — add timeline container
+- `src/components/filter-panel/` — add trip UI elements and timeline integration

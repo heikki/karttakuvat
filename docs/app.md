@@ -2,17 +2,23 @@
 
 Karttakuvat displays geotagged photographs and videos on an interactive map. Items are exported from Apple Photos via Python scripts and served as static files. The dev server provides API endpoints for editing metadata back into Photos.app.
 
+## Architecture
+
+The app uses Lit web components (`LitElement`) for all UI panels:
+
+- `<filter-panel>` — filters, stats, and controls (top-right)
+- `<photo-popup>` — single-photo popup on the map
+- `<photo-lightbox>` — full-screen photo viewer
+- `<metadata-modal>` — detailed photo metadata overlay
+- `<placement-panel>` — location placement UI
+
 ## Startup
 
-1. Cache lightbox DOM elements, wire up metadata modal
-2. Set up filter listeners (year, album, camera dropdowns + media/GPS toggle buttons + map type buttons)
-3. Set up "Fit", "Reset", and save/discard edit buttons
-4. Fetch `items.json`, sort by date, restore filters from URL or apply defaults
-5. Restore map style from URL, create map with globe projection, register filter subscriber
-6. On map load: add photo layers, add selection layer, set up marker interactions, add night layer, set up rectangular selection, load data, fit to all photos (skipped if map view restored from URL)
-7. Populate year dropdown from data, cascade to album and camera dropdowns, apply filters
-8. Restore selected photo from URL (reopen popup)
-9. Stats update via subscriber
+1. `initMap()` — creates MapLibre map with globe projection, adds controls, initializes popup/measure/fit/GPX subsystems, sets up globe background shader
+2. `initSave()` — wires up save/edit event listeners
+3. `loadPhotos()` — fetches `items.json`, sorts by date
+4. `<filter-panel>` detects loaded photos via `updated()` lifecycle hook, restores filters/map style/marker style/tracks visibility from URL, validates cascading filter options, applies filters, and dispatches initial map style/marker style/GPX visibility events
+5. On map load: adds GPX layers, photo layers, measure layers, sets up marker interactions, updates markers, reopens popup from URL, fits to all photos (skipped if map view restored from URL)
 
 ## Filters
 
@@ -27,7 +33,7 @@ Five filters that apply together, with cascading dependencies:
 ### Toggle Buttons
 
 - **Media**: Photos / Videos. Toggle buttons (active = included). Single-click toggles one button. Double-click solos that button (deactivates all others).
-- **GPS precision**: Exif / Inferred / User / None. Same toggle/solo behavior. Color-coded to match marker colors (blue/amber/green/gray).
+- **Location**: Exif / Inferred / User / None. Same toggle/solo behavior. Color-coded to match marker colors (blue/amber/green/gray). Default excludes "None" — photos without GPS are hidden by default.
 
 Changing any filter recomputes the filtered set and notifies:
 
@@ -43,7 +49,7 @@ MapLibre GL JS with raster tile sources. Style switching via buttons:
 - **Maasto**: MML Maastokartta over Thunderforest Outdoors (requires API keys)
 - **Orto**: MML Ortokuva over Google Satellite (requires API key)
 
-Selected map style is persisted in URL params (default `satellite` is omitted from URL). Style switching tears down and re-adds all layers after the new style loads.
+Selected map style is persisted in URL params (default `satellite` is omitted from URL). Style switching tears down and re-adds all layers (GPX, photo, measure) after the new style loads.
 
 ### Projection
 
@@ -51,16 +57,18 @@ The map uses globe projection by default. A globe control (bottom-right) lets th
 
 ### Controls
 
-- Navigation control (zoom +/-, compass) at bottom-right
+- Navigation control (zoom +/-, no compass) at bottom-right
 - Globe control (projection toggle) at bottom-right
 - Scale bar (metric) at bottom-left
+- Drag rotate disabled
 
 ### Marker Styles
 
-Two switchable marker styles, selectable via buttons in the stats panel. The active marker style is persisted in URL params.
+Two switchable marker styles, selectable via buttons in the filter panel. The active marker style is persisted in URL params.
 
-**Classic** (default): Color-coded circles by GPS type. Four layers:
+**Classic** (default): Color-coded circles by GPS type. Five layers:
 
+- **Hit area** (`classic-hit-area`): Transparent circles used as the click target. Zoom-dependent radius (6–16px). This is the layer used for marker interaction detection.
 - **Outlines** (`classic-outlines`): White rings behind all fills. Zoom-dependent radius (4–12px). Pitch-aligned to map.
 - **Markers** (`classic-markers`): Color-coded fills by GPS type. No stroke. Zoom-dependent radius (3–10px). Sorted by latitude (northern behind southern) then index.
   - Blue (`#3b82f6`): exif
@@ -79,7 +87,7 @@ Two switchable marker styles, selectable via buttons in the stats panel. The act
 
 ### Night Layer
 
-Day/night shadow overlay rendered as a custom WebGL layer (part of the Points bloom layer). Uses subsolar point calculation to determine sun position. Visible only in globe projection. When navigating photos, the night layer animates to match the photo's date/time — fast transition (400ms) within a day, slower (2s) across large time gaps.
+Day/night shadow overlay rendered as a custom WebGL layer (part of the Points bloom layer). Uses subsolar point calculation to determine sun position. Visible only in globe projection.
 
 ### Globe Background
 
@@ -91,19 +99,18 @@ Default center: Kuhmo, Finland (29.52, 64.13). Zoom 10. Box zoom, double-click z
 
 - **Initial load**: fit to all photos (skipped if map view is restored from URL)
 - **"Fit" button**: fits to all filtered photos with animation, then opens popup on first photo
-- **Padding**: top dynamic (350 in mercator; in globe: popup height + 60 or 50 if no popup), bottom 40, left 50, right 270 (accounts for stats panel)
+- **Padding**: top dynamic (350 in mercator; in globe: popup height + 60 or 50 if no popup), bottom 40, left 50, right 270 (accounts for filter panel)
 - **Max zoom**: 18
 - **Single point**: centers at zoom 14 instead of fitting bounds
 
 ### Auto-Pan
 
-When a popup opens or navigates to a new photo, the map automatically pans to keep the popup fully visible within the viewport (with padding for the stats panel on the right).
+When a popup opens or navigates to a new photo, the map automatically pans to keep the popup fully visible within the viewport (with padding for the filter panel on the right).
 
 ### Marker Click
 
 - Click marker: opens single-photo popup
-- Click marker that belongs to current group popup: selects that photo within the group
-- Click map background: closes popup (unless clicking on the selection rectangle)
+- Click map background: closes popup
 
 ## Placement Mode
 
@@ -117,36 +124,19 @@ Allows setting a photo's location by clicking on the map.
 6. Click on map: sets the location as a pending edit, exits placement mode, reopens popup at new location
 7. Escape: cancels placement mode
 
-## Selection
-
-Shift+drag draws a rectangle on the map and selects enclosed markers.
-
-1. Shift+mousedown: disables drag panning, records start point, clears previous selection
-2. Mousemove: draws selection rectangle (blue fill 10% opacity + dashed blue outline)
-3. Mouseup: re-enables drag panning, queries markers in the rectangle area
-4. Minimum drag size: 10px in both axes — smaller drags are cancelled
-
-**Result:**
-
-- **0 markers**: selection cleared
-- **1 marker**: selection cleared, single-photo popup at marker location
-- **2+ markers**: selection rectangle stays visible. Multi-photo popup at top-center of selection. Map fits to selection bounds with padding for popup height. Selection clears when popup closes.
-
-**Keyboard:** Escape closes popup and clears selection. Releasing Shift mid-drag cancels and clears.
-
 ## Popups
 
 ### Popup Behavior
 
 - **Dynamic offset**: Popup is positioned above the marker with an offset based on the marker's visual radius at the current zoom level. Re-anchored on zoom changes.
 - **Scroll zoom**: Mouse wheel on the popup or map canvas zooms around the selected marker (not the cursor), keeping the marker at the same screen position.
-- **Pan-through**: Mouse drag on the popup (outside buttons, links, inputs, and thumb strip) is forwarded to the map canvas for panning.
+- **Pan-through**: Mouse drag on the popup (outside buttons, links, inputs) is forwarded to the map canvas for panning.
 
 ### Single Photo
 
-Shown on marker click or single-marker selection:
+Shown on marker click:
 
-- Image wrap with thumbnail (click opens lightbox in all mode)
+- Image wrap with thumbnail (click opens lightbox)
 - Video indicator overlay (play icon) for video items
 - Overlay buttons on image: info button (opens metadata modal), Photos.app link
 - Date line with time adjustment controls:
@@ -156,23 +146,9 @@ Shown on marker click or single-marker selection:
 - Arrow keys navigate to next/prev photo in the filtered set (wrapping), moving the popup to each marker
 - Closing clears marker highlight
 
-### Multi-Photo
-
-Shown after multi-marker selection:
-
-- Count header (e.g. "45 photos - 3 videos") with date range
-- Main image (click opens lightbox in group mode)
-- Video indicator and overlay buttons (same as single)
-- Date and location info for current photo (with edit controls)
-- Scrollable thumbnail strip with video badges, active thumb has blue border
-- Arrow keys navigate between photos in the group (wrapping)
-- Switching photos updates the highlighted marker, video indicator, overlay buttons
-- Photos sorted chronologically within group
-- Closing clears selection rectangle and marker highlight
-
 ## Date/Time Editing
 
-Available in both single and multi-photo popups:
+Available in the popup:
 
 - **Copy**: copies current photo's effective date (including pending offsets)
 - **Paste**: applies copied date to current photo (shown only when copied date differs)
@@ -193,20 +169,17 @@ Location changes are stored as pending edits until saved.
 
 When location or time edits exist:
 
-- Edit section appears in stats panel showing count of pending edits
-- **Save to Photos**: POST to `/api/save-edits`, reloads data, reopens current popup
+- Edit section appears in filter panel showing count of pending edits
+- **Save to Photos**: POST to `/api/save-edits`, reloads data, reopens current popup. Shows alert on error.
 - **Discard**: clears all pending edits
 
 Pending edits are reflected immediately on the map (markers move to new positions) and in popups (dates show adjusted values).
 
 ## Lightbox
 
-Full-screen overlay. Two modes:
+Full-screen overlay for browsing all filtered photos sequentially. Activated by clicking image in popup or pressing Space when popup is open.
 
-- **All mode**: browse all filtered photos sequentially. Activated by clicking image in single popup.
-- **Group mode**: browse only photos from current popup group. Activated by clicking image in multi-photo popup.
-
-Controls: left/right arrows (click or keyboard), Space or backdrop click to close, Escape to close. Shows date with timezone, duration (for videos), coordinates, position counter (e.g. "3 of 45"), camera name overlay, and "Open in Photos" / info overlay buttons. Video items get a `.video` class on the lightbox.
+Controls: left/right arrows (click or keyboard), Space or backdrop click to close, Escape to close. Shows date with timezone, coordinates, camera name overlay, and "Open in Photos" / info overlay buttons. Video items get a play overlay icon.
 
 ## Metadata Modal
 
@@ -219,11 +192,32 @@ Full-screen overlay showing detailed photo metadata from Photos.app (via osxphot
 - Close with X button, backdrop click, or Escape
 - Blocks all keyboard events except Escape while open
 
+## GPX Track Overlay
+
+Displays GPX track data on the map when an album is selected.
+
+- On album filter change, fetches GPX file list from `/api/gpx/{album}` (dev server API)
+- Fetches actual `.gpx` files from `/albums/{album}/{filename}`
+- Parses GPX tracks (`<trk>`) and waypoints (`<wpt>`), including elevation data
+- Computes total track distance (via `@turf/distance`) and elevation gain/loss
+- Each album gets a color from a rotating palette of 8 colors
+
+### GPX Layers (4 layers, re-added after map style changes)
+
+- **Track outline** (`gpx-track-outline`): Black shadow line (width 6, opacity 0.4)
+- **Track line** (`gpx-track-line`): Colored line (width 3, opacity 0.85), rounded caps and joins
+- **Waypoint circles** (`gpx-waypoint-circles`): White circles with colored stroke (radius 5)
+- **Waypoint labels** (`gpx-waypoint-labels`): White text with dark halo, offset below circle
+
+### Tracks Toggle
+
+When GPX data is available for the current album, a "Tracks" button appears in the filter panel (highlighted blue when active). Clicking toggles track visibility. Visibility is persisted in the URL as `tracks=0` (hidden); absence means visible.
+
 ## Measurement Mode
 
 Interactive distance measurement tool for measuring distances on the map.
 
-1. Activated via "Measure" button in the stats panel view-buttons row
+1. Activated via "Measure" button in the filter panel view-buttons row
 2. Cursor changes to crosshair
 3. Click on map: adds a point, connected to previous points by a dashed red line
 4. Distance overlay appears at top-center showing cumulative distance (meters below 1 km, kilometers with 2 decimals otherwise)
@@ -233,16 +227,17 @@ Interactive distance measurement tool for measuring distances on the map.
 
 Measurement layers (points + line) are re-added after map style changes to persist across tile source switches.
 
-## Stats Panel
+## Filter Panel
 
-Fixed top-right (220px wide). Collapsible — clicking the header toggles the panel body. Shows:
+Fixed top-right (220px wide). Collapsible — clicking the header toggles the panel body. Implemented as `<filter-panel>` Lit web component. Shows:
 
 - Title "Karttakuvat" (clickable header to collapse/expand)
 - Item count (photos and/or videos)
-- Filter section: Year, Album, Camera dropdowns; Media and GPS toggle buttons; Map type buttons; Marker style buttons (Points/Classic)
+- Filter section: Year, Album, Camera dropdowns; Media and Location toggle buttons; Map style buttons; Marker style buttons (Classic/Points)
 - "Fit" button — fits map to filtered photos and opens popup on first photo
-- "Reset" button — closes popup, clears selection, exits measure mode, resets all filters to defaults, resets map style to satellite, clears URL params, fits to all photos
+- "Reset" button — closes popup, exits measure mode, resets all filters to defaults, resets map style to satellite, clears URL params, fits to all photos
 - "Measure" button — toggles distance measurement mode (highlighted blue when active)
+- "Tracks" button (conditional) — toggles GPX track visibility (highlighted blue when active, only shown when GPX data is available)
 - "Apple Maps" button — opens Apple Maps at the current map center or selected photo location (satellite view)
 - "Google Maps" button — opens Google Maps at the current map center or selected photo location
 - Pending edits section (hidden when no edits): count + Save/Discard buttons
@@ -255,9 +250,10 @@ App state is persisted in URL query parameters:
 - **Photo**: `id` (UUID of currently viewed photo)
 - **Map view**: `lat`, `lon`, `z` (zoom) — updated on every map move
 - **Map style**: `style` (e.g. `topo`, `mml_maastokartta`). Default `satellite` is omitted.
-- **Marker style**: `markers` (e.g. `classic`). Default `points` is omitted.
+- **Marker style**: `markers` (e.g. `points`). Default `classic` is omitted.
+- **Tracks**: `tracks` (e.g. `0` for hidden). Default visible is omitted.
 
-On startup, saved URL state is restored: filters are applied, map view is positioned, map style is set, and the selected photo popup is reopened. The Reset button clears all URL params.
+On startup, saved URL state is restored: filters are applied, map view is positioned, map style is set, marker style is set, tracks visibility is restored, and the selected photo popup is reopened. The Reset button clears all URL params.
 
 ## Keyboard Shortcuts
 
@@ -268,11 +264,9 @@ On startup, saved URL state is restored: filters are applied, map view is positi
 | Escape     | Measure mode        | Exit measurement mode           |
 | Escape     | Placement mode      | Cancel placement mode           |
 | Escape     | Lightbox open       | Close lightbox                  |
-| Escape     | Popup open          | Close popup and clear selection |
+| Escape     | Popup open          | Close popup                     |
 | Space      | Lightbox open       | Close lightbox                  |
-| Space      | Group popup open    | Open lightbox in group mode     |
-| Space      | Single popup open   | Open lightbox in all mode       |
+| Space      | Popup open          | Open lightbox                   |
 | Left/Right | Lightbox open       | Navigate photos                 |
-| Left/Right | Popup open          | Navigate photos (group or all)  |
-| Shift+drag | Map                 | Rectangular selection           |
+| Left/Right | Popup open          | Navigate photos (all filtered)  |
 | Enter      | Date input focused  | Apply manual date               |
