@@ -208,14 +208,6 @@ Phases 1-3 are a prerequisite for packaging as a native macOS app with [Electrob
 
 **Not required for phases 1-3** but a natural next step once Python is eliminated.
 
-## Scripts to Delete
+## Scripts Deleted
 
-One-off fix scripts and rarely-used utilities that have served their purpose:
-
-- `fix_atlantti_times.py`, `fix_dominica_times.py` — timezone corrections for specific trips
-- `update_atlantti_locations.py` — location interpolation for a sailing voyage
-- `interpolate_atlantti.py` — coordinate interpolation from logbook data
-- `set_cameras.py` — EXIF camera metadata copier
-- `match_stereo.py` — stereoscopic photo matcher
-- `sync_timezones.py` — timezone sync from coordinates
-- `reapply_times.py` — time mismatch detector/fixer
+All legacy Python scripts have been removed. The `scripts/` directory now contains only TypeScript files.
