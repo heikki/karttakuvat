@@ -6,6 +6,7 @@ const { BrowserView, BrowserWindow, ApplicationMenu, Utils } = await import(
 );
 
 const { createApiHandler, flushLogBuffer } = await import('../../api-routes');
+const { createImageCache } = await import('../../scripts/image-cache');
 const { openPhotosDb, countAssets } = await import('../../scripts/photos-db');
 type AppRPC = typeof import('../rpc-types').AppRPC;
 
@@ -49,7 +50,8 @@ function findDataDir(): string {
 const dataDir = findDataDir();
 console.log(`[main] Data directory: ${dataDir}`);
 
-const { routeApiRequest } = createApiHandler(dataDir);
+const imageCache = createImageCache({ cacheDir: join(dataDir, 'cache') });
+const { routeApiRequest } = createApiHandler(dataDir, { imageCache });
 
 // Locate bundled view files
 const appDir = join(resourcesDir, 'app');
@@ -166,17 +168,19 @@ const server = Bun.serve({
     const apiResponse = routeApiRequest(req, url.pathname);
     if (apiResponse !== null) {
       const response = await apiResponse;
-      for (const line of flushLogBuffer()) {
-        console.log(line);
-      }
-      // Detect Full Disk Access errors from Photos.sqlite
-      if (response.status === 500 && url.pathname.startsWith('/api/metadata/')) {
-        const body = await response.clone().text();
-        if (body.includes('CANTOPEN') || body.includes('unable to open') || body.includes('not found')) {
-          showFullDiskAccessDialog();
+      if (response !== null) {
+        for (const line of flushLogBuffer()) {
+          console.log(line);
         }
+        // Detect Full Disk Access errors from Photos.sqlite
+        if (response.status === 500 && url.pathname.startsWith('/api/metadata/')) {
+          const body = await response.clone().text();
+          if (body.includes('CANTOPEN') || body.includes('unable to open') || body.includes('not found')) {
+            showFullDiskAccessDialog();
+          }
+        }
+        return response;
       }
-      return response;
     }
 
     // Serve bundled view files (index.html, index.js, CSS)
@@ -407,5 +411,11 @@ ApplicationMenu.on('application-menu-clicked', (event: any) => {
       break;
   }
 });
+
+// Auto-sync on first launch (when items.json doesn't exist yet)
+if (!existsSync(join(dataDir, 'items.json'))) {
+  console.log('[main] No items.json found — running initial sync');
+  void runScript('Initial Sync', 'sync.ts');
+}
 
 console.log('[main] Initialization complete');

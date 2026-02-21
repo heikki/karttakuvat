@@ -1,4 +1,10 @@
-import { openPhotosDb, queryMetadata } from './scripts/photos-db';
+import type { ImageCache } from './scripts/image-cache';
+import {
+  openPhotosDb,
+  queryAssetIndex,
+  queryMetadata,
+  type AssetRecord
+} from './scripts/photos-db';
 import {
   quitPhotosApp,
   setDateTime,
@@ -181,16 +187,38 @@ async function processTimeEdits(
   return null;
 }
 
+export interface ApiHandlerOptions {
+  imageCache?: ImageCache;
+}
+
 /**
  * Create API route handler parameterized by data directory.
  * The dataDir should contain items.json, full/, thumb/, albums/.
  */
-export function createApiHandler(dataDir: string) {
+export function createApiHandler(
+  dataDir: string,
+  options: ApiHandlerOptions = {}
+) {
+  const { imageCache } = options;
   let photosDb: ReturnType<typeof openPhotosDb> | null = null;
+  let assetIndex: Map<string, AssetRecord> | null = null;
 
   function getPhotosDb() {
     photosDb ??= openPhotosDb();
     return photosDb;
+  }
+
+  function getAssetIndex(): Map<string, AssetRecord> {
+    if (assetIndex === null) {
+      assetIndex = queryAssetIndex(getPhotosDb());
+      console.log(`[image-cache] Loaded ${assetIndex.size} assets from Photos.sqlite`);
+    }
+    return assetIndex;
+  }
+
+  /** Invalidate the in-memory asset index so it reloads on next request. */
+  function reloadAssetIndex(): void {
+    assetIndex = null;
   }
 
   async function handleGetGpxFiles(album: string): Promise<Response> {
@@ -268,11 +296,32 @@ export function createApiHandler(dataDir: string) {
     }
   }
 
+  /** Serve an image via on-demand conversion + cache. */
+  async function handleImageRequest(
+    uuid: string,
+    size: 'full' | 'thumb'
+  ): Promise<Response | null> {
+    if (imageCache === undefined) return null;
+
+    const asset = getAssetIndex().get(uuid);
+    if (asset === undefined) return null;
+
+    try {
+      const cachedPath = await imageCache.resolve(uuid, size, asset);
+      if (cachedPath === null) return null;
+      return new Response(Bun.file(cachedPath));
+    } catch (err) {
+      console.error(`[image-cache] Error resolving ${size}/${uuid}:`, err);
+      return null;
+    }
+  }
+
   /** Route an API request. Returns null if the path doesn't match any API route. */
+  // eslint-disable-next-line complexity -- routing dispatch with multiple patterns
   function routeApiRequest(
     req: Request,
     pathname: string
-  ): Promise<Response> | Response | null {
+  ): Promise<Response | null> | Response | null {
     if (pathname === '/api/save-edits' && req.method === 'POST') {
       return handleSaveEdits(req);
     }
@@ -289,13 +338,28 @@ export function createApiHandler(dataDir: string) {
       return handleGetMetadata(metadataMatch.groups.id!);
     }
 
+    // On-demand image serving: /full/{uuid}.jpg and /thumb/{uuid}.jpg
+    if (imageCache !== undefined && req.method === 'GET') {
+      const imageMatch =
+        /^\/(?<size>full|thumb)\/(?<id>[A-F0-9-]+)\.jpg$/i.exec(pathname);
+      if (imageMatch?.groups !== undefined) {
+        return handleImageRequest(
+          imageMatch.groups.id!,
+          imageMatch.groups.size! as 'full' | 'thumb'
+        );
+      }
+    }
+
     return null;
   }
 
   /** Route a request: try API routes first, then serve static files from dataDir. */
   async function routeRequest(req: Request, url: URL): Promise<Response> {
     const apiResponse = routeApiRequest(req, url.pathname);
-    if (apiResponse !== null) return await apiResponse;
+    if (apiResponse !== null) {
+      const resolved = await apiResponse;
+      if (resolved !== null) return resolved;
+    }
 
     const decodedPath = decodeURIComponent(url.pathname);
 
@@ -307,5 +371,5 @@ export function createApiHandler(dataDir: string) {
     return new Response('Not Found', { status: 404 });
   }
 
-  return { routeApiRequest, routeRequest };
+  return { routeApiRequest, routeRequest, reloadAssetIndex };
 }

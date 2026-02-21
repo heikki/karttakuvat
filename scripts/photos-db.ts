@@ -410,6 +410,41 @@ export function queryByUuids(db: Database, uuids: string[]): PhotoRecord[] {
   return buildRecords(db, rows, joinTable);
 }
 
+/** Lightweight asset record for image cache — no album/camera overhead. */
+export interface AssetRecord {
+  uuid: string;
+  type: 'photo' | 'video';
+  directory: string | null;
+  filename: string | null;
+  hasEdits: boolean;
+}
+
+/** Load all visible assets as lightweight records for image cache lookup. */
+export function queryAssetIndex(db: Database): Map<string, AssetRecord> {
+  const rows = db
+    .query<
+      { ZUUID: string; ZKIND: number; ZDIRECTORY: string | null; ZFILENAME: string | null; ZADJUSTMENTSSTATE: number },
+      []
+    >(
+      `SELECT ZUUID, ZKIND, ZDIRECTORY, ZFILENAME, ZADJUSTMENTSSTATE
+       FROM ZASSET
+       WHERE ZHIDDEN = 0 AND ZTRASHEDSTATE = 0`
+    )
+    .all();
+
+  const map = new Map<string, AssetRecord>();
+  for (const row of rows) {
+    map.set(row.ZUUID, {
+      uuid: row.ZUUID,
+      type: row.ZKIND === 1 ? 'video' : 'photo',
+      directory: row.ZDIRECTORY,
+      filename: row.ZFILENAME,
+      hasEdits: row.ZADJUSTMENTSSTATE > 0
+    });
+  }
+  return map;
+}
+
 export function queryEdited(db: Database): PhotoRecord[] {
   const joinTable = discoverJoinTable(db);
   const rows = db

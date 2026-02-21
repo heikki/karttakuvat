@@ -1,9 +1,9 @@
 #!/usr/bin/env bun
 /**
- * Sync metadata from Apple Photos library without re-exporting images.
+ * Sync metadata from Apple Photos library.
  *
- * Replaces sync.py — updates items.json with current metadata for all
- * items that already have exported images in full/.
+ * Builds items.json for all geotagged photos and videos in the library.
+ * Images are converted on demand by the server — no pre-export needed.
  *
  * Usage:
  *   bun scripts/sync.ts
@@ -11,7 +11,7 @@
  * Requirements:
  *   - Full Disk Access for Terminal in System Settings
  */
-import { existsSync, readdirSync, readFileSync, unlinkSync } from 'node:fs';
+import { existsSync, readFileSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 
 import {
@@ -20,23 +20,14 @@ import {
   writeItemsJson,
   type ItemEntry
 } from './items';
-import { openPhotosDb, queryByUuids } from './photos-db';
+import { openPhotosDb, queryPhotos, queryVideos } from './photos-db';
 
 const PROJECT_ROOT = join(import.meta.dir, '..');
 const dataDirArg = process.argv.find((a) => a.startsWith('--data-dir='));
 const PUBLIC_DIR = dataDirArg ? dataDirArg.split('=')[1]! : join(PROJECT_ROOT, 'public');
-const FULL_DIR = join(PUBLIC_DIR, 'full');
-const THUMB_DIR = join(PUBLIC_DIR, 'thumb');
+const CACHE_FULL_DIR = join(PUBLIC_DIR, 'cache', 'full');
+const CACHE_THUMB_DIR = join(PUBLIC_DIR, 'cache', 'thumb');
 const JSON_PATH = join(PUBLIC_DIR, 'items.json');
-
-function getExportedUuids(dir: string): Set<string> {
-  if (!existsSync(dir)) return new Set();
-  return new Set(
-    readdirSync(dir)
-      .filter((f) => f.endsWith('.jpg'))
-      .map((f) => f.slice(0, -4))
-  );
-}
 
 function loadExistingItems(jsonPath: string): Map<string, ItemEntry> {
   if (!existsSync(jsonPath)) return new Map();
@@ -77,17 +68,13 @@ function cleanOrphans(
     const albumStr =
       old !== undefined && old.albums.length > 0 ? ` [${old.albums[0]}]` : '';
     console.log(`    ${uuid}${albumStr}`);
-    for (const dir of [FULL_DIR, THUMB_DIR]) {
+    // Clean cached images
+    for (const dir of [CACHE_FULL_DIR, CACHE_THUMB_DIR]) {
       try {
         unlinkSync(join(dir, `${uuid}.jpg`));
       } catch {
         /* missing is ok */
       }
-    }
-    try {
-      unlinkSync(join(FULL_DIR, `${uuid}.mov`));
-    } catch {
-      /* missing is ok */
     }
   }
 }
@@ -169,29 +156,20 @@ function reportLocationChanges(changes: LocationChange[]): void {
 }
 
 async function main(): Promise<void> {
-  if (!existsSync(FULL_DIR)) {
-    console.error(`Error: ${FULL_DIR} does not exist. Run export.ts first.`);
-    process.exit(1);
-  }
-
-  const exportedUuids = getExportedUuids(FULL_DIR);
-  console.log(`Found ${exportedUuids.size} exported images in full/`);
-  if (exportedUuids.size === 0) {
-    console.log('No exported images found.');
-    return;
-  }
-
   const oldItems = loadExistingItems(JSON_PATH);
   console.log(`Loaded ${oldItems.size} existing entries for change detection`);
 
   const db = openPhotosDb();
-  const records = queryByUuids(db, [...exportedUuids]);
+  const photos = queryPhotos(db);
+  const videos = queryVideos(db);
   db.close();
-  console.log(`Got metadata for ${records.length} items from Apple Photos`);
+  console.log(
+    `Found ${photos.length} photos, ${videos.length} videos in Apple Photos`
+  );
 
   const entries: ItemEntry[] = [];
-  for (const record of records) {
-    if (exportedUuids.has(record.uuid)) entries.push(buildItemEntry(record));
+  for (const record of [...photos, ...videos]) {
+    entries.push(buildItemEntry(record));
   }
   sortEntries(entries);
 
@@ -203,10 +181,11 @@ async function main(): Promise<void> {
   );
   reportStats(entries, skippedNoLocation);
 
-  // Clean up orphans
+  // Clean up cache entries for photos deleted from library
   const entryUuids = new Set(entries.map((e) => e.uuid));
+  const oldUuids = new Set(oldItems.keys());
   const orphanUuids = new Set(
-    [...exportedUuids].filter((u) => !entryUuids.has(u))
+    [...oldUuids].filter((u) => !entryUuids.has(u))
   );
   if (orphanUuids.size > 0) cleanOrphans(orphanUuids, oldItems);
 

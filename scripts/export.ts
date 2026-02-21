@@ -25,8 +25,12 @@ import {
   unlinkSync
 } from 'node:fs';
 import { homedir } from 'node:os';
-import { basename, extname, join } from 'node:path';
+import { extname, join } from 'node:path';
 
+import {
+  resolveEditedPath,
+  resolveOriginalPath
+} from './image-cache';
 import {
   buildItemEntry,
   sortEntries,
@@ -101,39 +105,19 @@ function defaultLibraryPath(): string {
   return join(homedir(), 'Pictures/Photos Library.photoslibrary');
 }
 
-function resolveOriginalPath(
+// Wrap shared resolvers for PhotoRecord interface
+function resolveOriginal(
   libraryPath: string,
   record: PhotoRecord
 ): string | null {
-  if (record.directory === null || record.filename === null) return null;
-  const p = join(libraryPath, 'originals', record.directory, record.filename);
-  return existsSync(p) ? p : null;
+  return resolveOriginalPath(libraryPath, record.directory, record.filename);
 }
 
-function resolveEditedPath(
+function resolveEdited(
   libraryPath: string,
   record: PhotoRecord
 ): string | null {
-  if (record.directory === null || record.filename === null) return null;
-  const rendersDir = join(
-    libraryPath,
-    'resources',
-    'renders',
-    record.directory
-  );
-  if (!existsSync(rendersDir)) return null;
-
-  const stem = basename(record.filename, extname(record.filename));
-  try {
-    const files = readdirSync(rendersDir);
-    const rendered = files.find(
-      (f) => f.startsWith(stem) && /\.jpe?g$/i.test(f)
-    );
-    if (rendered !== undefined) return join(rendersDir, rendered);
-  } catch {
-    // Directory not readable
-  }
-  return null;
+  return resolveEditedPath(libraryPath, record.directory, record.filename);
 }
 
 // ---------- Shell helpers ----------
@@ -203,7 +187,7 @@ async function exportPhoto(
   libraryPath: string
 ): Promise<boolean> {
   const outputPath = join(fullDir, `${record.uuid}.jpg`);
-  const originalPath = resolveOriginalPath(libraryPath, record);
+  const originalPath = resolveOriginal(libraryPath, record);
   if (originalPath === null) return false;
 
   const ext = extname(originalPath).toLowerCase();
@@ -231,7 +215,7 @@ async function exportEditedPhoto(
   libraryPath: string
 ): Promise<boolean> {
   const outputPath = join(fullDir, `${record.uuid}.jpg`);
-  const renderedPath = resolveEditedPath(libraryPath, record);
+  const renderedPath = resolveEdited(libraryPath, record);
   if (renderedPath !== null) {
     const ext = extname(renderedPath).toLowerCase();
     if (ext === '.jpg' || ext === '.jpeg') {
@@ -241,7 +225,7 @@ async function exportEditedPhoto(
     if (await sipsConvert(renderedPath, outputPath)) return true;
   }
 
-  const originalPath = resolveOriginalPath(libraryPath, record);
+  const originalPath = resolveOriginal(libraryPath, record);
   if (originalPath === null) return false;
   return await qlmanageToJpeg(
     originalPath,
@@ -255,7 +239,7 @@ async function exportVideoFrame(
   fullDir: string,
   libraryPath: string
 ): Promise<boolean> {
-  const originalPath = resolveOriginalPath(libraryPath, record);
+  const originalPath = resolveOriginal(libraryPath, record);
   if (originalPath === null) return false;
   return await qlmanageToJpeg(
     originalPath,
@@ -338,7 +322,7 @@ async function exportBatch(opts: ExportBatchOpts): Promise<void> {
     const ok = await exportFn(record, fullDir, libraryPath);
     if (ok) {
       exported++;
-    } else if (resolveOriginalPath(libraryPath, record) === null) {
+    } else if (resolveOriginal(libraryPath, record) === null) {
       icloud++;
     } else {
       process.stdout.write(`\n  Error: ${record.uuid}`);

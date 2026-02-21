@@ -3,6 +3,7 @@ node_modules
 .DS_Store
 public/full
 public/thumb
+public/cache
 dist
 build
 artifacts

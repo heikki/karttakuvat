@@ -1,13 +1,18 @@
 import { serve } from 'bun';
 
 import { createApiHandler, flushLogBuffer } from './api-routes';
+import { createImageCache } from './scripts/image-cache';
 import indexHtml from './src/index.html';
 
-const { routeApiRequest } = createApiHandler('public');
+const imageCache = createImageCache({ cacheDir: 'public/cache' });
+const { routeApiRequest } = createApiHandler('public', { imageCache });
 
 async function routeRequest(req: Request, url: URL): Promise<Response> {
   const apiResponse = routeApiRequest(req, url.pathname);
-  if (apiResponse !== null) return await apiResponse;
+  if (apiResponse !== null) {
+    const resolved = await apiResponse;
+    if (resolved !== null) return resolved;
+  }
 
   const decodedPath = decodeURIComponent(url.pathname);
 
