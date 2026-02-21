@@ -1,8 +1,21 @@
+import { existsSync } from 'node:fs';
 import { serve } from 'bun';
 
 import { createApiHandler, flushLogBuffer } from './api-routes';
 import { createImageCache } from './scripts/image-cache';
 import indexHtml from './src/index.html';
+
+// Auto-sync when items.json is missing
+if (!existsSync('public/items.json')) {
+  console.log('No items.json found — running sync...');
+  const proc = Bun.spawnSync(['bun', 'scripts/sync.ts'], {
+    stdio: ['inherit', 'inherit', 'inherit']
+  });
+  if (proc.exitCode !== 0) {
+    console.error('Sync failed');
+    process.exit(1);
+  }
+}
 
 const imageCache = createImageCache({ cacheDir: 'public/cache' });
 const { routeApiRequest } = createApiHandler('public', { imageCache });
