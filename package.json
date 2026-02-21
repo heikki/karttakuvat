@@ -5,9 +5,9 @@
   "private": true,
   "scripts": {
     "dev": "bun run --hot server.ts",
-    "dev:app": "bunx electrobun dev",
+    "dev:app": "electrobun dev",
     "build": "bun build ./src/index.ts --outdir ./dist --minify",
-    "build:app": "bunx electrobun build",
+    "build:app": "electrobun build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "format": "prettier --write ."
