@@ -141,18 +141,19 @@ const popupActions: PopupActions = {
   }
 };
 
-export function initPopupCallbacks(
-  m: MapGL,
-  highlight: (photo: Photo | null) => void,
-  panToFitPopup: (coords: [number, number]) => void,
-  flyToPopup: (coords: [number, number]) => void,
-  getMarkerRadius: (zoom: number) => number
-) {
+interface PopupCallbacks {
+  highlight: (photo: Photo | null) => void;
+  panToFitPopup: (coords: [number, number]) => void;
+  flyToPopup: (coords: [number, number]) => void;
+  getMarkerRadius: (zoom: number) => number;
+}
+
+export function initPopupCallbacks(m: MapGL, callbacks: PopupCallbacks) {
   map = m;
-  highlightFn = highlight;
-  panToFitPopupFn = panToFitPopup;
-  flyToPopupFn = flyToPopup;
-  getMarkerRadiusFn = getMarkerRadius;
+  highlightFn = callbacks.highlight;
+  panToFitPopupFn = callbacks.panToFitPopup;
+  flyToPopupFn = callbacks.flyToPopup;
+  getMarkerRadiusFn = callbacks.getMarkerRadius;
   initPopupZoom(m, getSelectedMarkerCoords);
   m.on('zoomend', reanchorPopup);
 
