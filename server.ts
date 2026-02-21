@@ -1,7 +1,16 @@
-import { serve, spawn } from 'bun';
+import { serve } from 'bun';
 
 import indexHtml from './src/index.html';
 import { openPhotosDb, queryOne } from './scripts/photos-db';
+import {
+  quitPhotosApp,
+  setDateTime,
+  setLocation,
+  setTimezone,
+  tzNameFromCoords,
+  tzOffsetFromCoords,
+  tzOffsetToSeconds
+} from './scripts/photos-edit';
 
 interface LocationEdit {
   uuid: string;
@@ -46,66 +55,17 @@ function applyHourOffset(dateStr: string, hours: number): string {
 }
 
 const scriptLogBuffer: string[] = [];
-function bufferScriptOutput(
-  label: string,
-  stdout: string,
-  stderr: string
-): void {
+
+function logEditResult(label: string, uuid: string, error?: string): void {
   const dim = '\x1b[2m';
   const reset = '\x1b[0m';
-  if (stderr !== '') {
+  if (error === undefined) {
+    scriptLogBuffer.push(`    ${label} ${dim}${uuid}${reset}`);
+  } else {
     scriptLogBuffer.push(
-      `    ${label} \x1b[31m${stderr.trim()}${reset}`
+      `    ${label} \x1b[31m✗${reset} ${dim}${uuid}${reset}\n         ${dim}${error}${reset}`
     );
   }
-  if (stdout === '') return;
-  try {
-    const parsed: unknown = JSON.parse(stdout);
-    const results: unknown[] = Array.isArray(parsed) ? parsed : [parsed];
-    for (const r of results) {
-      const rec = r as Record<string, unknown>;
-      const id = typeof rec.uuid === 'string' ? rec.uuid : '?';
-      if (rec.ok === true) {
-        scriptLogBuffer.push(`    ${label} ${dim}${id}${reset}`);
-      } else {
-        const error = typeof rec.error === 'string' ? rec.error : 'failed';
-        scriptLogBuffer.push(
-          `    ${label} \x1b[31m✗${reset} ${dim}${id}${reset}\n         ${dim}${error}${reset}`
-        );
-      }
-    }
-  } catch {
-    scriptLogBuffer.push(`    ${label} ${dim}${stdout.trim()}${reset}`);
-  }
-}
-
-async function runScript(
-  cmd: string[],
-  input: string,
-  label: string,
-  { quiet = false } = {}
-): Promise<{ error: Response } | { stdout: string }> {
-  const proc = spawn({
-    cmd,
-    stdin: new Blob([input]),
-    stdout: 'pipe',
-    stderr: 'pipe'
-  });
-
-  const exitCode = await proc.exited;
-  const stdout = await new Response(proc.stdout).text();
-  const stderr = await new Response(proc.stderr).text();
-
-  if (!quiet) {
-    bufferScriptOutput(label, stdout, stderr);
-  }
-
-  if (exitCode !== 0) {
-    return {
-      error: new Response(`${label} failed: ${stderr}`, { status: 500 })
-    };
-  }
-  return { stdout };
 }
 
 interface ItemRecord {
@@ -116,13 +76,6 @@ interface ItemRecord {
   lon: number | null;
   gps: string | null;
   gps_accuracy: number | null;
-}
-
-interface ScriptResult {
-  uuid: string;
-  ok: boolean;
-  tz?: string | null;
-  error?: string;
 }
 
 function tzOffsetHours(tz: string | null): number {
@@ -166,6 +119,7 @@ function applyTimeEdits(items: ItemRecord[], edits: TimeEdit[]) {
   }
 }
 
+// eslint-disable-next-line complexity -- sequential edits with tz lookup
 async function processLocationEdits(
   edits: LocationEdit[],
   itemsByUuid: Map<string, ItemRecord>
@@ -173,28 +127,31 @@ async function processLocationEdits(
   const tzResults = new Map<string, string | null>();
   if (edits.length === 0) return { tzResults };
 
-  const editsWithDates = edits.map((e) => {
-    const item = itemsByUuid.get(e.uuid);
-    return { ...e, date: item?.date ?? '', tz: item?.tz ?? null };
-  });
+  for (const edit of edits) {
+    const item = itemsByUuid.get(edit.uuid);
+    try {
+      // eslint-disable-next-line no-await-in-loop -- sequential AppleScript calls
+      await setLocation(edit.uuid, edit.lat, edit.lon);
 
-  const result = await runScript(
-    ['python3', 'scripts/set_locations.py'],
-    JSON.stringify(editsWithDates),
-    '📍'
-  );
-  if ('error' in result) return { error: result.error, tzResults };
+      // Look up timezone from new coordinates
+      const dateStr = item?.date ?? '';
+      const oldTz = item?.tz ?? null;
+      const tzName = tzNameFromCoords(edit.lat, edit.lon);
+      const newTz = tzOffsetFromCoords(edit.lat, edit.lon, dateStr);
 
-  try {
-    const scriptResults = JSON.parse(result.stdout) as ScriptResult[];
-    for (const r of scriptResults) {
-      if (r.ok && r.tz !== undefined) {
-        tzResults.set(r.uuid, r.tz);
+      if (tzName !== null && newTz !== null && newTz !== oldTz) {
+        const offsetSec = tzOffsetToSeconds(newTz);
+        setTimezone(edit.uuid, tzName, offsetSec);
       }
+
+      tzResults.set(edit.uuid, newTz);
+      logEditResult('📍', edit.uuid);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      logEditResult('📍', edit.uuid, msg);
     }
-  } catch {
-    // tz update in items.json will be skipped
   }
+
   return { tzResults };
 }
 
@@ -204,30 +161,23 @@ async function processTimeEdits(
 ): Promise<Response | null> {
   if (edits.length === 0) return null;
 
-  const timeEditsWithTarget = edits
-    .map((edit) => {
-      const item = itemsByUuid.get(edit.uuid);
-      if (item === undefined) return undefined;
-      const target = applyHourOffset(item.date, edit.hours);
-      const [datePart, timePart] = target.split(' ');
-      if (datePart === undefined || timePart === undefined) {
-        return undefined;
-      }
-      return {
-        uuid: edit.uuid,
-        date: datePart.replaceAll(':', '-'),
-        time: timePart,
-        tz: item.tz
-      };
-    })
-    .filter((e) => e !== undefined);
+  for (const edit of edits) {
+    const item = itemsByUuid.get(edit.uuid);
+    if (item === undefined) continue;
+    const target = applyHourOffset(item.date, edit.hours);
+    const [datePart, timePart] = target.split(' ');
+    if (datePart === undefined || timePart === undefined) continue;
 
-  const result = await runScript(
-    ['python3', 'scripts/set_times.py'],
-    JSON.stringify(timeEditsWithTarget),
-    '⏰'
-  );
-  if ('error' in result) return result.error;
+    try {
+      // eslint-disable-next-line no-await-in-loop -- sequential AppleScript calls
+      await setDateTime(edit.uuid, datePart.replaceAll(':', '-'), timePart);
+      logEditResult('⏰', edit.uuid);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      logEditResult('⏰', edit.uuid, msg);
+    }
+  }
+
   return null;
 }
 
@@ -282,6 +232,11 @@ async function handleSaveEdits(req: Request): Promise<Response> {
 
     const timeError = await processTimeEdits(timeEdits, itemsByUuid);
     if (timeError !== null) return timeError;
+
+    // Quit Photos.app to clear undo stack (same as Python scripts did)
+    if (locationEdits.length > 0 || timeEdits.length > 0) {
+      await quitPhotosApp();
+    }
 
     applyLocationEdits(items, locationEdits, locResult.tzResults);
     applyTimeEdits(items, timeEdits);

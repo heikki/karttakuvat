@@ -1,0 +1,183 @@
+/**
+ * Write operations for Apple Photos: location, date/time, timezone.
+ *
+ * Replaces set_locations.py and set_times.py with native TypeScript.
+ * - Location & date: AppleScript via Photos.app
+ * - Timezone: direct SQLite write (no Core Data triggers on these columns)
+ * - Timezone lookup: geo-tz package
+ */
+
+import { Database } from "bun:sqlite";
+import { spawn } from "bun";
+import { find as geoTzFind } from "geo-tz";
+import { homedir } from "node:os";
+import { join } from "node:path";
+
+export interface EditResult {
+  uuid: string;
+  ok: boolean;
+  tz?: string | null;
+  error?: string;
+}
+
+// ---------- AppleScript helpers ----------
+
+async function runAppleScript(script: string): Promise<void> {
+  const proc = spawn({
+    cmd: ["osascript", "-e", script],
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const exitCode = await proc.exited;
+  if (exitCode !== 0) {
+    const stderr = await new Response(proc.stderr).text();
+    throw new Error(`AppleScript failed: ${stderr.trim()}`);
+  }
+}
+
+/** Set location via AppleScript (Photos.app must be running). */
+export async function setLocation(
+  uuid: string,
+  lat: number,
+  lon: number
+): Promise<void> {
+  const script = `tell application "Photos" to set the location of media item id "${uuid}" to {${lat}, ${lon}}`;
+  await runAppleScript(script);
+}
+
+/** Set date/time via AppleScript. date: "YYYY-MM-DD", time: "HH:MM:SS" */
+export async function setDateTime(
+  uuid: string,
+  date: string,
+  time: string
+): Promise<void> {
+  // AppleScript date format: "YYYY-MM-DDTHH:MM:SS"
+  const script = `tell application "Photos" to set the date of media item id "${uuid}" to date "${date}T${time}"`;
+  await runAppleScript(script);
+}
+
+// ---------- SQLite timezone write ----------
+
+function defaultLibraryPath(): string {
+  return join(homedir(), "Pictures/Photos Library.photoslibrary");
+}
+
+/** Set timezone via direct SQLite write (safe — no triggers on these columns). */
+export function setTimezone(
+  uuid: string,
+  tzName: string,
+  offsetSeconds: number,
+  libraryPath?: string
+): void {
+  const dbPath = join(
+    libraryPath ?? defaultLibraryPath(),
+    "database/Photos.sqlite"
+  );
+  const db = new Database(dbPath, { readwrite: true });
+  try {
+    db.run("BEGIN IMMEDIATE");
+    const result = db.run(
+      `UPDATE ZADDITIONALASSETATTRIBUTES
+       SET ZTIMEZONEOFFSET = ?, ZTIMEZONENAME = ?
+       WHERE ZASSET = (SELECT Z_PK FROM ZASSET WHERE ZUUID = ?)`,
+      [offsetSeconds, tzName, uuid]
+    );
+    if (result.changes === 0) {
+      db.run("ROLLBACK");
+      throw new Error(`No row found for UUID ${uuid}`);
+    }
+    db.run("COMMIT");
+  } catch (err) {
+    try {
+      db.run("ROLLBACK");
+    } catch {
+      // already rolled back
+    }
+    throw err;
+  } finally {
+    db.close();
+  }
+}
+
+// ---------- Quit Photos.app ----------
+
+export async function quitPhotosApp(): Promise<void> {
+  await runAppleScript('tell application "Photos" to quit');
+}
+
+// ---------- Timezone helpers ----------
+
+/** Get IANA timezone name from coordinates. Returns e.g. "Europe/Helsinki". */
+export function tzNameFromCoords(lat: number, lon: number): string | null {
+  const results = geoTzFind(lat, lon);
+  return results[0] ?? null;
+}
+
+/**
+ * Get UTC offset string (e.g. "+03:00") from coordinates and local date.
+ * Accounts for DST at the given date.
+ */
+export function tzOffsetFromCoords(
+  lat: number,
+  lon: number,
+  dateStr: string
+): string | null {
+  if (dateStr === "") return null;
+  const tzName = tzNameFromCoords(lat, lon);
+  if (tzName === null) return null;
+  return tzOffsetFromTzName(tzName, dateStr);
+}
+
+/**
+ * Get UTC offset string from IANA timezone name and local date string.
+ * dateStr format: "YYYY:MM:DD HH:MM:SS"
+ */
+export function tzOffsetFromTzName(
+  tzName: string,
+  dateStr: string
+): string | null {
+  try {
+    // Parse "YYYY:MM:DD HH:MM:SS" into components
+    const match =
+      /^(?<yr>\d{4}):(?<mo>\d{2}):(?<dy>\d{2}) (?<hr>\d{2}):(?<mi>\d{2}):(?<sc>\d{2})$/v.exec(dateStr);
+    if (match?.groups === undefined) return null;
+    const { yr, mo, dy, hr, mi } = match.groups;
+
+    // Use Intl.DateTimeFormat to get the UTC offset at this date in the timezone
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: tzName,
+      timeZoneName: "longOffset",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    // Create a date in the target timezone by interpreting as UTC first,
+    // then using the formatter to extract the offset
+    const utcDate = new Date(
+      `${yr}-${mo}-${dy}T${hr}:${mi}:00Z`
+    );
+    const parts = formatter.formatToParts(utcDate);
+    const tzPart = parts.find((p) => p.type === "timeZoneName");
+    if (tzPart === undefined) return null;
+
+    // tzPart.value is like "GMT+03:00" or "GMT-05:00" or "GMT"
+    const gmtMatch = /^GMT(?<offset>[+-]\d{2}:\d{2})?$/v.exec(tzPart.value);
+    if (gmtMatch === null) return null;
+    return gmtMatch.groups?.offset ?? "+00:00";
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Convert UTC offset string like "+03:00" to seconds.
+ */
+export function tzOffsetToSeconds(offset: string): number {
+  const sign = offset.startsWith("+") ? 1 : -1;
+  const h = parseInt(offset.slice(1, 3), 10);
+  const m = parseInt(offset.slice(4, 6), 10);
+  return sign * (h * 3600 + m * 60);
+}
