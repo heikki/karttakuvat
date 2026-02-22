@@ -17,7 +17,6 @@ import { join } from 'node:path';
 import {
   deleteItems,
   getAllItems,
-  getItemCount,
   openAppDb,
   upsertItems
 } from './app-db';

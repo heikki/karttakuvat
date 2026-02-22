@@ -48,11 +48,6 @@ type ItemRecord = Pick<
 const datePattern =
   /^(?<yr>\d{4}):(?<mo>\d{2}):(?<dy>\d{2}) (?<hr>\d{2}):(?<mi>\d{2}):(?<sc>\d{2})$/v;
 
-function dateToUtc(dateStr: string, tz: string | null): string {
-  if (dateStr === '' || tz === null || tz === '') return dateStr;
-  return applyHourOffset(dateStr, -tzOffsetHours(tz));
-}
-
 function applyHourOffset(dateStr: string, hours: number): string {
   if (dateStr === '' || hours === 0) return dateStr;
   const match = datePattern.exec(dateStr);

@@ -79,14 +79,6 @@ export function getAllItems(): ItemEntry[] {
   return rows.map(rowToEntry);
 }
 
-export function getItem(uuid: string): ItemEntry | null {
-  if (db === null) return null;
-  const row = db
-    .query<ItemRow, [string]>('SELECT * FROM items WHERE uuid = ?')
-    .get(uuid);
-  return row === null ? null : rowToEntry(row);
-}
-
 export function getItemCount(): number {
   if (db === null) return 0;
   const row = db
