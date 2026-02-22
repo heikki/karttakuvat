@@ -37,7 +37,7 @@ function notify() {
 export async function loadPhotos() {
   try {
     await apiReady;
-    const response = await fetch(`${getApiBase()}/items.json?t=${Date.now()}`);
+    const response = await fetch(`${getApiBase()}/api/items?t=${Date.now()}`);
     const data = (await response.json()) as Photo[];
     sortByDate(data);
     state.photos = data;
@@ -49,7 +49,7 @@ export async function loadPhotos() {
       camera: state.filters.camera
     });
   } catch (error) {
-    console.error('Error loading items.json:', error);
+    console.error('Error loading items:', error);
     throw error;
   }
 }

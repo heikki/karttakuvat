@@ -1,9 +1,14 @@
 import {
   deleteAlbumFile,
   getAlbumFiles,
-  setFileVisible
+  getAllItems,
+  getItem,
+  setFileVisible,
+  updateItemDate,
+  updateItemLocation
 } from './app-db';
 import type { ImageCache } from './image-cache';
+import type { ItemEntry } from './items';
 import {
   openPhotosDb,
   queryAssetIndex,
@@ -36,15 +41,10 @@ interface SetLocationsBody {
   timeEdits?: TimeEdit[];
 }
 
-interface ItemRecord {
-  uuid: string;
-  date: string;
-  tz: string | null;
-  lat: number | null;
-  lon: number | null;
-  gps: string | null;
-  gps_accuracy: number | null;
-}
+type ItemRecord = Pick<
+  ItemEntry,
+  'uuid' | 'date' | 'tz' | 'lat' | 'lon' | 'gps' | 'gps_accuracy'
+>;
 
 const datePattern =
   /^(?<yr>\d{4}):(?<mo>\d{2}):(?<dy>\d{2}) (?<hr>\d{2}):(?<mi>\d{2}):(?<sc>\d{2})$/v;
@@ -196,7 +196,7 @@ export interface ApiHandlerOptions {
 
 /**
  * Create API route handler parameterized by data directory.
- * The dataDir should contain items.json, full/, thumb/, albums/.
+ * The dataDir should contain app.db, full/, thumb/, albums/.
  */
 export function createApiHandler(
   dataDir: string,
@@ -349,9 +349,11 @@ export function createApiHandler(
         return new Response('No edits provided', { status: 400 });
       }
 
-      const itemsFile = Bun.file(`${dataDir}/items.json`);
-      const items = (await itemsFile.json()) as ItemRecord[];
-      const itemsByUuid = new Map(items.map((i) => [i.uuid, i]));
+      // Build in-memory lookup from DB for tz computation during edits
+      const allItems = getAllItems();
+      const itemsByUuid = new Map<string, ItemRecord>(
+        allItems.map((i) => [i.uuid, i])
+      );
 
       const locResult = processLocationEdits(locationEdits, itemsByUuid);
       if (locResult.error !== undefined) return locResult.error;
@@ -363,24 +365,31 @@ export function createApiHandler(
         quitPhotosApp();
       }
 
-      applyLocationEdits(items, locationEdits, locResult.tzResults);
-      applyTimeEdits(items, timeEdits);
-      items.sort((a, b) => {
-        const d = dateToUtc(a.date, a.tz).localeCompare(
-          dateToUtc(b.date, b.tz)
-        );
-        return d === 0 ? a.uuid.localeCompare(b.uuid) : d;
-      });
+      // Apply edits to in-memory items, then persist to DB
+      const editedItems = [...itemsByUuid.values()];
+      applyLocationEdits(editedItems, locationEdits, locResult.tzResults);
+      applyTimeEdits(editedItems, timeEdits);
 
-      await Bun.write(`${dataDir}/items.json`, JSON.stringify(items, null, 2));
-
-      try {
-        const prettier = await import('prettier');
-        const raw = await Bun.file(`${dataDir}/items.json`).text();
-        const formatted = await prettier.format(raw, { parser: 'json' });
-        await Bun.write(`${dataDir}/items.json`, formatted);
-      } catch {
-        // prettier not available in bundled builds
+      // Persist each edited item to DB
+      for (const edit of locationEdits) {
+        const item = itemsByUuid.get(edit.uuid);
+        if (item !== undefined) {
+          updateItemLocation(
+            item.uuid,
+            item.lat!,
+            item.lon!,
+            item.gps ?? 'user',
+            item.gps_accuracy ?? 1,
+            item.tz,
+            item.date
+          );
+        }
+      }
+      for (const edit of timeEdits) {
+        const item = itemsByUuid.get(edit.uuid);
+        if (item !== undefined) {
+          updateItemDate(item.uuid, item.date);
+        }
       }
 
       return Response.json({ ok: true });
@@ -416,6 +425,10 @@ export function createApiHandler(
     req: Request,
     pathname: string
   ): Promise<Response | null> | Response | null {
+    if (pathname === '/api/items' && req.method === 'GET') {
+      return Response.json(getAllItems());
+    }
+
     if (pathname === '/api/save-edits' && req.method === 'POST') {
       return handleSaveEdits(req);
     }

@@ -2,7 +2,7 @@
 /**
  * Sync metadata from Apple Photos library.
  *
- * Builds items.json for all geotagged photos and videos in the library.
+ * Builds items in app.db for all geotagged photos and videos in the library.
  * Images are converted on demand by the server — no pre-export needed.
  *
  * Usage:
@@ -11,15 +11,17 @@
  * Requirements:
  *   - Full Disk Access for Terminal in System Settings
  */
-import { existsSync, readFileSync, unlinkSync } from 'node:fs';
+import { unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 
 import {
-  buildItemEntry,
-  sortEntries,
-  writeItemsJson,
-  type ItemEntry
-} from './items';
+  deleteItems,
+  getAllItems,
+  getItemCount,
+  openAppDb,
+  upsertItems
+} from './app-db';
+import { buildItemEntry, sortEntries, type ItemEntry } from './items';
 import { openPhotosDb, queryPhotos, queryVideos } from './photos-db';
 
 const PROJECT_ROOT = join(import.meta.dir, '..', '..');
@@ -30,12 +32,27 @@ const PUBLIC_DIR =
     : dataDirArg.split('=')[1]!;
 const CACHE_FULL_DIR = join(PUBLIC_DIR, 'cache', 'full');
 const CACHE_THUMB_DIR = join(PUBLIC_DIR, 'cache', 'thumb');
-const JSON_PATH = join(PUBLIC_DIR, 'items.json');
 
-function loadExistingItems(jsonPath: string): Map<string, ItemEntry> {
-  if (!existsSync(jsonPath)) return new Map();
-  const data = JSON.parse(readFileSync(jsonPath, 'utf8')) as ItemEntry[];
-  return new Map(data.map((i) => [i.uuid, i]));
+function cleanOrphans(
+  orphanUuids: Set<string>,
+  oldItems: Map<string, ItemEntry>
+): void {
+  console.log(`\n  Deleted from Photos: ${orphanUuids.size}`);
+  for (const uuid of [...orphanUuids].sort()) {
+    const old = oldItems.get(uuid);
+    const albumStr =
+      old !== undefined && old.albums.length > 0 ? ` [${old.albums[0]}]` : '';
+    console.log(`    ${uuid}${albumStr}`);
+    // Clean cached images
+    for (const dir of [CACHE_FULL_DIR, CACHE_THUMB_DIR]) {
+      try {
+        unlinkSync(join(dir, `${uuid}.jpg`));
+      } catch {
+        /* missing is ok */
+      }
+    }
+  }
+  deleteItems([...orphanUuids]);
 }
 
 interface CoordsChangedArgs {
@@ -59,27 +76,6 @@ function coordsChanged(args: CoordsChangedArgs, threshold = 0.0001): boolean {
     Math.abs(oldLat - newLat) > threshold ||
     Math.abs(oldLon - newLon) > threshold
   );
-}
-
-function cleanOrphans(
-  orphanUuids: Set<string>,
-  oldItems: Map<string, ItemEntry>
-): void {
-  console.log(`\n  Deleted from Photos: ${orphanUuids.size}`);
-  for (const uuid of [...orphanUuids].sort()) {
-    const old = oldItems.get(uuid);
-    const albumStr =
-      old !== undefined && old.albums.length > 0 ? ` [${old.albums[0]}]` : '';
-    console.log(`    ${uuid}${albumStr}`);
-    // Clean cached images
-    for (const dir of [CACHE_FULL_DIR, CACHE_THUMB_DIR]) {
-      try {
-        unlinkSync(join(dir, `${uuid}.jpg`));
-      } catch {
-        /* missing is ok */
-      }
-    }
-  }
 }
 
 interface LocationChange {
@@ -134,7 +130,7 @@ function reportStats(entries: ItemEntry[], skippedNoLocation: number): void {
   const inferredCount = entries.filter((e) => e.gps === 'inferred').length;
   const userCount = entries.filter((e) => e.gps === 'user').length;
 
-  console.log(`\nUpdated ${JSON_PATH}`);
+  console.log(`\nUpdated items in app.db`);
   console.log(
     `  Total entries: ${entries.length} (${photoCount} photos, ${videoCount} videos)`
   );
@@ -158,14 +154,17 @@ function reportLocationChanges(changes: LocationChange[]): void {
   }
 }
 
-async function main(): Promise<void> {
-  const oldItems = loadExistingItems(JSON_PATH);
+function main(): void {
+  openAppDb(PUBLIC_DIR);
+
+  const oldItemsList = getAllItems();
+  const oldItems = new Map(oldItemsList.map((i) => [i.uuid, i]));
   console.log(`Loaded ${oldItems.size} existing entries for change detection`);
 
-  const db = openPhotosDb();
-  const photos = queryPhotos(db);
-  const videos = queryVideos(db);
-  db.close();
+  const photosDb = openPhotosDb();
+  const photos = queryPhotos(photosDb);
+  const videos = queryVideos(photosDb);
+  photosDb.close();
   console.log(
     `Found ${photos.length} photos, ${videos.length} videos in Apple Photos`
   );
@@ -176,7 +175,7 @@ async function main(): Promise<void> {
   }
   sortEntries(entries);
 
-  await writeItemsJson(entries, JSON_PATH);
+  upsertItems(entries);
 
   const { locationChanges, skippedNoLocation } = detectChanges(
     entries,
@@ -184,7 +183,7 @@ async function main(): Promise<void> {
   );
   reportStats(entries, skippedNoLocation);
 
-  // Clean up cache entries for photos deleted from library
+  // Clean up entries for photos deleted from library
   const entryUuids = new Set(entries.map((e) => e.uuid));
   const oldUuids = new Set(oldItems.keys());
   const orphanUuids = new Set([...oldUuids].filter((u) => !entryUuids.has(u)));
@@ -193,7 +192,9 @@ async function main(): Promise<void> {
   reportLocationChanges(locationChanges);
 }
 
-main().catch((err: unknown) => {
+try {
+  main();
+} catch (err: unknown) {
   console.error(err);
   process.exit(1);
-});
+}

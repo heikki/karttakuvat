@@ -1,14 +1,15 @@
-import { existsSync } from 'node:fs';
 import { serve } from 'bun';
 
-import { openAppDb } from './app-db';
+import { getItemCount, openAppDb } from './app-db';
 import { createApiHandler, flushLogBuffer } from './api-routes';
 import { createImageCache } from './image-cache';
 import indexHtml from '../client/index.html';
 
-// Auto-sync when items.json is missing
-if (!existsSync('data/items.json')) {
-  console.log('No items.json found — running sync...');
+openAppDb('data');
+
+// Auto-sync when items table is empty
+if (getItemCount() === 0) {
+  console.log('No items in database — running sync...');
   const proc = Bun.spawnSync(['bun', 'src/server/sync.ts'], {
     stdio: ['inherit', 'inherit', 'inherit']
   });
@@ -17,8 +18,6 @@ if (!existsSync('data/items.json')) {
     process.exit(1);
   }
 }
-
-openAppDb('data');
 const imageCache = createImageCache({ cacheDir: 'data/cache' });
 const { routeApiRequest } = createApiHandler('data', { imageCache });
 

@@ -1,7 +1,7 @@
 /**
- * Shared helpers for building and writing items.json.
+ * Shared types and helpers for building item entries.
  *
- * Used by both export.ts and sync.ts to avoid duplication.
+ * Used by sync.ts and app-db.ts.
  */
 
 import type { PhotoRecord } from './photos-db';
@@ -94,7 +94,7 @@ function sortedAlbums(record: PhotoRecord): {
   };
 }
 
-/** Build a single items.json entry from a PhotoRecord. */
+/** Build a single item entry from a PhotoRecord. */
 export function buildItemEntry(record: PhotoRecord): ItemEntry {
   const sorted = sortedAlbums(record);
   const albumUuid = sorted.albumUuids[0] ?? DEFAULT_ALBUM_UUID;
@@ -146,18 +146,3 @@ export function sortEntries(entries: ItemEntry[]): void {
   });
 }
 
-/** Write items.json and format with prettier. */
-export async function writeItemsJson(
-  entries: ItemEntry[],
-  jsonPath: string
-): Promise<void> {
-  await Bun.write(jsonPath, `${JSON.stringify(entries, null, 2)}\n`);
-  try {
-    const prettier = await import('prettier');
-    const raw = await Bun.file(jsonPath).text();
-    const formatted = await prettier.format(raw, { parser: 'json' });
-    await Bun.write(jsonPath, formatted);
-  } catch {
-    // prettier not available in bundled builds — JSON.stringify formatting is fine
-  }
-}
