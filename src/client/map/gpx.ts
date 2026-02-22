@@ -287,6 +287,13 @@ function updateSources(): void {
   document.dispatchEvent(new GpxDataChangedEvent(hasData));
 }
 
+/** Force-reload GPX tracks for the current album. */
+export function reloadGpxTracks(): void {
+  const album = currentAlbum;
+  currentAlbum = null; // reset cache so loadGpxForAlbum re-fetches
+  void loadGpxForAlbum(album);
+}
+
 export function setGpxVisible(show: boolean): void {
   visible = show;
   setLayerVisibility(visible);

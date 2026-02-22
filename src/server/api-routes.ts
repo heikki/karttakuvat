@@ -221,6 +221,40 @@ export function createApiHandler(
     assetIndex = null;
   }
 
+  async function handleUploadAlbumFile(
+    req: Request,
+    album: string
+  ): Promise<Response> {
+    try {
+      const { mkdir } = await import('node:fs/promises');
+      const dir = `${dataDir}/albums/${album}`;
+      await mkdir(dir, { recursive: true });
+
+      const formData = await req.formData();
+      const results: string[] = [];
+
+      for (const value of formData.getAll('file')) {
+        if (!(value instanceof File)) continue;
+        const name = value.name.toLowerCase();
+        if (!name.endsWith('.gpx') && !name.endsWith('.md')) continue;
+        const bytes = await value.arrayBuffer();
+        await Bun.write(`${dir}/${value.name}`, bytes);
+        results.push(value.name);
+      }
+
+      if (results.length === 0) {
+        return new Response('No valid files (.gpx, .md) in upload', {
+          status: 400
+        });
+      }
+
+      return Response.json({ ok: true, files: results });
+    } catch (err) {
+      console.error('handleUploadAlbumFile error:', err);
+      return new Response(`Server error: ${String(err)}`, { status: 500 });
+    }
+  }
+
   async function handleGetGpxFiles(album: string): Promise<Response> {
     try {
       const { readdir } = await import('node:fs/promises');
@@ -325,6 +359,14 @@ export function createApiHandler(
   ): Promise<Response | null> | Response | null {
     if (pathname === '/api/save-edits' && req.method === 'POST') {
       return handleSaveEdits(req);
+    }
+
+    const uploadMatch = /^\/api\/albums\/(?<album>.+)\/upload$/.exec(pathname);
+    if (uploadMatch?.groups !== undefined && req.method === 'POST') {
+      return handleUploadAlbumFile(
+        req,
+        decodeURIComponent(uploadMatch.groups.album!)
+      );
     }
 
     const gpxMatch = /^\/api\/gpx\/(?<album>.+)$/.exec(pathname);
