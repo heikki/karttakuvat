@@ -219,9 +219,7 @@ interface AppRPC {
   };
   webview: {
     requests: Record<string, never>;
-    messages: {
-      setApiBase: { url: string };
-    };
+    messages: Record<string, never>;
   };
 }
 

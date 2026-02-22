@@ -68,7 +68,7 @@ function getSelectedMarkerCoords(): [number, number] | null {
   return [lon, lat];
 }
 
-export function reanchorPopup() {
+function reanchorPopup() {
   if (popup === null) return;
   if (map === null) return;
   if (!popup.isOpen()) return;
@@ -342,7 +342,7 @@ function applyManualDate(dateValue: string) {
   syncPopupElement();
 }
 
-export function navigateToPhoto(newIndex: number) {
+function navigateToPhoto(newIndex: number) {
   const photo = state.filteredPhotos[newIndex];
   if (photo === undefined || popup === null) return;
 

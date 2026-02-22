@@ -32,10 +32,6 @@ export class PhotoLightbox extends LitElement {
     this.photo = null;
   }
 
-  get isActive(): boolean {
-    return this.active;
-  }
-
   private _navigate(delta: number) {
     const total = state.filteredPhotos.length;
     if (total === 0) return;

@@ -1,6 +1,5 @@
-import { apiReady, getApiBase } from './api';
 import type { Photo } from './types';
-import { getYear, sortByDate } from './utils';
+import { exifDatePattern, getYear, sortByDate } from './utils';
 
 export const state = {
   photos: [] as Photo[],
@@ -36,8 +35,7 @@ function notify() {
 
 export async function loadPhotos() {
   try {
-    await apiReady;
-    const response = await fetch(`${getApiBase()}/api/items?t=${Date.now()}`);
+    const response = await fetch(`/api/items?t=${Date.now()}`);
     const data = (await response.json()) as Photo[];
     sortByDate(data);
     state.photos = data;
@@ -158,12 +156,9 @@ export function setPendingTimeEdit(uuid: string, totalHours: number) {
   notifyEdits();
 }
 
-const datePattern =
-  /^(?<yr>\d{4}):(?<mo>\d{2}):(?<dy>\d{2}) (?<hr>\d{2}):(?<mi>\d{2}):(?<sc>\d{2})$/v;
-
 export function applyHourOffset(dateStr: string, hours: number): string {
   if (dateStr === '' || hours === 0) return dateStr;
-  const match = datePattern.exec(dateStr);
+  const match = exifDatePattern.exec(dateStr);
   if (match?.groups === undefined) return dateStr;
   const { yr, mo, dy, hr, mi, sc } = match.groups;
   const d = new Date(

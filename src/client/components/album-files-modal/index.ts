@@ -1,7 +1,6 @@
 import { css, html, LitElement, nothing } from 'lit';
 import { customElement, state as litState, property } from 'lit/decorators.js';
 
-import { getApiBase } from '@common/api';
 import { ShowAlbumFilesEvent } from '@common/events';
 
 interface AlbumFile {
@@ -194,7 +193,7 @@ export class AlbumFilesModal extends LitElement {
     this._loading = true;
     try {
       const res = await fetch(
-        `${getApiBase()}/api/albums/${encodeURIComponent(this._album)}/files`
+        `/api/albums/${encodeURIComponent(this._album)}/files`
       );
       const data = (await res.json()) as AlbumFile[];
       this._files = data.sort((a, b) => a.name.localeCompare(b.name));
@@ -209,7 +208,7 @@ export class AlbumFilesModal extends LitElement {
     const newVisible = !file.visible;
     try {
       const res = await fetch(
-        `${getApiBase()}/api/albums/${encodeURIComponent(this._album)}/files/${encodeURIComponent(file.name)}/visibility`,
+        `/api/albums/${encodeURIComponent(this._album)}/files/${encodeURIComponent(file.name)}/visibility`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -240,7 +239,7 @@ export class AlbumFilesModal extends LitElement {
   private async _deleteFile(filename: string) {
     try {
       const res = await fetch(
-        `${getApiBase()}/api/albums/${encodeURIComponent(this._album)}/files/${encodeURIComponent(filename)}`,
+        `/api/albums/${encodeURIComponent(this._album)}/files/${encodeURIComponent(filename)}`,
         { method: 'DELETE' }
       );
       if (res.ok) {
@@ -274,7 +273,7 @@ export class AlbumFilesModal extends LitElement {
 
     try {
       const res = await fetch(
-        `${getApiBase()}/api/albums/${encodeURIComponent(this._album)}/upload`,
+        `/api/albums/${encodeURIComponent(this._album)}/upload`,
         { method: 'POST', body: formData }
       );
       if (res.ok) {

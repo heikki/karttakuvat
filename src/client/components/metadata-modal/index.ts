@@ -1,7 +1,6 @@
 import { css, html, LitElement, nothing } from 'lit';
 import { customElement, state as litState, property } from 'lit/decorators.js';
 
-import { getApiBase } from '@common/api';
 import { ShowMetadataEvent } from '@common/events';
 
 function escapeHtml(s: string): string {
@@ -212,7 +211,7 @@ export class MetadataModal extends LitElement {
     this._error = null;
     this.active = true;
 
-    void fetch(`${getApiBase()}/api/metadata/${uuid}`)
+    void fetch(`/api/metadata/${uuid}`)
       .then((r) => {
         if (!r.ok) throw new Error(`${r.status}`);
         return r.json() as Promise<Record<string, unknown>>;

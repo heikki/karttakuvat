@@ -1,4 +1,3 @@
-import { getApiBase } from '@common/api';
 import {
   clearPendingEdits,
   getPendingEdits,
@@ -16,7 +15,7 @@ async function saveEdits() {
   setSaving(true);
 
   try {
-    const response = await fetch(`${getApiBase()}/api/save-edits`, {
+    const response = await fetch('/api/save-edits', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ edits, timeEdits })
