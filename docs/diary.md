@@ -4,10 +4,10 @@ Geotagged photo map viewer with Apple Photos integration.
 
 ## Project Stats (as of 22.02.2026)
 
-- **TypeScript files**: 43
-- **Lines of code**: 9,661
-- **Total commits**: 439
-- **Total tokens**: 953M | **Total cost**: $589.09
+- **TypeScript files**: 42
+- **Lines of code**: 9,697
+- **Total commits**: 444
+- **Total tokens**: 966M | **Total cost**: $597
 
 ## Updating This Diary
 
@@ -16,7 +16,7 @@ Run these commands to gather data:
 ```bash
 bunx ccusage                    # Token usage and cost per day
 git log --oneline | wc -l       # Total commits
-find src -name "*.ts" -o -name "*.tsx" | xargs wc -l | tail -1  # Lines
+find . -name "*.ts" -o -name "*.tsx" | grep -v node_modules | grep -v .claude | xargs wc -l | tail -1  # Lines
 git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent commits
 ```
 
@@ -40,6 +40,7 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 - Desktop app waits for initial sync before showing the page
 - Fixed image rotation for HEIC conversions and edited photos
 - Removed web production build, kept dev server for debugging
+- Dead code cleanup: removed unused query functions, dead api.ts module, unnecessary exports, and trivial wrappers across server and client
 
 ## 21.02.2026 — Python Replacement, Electrobun Desktop App & Native AppleScript
 
