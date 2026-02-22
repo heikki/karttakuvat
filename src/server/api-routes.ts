@@ -2,7 +2,6 @@ import {
   deleteAlbumFile,
   getAlbumFiles,
   getAllItems,
-  getItem,
   setFileVisible,
   updateItemDate,
   updateItemLocation
