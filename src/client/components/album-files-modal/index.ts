@@ -4,10 +4,15 @@ import { customElement, state as litState, property } from 'lit/decorators.js';
 import { getApiBase } from '@common/api';
 import { ShowAlbumFilesEvent } from '@common/events';
 
+interface AlbumFile {
+  name: string;
+  visible: boolean;
+}
+
 @customElement('album-files-modal')
 export class AlbumFilesModal extends LitElement {
   @property({ type: Boolean, reflect: true }) active = false;
-  @litState() private _files: string[] = [];
+  @litState() private _files: AlbumFile[] = [];
   @litState() private _loading = false;
   @litState() private _album = '';
 
@@ -69,10 +74,27 @@ export class AlbumFilesModal extends LitElement {
     }
     .file-row {
       display: flex;
-      justify-content: space-between;
       align-items: center;
       padding: 6px 0;
       border-bottom: 1px solid #2c2c2e;
+      gap: 8px;
+    }
+    .vis-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 15px;
+      padding: 2px 4px;
+      flex-shrink: 0;
+      border-radius: 4px;
+      line-height: 1;
+      opacity: 0.9;
+    }
+    .vis-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    .vis-btn.hidden {
+      opacity: 0.35;
     }
     .file-name {
       overflow: hidden;
@@ -80,6 +102,9 @@ export class AlbumFilesModal extends LitElement {
       white-space: nowrap;
       flex: 1;
       min-width: 0;
+    }
+    .file-name.hidden {
+      opacity: 0.4;
     }
     .delete-btn {
       background: none;
@@ -171,13 +196,45 @@ export class AlbumFilesModal extends LitElement {
       const res = await fetch(
         `${getApiBase()}/api/albums/${encodeURIComponent(this._album)}/files`
       );
-      this._files = ((await res.json()) as string[]).sort((a, b) =>
-        a.localeCompare(b)
-      );
+      const data = (await res.json()) as AlbumFile[];
+      this._files = data.sort((a, b) => a.name.localeCompare(b.name));
+      this._syncHiddenFiles();
     } catch {
       this._files = [];
     }
     this._loading = false;
+  }
+
+  private async _toggleVisibility(file: AlbumFile) {
+    const newVisible = !file.visible;
+    try {
+      const res = await fetch(
+        `${getApiBase()}/api/albums/${encodeURIComponent(this._album)}/files/${encodeURIComponent(file.name)}/visibility`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ visible: newVisible })
+        }
+      );
+      if (res.ok) {
+        this._files = this._files.map((f) =>
+          f.name === file.name ? { ...f, visible: newVisible } : f
+        );
+        this._syncHiddenFiles();
+      }
+    } catch (err) {
+      console.error('Toggle visibility failed:', err);
+    }
+  }
+
+  private _syncHiddenFiles() {
+    const hidden = new Set<string>();
+    for (const f of this._files) {
+      if (!f.visible) hidden.add(f.name);
+    }
+    void import('../../map/gpx').then(({ setHiddenFiles }) => {
+      setHiddenFiles(hidden);
+    });
   }
 
   private async _deleteFile(filename: string) {
@@ -187,7 +244,8 @@ export class AlbumFilesModal extends LitElement {
         { method: 'DELETE' }
       );
       if (res.ok) {
-        this._files = this._files.filter((f) => f !== filename);
+        this._files = this._files.filter((f) => f.name !== filename);
+        this._syncHiddenFiles();
         if (filename.toLowerCase().endsWith('.gpx')) {
           const { reloadGpxTracks } = await import('../../map/gpx');
           reloadGpxTracks();
@@ -221,13 +279,6 @@ export class AlbumFilesModal extends LitElement {
       );
       if (res.ok) {
         await this._fetchFiles();
-        const hasGpx = Array.from(files).some((f) =>
-          f.name.toLowerCase().endsWith('.gpx')
-        );
-        if (hasGpx) {
-          const { reloadGpxTracks } = await import('../../map/gpx');
-          reloadGpxTracks();
-        }
       }
     } catch (err) {
       console.error('Upload failed:', err);
@@ -264,11 +315,22 @@ export class AlbumFilesModal extends LitElement {
           ${this._files.map(
             (f) => html`
               <div class="file-row">
-                <span class="file-name">${f}</span>
+                <button
+                  class="vis-btn ${f.visible ? '' : 'hidden'}"
+                  title="${f.visible ? 'Hide' : 'Show'}"
+                  @click=${() => {
+                    void this._toggleVisibility(f);
+                  }}
+                >
+                  ${f.visible ? '\u{1F441}' : '\u{1F441}'}
+                </button>
+                <span class="file-name ${f.visible ? '' : 'hidden'}"
+                  >${f.name}</span
+                >
                 <button
                   class="delete-btn"
                   @click=${() => {
-                    void this._deleteFile(f);
+                    void this._deleteFile(f.name);
                   }}
                 >
                   Delete

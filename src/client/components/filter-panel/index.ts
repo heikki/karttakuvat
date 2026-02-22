@@ -6,12 +6,10 @@ import {
   ChangeMapStyleEvent,
   ChangeMarkerStyleEvent,
   FitToPhotosEvent,
-  GpxDataChangedEvent,
   MeasureModeExitedEvent,
   OpenExternalMapEvent,
   ResetMapEvent,
   SaveEditsEvent,
-  SetGpxVisibleEvent,
   ShowAlbumFilesEvent,
   ToggleMeasureModeEvent
 } from '@common/events';
@@ -21,9 +19,7 @@ import {
   mapStyleFromUrl,
   mapStyleToUrl,
   markerStyleFromUrl,
-  markerStyleToUrl,
-  tracksVisibleFromUrl,
-  tracksVisibleToUrl
+  markerStyleToUrl
 } from '@common/filter-url';
 import { getYear, isVideo } from '@common/utils';
 
@@ -86,8 +82,6 @@ export class FilterPanel extends LitElement {
   @litState() private _mapStyle = 'satellite';
   @litState() private _markerStyle = 'classic';
   @litState() private _measureActive = false;
-  @litState() private _tracksVisible = true;
-  @litState() private _tracksAvailable = false;
 
   private _initialized = false;
   private _gpsClickTimer: ReturnType<typeof setTimeout> | null = null;
@@ -98,7 +92,6 @@ export class FilterPanel extends LitElement {
   override connectedCallback() {
     super.connectedCallback();
     this._restoreFromUrl();
-    document.addEventListener(GpxDataChangedEvent.type, this._onGpxDataChanged);
     document.addEventListener(
       MeasureModeExitedEvent.type,
       this._onMeasureExited
@@ -115,18 +108,10 @@ export class FilterPanel extends LitElement {
   override disconnectedCallback() {
     super.disconnectedCallback();
     document.removeEventListener(
-      GpxDataChangedEvent.type,
-      this._onGpxDataChanged
-    );
-    document.removeEventListener(
       MeasureModeExitedEvent.type,
       this._onMeasureExited
     );
   }
-
-  private readonly _onGpxDataChanged = (e: GpxDataChangedEvent) => {
-    this._tracksAvailable = e.available;
-  };
 
   private readonly _onMeasureExited = () => {
     this._measureActive = false;
@@ -145,7 +130,6 @@ export class FilterPanel extends LitElement {
     if (mapStyle !== null) this._mapStyle = mapStyle;
     const markerStyle = markerStyleFromUrl();
     if (markerStyle !== null) this._markerStyle = markerStyle;
-    this._tracksVisible = tracksVisibleFromUrl();
   }
 
   private _applyInitialFilters() {
@@ -160,7 +144,6 @@ export class FilterPanel extends LitElement {
     this._applyFilters();
     document.dispatchEvent(new ChangeMapStyleEvent(this._mapStyle));
     document.dispatchEvent(new ChangeMarkerStyleEvent(this._markerStyle));
-    document.dispatchEvent(new SetGpxVisibleEvent(this._tracksVisible));
   }
 
   private _getYearPhotos() {
@@ -452,36 +435,18 @@ export class FilterPanel extends LitElement {
                     Measure
                   </button>
                 </div>
-                ${this._tracksAvailable || this._album !== 'all'
+                ${this._album !== 'all'
                   ? html` <div class="view-buttons">
-                      ${this._tracksAvailable
-                        ? html`<button
-                            class="view-btn ${this._tracksVisible
-                              ? 'active'
-                              : ''}"
-                            @click=${() => {
-                              this._tracksVisible = !this._tracksVisible;
-                              tracksVisibleToUrl(this._tracksVisible);
-                              document.dispatchEvent(
-                                new SetGpxVisibleEvent(this._tracksVisible)
-                              );
-                            }}
-                          >
-                            Tracks
-                          </button>`
-                        : nothing}
-                      ${this._album !== 'all'
-                        ? html`<button
-                            class="view-btn"
-                            @click=${() => {
-                              document.dispatchEvent(
-                                new ShowAlbumFilesEvent(this._album)
-                              );
-                            }}
-                          >
-                            Files
-                          </button>`
-                        : nothing}
+                      <button
+                        class="view-btn"
+                        @click=${() => {
+                          document.dispatchEvent(
+                            new ShowAlbumFilesEvent(this._album)
+                          );
+                        }}
+                      >
+                        Files
+                      </button>
                     </div>`
                   : nothing}
                 <div class="view-buttons">

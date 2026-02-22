@@ -10,6 +10,7 @@ import { dirname, join, resolve } from 'node:path';
 const { BrowserView, BrowserWindow, ApplicationMenu, Utils } =
   await import('electrobun/bun');
 
+const { openAppDb } = await import('../server/app-db');
 const { createApiHandler, flushLogBuffer } = await import(
   '../server/api-routes'
 );
@@ -61,6 +62,7 @@ function findDataDir(): string {
 const dataDir = findDataDir();
 console.log(`[main] Data directory: ${dataDir}`);
 
+openAppDb(dataDir);
 const imageCache = createImageCache({ cacheDir: join(dataDir, 'cache') });
 const { routeApiRequest } = createApiHandler(dataDir, { imageCache });
 

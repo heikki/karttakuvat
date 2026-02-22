@@ -69,15 +69,6 @@ export class ResetMapEvent extends Event {
   }
 }
 
-export class SetGpxVisibleEvent extends Event {
-  static readonly type = 'set-gpx-visible';
-  readonly visible: boolean;
-  constructor(visible: boolean) {
-    super(SetGpxVisibleEvent.type);
-    this.visible = visible;
-  }
-}
-
 export class ToggleMeasureModeEvent extends Event {
   static readonly type = 'toggle-measure-mode';
   constructor() {
@@ -102,15 +93,6 @@ export class OpenExternalMapEvent extends Event {
 }
 
 /* ── Map status events (map → filter-panel) ── */
-
-export class GpxDataChangedEvent extends Event {
-  static readonly type = 'gpx-data-changed';
-  readonly available: boolean;
-  constructor(available: boolean) {
-    super(GpxDataChangedEvent.type);
-    this.available = available;
-  }
-}
 
 export class MeasureModeExitedEvent extends Event {
   static readonly type = 'measure-mode-exited';
@@ -142,11 +124,9 @@ declare global {
     [ChangeMarkerStyleEvent.type]: ChangeMarkerStyleEvent;
     [FitToPhotosEvent.type]: FitToPhotosEvent;
     [ResetMapEvent.type]: ResetMapEvent;
-    [SetGpxVisibleEvent.type]: SetGpxVisibleEvent;
     [ToggleMeasureModeEvent.type]: ToggleMeasureModeEvent;
     [OpenExternalMapEvent.type]: OpenExternalMapEvent;
     [SaveEditsEvent.type]: SaveEditsEvent;
-    [GpxDataChangedEvent.type]: GpxDataChangedEvent;
     [MeasureModeExitedEvent.type]: MeasureModeExitedEvent;
     [ShowAlbumFilesEvent.type]: ShowAlbumFilesEvent;
   }

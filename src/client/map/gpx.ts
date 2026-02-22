@@ -5,7 +5,6 @@ import type { GeoJSONSource, Map as MapGL } from 'maplibre-gl';
 
 import { getApiBase } from '@common/api';
 import { state, subscribe } from '@common/data';
-import { GpxDataChangedEvent, SetGpxVisibleEvent } from '@common/events';
 
 // Sources and layers
 const TRACK_SOURCE = 'gpx-tracks';
@@ -25,8 +24,8 @@ const ALL_SOURCES = [TRACK_SOURCE, WAYPOINT_SOURCE];
 
 // Module state
 let map: MapGL | null = null;
-let visible = true;
 let currentAlbum: string | null = null;
+const hiddenFiles = new Set<string>();
 let trackFeatures: Array<Feature<LineString>> = [];
 let waypointFeatures: Array<Feature<Point>> = [];
 
@@ -50,9 +49,6 @@ export function initGpx(m: MapGL): void {
       state.filters.album === 'all' ? null : state.filters.album
     );
   });
-  document.addEventListener(SetGpxVisibleEvent.type, (e) => {
-    setGpxVisible(e.visible);
-  });
 }
 
 export function addGpxLayers(): void {
@@ -64,8 +60,6 @@ export function addGpxLayers(): void {
   for (const id of ALL_SOURCES) {
     if (map.getSource(id) !== undefined) map.removeSource(id);
   }
-
-  const vis = visible ? 'visible' : 'none';
 
   map.addSource(TRACK_SOURCE, {
     type: 'geojson',
@@ -82,7 +76,7 @@ export function addGpxLayers(): void {
     type: 'line',
     source: TRACK_SOURCE,
     paint: { 'line-color': 'rgba(0, 0, 0, 0.4)', 'line-width': 6 },
-    layout: { 'visibility': vis, 'line-cap': 'round', 'line-join': 'round' }
+    layout: { 'visibility': 'visible', 'line-cap': 'round', 'line-join': 'round' }
   });
 
   map.addLayer({
@@ -94,7 +88,7 @@ export function addGpxLayers(): void {
       'line-width': 3,
       'line-opacity': 0.85
     },
-    layout: { 'visibility': vis, 'line-cap': 'round', 'line-join': 'round' }
+    layout: { 'visibility': 'visible', 'line-cap': 'round', 'line-join': 'round' }
   });
 
   map.addLayer({
@@ -107,7 +101,7 @@ export function addGpxLayers(): void {
       'circle-stroke-width': 2,
       'circle-stroke-color': ['get', 'color']
     },
-    layout: { visibility: vis }
+    layout: { visibility: 'visible' }
   });
 
   map.addLayer({
@@ -115,7 +109,7 @@ export function addGpxLayers(): void {
     type: 'symbol',
     source: WAYPOINT_SOURCE,
     layout: {
-      'visibility': vis,
+      'visibility': 'visible',
       'text-field': ['get', 'name'],
       'text-size': 11,
       'text-offset': [0, 1.4],
@@ -143,8 +137,9 @@ export async function loadGpxForAlbum(album: string | null): Promise<void> {
       );
       if (res.ok) {
         const files = (await res.json()) as string[];
+        const visible = files.filter((f) => !hiddenFiles.has(f));
         const color = TRACK_COLORS[nextColorIndex++ % TRACK_COLORS.length]!;
-        await Promise.all(files.map((f) => loadGpxFile(album, f, color)));
+        await Promise.all(visible.map((f) => loadGpxFile(album, f, color)));
       }
     } catch {
       // No GPX files for this album
@@ -283,8 +278,6 @@ function updateSources(): void {
     (wptSrc as GeoJSONSource).setData(fc);
   }
 
-  const hasData = trackFeatures.length > 0 || waypointFeatures.length > 0;
-  document.dispatchEvent(new GpxDataChangedEvent(hasData));
 }
 
 /** Force-reload GPX tracks for the current album. */
@@ -294,17 +287,9 @@ export function reloadGpxTracks(): void {
   void loadGpxForAlbum(album);
 }
 
-export function setGpxVisible(show: boolean): void {
-  visible = show;
-  setLayerVisibility(visible);
-}
-
-function setLayerVisibility(show: boolean): void {
-  if (map === null) return;
-  const v = show ? 'visible' : 'none';
-  for (const id of ALL_LAYERS) {
-    if (map.getLayer(id) !== undefined) {
-      map.setLayoutProperty(id, 'visibility', v);
-    }
-  }
+/** Update the set of hidden filenames and reload tracks. */
+export function setHiddenFiles(hidden: Set<string>): void {
+  hiddenFiles.clear();
+  for (const f of hidden) hiddenFiles.add(f);
+  reloadGpxTracks();
 }

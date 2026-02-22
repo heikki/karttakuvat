@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { serve } from 'bun';
 
+import { openAppDb } from './app-db';
 import { createApiHandler, flushLogBuffer } from './api-routes';
 import { createImageCache } from './image-cache';
 import indexHtml from '../client/index.html';
@@ -17,6 +18,7 @@ if (!existsSync('data/items.json')) {
   }
 }
 
+openAppDb('data');
 const imageCache = createImageCache({ cacheDir: 'data/cache' });
 const { routeApiRequest } = createApiHandler('data', { imageCache });
 

@@ -1,3 +1,8 @@
+import {
+  deleteAlbumFile,
+  getAlbumFiles,
+  setFileVisible
+} from './app-db';
 import type { ImageCache } from './image-cache';
 import {
   openPhotosDb,
@@ -276,7 +281,12 @@ export function createApiHandler(
         const lower = f.toLowerCase();
         return lower.endsWith('.gpx') || lower.endsWith('.md');
       });
-      return Response.json(files);
+      const dbInfo = getAlbumFiles(album);
+      const result = files.map((f) => ({
+        name: f,
+        visible: dbInfo.get(f)?.visible ?? true
+      }));
+      return Response.json(result);
     } catch {
       return Response.json([]);
     }
@@ -290,11 +300,30 @@ export function createApiHandler(
       const { unlink } = await import('node:fs/promises');
       const filePath = `${dataDir}/albums/${album}/${filename}`;
       await unlink(filePath);
+      deleteAlbumFile(album, filename);
       return Response.json({ ok: true });
     } catch (err) {
       console.error('handleDeleteAlbumFile error:', err);
       return new Response(`Server error: ${String(err)}`, { status: 500 });
     }
+  }
+
+  function handleSetFileVisibility(
+    album: string,
+    filename: string,
+    req: Request
+  ): Promise<Response> {
+    return req
+      .json()
+      .then((body: unknown) => {
+        const { visible } = body as { visible: boolean };
+        setFileVisible(album, filename, visible);
+        return Response.json({ ok: true });
+      })
+      .catch((err: unknown) => {
+        console.error('handleSetFileVisibility error:', err);
+        return new Response(`Server error: ${String(err)}`, { status: 500 });
+      });
   }
 
   function handleGetMetadata(uuid: string): Response {
@@ -409,6 +438,18 @@ export function createApiHandler(
     if (albumFilesMatch?.groups !== undefined && req.method === 'GET') {
       return handleGetAlbumFiles(
         decodeURIComponent(albumFilesMatch.groups.album!)
+      );
+    }
+
+    const visibilityMatch =
+      /^\/api\/albums\/(?<album>[^/]+)\/files\/(?<filename>[^/]+)\/visibility$/.exec(
+        pathname
+      );
+    if (visibilityMatch?.groups !== undefined && req.method === 'PUT') {
+      return handleSetFileVisibility(
+        decodeURIComponent(visibilityMatch.groups.album!),
+        decodeURIComponent(visibilityMatch.groups.filename!),
+        req
       );
     }
 
