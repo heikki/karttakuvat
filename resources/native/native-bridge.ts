@@ -4,9 +4,9 @@
  * Provides convertToJpeg, resizeToJpeg, and extractVideoFrame as typed
  * functions matching the old subprocess-based signatures.
  */
-import { dlopen, FFIType, ptr } from 'bun:ffi';
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { dlopen, FFIType, ptr } from 'bun:ffi';
 
 function findDylib(): string {
   const argv0Dir = dirname(process.argv[0] ?? '.');
@@ -16,7 +16,17 @@ function findDylib(): string {
     // 2. Electrobun installed: Contents/MacOS/../Resources/app/
     join(argv0Dir, '..', 'Resources', 'app', 'libkarttakuvat.dylib'),
     // 3. Electrobun dev: Contents/MacOS → up 5 levels → project root/resources/native/
-    join(argv0Dir, '..', '..', '..', '..', '..', 'resources', 'native', 'libkarttakuvat.dylib')
+    join(
+      argv0Dir,
+      '..',
+      '..',
+      '..',
+      '..',
+      '..',
+      'resources',
+      'native',
+      'libkarttakuvat.dylib'
+    )
   ];
   for (const path of candidates) {
     if (existsSync(path)) return path;
@@ -77,10 +87,16 @@ const ERR_BUF_LEN = 1024;
 export function runAppleScript(script: string): void {
   const scriptBuf = toCString(script);
   const errBuf = new Uint8Array(ERR_BUF_LEN);
-  const rc = lib.symbols.runAppleScript(ptr(scriptBuf), ptr(errBuf), ERR_BUF_LEN);
+  const rc = lib.symbols.runAppleScript(
+    ptr(scriptBuf),
+    ptr(errBuf),
+    ERR_BUF_LEN
+  );
   if (rc !== 0) {
     const nullIdx = errBuf.indexOf(0);
-    const msg = new TextDecoder().decode(errBuf.subarray(0, nullIdx === -1 ? undefined : nullIdx));
+    const msg = new TextDecoder().decode(
+      errBuf.subarray(0, nullIdx === -1 ? undefined : nullIdx)
+    );
     throw new Error(`AppleScript failed: ${msg}`);
   }
 }
