@@ -6,8 +6,8 @@ Geotagged photo map viewer with Apple Photos integration.
 
 - **TypeScript files**: 42
 - **Lines of code**: 9,697
-- **Total commits**: 444
-- **Total tokens**: 966M | **Total cost**: $597
+- **Total commits**: 445
+- **Total tokens**: 969M | **Total cost**: $599
 
 ## Updating This Diary
 
@@ -29,7 +29,7 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 
 ## 22.02.2026 — SQLite Migration, Album Management & View State Persistence
 
-**Tokens**: 58M | **Cost**: $33
+**Tokens**: 76M | **Cost**: $43
 
 - Reorganized root directory structure, moved data files to `data/`
 - Migrated `items.json` to SQLite `items` table in `app.db`
