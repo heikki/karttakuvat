@@ -259,18 +259,6 @@ export function createApiHandler(
     }
   }
 
-  async function handleGetGpxFiles(album: string): Promise<Response> {
-    try {
-      const { readdir } = await import('node:fs/promises');
-      const dir = `${dataDir}/albums/${album}`;
-      const entries = await readdir(dir).catch(() => [] as string[]);
-      const gpxFiles = entries.filter((f) => f.toLowerCase().endsWith('.gpx'));
-      return Response.json(gpxFiles);
-    } catch {
-      return Response.json([]);
-    }
-  }
-
   async function handleGetAlbumFiles(album: string): Promise<Response> {
     try {
       const { readdir } = await import('node:fs/promises');
@@ -438,11 +426,6 @@ export function createApiHandler(
         req,
         decodeURIComponent(uploadMatch.groups.album!)
       );
-    }
-
-    const gpxMatch = /^\/api\/gpx\/(?<album>.+)$/.exec(pathname);
-    if (gpxMatch?.groups !== undefined && req.method === 'GET') {
-      return handleGetGpxFiles(decodeURIComponent(gpxMatch.groups.album!));
     }
 
     const albumFilesMatch = /^\/api\/albums\/(?<album>[^/]+)\/files$/.exec(
