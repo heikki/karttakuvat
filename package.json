@@ -21,7 +21,6 @@
     "@types/bun": "latest",
     "@types/geojson": "^7946.0.16",
     "@types/maplibre-gl": "^1.14.0",
-    "bun-tsconfig-paths": "^0.1.1",
     "eslint": "^9.39.2",
     "eslint-config-love": "^145.0.0",
     "prettier": "^3.8.0"
@@ -30,7 +29,6 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@kikuchan/decimal": "^0.1.0-alpha.7",
     "@turf/distance": "^7.3.4",
     "@turf/helpers": "^7.3.4",
     "electrobun": "^1.13.1",
