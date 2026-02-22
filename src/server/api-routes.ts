@@ -267,6 +267,36 @@ export function createApiHandler(
     }
   }
 
+  async function handleGetAlbumFiles(album: string): Promise<Response> {
+    try {
+      const { readdir } = await import('node:fs/promises');
+      const dir = `${dataDir}/albums/${album}`;
+      const entries = await readdir(dir).catch(() => [] as string[]);
+      const files = entries.filter((f) => {
+        const lower = f.toLowerCase();
+        return lower.endsWith('.gpx') || lower.endsWith('.md');
+      });
+      return Response.json(files);
+    } catch {
+      return Response.json([]);
+    }
+  }
+
+  async function handleDeleteAlbumFile(
+    album: string,
+    filename: string
+  ): Promise<Response> {
+    try {
+      const { unlink } = await import('node:fs/promises');
+      const filePath = `${dataDir}/albums/${album}/${filename}`;
+      await unlink(filePath);
+      return Response.json({ ok: true });
+    } catch (err) {
+      console.error('handleDeleteAlbumFile error:', err);
+      return new Response(`Server error: ${String(err)}`, { status: 500 });
+    }
+  }
+
   function handleGetMetadata(uuid: string): Response {
     try {
       const record = queryMetadata(getPhotosDb(), uuid);
@@ -372,6 +402,25 @@ export function createApiHandler(
     const gpxMatch = /^\/api\/gpx\/(?<album>.+)$/.exec(pathname);
     if (gpxMatch?.groups !== undefined && req.method === 'GET') {
       return handleGetGpxFiles(decodeURIComponent(gpxMatch.groups.album!));
+    }
+
+    const albumFilesMatch =
+      /^\/api\/albums\/(?<album>[^/]+)\/files$/.exec(pathname);
+    if (albumFilesMatch?.groups !== undefined && req.method === 'GET') {
+      return handleGetAlbumFiles(
+        decodeURIComponent(albumFilesMatch.groups.album!)
+      );
+    }
+
+    const deleteFileMatch =
+      /^\/api\/albums\/(?<album>[^/]+)\/files\/(?<filename>[^/]+)$/.exec(
+        pathname
+      );
+    if (deleteFileMatch?.groups !== undefined && req.method === 'DELETE') {
+      return handleDeleteAlbumFile(
+        decodeURIComponent(deleteFileMatch.groups.album!),
+        decodeURIComponent(deleteFileMatch.groups.filename!)
+      );
     }
 
     const metadataMatch = /^\/api\/metadata\/(?<id>[A-F0-9-]+)$/i.exec(

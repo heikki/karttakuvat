@@ -119,6 +119,15 @@ export class MeasureModeExitedEvent extends Event {
   }
 }
 
+export class ShowAlbumFilesEvent extends Event {
+  static readonly type = 'show-album-files';
+  readonly album: string;
+  constructor(album: string) {
+    super(ShowAlbumFilesEvent.type);
+    this.album = album;
+  }
+}
+
 declare global {
   interface HTMLElementEventMap {
     [ShowLightboxEvent.type]: ShowLightboxEvent;
@@ -139,5 +148,6 @@ declare global {
     [SaveEditsEvent.type]: SaveEditsEvent;
     [GpxDataChangedEvent.type]: GpxDataChangedEvent;
     [MeasureModeExitedEvent.type]: MeasureModeExitedEvent;
+    [ShowAlbumFilesEvent.type]: ShowAlbumFilesEvent;
   }
 }

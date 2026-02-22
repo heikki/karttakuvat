@@ -12,6 +12,7 @@ import {
   ResetMapEvent,
   SaveEditsEvent,
   SetGpxVisibleEvent,
+  ShowAlbumFilesEvent,
   ToggleMeasureModeEvent
 } from '@common/events';
 import {
@@ -24,7 +25,6 @@ import {
   tracksVisibleFromUrl,
   tracksVisibleToUrl
 } from '@common/filter-url';
-import { getApiBase } from '@common/api';
 import { getYear, isVideo } from '@common/utils';
 
 import { StoreController } from './store-controller';
@@ -282,41 +282,6 @@ export class FilterPanel extends LitElement {
     this._applyFilters();
   }
 
-  private get _fileInput(): HTMLInputElement | null {
-    return this.renderRoot.querySelector('input[type="file"]');
-  }
-
-  private readonly _onFileUpload = async (e: Event) => {
-    const input = e.target as HTMLInputElement;
-    const files = input.files;
-    if (files === null || files.length === 0 || this._album === 'all') return;
-
-    const formData = new FormData();
-    for (let i = 0; i < files.length; i++) {
-      formData.append('file', files[i]!);
-    }
-
-    try {
-      const res = await fetch(
-        `${getApiBase()}/api/albums/${encodeURIComponent(this._album)}/upload`,
-        { method: 'POST', body: formData }
-      );
-      if (res.ok) {
-        const hasGpx = Array.from(files).some((f) =>
-          f.name.toLowerCase().endsWith('.gpx')
-        );
-        if (hasGpx) {
-          const { reloadGpxTracks } = await import('../../map/gpx');
-          reloadGpxTracks();
-        }
-      }
-    } catch (err) {
-      console.error('Upload failed:', err);
-    }
-
-    input.value = '';
-  };
-
   private _onReset() {
     this._year = 'all';
     this._album = 'all';
@@ -507,20 +472,15 @@ export class FilterPanel extends LitElement {
                         : nothing}
                       ${this._album !== 'all'
                         ? html`<button
-                              class="view-btn"
-                              @click=${() => {
-                                this._fileInput?.click();
-                              }}
-                            >
-                              Add GPX
-                            </button>
-                            <input
-                              type="file"
-                              accept=".gpx,.md"
-                              multiple
-                              style="display:none"
-                              @change=${this._onFileUpload}
-                            />`
+                            class="view-btn"
+                            @click=${() => {
+                              document.dispatchEvent(
+                                new ShowAlbumFilesEvent(this._album)
+                              );
+                            }}
+                          >
+                            Files
+                          </button>`
                         : nothing}
                     </div>`
                   : nothing}
