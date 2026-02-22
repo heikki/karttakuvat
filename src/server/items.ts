@@ -27,7 +27,7 @@ export interface ItemEntry {
 const DEFAULT_ALBUM_UUID = '81938C84-C5B0-4258-BC19-0B3EFA9BF296';
 
 /** Format duration in seconds to "M:SS" or "H:MM:SS". */
-export function formatDuration(seconds: number | null): string | null {
+function formatDuration(seconds: number | null): string | null {
   if (seconds === null || seconds === 0) return null;
   const s = Math.trunc(seconds);
   if (s < 3600) {
@@ -39,7 +39,7 @@ export function formatDuration(seconds: number | null): string | null {
 }
 
 /** Convert local date + tz offset to UTC sortable string. */
-export function dateToUtc(dateStr: string, tz: string | null): string {
+function dateToUtc(dateStr: string, tz: string | null): string {
   if (dateStr === '' || tz === null || tz === '') return dateStr;
   try {
     const match =

@@ -24,7 +24,7 @@ import {
 } from '../../resources/native/native-bridge';
 import type { AssetRecord } from './photos-db';
 
-export interface ImageCacheConfig {
+interface ImageCacheConfig {
   cacheDir: string;
   libraryPath?: string;
 }
@@ -46,7 +46,7 @@ function createThumbnail(fullPath: string, thumbPath: string): boolean {
 
 // ---------- Path resolution ----------
 
-export function resolveOriginalPath(
+function resolveOriginalPath(
   libraryPath: string,
   directory: string | null,
   filename: string | null
@@ -56,7 +56,7 @@ export function resolveOriginalPath(
   return existsSync(p) ? p : null;
 }
 
-export function resolveEditedPath(
+function resolveEditedPath(
   libraryPath: string,
   directory: string | null,
   filename: string | null
@@ -190,7 +190,7 @@ export function createImageCache(config: ImageCacheConfig): ImageCache {
     }
   }
 
-  function resolveImpl(
+  function resolve(
     uuid: string,
     size: 'full' | 'thumb',
     asset: AssetRecord
@@ -232,14 +232,6 @@ export function createImageCache(config: ImageCacheConfig): ImageCache {
     }
 
     return cachedPath;
-  }
-
-  function resolve(
-    uuid: string,
-    size: 'full' | 'thumb',
-    asset: AssetRecord
-  ): string | null {
-    return resolveImpl(uuid, size, asset);
   }
 
   function invalidate(uuid: string): void {

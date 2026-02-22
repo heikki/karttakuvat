@@ -25,13 +25,13 @@ import {
   tzOffsetToSeconds
 } from './photos-edit';
 
-export interface LocationEdit {
+interface LocationEdit {
   uuid: string;
   lat: number;
   lon: number;
 }
 
-export interface TimeEdit {
+interface TimeEdit {
   uuid: string;
   hours: number;
 }
@@ -130,9 +130,9 @@ function applyTimeEdits(items: ItemRecord[], edits: TimeEdit[]) {
 function processLocationEdits(
   edits: LocationEdit[],
   itemsByUuid: Map<string, ItemRecord>
-): { error?: Response; tzResults: Map<string, string | null> } {
+): Map<string, string | null> {
   const tzResults = new Map<string, string | null>();
-  if (edits.length === 0) return { tzResults };
+  if (edits.length === 0) return tzResults;
 
   for (const edit of edits) {
     const item = itemsByUuid.get(edit.uuid);
@@ -157,15 +157,13 @@ function processLocationEdits(
     }
   }
 
-  return { tzResults };
+  return tzResults;
 }
 
 function processTimeEdits(
   edits: TimeEdit[],
   itemsByUuid: Map<string, ItemRecord>
-): Response | null {
-  if (edits.length === 0) return null;
-
+): void {
   for (const edit of edits) {
     const item = itemsByUuid.get(edit.uuid);
     if (item === undefined) continue;
@@ -181,11 +179,9 @@ function processTimeEdits(
       logEditResult('⏰', edit.uuid, msg);
     }
   }
-
-  return null;
 }
 
-export interface ApiHandlerOptions {
+interface ApiHandlerOptions {
   imageCache?: ImageCache;
 }
 
@@ -214,11 +210,6 @@ export function createApiHandler(
       );
     }
     return assetIndex;
-  }
-
-  /** Invalidate the in-memory asset index so it reloads on next request. */
-  function reloadAssetIndex(): void {
-    assetIndex = null;
   }
 
   async function handleUploadAlbumFile(
@@ -343,11 +334,8 @@ export function createApiHandler(
         allItems.map((i) => [i.uuid, i])
       );
 
-      const locResult = processLocationEdits(locationEdits, itemsByUuid);
-      if (locResult.error !== undefined) return locResult.error;
-
-      const timeError = processTimeEdits(timeEdits, itemsByUuid);
-      if (timeError !== null) return timeError;
+      const tzResults = processLocationEdits(locationEdits, itemsByUuid);
+      processTimeEdits(timeEdits, itemsByUuid);
 
       if (locationEdits.length > 0 || timeEdits.length > 0) {
         quitPhotosApp();
@@ -355,7 +343,7 @@ export function createApiHandler(
 
       // Apply edits to in-memory items, then persist to DB
       const editedItems = [...itemsByUuid.values()];
-      applyLocationEdits(editedItems, locationEdits, locResult.tzResults);
+      applyLocationEdits(editedItems, locationEdits, tzResults);
       applyTimeEdits(editedItems, timeEdits);
 
       // Persist each edited item to DB
@@ -493,23 +481,5 @@ export function createApiHandler(
     return null;
   }
 
-  /** Route a request: try API routes first, then serve static files from dataDir. */
-  async function routeRequest(req: Request, url: URL): Promise<Response> {
-    const apiResponse = routeApiRequest(req, url.pathname);
-    if (apiResponse !== null) {
-      const resolved = await apiResponse;
-      if (resolved !== null) return resolved;
-    }
-
-    const decodedPath = decodeURIComponent(url.pathname);
-
-    const file = Bun.file(`${dataDir}${decodedPath}`);
-    if (file.size > 0) {
-      return new Response(file);
-    }
-
-    return new Response('Not Found', { status: 404 });
-  }
-
-  return { routeApiRequest, routeRequest, reloadAssetIndex };
+  return { routeApiRequest };
 }

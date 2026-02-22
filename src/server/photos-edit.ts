@@ -18,13 +18,6 @@ import { runAppleScript } from '../../resources/native/native-bridge';
 // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/consistent-type-imports -- CJS interop
 const { find: geoTzFind } = require('geo-tz') as typeof import('geo-tz');
 
-export interface EditResult {
-  uuid: string;
-  ok: boolean;
-  tz?: string | null;
-  error?: string;
-}
-
 // ---------- AppleScript helpers ----------
 
 /** Set location via AppleScript (Photos.app must be running). */

@@ -132,7 +132,12 @@ function validateSchema(db: Database): void {
 
 // ---------- Join table discovery ----------
 
+const joinTableCache = new WeakMap<Database, JoinTableInfo>();
+
 function discoverJoinTable(db: Database): JoinTableInfo {
+  const cached = joinTableCache.get(db);
+  if (cached !== undefined) return cached;
+
   const tables = db
     .query<
       { name: string },
@@ -150,7 +155,13 @@ function discoverJoinTable(db: Database): JoinTableInfo {
     const assetCol = cols.find((c) => /^Z_\d+ASSETS$/.exec(c) !== null);
 
     if (albumCol !== undefined && assetCol !== undefined) {
-      return { tableName: name, albumColumn: albumCol, assetColumn: assetCol };
+      const info = {
+        tableName: name,
+        albumColumn: albumCol,
+        assetColumn: assetCol
+      };
+      joinTableCache.set(db, info);
+      return info;
     }
   }
 
@@ -182,13 +193,6 @@ function formatTzOffset(seconds: number | null): string | null {
   return `${sign}${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
-function formatCameraApple(mod: string): string | null {
-  if (mod === '') {
-    return null;
-  }
-  return mod;
-}
-
 function formatCameraBrand(m: string, mod: string): string | null {
   let cleanMake = m;
   let cleanModel = mod;
@@ -210,6 +214,7 @@ function formatCameraBrand(m: string, mod: string): string | null {
   return `${cleanMake} ${cleanModel}`;
 }
 
+// eslint-disable-next-line complexity -- straightforward branching on make/model variants
 function formatCamera(
   make: string | null,
   model: string | null
@@ -226,7 +231,7 @@ function formatCamera(
     return null;
   }
   if (m === 'Apple') {
-    return formatCameraApple(mod);
+    return mod === '' ? null : mod;
   }
   if (mod.toLowerCase().startsWith(m.toLowerCase())) {
     return mod;
@@ -368,20 +373,6 @@ function loadAlbums(
 
 // ---------- Public query functions ----------
 
-/** Fast count of visible photos + videos in the library. */
-export function countAssets(db: Database): { photos: number; videos: number } {
-  const row = db
-    .query<{ photos: number; videos: number }, []>(
-      `SELECT
-      SUM(CASE WHEN ZKIND = 0 THEN 1 ELSE 0 END) AS photos,
-      SUM(CASE WHEN ZKIND = 1 THEN 1 ELSE 0 END) AS videos
-    FROM ZASSET WHERE ZHIDDEN = 0 AND ZTRASHEDSTATE = 0`
-    )
-    .get()!;
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- SQLite SUM() returns null for empty result sets
-  return { photos: row.photos ?? 0, videos: row.videos ?? 0 };
-}
-
 export function queryPhotos(db: Database): PhotoRecord[] {
   const joinTable = discoverJoinTable(db);
   const rows = db
@@ -401,16 +392,6 @@ export function queryVideos(db: Database): PhotoRecord[] {
       []
     >(`${BASE_SQL} WHERE a.ZKIND = 1 AND a.ZHIDDEN = 0 AND a.ZTRASHEDSTATE = 0`)
     .all();
-  return buildRecords(db, rows, joinTable);
-}
-
-export function queryByUuids(db: Database, uuids: string[]): PhotoRecord[] {
-  if (uuids.length === 0) return [];
-  const joinTable = discoverJoinTable(db);
-  const placeholders = uuids.map(() => '?').join(',');
-  const rows = db
-    .query<RawRow, string[]>(`${BASE_SQL} WHERE a.ZUUID IN (${placeholders})`)
-    .all(...uuids);
   return buildRecords(db, rows, joinTable);
 }
 
@@ -453,26 +434,6 @@ export function queryAssetIndex(db: Database): Map<string, AssetRecord> {
     });
   }
   return map;
-}
-
-export function queryEdited(db: Database): PhotoRecord[] {
-  const joinTable = discoverJoinTable(db);
-  const rows = db
-    .query<
-      RawRow,
-      []
-    >(`${BASE_SQL} WHERE a.ZADJUSTMENTSSTATE > 0 AND a.ZHIDDEN = 0 AND a.ZTRASHEDSTATE = 0`)
-    .all();
-  return buildRecords(db, rows, joinTable);
-}
-
-export function queryOne(db: Database, uuid: string): PhotoRecord | null {
-  const joinTable = discoverJoinTable(db);
-  const rows = db
-    .query<RawRow, [string]>(`${BASE_SQL} WHERE a.ZUUID = ?`)
-    .all(uuid);
-  const records = buildRecords(db, rows, joinTable);
-  return records[0] ?? null;
 }
 
 // ---------- Metadata helpers ----------
@@ -702,4 +663,3 @@ export function queryMetadata(
 
   return result;
 }
-
