@@ -191,7 +191,12 @@ function loadWindowState(): {
   try {
     const raw = getSetting('window');
     if (raw === null) return defaultFrame;
-    return JSON.parse(raw) as { x: number; y: number; width: number; height: number };
+    return JSON.parse(raw) as {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    };
   } catch {
     return defaultFrame;
   }
