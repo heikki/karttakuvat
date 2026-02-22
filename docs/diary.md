@@ -2,12 +2,12 @@
 
 Geotagged photo map viewer with Apple Photos integration.
 
-## Project Stats (as of 21.02.2026)
+## Project Stats (as of 22.02.2026)
 
-- **TypeScript files**: 32
-- **Lines of code**: 6,934
-- **Total commits**: 416
-- **Total tokens**: 889M | **Total cost**: $553.47
+- **TypeScript files**: 43
+- **Lines of code**: 9,661
+- **Total commits**: 439
+- **Total tokens**: 953M | **Total cost**: $589.09
 
 ## Updating This Diary
 
@@ -26,6 +26,20 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 - Use flat bullet lists (no bold subsections or nested structure)
 - Focus on significant features and fixes, skip minor tweaks
 - Describe final outcomes, not intermediate attempts that were reverted
+
+## 22.02.2026 — SQLite Migration, Album Management & View State Persistence
+
+**Tokens**: 58M | **Cost**: $33
+
+- Reorganized root directory structure, moved data files to `data/`
+- Migrated `items.json` to SQLite `items` table in `app.db`
+- Added album file management: upload/delete GPX and markdown files per album, with modal dialog
+- Added per-file visibility toggles with server-side SQLite persistence
+- Replaced `/api/gpx/{album}` with `/api/albums/{album}/files` for unified file management
+- Persisted view state (map position, filters, style) between sessions via `settings` table and `localStorage`
+- Desktop app waits for initial sync before showing the page
+- Fixed image rotation for HEIC conversions and edited photos
+- Removed web production build, kept dev server for debugging
 
 ## 21.02.2026 — Python Replacement, Electrobun Desktop App & Native AppleScript
 

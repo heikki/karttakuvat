@@ -24,7 +24,7 @@ The user picks a year from the dropdown. The album and camera dropdowns are repo
 
 ## Filter by album
 
-The user picks an album from the dropdown (options are filtered by the selected year). The camera dropdown is repopulated to show only cameras used in photos matching the current year + album. If GPX track data is available for the selected album, it is loaded and displayed on the map, and a "Tracks" toggle button appears.
+The user picks an album from the dropdown (options are filtered by the selected year). The camera dropdown is repopulated to show only cameras used in photos matching the current year + album. If GPX track data is available for the selected album, visible tracks are loaded and displayed on the map.
 
 ## Filter by camera
 
@@ -96,7 +96,11 @@ The popup and the lightbox show a Photos.app link button (visible when the photo
 
 ## View GPX tracks
 
-When the user selects an album that has associated GPX files, the tracks are automatically loaded and displayed on the map as colored lines with waypoint markers. A "Tracks" button appears in the filter panel to toggle track visibility. Track visibility is persisted in the URL.
+When the user selects an album that has associated GPX files, the visible tracks are automatically loaded and displayed on the map as colored lines with waypoint markers. Track visibility is managed per-file via the album files modal.
+
+## Manage album files
+
+When an album is selected, the user clicks the "Files" button in the filter panel to open the album files modal. The modal lists all GPX and markdown files associated with the album. The user can upload new files via drag-and-drop or file picker, toggle file visibility (hidden files are excluded from the map), or delete files. Changes take effect immediately on the map.
 
 ## Measure distances on the map
 

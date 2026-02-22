@@ -11,12 +11,13 @@ The app uses Lit web components (`LitElement`) for all UI panels:
 - `<photo-lightbox>` — full-screen photo viewer
 - `<metadata-modal>` — detailed photo metadata overlay
 - `<placement-panel>` — location placement UI
+- `<album-files-modal>` — album file management dialog
 
 ## Startup
 
 1. `initMap()` — creates MapLibre map with globe projection, adds controls, initializes popup/measure/fit/GPX subsystems, sets up globe background shader
 2. `initSave()` — wires up save/edit event listeners
-3. `loadPhotos()` — fetches `items.json`, sorts by date
+3. `loadPhotos()` — fetches items from `/api/items`, sorts by date
 4. `<filter-panel>` detects loaded photos via `updated()` lifecycle hook, restores filters/map style/marker style/tracks visibility from URL, validates cascading filter options, applies filters, and dispatches initial map style/marker style/GPX visibility events
 5. On map load: adds GPX layers, photo layers, measure layers, sets up marker interactions, updates markers, reopens popup from URL, fits to all photos (skipped if map view restored from URL)
 
@@ -196,8 +197,8 @@ Full-screen overlay showing detailed photo metadata from Photos.app (via osxphot
 
 Displays GPX track data on the map when an album is selected.
 
-- On album filter change, fetches GPX file list from `/api/gpx/{album}` (dev server API)
-- Fetches actual `.gpx` files from `/albums/{album}/{filename}`
+- On album filter change, fetches file list from `/api/albums/{album}/files`
+- Loads visible `.gpx` files from `data/albums/{album}/{filename}`
 - Parses GPX tracks (`<trk>`) and waypoints (`<wpt>`), including elevation data
 - Computes total track distance (via `@turf/distance`) and elevation gain/loss
 - Each album gets a color from a rotating palette of 8 colors
@@ -209,9 +210,9 @@ Displays GPX track data on the map when an album is selected.
 - **Waypoint circles** (`gpx-waypoint-circles`): White circles with colored stroke (radius 5)
 - **Waypoint labels** (`gpx-waypoint-labels`): White text with dark halo, offset below circle
 
-### Tracks Toggle
+### Track Visibility
 
-When GPX data is available for the current album, a "Tracks" button appears in the filter panel (highlighted blue when active). Clicking toggles track visibility. Visibility is persisted in the URL as `tracks=0` (hidden); absence means visible.
+GPX track visibility is controlled per-file via the album files modal. Hidden files are excluded from track rendering on the map. Visibility state is persisted in the `album_files` table in `app.db`.
 
 ## Measurement Mode
 
@@ -237,7 +238,7 @@ Fixed top-right (220px wide). Collapsible — clicking the header toggles the pa
 - "Fit" button — fits map to filtered photos and opens popup on first photo
 - "Reset" button — closes popup, exits measure mode, resets all filters to defaults, resets map style to satellite, clears URL params, fits to all photos
 - "Measure" button — toggles distance measurement mode (highlighted blue when active)
-- "Tracks" button (conditional) — toggles GPX track visibility (highlighted blue when active, only shown when GPX data is available)
+- "Files" button (conditional) — opens album files management modal (only shown when an album is selected)
 - "Apple Maps" button — opens Apple Maps at the current map center or selected photo location (satellite view)
 - "Google Maps" button — opens Google Maps at the current map center or selected photo location
 - Pending edits section (hidden when no edits): count + Save/Discard buttons
@@ -251,13 +252,35 @@ App state is persisted in URL query parameters:
 - **Map view**: `lat`, `lon`, `z` (zoom) — updated on every map move
 - **Map style**: `style` (e.g. `topo`, `mml_maastokartta`). Default `satellite` is omitted.
 - **Marker style**: `markers` (e.g. `points`). Default `classic` is omitted.
-- **Tracks**: `tracks` (e.g. `0` for hidden). Default visible is omitted.
 
-On startup, saved URL state is restored: filters are applied, map view is positioned, map style is set, marker style is set, tracks visibility is restored, and the selected photo popup is reopened. The Reset button clears all URL params.
+On startup, saved URL state is restored: filters are applied, map view is positioned, map style is set, marker style is set, and the selected photo popup is reopened. The Reset button clears all URL params.
+
+## Album Files Management
+
+Each album can have associated GPX tracks and markdown notes, managed via the album files modal.
+
+- **Open**: "Files" button appears in the filter panel when an album is selected
+- **Upload**: drag-and-drop or file picker for `.gpx` and `.md` files, uploaded via POST `/api/albums/{album}/upload`
+- **Storage**: files stored on disk in `data/albums/{album_name}/`
+- **Visibility**: each file has a toggle to show/hide it; state persisted in `album_files` table in `app.db`
+- **Deletion**: files can be deleted via the modal, removing both the disk file and DB record
+- **GPX integration**: hidden files are excluded from track rendering on the map
+
+## Data Storage
+
+Photo metadata is stored in the `items` table in `app.db` (SQLite), populated by the sync script from the Apple Photos database. The API serves items via GET `/api/items`. The `settings` table stores app state (window position, view state). The `album_files` table tracks per-file visibility for album assets.
+
+### View State Persistence
+
+Map position, filters, map style, and marker style are persisted between sessions:
+
+- **Desktop app**: saved to the `settings` table (key `view`) via PUT `/api/view-state`, restored on startup by building the URL with saved query params
+- **Web version**: saved to `localStorage`, restored synchronously at module load before components initialize
+- Both use debounced 1-second save on state changes
 
 ## Desktop App (Electrobun)
 
-The app is packaged as a native macOS desktop app using Electrobun (Bun + system webview). Entry point: `src/bun/index.ts`.
+The app is packaged as a native macOS desktop app using Electrobun (Bun + system webview). Entry point: `src/app/index.ts`.
 
 ### Architecture
 
@@ -283,7 +306,7 @@ Images are converted on demand from the Apple Photos library using a native ObjC
 
 ### Window State Persistence
 
-Window position and size are saved to `~/Library/Application Support/Karttakuvat/window-state.json` on move/resize (debounced 500ms) and restored on launch.
+Window position and size are saved to the `settings` table in `app.db` (key `window`) on move/resize (debounced 500ms) and restored on launch.
 
 ### External Link Handling
 
@@ -295,7 +318,7 @@ If the `/api/metadata/:uuid` endpoint returns a 500 error indicating Photos.sqli
 
 ### Data Directory
 
-Dev builds use `public/` in the project root. Installed builds use `~/Library/Application Support/Karttakuvat/` (overridable via `KARTTAKUVAT_DATA_DIR` env var).
+Dev builds use `data/` in the project root. Installed builds use `~/Library/Application Support/Karttakuvat/` (overridable via `KARTTAKUVAT_DATA_DIR` env var). Contains `app.db`, `cache/` (image cache), and `albums/` (GPX/markdown files).
 
 ## Keyboard Shortcuts
 
