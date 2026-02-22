@@ -33,8 +33,14 @@ extern "C" int convertToJpeg(const char* inPath, const char* outPath, float qual
         if (!source) return 1;
 
         CGImageRef image = CGImageSourceCreateImageAtIndex(source, 0, NULL);
+        // Copy source properties (includes EXIF orientation) so the output
+        // JPEG retains the correct rotation metadata.
+        CFDictionaryRef sourceProps = CGImageSourceCopyPropertiesAtIndex(source, 0, NULL);
         CFRelease(source);
-        if (!image) return 2;
+        if (!image) {
+            if (sourceProps) CFRelease(sourceProps);
+            return 2;
+        }
 
         CGImageDestinationRef dest = CGImageDestinationCreateWithURL(
             (__bridge CFURLRef)outputURL,
@@ -43,13 +49,16 @@ extern "C" int convertToJpeg(const char* inPath, const char* outPath, float qual
         );
         if (!dest) {
             CGImageRelease(image);
+            if (sourceProps) CFRelease(sourceProps);
             return 3;
         }
 
-        NSDictionary* opts = @{
-            (__bridge NSString*)kCGImageDestinationLossyCompressionQuality: @(quality)
-        };
+        NSMutableDictionary* opts = sourceProps
+            ? [NSMutableDictionary dictionaryWithDictionary:(__bridge NSDictionary*)sourceProps]
+            : [NSMutableDictionary dictionary];
+        opts[(__bridge NSString*)kCGImageDestinationLossyCompressionQuality] = @(quality);
         CGImageDestinationAddImage(dest, image, (__bridge CFDictionaryRef)opts);
+        if (sourceProps) CFRelease(sourceProps);
         bool ok = CGImageDestinationFinalize(dest);
 
         CFRelease(dest);
