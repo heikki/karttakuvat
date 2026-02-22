@@ -244,7 +244,7 @@ function buildViewUrl(): string {
 
 const win = new BrowserWindow<typeof rpc>({
   title: 'Karttakuvat',
-  url: buildViewUrl(),
+  url: 'about:blank',
   frame: savedFrame,
   rpc
 });
@@ -459,9 +459,7 @@ async function runSyncQuiet() {
   runningScript = null; // eslint-disable-line require-atomic-updates -- intentional sequential reset
   win.setTitle('Karttakuvat');
 
-  if (exitCode === 0) {
-    win.webview.loadURL(buildViewUrl());
-  } else {
+  if (exitCode !== 0) {
     console.log(`[main] Quiet sync failed with exit code ${exitCode}`);
   }
 }
@@ -504,7 +502,9 @@ ApplicationMenu.on('application-menu-clicked', (event: unknown) => {
   }
 });
 
-// Auto-sync on startup
-void runSyncQuiet();
-
-console.log('[main] Initialization complete');
+// Auto-sync on startup, then show app
+void (async () => {
+  await runSyncQuiet();
+  win.webview.loadURL(buildViewUrl());
+  console.log('[main] Initialization complete');
+})();
