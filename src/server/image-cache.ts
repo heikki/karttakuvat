@@ -69,7 +69,7 @@ export function resolveEditedPath(
   try {
     const files = readdirSync(rendersDir);
     const rendered = files.find(
-      (f) => f.startsWith(stem) && /\.(jpe?g|heic|heif|tiff?)$/i.test(f)
+      (f) => f.startsWith(stem) && /\.(?:jpe?g|heic|heif|tiff?)$/i.test(f)
     );
     if (rendered !== undefined) return join(rendersDir, rendered);
   } catch {

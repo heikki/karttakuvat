@@ -435,8 +435,9 @@ export class FilterPanel extends LitElement {
                     Measure
                   </button>
                 </div>
-                ${this._album !== 'all'
-                  ? html` <div class="view-buttons">
+                ${this._album === 'all'
+                  ? nothing
+                  : html` <div class="view-buttons">
                       <button
                         class="view-btn"
                         @click=${() => {
@@ -447,8 +448,7 @@ export class FilterPanel extends LitElement {
                       >
                         Files
                       </button>
-                    </div>`
-                  : nothing}
+                    </div>`}
                 <div class="view-buttons">
                   <button
                     class="view-btn"

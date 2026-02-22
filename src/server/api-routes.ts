@@ -232,14 +232,19 @@ export function createApiHandler(
       const formData = await req.formData();
       const results: string[] = [];
 
-      for (const value of formData.getAll('file')) {
-        if (!(value instanceof File)) continue;
-        const name = value.name.toLowerCase();
-        if (!name.endsWith('.gpx') && !name.endsWith('.md')) continue;
-        const bytes = await value.arrayBuffer();
-        await Bun.write(`${dir}/${value.name}`, bytes);
-        results.push(value.name);
-      }
+      const writes = formData
+        .getAll('file')
+        .filter((value): value is File => {
+          if (!(value instanceof File)) return false;
+          const name = value.name.toLowerCase();
+          return name.endsWith('.gpx') || name.endsWith('.md');
+        })
+        .map(async (file) => {
+          const bytes = await file.arrayBuffer();
+          await Bun.write(`${dir}/${file.name}`, bytes);
+          return file.name;
+        });
+      results.push(...(await Promise.all(writes)));
 
       if (results.length === 0) {
         return new Response('No valid files (.gpx, .md) in upload', {

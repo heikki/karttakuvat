@@ -168,7 +168,7 @@ export class AlbumFilesModal extends LitElement {
   private readonly _onShowAlbumFiles = (e: ShowAlbumFilesEvent) => {
     this._album = e.album;
     this.active = true;
-    this._fetchFiles();
+    void this._fetchFiles();
   };
 
   private readonly _onHostClick = (e: Event) => {
@@ -269,7 +269,7 @@ export class AlbumFilesModal extends LitElement {
 
     const formData = new FormData();
     for (let i = 0; i < files.length; i++) {
-      formData.append('file', files[i]!);
+      formData.append('file', files.item(i)!);
     }
 
     try {
