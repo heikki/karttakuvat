@@ -3,6 +3,7 @@ node_modules
 .DS_Store
 data/cache
 data/items.json
+data/albums/*/
 src/client/maplibre-gl.css
 build
 artifacts
