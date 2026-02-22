@@ -5,9 +5,9 @@ Geotagged photo map viewer with Apple Photos integration.
 ## Project Stats (as of 22.02.2026)
 
 - **TypeScript files**: 42
-- **Lines of code**: 9,697
-- **Total commits**: 445
-- **Total tokens**: 969M | **Total cost**: $599
+- **Lines of code**: 9,720
+- **Total commits**: 448
+- **Total tokens**: 972M | **Total cost**: $601
 
 ## Updating This Diary
 
@@ -41,6 +41,7 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 - Fixed image rotation for HEIC conversions and edited photos
 - Removed web production build, kept dev server for debugging
 - Dead code cleanup: removed unused query functions, dead api.ts module, unnecessary exports, and trivial wrappers across server and client
+- Removed unused dependencies: `@kikuchan/decimal` and `bun-tsconfig-paths`
 
 ## 21.02.2026 — Python Replacement, Electrobun Desktop App & Native AppleScript
 
