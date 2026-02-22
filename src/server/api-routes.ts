@@ -2,6 +2,7 @@ import {
   deleteAlbumFile,
   getAlbumFiles,
   getAllItems,
+  getSetting,
   setFileVisible,
   setSetting,
   updateItemDate,
@@ -415,6 +416,14 @@ export function createApiHandler(
   ): Promise<Response | null> | Response | null {
     if (pathname === '/api/items' && req.method === 'GET') {
       return Response.json(getAllItems());
+    }
+
+    if (pathname === '/api/view-state' && req.method === 'GET') {
+      const raw = getSetting('view');
+      if (raw === null) return new Response(null, { status: 204 });
+      return new Response(raw, {
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
     if (pathname === '/api/view-state' && req.method === 'PUT') {
