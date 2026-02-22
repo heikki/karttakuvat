@@ -14,12 +14,7 @@
 import { unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 
-import {
-  deleteItems,
-  getAllItems,
-  openAppDb,
-  upsertItems
-} from './app-db';
+import { deleteItems, getAllItems, openAppDb, upsertItems } from './app-db';
 import { buildItemEntry, sortEntries, type ItemEntry } from './items';
 import { openPhotosDb, queryPhotos, queryVideos } from './photos-db';
 

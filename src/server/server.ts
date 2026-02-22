@@ -1,9 +1,9 @@
 import { serve } from 'bun';
 
-import { getItemCount, openAppDb } from './app-db';
-import { createApiHandler, flushLogBuffer } from './api-routes';
-import { createImageCache } from './image-cache';
 import indexHtml from '../client/index.html';
+import { createApiHandler, flushLogBuffer } from './api-routes';
+import { getItemCount, openAppDb } from './app-db';
+import { createImageCache } from './image-cache';
 
 openAppDb('data');
 

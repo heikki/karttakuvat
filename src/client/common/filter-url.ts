@@ -144,4 +144,3 @@ export function markerStyleToUrl(style: string): void {
 export function markerStyleFromUrl(): string | null {
   return new URLSearchParams(location.search).get('markers');
 }
-

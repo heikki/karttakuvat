@@ -145,4 +145,3 @@ export function sortEntries(entries: ItemEntry[]): void {
     return d === 0 ? a.uuid.localeCompare(b.uuid) : d;
   });
 }
-

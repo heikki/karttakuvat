@@ -76,7 +76,11 @@ export function addGpxLayers(): void {
     type: 'line',
     source: TRACK_SOURCE,
     paint: { 'line-color': 'rgba(0, 0, 0, 0.4)', 'line-width': 6 },
-    layout: { 'visibility': 'visible', 'line-cap': 'round', 'line-join': 'round' }
+    layout: {
+      'visibility': 'visible',
+      'line-cap': 'round',
+      'line-join': 'round'
+    }
   });
 
   map.addLayer({
@@ -88,7 +92,11 @@ export function addGpxLayers(): void {
       'line-width': 3,
       'line-opacity': 0.85
     },
-    layout: { 'visibility': 'visible', 'line-cap': 'round', 'line-join': 'round' }
+    layout: {
+      'visibility': 'visible',
+      'line-cap': 'round',
+      'line-join': 'round'
+    }
   });
 
   map.addLayer({
@@ -277,7 +285,6 @@ function updateSources(): void {
     };
     (wptSrc as GeoJSONSource).setData(fc);
   }
-
 }
 
 /** Force-reload GPX tracks for the current album. */

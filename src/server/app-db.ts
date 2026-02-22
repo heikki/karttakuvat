@@ -63,7 +63,7 @@ function rowToEntry(row: ItemRow): ItemEntry {
     date: row.date,
     tz: row.tz,
     camera: row.camera,
-    ...(row.duration !== null ? { duration: row.duration } : {}),
+    ...(row.duration === null ? {} : { duration: row.duration }),
     gps: row.gps as ItemEntry['gps'],
     gps_accuracy: row.gps_accuracy,
     albums: JSON.parse(row.albums) as string[],
@@ -120,19 +120,27 @@ export function deleteItems(uuids: string[]): void {
   db.run(`DELETE FROM items WHERE uuid IN (${placeholders})`, uuids);
 }
 
-export function updateItemLocation(
-  uuid: string,
-  lat: number,
-  lon: number,
-  gps: string,
-  gpsAccuracy: number,
-  tz: string | null,
-  date: string
-): void {
+export function updateItemLocation(args: {
+  uuid: string;
+  lat: number;
+  lon: number;
+  gps: string;
+  gpsAccuracy: number;
+  tz: string | null;
+  date: string;
+}): void {
   if (db === null) return;
   db.run(
     'UPDATE items SET lat = ?, lon = ?, gps = ?, gps_accuracy = ?, tz = ?, date = ? WHERE uuid = ?',
-    [lat, lon, gps, gpsAccuracy, tz, date, uuid]
+    [
+      args.lat,
+      args.lon,
+      args.gps,
+      args.gpsAccuracy,
+      args.tz,
+      args.date,
+      args.uuid
+    ]
   );
 }
 
@@ -148,9 +156,10 @@ export interface AlbumFileInfo {
 export function getAlbumFiles(album: string): Map<string, AlbumFileInfo> {
   if (db === null) return new Map();
   const rows = db
-    .query<{ filename: string; visible: number }, [string]>(
-      'SELECT filename, visible FROM album_files WHERE album = ?'
-    )
+    .query<
+      { filename: string; visible: number },
+      [string]
+    >('SELECT filename, visible FROM album_files WHERE album = ?')
     .all(album);
   const map = new Map<string, AlbumFileInfo>();
   for (const row of rows) {

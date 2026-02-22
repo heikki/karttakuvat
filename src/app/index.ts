@@ -11,9 +11,8 @@ const { BrowserView, BrowserWindow, ApplicationMenu, Utils } =
   await import('electrobun/bun');
 
 const { openAppDb } = await import('../server/app-db');
-const { createApiHandler, flushLogBuffer } = await import(
-  '../server/api-routes'
-);
+const { createApiHandler, flushLogBuffer } =
+  await import('../server/api-routes');
 const { createImageCache } = await import('../server/image-cache');
 
 // Detect dev build from version.json

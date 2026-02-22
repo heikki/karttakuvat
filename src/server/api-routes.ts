@@ -368,15 +368,15 @@ export function createApiHandler(
       for (const edit of locationEdits) {
         const item = itemsByUuid.get(edit.uuid);
         if (item !== undefined) {
-          updateItemLocation(
-            item.uuid,
-            item.lat!,
-            item.lon!,
-            item.gps ?? 'user',
-            item.gps_accuracy ?? 1,
-            item.tz,
-            item.date
-          );
+          updateItemLocation({
+            uuid: item.uuid,
+            lat: item.lat!,
+            lon: item.lon!,
+            gps: item.gps ?? 'user',
+            gpsAccuracy: item.gps_accuracy ?? 1,
+            tz: item.tz,
+            date: item.date
+          });
         }
       }
       for (const edit of timeEdits) {
@@ -440,8 +440,9 @@ export function createApiHandler(
       return handleGetGpxFiles(decodeURIComponent(gpxMatch.groups.album!));
     }
 
-    const albumFilesMatch =
-      /^\/api\/albums\/(?<album>[^/]+)\/files$/.exec(pathname);
+    const albumFilesMatch = /^\/api\/albums\/(?<album>[^/]+)\/files$/.exec(
+      pathname
+    );
     if (albumFilesMatch?.groups !== undefined && req.method === 'GET') {
       return handleGetAlbumFiles(
         decodeURIComponent(albumFilesMatch.groups.album!)
