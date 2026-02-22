@@ -12,7 +12,7 @@ import {
   setPendingTimeEdit,
   state
 } from '@common/data';
-import { ShowLightboxEvent } from '@common/events';
+import { SaveEditsEvent, ShowLightboxEvent } from '@common/events';
 import { photoFromUrl, photoToUrl } from '@common/filter-url';
 import {
   computeManualDateOffset,
@@ -117,6 +117,9 @@ function handleKeydown(e: KeyboardEvent) {
 }
 
 const popupActions: PopupActions = {
+  confirmLocation: () => {
+    confirmLocation();
+  },
   copyLocation: () => {
     copyLocationFromPopup();
   },
@@ -278,6 +281,15 @@ export function showPopup(index: number) {
 function adjustTime(uuid: string, hours: number) {
   addPendingTimeEdit(uuid, hours);
   syncPopupElement();
+}
+
+function confirmLocation() {
+  const photo = getPhoto();
+  if (photo === undefined) return;
+  const loc = getEffectiveLocation(photo);
+  if (loc === null) return;
+  addPendingEdit(photo.uuid, loc.lat, loc.lon);
+  document.dispatchEvent(new SaveEditsEvent());
 }
 
 function copyLocationFromPopup() {

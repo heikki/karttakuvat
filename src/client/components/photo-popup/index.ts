@@ -22,6 +22,7 @@ import {
 export interface PopupActions {
   copyLocation: () => void;
   pasteLocation: () => void;
+  confirmLocation: () => void;
   copyDate: () => void;
   pasteDate: () => void;
   toggleDateEdit: () => void;
@@ -338,6 +339,16 @@ export class PhotoPopup extends LitElement {
         >
           set
         </button>
+        ${loc !== null && photo.gps === 'inferred'
+          ? html`<button
+              class="action-btn"
+              @click=${() => {
+                this.actions?.confirmLocation();
+              }}
+            >
+              confirm
+            </button>`
+          : nothing}
         ${loc === null
           ? nothing
           : html`<button
