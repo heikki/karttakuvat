@@ -141,16 +141,30 @@ export async function loadGpxForAlbum(album: string | null): Promise<void> {
   if (album !== null && album !== 'all') {
     try {
       const res = await fetch(
-        `${getApiBase()}/api/gpx/${encodeURIComponent(album)}`
+        `${getApiBase()}/api/albums/${encodeURIComponent(album)}/files`
       );
       if (res.ok) {
-        const files = (await res.json()) as string[];
-        const visible = files.filter((f) => !hiddenFiles.has(f));
+        const files = (await res.json()) as Array<{
+          name: string;
+          visible: boolean;
+        }>;
+        hiddenFiles.clear();
+        const gpxFiles: string[] = [];
+        for (const f of files) {
+          if (!f.name.toLowerCase().endsWith('.gpx')) continue;
+          if (f.visible) {
+            gpxFiles.push(f.name);
+          } else {
+            hiddenFiles.add(f.name);
+          }
+        }
         const color = TRACK_COLORS[nextColorIndex++ % TRACK_COLORS.length]!;
-        await Promise.all(visible.map((f) => loadGpxFile(album, f, color)));
+        await Promise.all(
+          gpxFiles.map((name) => loadGpxFile(album, name, color))
+        );
       }
     } catch {
-      // No GPX files for this album
+      // No files for this album
     }
   }
 
