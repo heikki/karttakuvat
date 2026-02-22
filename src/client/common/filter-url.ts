@@ -1,3 +1,11 @@
+// Restore saved view state into URL before any component reads it
+if (location.search === '') {
+  const saved = localStorage.getItem('viewState');
+  if (saved !== null && saved !== '') {
+    history.replaceState(null, '', `?${saved}`);
+  }
+}
+
 const ALL_GPS = ['exif', 'inferred', 'user', 'none'];
 const ALL_MEDIA = ['photo', 'video'];
 
@@ -16,6 +24,8 @@ function saveViewState(params: URLSearchParams): void {
   viewSaveTimer = setTimeout(() => {
     const obj = Object.fromEntries(params);
     delete obj.id;
+    const qs = new URLSearchParams(obj).toString();
+    localStorage.setItem('viewState', qs);
     void fetch('/api/view-state', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
