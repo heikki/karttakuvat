@@ -171,7 +171,9 @@ export class AlbumFilesModal extends LitElement {
       const res = await fetch(
         `${getApiBase()}/api/albums/${encodeURIComponent(this._album)}/files`
       );
-      this._files = (await res.json()) as string[];
+      this._files = ((await res.json()) as string[]).sort((a, b) =>
+        a.localeCompare(b)
+      );
     } catch {
       this._files = [];
     }
