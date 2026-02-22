@@ -3,6 +3,7 @@ import {
   getAlbumFiles,
   getAllItems,
   setFileVisible,
+  setSetting,
   updateItemDate,
   updateItemLocation
 } from './app-db';
@@ -414,6 +415,16 @@ export function createApiHandler(
   ): Promise<Response | null> | Response | null {
     if (pathname === '/api/items' && req.method === 'GET') {
       return Response.json(getAllItems());
+    }
+
+    if (pathname === '/api/view-state' && req.method === 'PUT') {
+      return req
+        .json()
+        .then((body: unknown) => {
+          setSetting('view', JSON.stringify(body));
+          return new Response(null, { status: 204 });
+        })
+        .catch(() => new Response('Bad request', { status: 400 }));
     }
 
     if (pathname === '/api/save-edits' && req.method === 'POST') {

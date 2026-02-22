@@ -1,16 +1,10 @@
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync
-} from 'node:fs';
+import { existsSync, mkdirSync, rmSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 
 const { BrowserView, BrowserWindow, ApplicationMenu, Utils } =
   await import('electrobun/bun');
 
-const { openAppDb } = await import('../server/app-db');
+const { openAppDb, getSetting, setSetting } = await import('../server/app-db');
 const { createApiHandler, flushLogBuffer } =
   await import('../server/api-routes');
 const { createImageCache } = await import('../server/image-cache');
@@ -185,12 +179,7 @@ const server = Bun.serve({
 const baseUrl = `http://127.0.0.1:${server.port}`;
 console.log(`[main] Server running on ${baseUrl}`);
 
-// Window state persistence
-const configDir = join(
-  process.env.HOME!,
-  'Library/Application Support/Karttakuvat'
-);
-const stateFile = join(configDir, 'window-state.json');
+// Window state persistence (stored in app.db settings table)
 const defaultFrame = { x: 100, y: 100, width: 1200, height: 800 };
 
 function loadWindowState(): {
@@ -200,12 +189,9 @@ function loadWindowState(): {
   height: number;
 } {
   try {
-    return JSON.parse(readFileSync(stateFile, 'utf8')) as {
-      x: number;
-      y: number;
-      width: number;
-      height: number;
-    };
+    const raw = getSetting('window');
+    if (raw === null) return defaultFrame;
+    return JSON.parse(raw) as { x: number; y: number; width: number; height: number };
   } catch {
     return defaultFrame;
   }
@@ -217,8 +203,7 @@ function saveWindowState(frame: {
   width: number;
   height: number;
 }) {
-  mkdirSync(configDir, { recursive: true });
-  writeFileSync(stateFile, JSON.stringify(frame));
+  setSetting('window', JSON.stringify(frame));
 }
 
 // RPC type definition for Electrobun communication
@@ -245,9 +230,21 @@ const rpc = BrowserView.defineRPC<AppRPC>({
 
 const savedFrame = loadWindowState();
 
+function buildViewUrl(): string {
+  try {
+    const raw = getSetting('view');
+    if (raw === null) return baseUrl;
+    const obj = JSON.parse(raw) as Record<string, string>;
+    const qs = new URLSearchParams(obj).toString();
+    return qs === '' ? baseUrl : `${baseUrl}?${qs}`;
+  } catch {
+    return baseUrl;
+  }
+}
+
 const win = new BrowserWindow<typeof rpc>({
   title: 'Karttakuvat',
-  url: baseUrl,
+  url: buildViewUrl(),
   frame: savedFrame,
   rpc
 });
@@ -409,7 +406,7 @@ async function runScript(
 
   const lastLines = outputLines.slice(-8).join('\n');
   if (exitCode === 0) {
-    win.webview.loadURL(baseUrl);
+    win.webview.loadURL(buildViewUrl());
     void Utils.showMessageBox({
       type: 'info',
       title: `${name} Complete`,
@@ -463,7 +460,7 @@ async function runSyncQuiet() {
   win.setTitle('Karttakuvat');
 
   if (exitCode === 0) {
-    win.webview.loadURL(baseUrl);
+    win.webview.loadURL(buildViewUrl());
   } else {
     console.log(`[main] Quiet sync failed with exit code ${exitCode}`);
   }
@@ -481,7 +478,7 @@ function clearCache() {
   mkdirSync(cacheThumbDir, { recursive: true });
 
   console.log('[main] Cache cleared');
-  win.webview.loadURL(baseUrl);
+  win.webview.loadURL(buildViewUrl());
   void Utils.showMessageBox({
     type: 'info',
     title: 'Cache Cleared',

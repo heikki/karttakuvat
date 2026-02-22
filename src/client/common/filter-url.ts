@@ -9,9 +9,25 @@ interface SavedFilters {
   media: string[];
 }
 
+let viewSaveTimer: ReturnType<typeof setTimeout> | null = null;
+
+function saveViewState(params: URLSearchParams): void {
+  if (viewSaveTimer !== null) clearTimeout(viewSaveTimer);
+  viewSaveTimer = setTimeout(() => {
+    const obj = Object.fromEntries(params);
+    delete obj.id;
+    void fetch('/api/view-state', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(obj)
+    });
+  }, 1000);
+}
+
 function updateUrl(params: URLSearchParams): void {
   const qs = params.toString();
   history.replaceState(null, '', qs === '' ? location.pathname : `?${qs}`);
+  saveViewState(params);
 }
 
 function currentParams(): URLSearchParams {
