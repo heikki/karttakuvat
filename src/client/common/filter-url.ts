@@ -52,9 +52,7 @@ function flushUrl() {
 
 function updateUrl(params: URLSearchParams): void {
   pendingUrlParams = params;
-  if (urlUpdateTimer === null) {
-    urlUpdateTimer = setTimeout(flushUrl, 100);
-  }
+  urlUpdateTimer ??= setTimeout(flushUrl, 100);
 }
 
 function currentParams(): URLSearchParams {

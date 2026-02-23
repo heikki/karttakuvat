@@ -73,8 +73,8 @@ function showMapError(msg: string, onClick?: () => void) {
   banner.textContent = msg;
   banner.onclick = () => {
     void navigator.clipboard.writeText(msg).then(() => {
-      banner!.textContent = 'Copied!';
-      setTimeout(() => banner!.remove(), 600);
+      banner.textContent = 'Copied!';
+      setTimeout(() => { banner.remove(); }, 600);
     });
     if (onClick !== undefined) onClick();
   };
@@ -168,7 +168,7 @@ export function initMap() {
   });
 
   map.on('error', (e) => {
-    console.error('[MapGL] error:', e.error?.message ?? e);
+    console.error('[MapGL] error:', (e.error as Error | undefined)?.message ?? e);
   });
 
   // Detect WebGL context loss — primary suspect for permanent map freeze
@@ -186,7 +186,7 @@ export function initMap() {
   let lastTileTime = performance.now();
   let tileCheckTimer: ReturnType<typeof setTimeout> | null = null;
   map.on('sourcedata', (e) => {
-    if (e.sourceDataType === 'content' || e.dataType === 'source') {
+    if (e.sourceDataType === 'content') {
       lastTileTime = performance.now();
     }
   });
@@ -199,11 +199,7 @@ export function initMap() {
           `[MapGL] Tile freeze detected — tiles not loaded ${Math.round(gap)}ms after move`
         );
         showMapError('Tiles frozen — click to reload style', () => {
-          // Force style reload to recover
-          const style = map.getStyle();
-          if (style !== undefined) {
-            changeMapStyle('satellite');
-          }
+          changeMapStyle('satellite');
         });
       }
     }, 8000);
@@ -262,23 +258,11 @@ export function initMap() {
     if (e.key === 'D' && e.shiftKey && !e.metaKey && !e.ctrlKey) {
       e.preventDefault();
       const sinceRender = Math.round(performance.now() - lastRenderTs);
-      const tilesLoaded = map.areTilesLoaded();
-      const proj = map.getProjection().type;
-      const zoom = map.getZoom().toFixed(1);
-      const gl = map.getCanvas().getContext('webgl2');
-      const glLost = gl === null || gl.isContextLost();
       const debugLog = (window as unknown as Record<string, string[]>)
         .__debugLog;
-      const errors = debugLog?.slice(-5).join('\n') ?? '(none)';
-      const lines = [
-        `Frames: ${renderFrames} | Last: ${sinceRender}ms ago`,
-        `Tiles: ${tilesLoaded} | GL lost: ${glLost}`,
-        `Proj: ${proj} | Zoom: ${zoom}`,
-        errors !== '(none)' ? `Errors: ${errors}` : ''
-      ]
-        .filter(Boolean)
-        .join(' · ');
-      showMapError(lines);
+      const errors = debugLog?.slice(-5).join('\n') ?? '';
+      const info = `Frames: ${renderFrames} | Last render: ${sinceRender}ms ago | Tiles loaded: ${String(map.areTilesLoaded())}`;
+      showMapError(errors === '' ? info : `${info}\n${errors}`);
     }
   });
 

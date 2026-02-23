@@ -381,26 +381,35 @@ export class BloomLayer implements CustomLayerInterface {
       if (this.map.getProjection().type === 'globe') {
         this.drawNight(gl, options, sun);
       }
-      if (
-        this.instanceCount > 0 &&
-        this.instanceBuf !== null &&
-        this.brightFbo !== null &&
-        this.blur !== null &&
-        this.composite !== null
-      ) {
-        const mvp = options.modelViewProjectionMatrix as Float32Array;
-        if (this.needsBlurUpdate(mvp, w, h)) {
-          this.drawBright(gl, options, sun);
-          this.drawBlur(gl);
-          this.renderedGeneration = this.dataGeneration;
-          this.hasCachedBlur = true;
-        }
-        this.drawComposite(gl, prevFbo, w, h);
-      }
+      this.renderBloom(gl, options, prevFbo);
     } catch (err) {
       console.error('[BloomLayer] render error:', err);
     }
     restoreGl(gl, prevFbo, w, h);
+  }
+
+  private renderBloom(
+    gl: WebGL2RenderingContext,
+    options: CustomRenderMethodInput,
+    prevFbo: WebGLFramebuffer | null
+  ) {
+    const { width: w, height: h } = this.map!.getCanvas();
+    if (
+      this.instanceCount > 0 &&
+      this.instanceBuf !== null &&
+      this.brightFbo !== null &&
+      this.blur !== null &&
+      this.composite !== null
+    ) {
+      const mvp = options.modelViewProjectionMatrix as Float32Array;
+      if (this.needsBlurUpdate(mvp, w, h)) {
+        this.drawBright(gl, options, this.getSubsolarPoint());
+        this.drawBlur(gl);
+        this.renderedGeneration = this.dataGeneration;
+        this.hasCachedBlur = true;
+      }
+      this.drawComposite(gl, prevFbo, w, h);
+    }
   }
 
   updateData(

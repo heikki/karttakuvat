@@ -21,8 +21,9 @@ window.addEventListener('unhandledrejection', (e) => {
 // Expose debug log for Safari Inspector: type `window.__debugLog` in console
 (window as unknown as Record<string, unknown>).__debugLog = debugLog;
 (window as unknown as Record<string, unknown>).__showDebug = () => {
-  // eslint-disable-next-line no-alert
-  alert(debugLog.slice(-20).join('\n') || '(no errors logged)');
+  const text = debugLog.slice(-20).join('\n');
+  // eslint-disable-next-line no-alert -- debug-only function, not shown in UI
+  alert(text === '' ? '(no errors logged)' : text);
 };
 
 // Prevent zoom gestures
