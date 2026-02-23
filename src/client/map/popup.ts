@@ -59,7 +59,6 @@ function popupOffset(): [number, number] {
   return [0, -(radius * 1.3 + 5)];
 }
 
-let reanchoring = false;
 
 function getSelectedMarkerCoords(): [number, number] | null {
   const photo = getPhoto();
@@ -70,15 +69,11 @@ function getSelectedMarkerCoords(): [number, number] | null {
 
 function reanchorPopup() {
   if (popup === null) return;
-  if (map === null) return;
   if (!popup.isOpen()) return;
-  const lngLat = popup.getLngLat();
-  reanchoring = true;
-  popup.remove();
+  // Just update the offset — no remove/addTo cycle.
+  // Removing and re-adding the popup during a zoomend handler causes
+  // re-entrant rendering (ResizeObserver → redraw → TaskQueue crash).
   popup.setOffset(popupOffset());
-  popup.setLngLat(lngLat).addTo(map);
-  setupPopupEvents(popup.getElement());
-  reanchoring = false;
 }
 
 function handleArrowNav(key: string) {
@@ -265,7 +260,6 @@ export function showPopup(index: number) {
   installCanvasZoomOverride();
 
   popup.on('close', () => {
-    if (reanchoring) return;
     removeCanvasZoomOverride();
     dateEditMode = false;
     highlightFn(null);

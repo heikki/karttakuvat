@@ -58,6 +58,28 @@ import {
 // eslint-disable-next-line @typescript-eslint/init-declarations -- map is initialized in initMap() which is called before any other usage
 let map: MapGL;
 
+function showMapError(msg: string, onClick?: () => void) {
+  let banner = document.getElementById('map-error-banner');
+  if (banner === null) {
+    banner = document.createElement('div');
+    banner.id = 'map-error-banner';
+    banner.style.cssText =
+      'position:fixed;top:12px;left:50%;transform:translateX(-50%);' +
+      'background:#dc2626;color:#fff;padding:8px 16px;border-radius:8px;' +
+      'font:13px/1.4 -apple-system,sans-serif;z-index:99999;cursor:pointer;' +
+      'box-shadow:0 4px 12px rgba(0,0,0,0.4)';
+    document.body.appendChild(banner);
+  }
+  banner.textContent = msg;
+  banner.onclick = () => {
+    void navigator.clipboard.writeText(msg).then(() => {
+      banner!.textContent = 'Copied!';
+      setTimeout(() => banner!.remove(), 600);
+    });
+    if (onClick !== undefined) onClick();
+  };
+}
+
 const markerStyles: Record<string, () => MarkerLayer> = {
   points: () => new PointsLayer(),
   classic: () => new ClassicLayer()
@@ -145,8 +167,46 @@ export function initMap() {
     mapViewToUrl({ lat: c.lat, lon: c.lng, zoom: map.getZoom() });
   });
 
-  map.on('error', () => {
-    /* ignore */
+  map.on('error', (e) => {
+    console.error('[MapGL] error:', e.error?.message ?? e);
+  });
+
+  // Detect WebGL context loss — primary suspect for permanent map freeze
+  const mapCanvas = map.getCanvas();
+  mapCanvas.addEventListener('webglcontextlost', (e) => {
+    console.error('[MapGL] WebGL context LOST', e);
+    showMapError('WebGL context lost — map frozen');
+  });
+  mapCanvas.addEventListener('webglcontextrestored', () => {
+    console.warn('[MapGL] WebGL context restored');
+  });
+
+  // Detect tile freeze: if tiles haven't loaded for a while after camera
+  // moves, the raster tile pipeline may be stuck.
+  let lastTileTime = performance.now();
+  let tileCheckTimer: ReturnType<typeof setTimeout> | null = null;
+  map.on('sourcedata', (e) => {
+    if (e.sourceDataType === 'content' || e.dataType === 'source') {
+      lastTileTime = performance.now();
+    }
+  });
+  map.on('moveend', () => {
+    if (tileCheckTimer !== null) clearTimeout(tileCheckTimer);
+    tileCheckTimer = setTimeout(() => {
+      if (!map.areTilesLoaded()) {
+        const gap = performance.now() - lastTileTime;
+        console.error(
+          `[MapGL] Tile freeze detected — tiles not loaded ${Math.round(gap)}ms after move`
+        );
+        showMapError('Tiles frozen — click to reload style', () => {
+          // Force style reload to recover
+          const style = map.getStyle();
+          if (style !== undefined) {
+            changeMapStyle('satellite');
+          }
+        });
+      }
+    }, 8000);
   });
   const panToFitPopup = createPanToFitPopup(map);
   const flyToPopup = createFlyToPopup(map);
@@ -187,6 +247,39 @@ export function initMap() {
   });
   map.on('idle', () => {
     setMapIdle(true);
+  });
+
+  // Debug: track render loop health
+  let renderFrames = 0;
+  let lastRenderTs = 0;
+  map.on('render', () => {
+    renderFrames++;
+    lastRenderTs = performance.now();
+  });
+
+  // Press Shift+D when frozen to see diagnostics
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'D' && e.shiftKey && !e.metaKey && !e.ctrlKey) {
+      e.preventDefault();
+      const sinceRender = Math.round(performance.now() - lastRenderTs);
+      const tilesLoaded = map.areTilesLoaded();
+      const proj = map.getProjection().type;
+      const zoom = map.getZoom().toFixed(1);
+      const gl = map.getCanvas().getContext('webgl2');
+      const glLost = gl === null || gl.isContextLost();
+      const debugLog = (window as unknown as Record<string, string[]>)
+        .__debugLog;
+      const errors = debugLog?.slice(-5).join('\n') ?? '(none)';
+      const lines = [
+        `Frames: ${renderFrames} | Last: ${sinceRender}ms ago`,
+        `Tiles: ${tilesLoaded} | GL lost: ${glLost}`,
+        `Proj: ${proj} | Zoom: ${zoom}`,
+        errors !== '(none)' ? `Errors: ${errors}` : ''
+      ]
+        .filter(Boolean)
+        .join(' · ');
+      showMapError(lines);
+    }
   });
 
   map.on('load', () => {

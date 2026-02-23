@@ -29,6 +29,7 @@ export function restoreGl(
   gl.viewport(0, 0, w, h);
   gl.enable(gl.BLEND);
   gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+  gl.colorMask(true, true, true, true);
   gl.activeTexture(gl.TEXTURE0);
 }
 

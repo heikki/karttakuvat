@@ -34,10 +34,27 @@ function saveViewState(params: URLSearchParams): void {
   }, 1000);
 }
 
+let pendingUrlParams: URLSearchParams | null = null;
+let urlUpdateTimer: ReturnType<typeof setTimeout> | null = null;
+
+function flushUrl() {
+  if (pendingUrlParams === null) return;
+  const qs = pendingUrlParams.toString();
+  try {
+    history.replaceState(null, '', qs === '' ? location.pathname : `?${qs}`);
+  } catch {
+    // SecurityError: browser rate-limits replaceState (100/10s)
+  }
+  saveViewState(pendingUrlParams);
+  pendingUrlParams = null;
+  urlUpdateTimer = null;
+}
+
 function updateUrl(params: URLSearchParams): void {
-  const qs = params.toString();
-  history.replaceState(null, '', qs === '' ? location.pathname : `?${qs}`);
-  saveViewState(params);
+  pendingUrlParams = params;
+  if (urlUpdateTimer === null) {
+    urlUpdateTimer = setTimeout(flushUrl, 100);
+  }
 }
 
 function currentParams(): URLSearchParams {

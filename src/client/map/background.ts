@@ -266,6 +266,18 @@ function initGL(container: HTMLElement): boolean {
   gl = canvas.getContext('webgl2', { alpha: false, antialias: false });
   if (gl === null) return false;
 
+  canvas.addEventListener('webglcontextlost', (e) => {
+    console.error('[GlobeBG] WebGL context LOST', e);
+    // Stop animation loop — no point rendering with a dead context
+    if (animationId !== null) {
+      cancelAnimationFrame(animationId);
+      animationId = null;
+    }
+  });
+  canvas.addEventListener('webglcontextrestored', () => {
+    console.warn('[GlobeBG] WebGL context restored');
+  });
+
   nebulaProgram = createProgram(gl, VERTEX_SRC, NEBULA_SRC);
   blitProgram = createProgram(gl, VERTEX_SRC, BLIT_SRC);
   if (nebulaProgram === null || blitProgram === null) return false;

@@ -376,25 +376,29 @@ export class BloomLayer implements CustomLayerInterface {
     const gl = _gl as WebGL2RenderingContext;
     const { width: w, height: h } = this.map.getCanvas();
     const prevFbo = saveFbo(gl);
-    const sun = this.getSubsolarPoint();
-    if (this.map.getProjection().type === 'globe') {
-      this.drawNight(gl, options, sun);
-    }
-    if (
-      this.instanceCount > 0 &&
-      this.instanceBuf !== null &&
-      this.brightFbo !== null &&
-      this.blur !== null &&
-      this.composite !== null
-    ) {
-      const mvp = options.modelViewProjectionMatrix as Float32Array;
-      if (this.needsBlurUpdate(mvp, w, h)) {
-        this.drawBright(gl, options, sun);
-        this.drawBlur(gl);
-        this.renderedGeneration = this.dataGeneration;
-        this.hasCachedBlur = true;
+    try {
+      const sun = this.getSubsolarPoint();
+      if (this.map.getProjection().type === 'globe') {
+        this.drawNight(gl, options, sun);
       }
-      this.drawComposite(gl, prevFbo, w, h);
+      if (
+        this.instanceCount > 0 &&
+        this.instanceBuf !== null &&
+        this.brightFbo !== null &&
+        this.blur !== null &&
+        this.composite !== null
+      ) {
+        const mvp = options.modelViewProjectionMatrix as Float32Array;
+        if (this.needsBlurUpdate(mvp, w, h)) {
+          this.drawBright(gl, options, sun);
+          this.drawBlur(gl);
+          this.renderedGeneration = this.dataGeneration;
+          this.hasCachedBlur = true;
+        }
+        this.drawComposite(gl, prevFbo, w, h);
+      }
+    } catch (err) {
+      console.error('[BloomLayer] render error:', err);
     }
     restoreGl(gl, prevFbo, w, h);
   }

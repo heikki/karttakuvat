@@ -5,6 +5,26 @@ import './components';
 import { initMap } from './map';
 import { initSave } from './save';
 
+// --- Debug: catch uncaught errors and show on screen ---
+const debugLog: string[] = [];
+function debugPush(msg: string) {
+  debugLog.push(`${new Date().toISOString().slice(11, 19)} ${msg}`);
+  if (debugLog.length > 50) debugLog.shift();
+  console.error('[debug]', msg);
+}
+window.addEventListener('error', (e) => {
+  debugPush(`ERR: ${e.message} at ${e.filename}:${e.lineno}`);
+});
+window.addEventListener('unhandledrejection', (e) => {
+  debugPush(`REJECT: ${e.reason}`);
+});
+// Expose debug log for Safari Inspector: type `window.__debugLog` in console
+(window as unknown as Record<string, unknown>).__debugLog = debugLog;
+(window as unknown as Record<string, unknown>).__showDebug = () => {
+  // eslint-disable-next-line no-alert
+  alert(debugLog.slice(-20).join('\n') || '(no errors logged)');
+};
+
 // Prevent zoom gestures
 document.addEventListener(
   'wheel',
