@@ -74,7 +74,9 @@ function showMapError(msg: string, onClick?: () => void) {
   banner.onclick = () => {
     void navigator.clipboard.writeText(msg).then(() => {
       banner.textContent = 'Copied!';
-      setTimeout(() => { banner.remove(); }, 600);
+      setTimeout(() => {
+        banner.remove();
+      }, 600);
     });
     if (onClick !== undefined) onClick();
   };
@@ -168,7 +170,10 @@ export function initMap() {
   });
 
   map.on('error', (e) => {
-    console.error('[MapGL] error:', (e.error as Error | undefined)?.message ?? e);
+    console.error(
+      '[MapGL] error:',
+      (e.error as Error | undefined)?.message ?? e
+    );
   });
 
   // Detect WebGL context loss — primary suspect for permanent map freeze

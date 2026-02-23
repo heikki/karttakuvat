@@ -59,7 +59,6 @@ function popupOffset(): [number, number] {
   return [0, -(radius * 1.3 + 5)];
 }
 
-
 function getSelectedMarkerCoords(): [number, number] | null {
   const photo = getPhoto();
   if (photo === undefined) return null;
