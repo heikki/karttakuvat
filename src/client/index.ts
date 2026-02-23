@@ -5,11 +5,6 @@ import './components';
 import { initMap } from './map';
 import { initSave } from './save';
 
-// Native app: offset map height by title bar
-if ((window as Record<string, unknown>).__electrobunWebviewId !== undefined) {
-  document.documentElement.style.setProperty('--titlebar-height', '28px');
-}
-
 // --- Debug: catch uncaught errors and show on screen ---
 const debugLog: string[] = [];
 function debugPush(msg: string) {

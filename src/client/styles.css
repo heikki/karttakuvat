@@ -9,7 +9,7 @@ body {
   background: #191a22;
 }
 #map {
-  height: calc(100vh - var(--titlebar-height, 0px));
+  height: calc(100vh - 28px);
   width: 100%;
   position: relative;
 }
