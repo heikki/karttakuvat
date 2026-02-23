@@ -2,12 +2,12 @@
 
 Geotagged photo map viewer with Apple Photos integration.
 
-## Project Stats (as of 22.02.2026)
+## Project Stats (as of 23.02.2026)
 
-- **TypeScript files**: 42
-- **Lines of code**: 9,720
-- **Total commits**: 449
-- **Total tokens**: 975M | **Total cost**: $603
+- **TypeScript files**: 44
+- **Lines of code**: 9,857
+- **Total commits**: 453
+- **Total tokens**: 1,001M | **Total cost**: $617
 
 ## Updating This Diary
 
@@ -26,6 +26,14 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 - Use flat bullet lists (no bold subsections or nested structure)
 - Focus on significant features and fixes, skip minor tweaks
 - Describe final outcomes, not intermediate attempts that were reverted
+
+## 23.02.2026 — Map Stability Fixes & Diagnostics
+
+**Tokens**: 25M | **Cost**: $14.15
+
+- Fixed map freeze caused by re-entrant MapLibre render loop: throttled `replaceState` to avoid browser rate limit, simplified popup reanchoring to `setOffset()`, wrapped BloomLayer render in try/catch with guaranteed GL state restore
+- Fixed lint hang caused by `map.getProjection().type` triggering exponential type resolution in typescript-eslint
+- Added Shift+D diagnostics overlay: render stats, error log, WebGL context loss detection, tile freeze auto-recovery
 
 ## 22.02.2026 — SQLite Migration, Album Management & View State Persistence
 

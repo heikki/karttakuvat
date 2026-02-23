@@ -335,3 +335,4 @@ Dev builds use `data/` in the project root. Installed builds use `~/Library/Appl
 | Left/Right | Lightbox open       | Navigate photos                |
 | Left/Right | Popup open          | Navigate photos (all filtered) |
 | Enter      | Date input focused  | Apply manual date              |
+| Shift+D    | Any                 | Toggle diagnostics overlay     |
