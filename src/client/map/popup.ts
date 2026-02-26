@@ -153,8 +153,61 @@ export function initPopupCallbacks(m: MapGL, callbacks: PopupCallbacks) {
   getMarkerRadiusFn = callbacks.getMarkerRadius;
   initPopupZoom(m, getSelectedMarkerCoords);
   m.on('zoomend', reanchorPopup);
+  m.on('render', updatePopupGlobeMask);
 
   document.addEventListener('keydown', handleKeydown);
+}
+
+function updatePopupGlobeMask() {
+  if (popup === null || map === null) return;
+  const el = popup.getElement();
+  if (!el) return;
+
+  if (map.getProjection().type !== 'globe') {
+    el.style.maskImage = '';
+    return;
+  }
+
+  const lngLat = popup.getLngLat();
+  const occluded = lngLat ? map.transform.isLocationOccluded(lngLat) : false;
+
+  if (!occluded) {
+    el.style.maskImage = '';
+    return;
+  }
+
+  // Globe is always centered in the map container
+  const container = map.getContainer();
+  const globeCx = container.clientWidth / 2;
+  const globeCy = container.clientHeight / 2;
+
+  // Compute screen-space globe silhouette radius.
+  // In 3D: sphere of radius R at distance D from camera.
+  // Visual silhouette radius on screen = focalLength * R / sqrt(D² - R²)
+  const t = map.transform as any;
+  const R: number =
+    t.worldSize / (2.0 * Math.PI) / Math.cos(map.getCenter().lat * Math.PI / 180);
+  const f: number = t.cameraToCenterDistance; // focal length in pixels
+  const D = f + R; // camera-to-sphere-center distance
+  const r = f * R / Math.sqrt(D * D - R * R);
+
+  // clip-path operates in pre-transform space, but the popup is moved via CSS
+  // transform. Compensate by subtracting the visual offset from globe coords.
+  const mapRect = container.getBoundingClientRect();
+  const popupRect = el.getBoundingClientRect();
+  const cx = globeCx - (popupRect.left - mapRect.left);
+  const cy = globeCy - (popupRect.top - mapRect.top);
+
+  // Use a radial-gradient mask: transparent inside globe, opaque outside.
+  // The gradient is centered in its own box; mask-position offsets it so the
+  // gradient center lands at (cx, cy) in the element's coordinate space.
+  const maskSize = Math.max(container.clientWidth, container.clientHeight) * 3;
+  const half = maskSize / 2;
+  el.style.maskImage =
+    `radial-gradient(circle ${r}px at center, transparent ${r}px, black ${r}px)`;
+  el.style.maskSize = `${maskSize}px ${maskSize}px`;
+  el.style.maskPosition = `${cx - half}px ${cy - half}px`;
+  el.style.maskRepeat = 'no-repeat';
 }
 
 export function getPopup(): Popup | null {
