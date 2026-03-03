@@ -194,29 +194,6 @@ export function initMap() {
     console.warn('[MapGL] WebGL context restored');
   });
 
-  // Detect tile freeze: if tiles haven't loaded for a while after camera
-  // moves, the raster tile pipeline may be stuck.
-  let lastTileTime = performance.now();
-  let tileCheckTimer: ReturnType<typeof setTimeout> | null = null;
-  map.on('sourcedata', (e) => {
-    if (e.sourceDataType === 'content') {
-      lastTileTime = performance.now();
-    }
-  });
-  map.on('moveend', () => {
-    if (tileCheckTimer !== null) clearTimeout(tileCheckTimer);
-    tileCheckTimer = setTimeout(() => {
-      if (!map.areTilesLoaded()) {
-        const gap = performance.now() - lastTileTime;
-        console.error(
-          `[MapGL] Tile freeze detected — tiles not loaded ${Math.round(gap)}ms after move`
-        );
-        showMapError('Tiles frozen — click to reload style', () => {
-          changeMapStyle('satellite');
-        });
-      }
-    }, 8000);
-  });
   const panToFitPopup = createPanToFitPopup(map);
   const flyToPopup = createFlyToPopup(map);
   const highlight = (photo: Photo | null) => {
