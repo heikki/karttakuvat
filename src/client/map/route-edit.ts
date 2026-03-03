@@ -492,7 +492,10 @@ function onPointEnter(): void {
 }
 
 function onPointLeave(): void {
-  if (dragIndex === null) setCursorClass(null);
+  // Don't reset if still over a segment (point sits on top of hit layer)
+  if (dragIndex === null) {
+    setCursorClass(hoveredSegIdx === null ? null : 'cursor-pointer');
+  }
 }
 
 function onKeyDown(e: KeyboardEvent): void {
