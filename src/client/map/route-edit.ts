@@ -38,6 +38,7 @@ let popupEl: HTMLElement | null = null;
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 let hoveredSegIdx: number | null = null;
 let hoveredPointId: number | null = null;
+let dragFromSegment = false;
 
 export function isRouteEditMode(): boolean {
   return isEditActive;
@@ -88,6 +89,7 @@ function enterEditMode(): void {
   map.on('click', onMapClick);
   map.on('contextmenu', onRightClick);
   map.on('mousedown', EDIT_IDS.points, onPointMouseDown);
+  map.on('mousedown', EDIT_IDS.hit, onSegmentMouseDown);
   map.on('mouseenter', EDIT_IDS.hit, onSegmentEnter);
   map.on('mouseleave', EDIT_IDS.hit, onSegmentLeave);
   map.on('mousemove', EDIT_IDS.hit, onSegmentMove);
@@ -110,6 +112,7 @@ function exitEditMode(): void {
   map.off('click', onMapClick);
   map.off('contextmenu', onRightClick);
   map.off('mousedown', EDIT_IDS.points, onPointMouseDown);
+  map.off('mousedown', EDIT_IDS.hit, onSegmentMouseDown);
   map.off('mouseenter', EDIT_IDS.hit, onSegmentEnter);
   map.off('mouseleave', EDIT_IDS.hit, onSegmentLeave);
   map.off('mousemove', EDIT_IDS.hit, onSegmentMove);
@@ -228,8 +231,21 @@ function scheduleAutoSave(): void {
 
 // --- Click handler ---
 
+function consumeDragFromSegment(): boolean {
+  if (!dragFromSegment) return false;
+  dragFromSegment = false;
+  return true;
+}
+
+function isClickOnPhotoMarker(point: MapMouseEvent['point']): boolean {
+  if (map === null) return false;
+  const layerId = getMarkerLayerIdFn();
+  if (layerId === null || map.getLayer(layerId) === undefined) return false;
+  return map.queryRenderedFeatures(point, { layers: [layerId] }).length > 0;
+}
+
 function onMapClick(e: MapMouseEvent): void {
-  if (map === null || routeData === null) return;
+  if (map === null || routeData === null || consumeDragFromSegment()) return;
 
   // 1. Check if clicking on a route edit point
   const pointFeatures = map.queryRenderedFeatures(e.point, {
@@ -237,23 +253,12 @@ function onMapClick(e: MapMouseEvent): void {
   });
   if (pointFeatures.length > 0) {
     const idx = pointFeatures[0]!.properties.index as number;
-    const pt = routeData.points[idx];
-    if (pt?.type === 'waypoint') {
-      removeWaypoint(idx);
-      return;
-    }
-    // Photo anchor — ignore click
+    if (routeData.points[idx]?.type === 'waypoint') removeWaypoint(idx);
     return;
   }
 
   // 2. Check if clicking on photo markers — pass through
-  const markerLayerId = getMarkerLayerIdFn();
-  if (markerLayerId !== null && map.getLayer(markerLayerId) !== undefined) {
-    const markerFeatures = map.queryRenderedFeatures(e.point, {
-      layers: [markerLayerId]
-    });
-    if (markerFeatures.length > 0) return;
-  }
+  if (isClickOnPhotoMarker(e.point)) return;
 
   // 3. Add new waypoint — on segment if hit, otherwise nearest segment
   removePopup();
@@ -355,7 +360,7 @@ function removePopup(): void {
 // --- Drag handler ---
 
 function onPointMouseDown(e: MapMouseEvent): void {
-  if (map === null || routeData === null) return;
+  if (map === null || routeData === null || e.originalEvent.button !== 0) return;
 
   const features = map.queryRenderedFeatures(e.point, {
     layers: [EDIT_IDS.points]
@@ -363,12 +368,38 @@ function onPointMouseDown(e: MapMouseEvent): void {
   if (features.length === 0) return;
 
   const idx = features[0]!.properties.index as number;
-  dragIndex = idx;
+  startDrag(idx, e);
+}
 
+function onSegmentMouseDown(e: MapMouseEvent): void {
+  if (map === null || routeData === null || e.originalEvent.button !== 0) return;
+
+  // Don't start segment drag if already on a point
+  const pointFeatures = map.queryRenderedFeatures(e.point, {
+    layers: [EDIT_IDS.points]
+  });
+  if (pointFeatures.length > 0) return;
+
+  const hitFeatures = map.queryRenderedFeatures(e.point, {
+    layers: [EDIT_IDS.hit]
+  });
+  if (hitFeatures.length === 0) return;
+
+  const segIdx = hitFeatures[0]!.properties.segIndex as number;
+  insertWaypointInRoute(routeData, segIdx, e.lngLat.lng, e.lngLat.lat);
+  updateEditSources();
+
+  // The new waypoint is at segIdx + 1 in the points array
+  dragFromSegment = true;
+  startDrag(segIdx + 1, e);
+}
+
+function startDrag(idx: number, e: MapMouseEvent): void {
+  if (map === null) return;
+  dragIndex = idx;
   e.preventDefault();
   map.dragPan.disable();
   setCursorClass('cursor-grabbing');
-
   map.on('mousemove', onDragMove);
   map.on('mouseup', onDragEnd);
 }
