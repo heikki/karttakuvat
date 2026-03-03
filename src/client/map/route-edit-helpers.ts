@@ -1,3 +1,4 @@
+import type { Feature, LineString } from 'geojson';
 import type { Map as MapGL } from 'maplibre-gl';
 
 import type { RouteData, RoutePoint, RouteSegment } from './photo-route';
@@ -176,16 +177,37 @@ export function updateAdjacentSegments(
   }
 }
 
-/** Concatenate all segment geometries into one coordinate array. */
-export function concatRouteCoords(data: RouteData): Array<[number, number]> {
-  const coords: Array<[number, number]> = [];
+/** Build line features from route segments, breaking at 'none' segments. */
+export function buildRouteLineFeatures(
+  data: RouteData
+): Array<Feature<LineString>> {
+  const features: Array<Feature<LineString>> = [];
+  let current: Array<[number, number]> = [];
   for (const seg of data.segments) {
+    if (seg.method === 'none') {
+      if (current.length >= 2) {
+        features.push({
+          type: 'Feature',
+          geometry: { type: 'LineString', coordinates: current },
+          properties: {}
+        });
+      }
+      current = [];
+      continue;
+    }
     for (let j = 0; j < seg.geometry.length; j++) {
-      if (coords.length > 0 && j === 0) continue;
-      coords.push(seg.geometry[j]!);
+      if (current.length > 0 && j === 0) continue;
+      current.push(seg.geometry[j]!);
     }
   }
-  return coords;
+  if (current.length >= 2) {
+    features.push({
+      type: 'Feature',
+      geometry: { type: 'LineString', coordinates: current },
+      properties: {}
+    });
+  }
+  return features;
 }
 
 /** Distance from a point to a polyline (in whatever coordinate space the inputs are). */
@@ -254,7 +276,7 @@ export function createSegmentPopup(opts: SegmentPopupOpts): HTMLElement {
     '<button data-method="driving">Drive</button>',
     '<button data-method="walking">Walk</button>',
     '<button data-method="hiking">Hike</button>',
-    '<button data-method="cycling">Cycle</button>'
+    '<button data-method="none">None</button>'
   ].join('');
 
   el.style.cssText =
@@ -318,7 +340,9 @@ export async function rerouteSegment(
   segIdx: number
 ): Promise<void> {
   const seg = routeData.segments[segIdx];
-  if (seg === undefined || seg.method === 'straight') return;
+  if (seg === undefined || seg.method === 'straight' || seg.method === 'none') {
+    return;
+  }
 
   const startPt = routeData.points[segIdx]!;
   const endPt = routeData.points[segIdx + 1]!;
@@ -376,7 +400,7 @@ export async function applySegmentMethod(
   const prevGeometry = seg.geometry;
   seg.method = method;
 
-  if (method === 'straight') {
+  if (method === 'straight' || method === 'none') {
     const startPt = data.points[segIdx]!;
     const endPt = data.points[segIdx + 1]!;
     seg.geometry = [

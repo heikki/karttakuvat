@@ -17,7 +17,7 @@ import {
 import {
   ALL_EDIT_LAYERS,
   applySegmentMethod,
-  concatRouteCoords,
+  buildRouteLineFeatures,
   createEditLayers,
   createSegmentPopup,
   EDIT_IDS,
@@ -206,16 +206,8 @@ function updateLineSrc(): void {
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- need GeoJSONSource for setData
   const src = map.getSource(EDIT_IDS.lineSrc) as GeoJSONSource | undefined;
   if (src === undefined) return;
-  const c = concatRouteCoords(routeData);
-  src.setData(
-    c.length >= 2
-      ? {
-          type: 'Feature',
-          geometry: { type: 'LineString', coordinates: c },
-          properties: {}
-        }
-      : { type: 'FeatureCollection', features: [] }
-  );
+  const features = buildRouteLineFeatures(routeData);
+  src.setData({ type: 'FeatureCollection', features });
 }
 
 function scheduleAutoSave(): void {

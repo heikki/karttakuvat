@@ -16,7 +16,7 @@ export interface RoutePoint {
 }
 
 export interface RouteSegment {
-  method: 'straight' | 'driving' | 'walking' | 'hiking' | 'cycling';
+  method: 'straight' | 'driving' | 'walking' | 'hiking' | 'cycling' | 'none';
   geometry: Array<[number, number]>;
 }
 
@@ -290,28 +290,35 @@ function applyRouteData(data: RouteData): void {
   const src = map.getSource(ROUTE_SOURCE) as GeoJSONSource | undefined;
   if (src === undefined) return;
 
-  // Concatenate all segment geometries into one LineString
-  const allCoords: Array<[number, number]> = [];
+  // Build separate LineStrings, breaking at 'none' segments
+  const features: Array<Feature<LineString>> = [];
+  let current: Array<[number, number]> = [];
   for (const seg of data.segments) {
+    if (seg.method === 'none') {
+      if (current.length >= 2) {
+        features.push({
+          type: 'Feature',
+          geometry: { type: 'LineString', coordinates: current },
+          properties: {}
+        });
+      }
+      current = [];
+      continue;
+    }
     for (let i = 0; i < seg.geometry.length; i++) {
-      // Skip first point of subsequent segments to avoid duplicates
-      if (allCoords.length > 0 && i === 0) continue;
-      allCoords.push(seg.geometry[i]!);
+      if (current.length > 0 && i === 0) continue;
+      current.push(seg.geometry[i]!);
     }
   }
-
-  if (allCoords.length < 2) {
-    src.setData({ type: 'FeatureCollection', features: [] });
-    return;
+  if (current.length >= 2) {
+    features.push({
+      type: 'Feature',
+      geometry: { type: 'LineString', coordinates: current },
+      properties: {}
+    });
   }
 
-  const feature: Feature<LineString> = {
-    type: 'Feature',
-    geometry: { type: 'LineString', coordinates: allCoords },
-    properties: {}
-  };
-
-  src.setData({ type: 'FeatureCollection', features: [feature] });
+  src.setData({ type: 'FeatureCollection', features });
 }
 
 /** Build a lookup from uuid → effective location for all filtered photos. */
