@@ -1,6 +1,6 @@
 import type { GeoJSONSource, Map as MapGL, MapMouseEvent } from 'maplibre-gl';
 
-import { state } from '@common/data';
+import { state, subscribe } from '@common/data';
 import { RouteEditExitedEvent, ToggleRouteEditEvent } from '@common/events';
 import type { Photo } from '@common/types';
 
@@ -11,6 +11,7 @@ import {
   setRouteData,
   setRouteEditStyle,
   setSavedRouteData,
+  syncPhotoPoints,
   type RouteData
 } from './photo-route';
 import {
@@ -53,6 +54,14 @@ export function initRouteEdit(
       exitEditMode();
     } else {
       enterEditMode();
+    }
+  });
+
+  // Sync photo point positions when pending edits change
+  subscribe(() => {
+    if (isEditActive && routeData !== null) {
+      syncPhotoPoints(routeData);
+      updateEditSources();
     }
   });
 }

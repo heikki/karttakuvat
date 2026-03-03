@@ -286,6 +286,43 @@ function applyRouteData(data: RouteData): void {
   src.setData({ type: 'FeatureCollection', features: [feature] });
 }
 
+/** Build a lookup from uuid → effective location for all filtered photos. */
+function buildPhotoLocationMap(): Map<string, { lon: number; lat: number }> {
+  const m = new Map<string, { lon: number; lat: number }>();
+  for (const photo of state.filteredPhotos) {
+    const loc = getEffectiveLocation(photo);
+    if (loc !== null) m.set(photo.uuid, loc);
+  }
+  return m;
+}
+
+function getMovedPhotoLocation(
+  pt: RoutePoint,
+  locMap: Map<string, { lon: number; lat: number }>
+): { lon: number; lat: number } | null {
+  if (pt.type !== 'photo' || pt.uuid === undefined) return null;
+  const loc = locMap.get(pt.uuid);
+  if (loc === undefined || (loc.lon === pt.lon && loc.lat === pt.lat)) return null;
+  return loc;
+}
+
+/** Sync photo point coordinates in route data with current effective locations. */
+export function syncPhotoPoints(data: RouteData): void {
+  const locMap = buildPhotoLocationMap();
+  for (let i = 0; i < data.points.length; i++) {
+    const loc = getMovedPhotoLocation(data.points[i]!, locMap);
+    if (loc === null) continue;
+    const pt = data.points[i]!;
+    pt.lon = loc.lon;
+    pt.lat = loc.lat;
+    const coord: [number, number] = [loc.lon, loc.lat];
+    const before = data.segments[i - 1];
+    if (before?.method === 'straight') before.geometry.splice(-1, 1, coord);
+    const after = data.segments[i];
+    if (after?.method === 'straight') after.geometry.splice(0, 1, coord);
+  }
+}
+
 function updateRoute(): void {
   if (map === null) return;
 
@@ -293,8 +330,9 @@ function updateRoute(): void {
   const src = map.getSource(ROUTE_SOURCE) as GeoJSONSource | undefined;
   if (src === undefined) return;
 
-  // Use saved route data if available
+  // Use saved route data if available, syncing photo locations
   if (savedRouteData !== null) {
+    syncPhotoPoints(savedRouteData);
     applyRouteData(savedRouteData);
     return;
   }
