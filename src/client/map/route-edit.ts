@@ -290,6 +290,7 @@ function insertWaypoint(segIdx: number, lon: number, lat: number): void {
   if (routeData === null) return;
 
   const method = routeData.segments[segIdx]?.method ?? 'straight';
+  if (method === 'none') return;
   insertWaypointInRoute(routeData, segIdx, lon, lat);
 
   if (method !== 'straight') {
@@ -401,6 +402,7 @@ function onSegmentMouseDown(e: MapMouseEvent): void {
   if (hitFeatures.length === 0) return;
 
   const segIdx = hitFeatures[0]!.properties.segIndex as number;
+  if (routeData.segments[segIdx]?.method === 'none') return;
   insertWaypointInRoute(routeData, segIdx, e.lngLat.lng, e.lngLat.lat);
   updateEditSources();
 
