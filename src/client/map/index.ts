@@ -33,6 +33,7 @@ import { ClassicLayer } from './classic-layer';
 import { mapStyles } from './config';
 import { fitToPhotos, initFit } from './fit';
 import { addGpxLayers, initGpx } from './gpx';
+import { addPhotoRouteLayers, initPhotoRoute } from './photo-route';
 import {
   addMeasureLayers,
   exitMeasureMode,
@@ -224,6 +225,7 @@ export function initMap() {
   });
   initMeasure(map, getMarkerLayerId);
   initFit(map);
+  initPhotoRoute(map);
   initGpx(map);
 
   // Init globe background shader
@@ -272,6 +274,7 @@ export function initMap() {
   });
 
   map.on('load', () => {
+    addPhotoRouteLayers();
     addGpxLayers();
     addPhotoLayers();
     addMeasureLayers();
@@ -357,6 +360,7 @@ function changeMapStyle(styleKey: string) {
   map.stop();
 
   const applyLayers = () => {
+    addPhotoRouteLayers();
     addGpxLayers();
     addPhotoLayers();
     addMeasureLayers();

@@ -11,7 +11,8 @@ import {
   ResetMapEvent,
   SaveEditsEvent,
   ShowAlbumFilesEvent,
-  ToggleMeasureModeEvent
+  ToggleMeasureModeEvent,
+  TogglePhotoRouteEvent
 } from '@common/events';
 import {
   filtersFromUrl,
@@ -19,7 +20,9 @@ import {
   mapStyleFromUrl,
   mapStyleToUrl,
   markerStyleFromUrl,
-  markerStyleToUrl
+  markerStyleToUrl,
+  routeFromUrl,
+  routeToUrl
 } from '@common/filter-url';
 import { getYear, isVideo } from '@common/utils';
 
@@ -82,6 +85,7 @@ export class FilterPanel extends LitElement {
   @litState() private _mapStyle = 'satellite';
   @litState() private _markerStyle = 'classic';
   @litState() private _measureActive = false;
+  @litState() private _routeActive = false;
 
   private _initialized = false;
   private _gpsClickTimer: ReturnType<typeof setTimeout> | null = null;
@@ -126,6 +130,7 @@ export class FilterPanel extends LitElement {
       if (saved.gps !== undefined) this._gps = saved.gps;
       if (saved.media !== undefined) this._media = saved.media;
     }
+    this._routeActive = routeFromUrl();
     const mapStyle = mapStyleFromUrl();
     if (mapStyle !== null) this._mapStyle = mapStyle;
     const markerStyle = markerStyleFromUrl();
@@ -144,6 +149,9 @@ export class FilterPanel extends LitElement {
     this._applyFilters();
     document.dispatchEvent(new ChangeMapStyleEvent(this._mapStyle));
     document.dispatchEvent(new ChangeMarkerStyleEvent(this._markerStyle));
+    if (this._routeActive) {
+      document.dispatchEvent(new TogglePhotoRouteEvent(true));
+    }
   }
 
   private _getYearPhotos() {
@@ -215,6 +223,11 @@ export class FilterPanel extends LitElement {
     if (this._camera !== 'all' && !cameraOpts.includes(this._camera)) {
       this._camera = 'all';
     }
+    if (this._album === 'all' && this._routeActive) {
+      this._routeActive = false;
+      routeToUrl(false);
+      document.dispatchEvent(new TogglePhotoRouteEvent(false));
+    }
     this._applyFilters();
   };
 
@@ -276,6 +289,10 @@ export class FilterPanel extends LitElement {
       mapStyleToUrl('satellite');
     }
     this._measureActive = false;
+    if (this._routeActive) {
+      this._routeActive = false;
+      document.dispatchEvent(new TogglePhotoRouteEvent(false));
+    }
     this._applyFilters();
     history.replaceState(null, '', location.pathname);
     document.dispatchEvent(new ResetMapEvent());
@@ -447,6 +464,18 @@ export class FilterPanel extends LitElement {
                         }}
                       >
                         Files
+                      </button>
+                      <button
+                        class="view-btn ${this._routeActive ? 'active' : ''}"
+                        @click=${() => {
+                          this._routeActive = !this._routeActive;
+                          routeToUrl(this._routeActive);
+                          document.dispatchEvent(
+                            new TogglePhotoRouteEvent(this._routeActive)
+                          );
+                        }}
+                      >
+                        Route
                       </button>
                     </div>`}
                 <div class="view-buttons">

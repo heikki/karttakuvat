@@ -92,6 +92,15 @@ export class OpenExternalMapEvent extends Event {
   }
 }
 
+export class TogglePhotoRouteEvent extends Event {
+  static readonly type = 'toggle-photo-route';
+  readonly show: boolean;
+  constructor(show: boolean) {
+    super(TogglePhotoRouteEvent.type);
+    this.show = show;
+  }
+}
+
 /* ── Map status events (map → filter-panel) ── */
 
 export class MeasureModeExitedEvent extends Event {
@@ -127,6 +136,7 @@ declare global {
     [ToggleMeasureModeEvent.type]: ToggleMeasureModeEvent;
     [OpenExternalMapEvent.type]: OpenExternalMapEvent;
     [SaveEditsEvent.type]: SaveEditsEvent;
+    [TogglePhotoRouteEvent.type]: TogglePhotoRouteEvent;
     [MeasureModeExitedEvent.type]: MeasureModeExitedEvent;
     [ShowAlbumFilesEvent.type]: ShowAlbumFilesEvent;
   }

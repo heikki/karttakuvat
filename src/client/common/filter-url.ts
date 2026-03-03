@@ -185,3 +185,17 @@ export function markerStyleToUrl(style: string): void {
 export function markerStyleFromUrl(): string | null {
   return new URLSearchParams(location.search).get('markers');
 }
+
+export function routeToUrl(visible: boolean): void {
+  const params = currentParams();
+  if (visible) {
+    params.set('route', '1');
+  } else {
+    params.delete('route');
+  }
+  updateUrl(params);
+}
+
+export function routeFromUrl(): boolean {
+  return new URLSearchParams(location.search).get('route') === '1';
+}
