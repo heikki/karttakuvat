@@ -54,7 +54,12 @@ export default {
     bun: {
       entrypoint: 'src/app/index.ts',
       external: ['prettier'],
-      plugins: [pathAliasPlugin]
+      plugins: [pathAliasPlugin],
+      define: {
+        'process.env.PUBLIC_ORS_API_KEY': JSON.stringify(
+          process.env.PUBLIC_ORS_API_KEY ?? ''
+        )
+      }
     },
 
     views: {
