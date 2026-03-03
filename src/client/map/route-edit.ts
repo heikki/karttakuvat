@@ -15,13 +15,15 @@ import {
 import {
   ALL_EDIT_LAYERS,
   applySegmentMethod,
+  concatRouteCoords,
   createEditLayers,
   createSegmentPopup,
   EDIT_IDS,
   findNearestSegment,
   insertWaypointInRoute,
   removeWaypointFromRoute,
-  rerouteSegment
+  rerouteSegment,
+  updateAdjacentSegments
 } from './route-edit-helpers';
 
 // Module state
@@ -33,6 +35,7 @@ let dragIndex: number | null = null;
 let popupEl: HTMLElement | null = null;
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 let hoveredSegIdx: number | null = null;
+let hoveredPointId: number | null = null;
 
 export function isRouteEditMode(): boolean {
   return isEditActive;
@@ -102,6 +105,13 @@ function exitEditMode(): void {
   map.off('mouseenter', EDIT_IDS.points, onPointEnter);
   map.off('mouseleave', EDIT_IDS.points, onPointLeave);
   clearHoverHighlight();
+  if (hoveredPointId !== null) {
+    map.setFeatureState(
+      { source: EDIT_IDS.pointsSrc, id: hoveredPointId },
+      { hover: false }
+    );
+    hoveredPointId = null;
+  }
   document.removeEventListener('keydown', onKeyDown);
 
   // Clean up any drag handlers
@@ -139,6 +149,7 @@ function updateEditSources(): void {
       type: 'FeatureCollection',
       features: routeData.points.map((p, i) => ({
         type: 'Feature' as const,
+        id: i,
         geometry: { type: 'Point' as const, coordinates: [p.lon, p.lat] },
         properties: { index: i, pointType: p.type, uuid: p.uuid ?? '' }
       }))
@@ -174,21 +185,14 @@ function updateEditSources(): void {
 function updateLineSrc(): void {
   if (map === null || routeData === null) return;
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- need GeoJSONSource for setData
-  const lineSrc = map.getSource(EDIT_IDS.lineSrc) as GeoJSONSource | undefined;
-  if (lineSrc === undefined) return;
-
-  const allCoords: Array<[number, number]> = [];
-  for (const seg of routeData.segments) {
-    for (let j = 0; j < seg.geometry.length; j++) {
-      if (allCoords.length > 0 && j === 0) continue;
-      allCoords.push(seg.geometry[j]!);
-    }
-  }
-  lineSrc.setData(
-    allCoords.length >= 2
+  const src = map.getSource(EDIT_IDS.lineSrc) as GeoJSONSource | undefined;
+  if (src === undefined) return;
+  const c = concatRouteCoords(routeData);
+  src.setData(
+    c.length >= 2
       ? {
           type: 'Feature',
-          geometry: { type: 'LineString', coordinates: allCoords },
+          geometry: { type: 'LineString', coordinates: c },
           properties: {}
         }
       : { type: 'FeatureCollection', features: [] }
@@ -355,38 +359,7 @@ function onPointMouseDown(e: MapMouseEvent): void {
 
 function onDragMove(e: MapMouseEvent): void {
   if (routeData === null || dragIndex === null) return;
-
-  const pt = routeData.points[dragIndex];
-  if (pt === undefined) return;
-
-  pt.lon = e.lngLat.lng;
-  pt.lat = e.lngLat.lat;
-
-  // Update adjacent segment geometries (straight lines during drag)
-  const segBefore = dragIndex - 1;
-  const segAfter = dragIndex;
-
-  if (segBefore >= 0 && routeData.segments[segBefore] !== undefined) {
-    const prevPt = routeData.points[dragIndex - 1]!;
-    const seg = routeData.segments[segBefore];
-    seg.geometry = [
-      [prevPt.lon, prevPt.lat],
-      [pt.lon, pt.lat]
-    ];
-  }
-
-  if (
-    segAfter < routeData.segments.length &&
-    routeData.segments[segAfter] !== undefined
-  ) {
-    const nextPt = routeData.points[dragIndex + 1]!;
-    const seg = routeData.segments[segAfter];
-    seg.geometry = [
-      [pt.lon, pt.lat],
-      [nextPt.lon, nextPt.lat]
-    ];
-  }
-
+  updateAdjacentSegments(routeData, dragIndex, e.lngLat.lng, e.lngLat.lat);
   updateEditSources();
 }
 
@@ -452,8 +425,22 @@ function onSegmentLeave(): void {
   clearHoverHighlight();
 }
 
+function setHoverSource(geojson: object): void {
+  if (map === null) return;
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- need GeoJSONSource for setData
+  const src = map.getSource(EDIT_IDS.hoverSrc) as GeoJSONSource | undefined;
+  src?.setData(geojson as GeoJSON.GeoJSON);
+}
+
 function onSegmentMove(e: MapMouseEvent): void {
-  if (map === null || routeData === null || dragIndex !== null) return;
+  if (
+    map === null ||
+    routeData === null ||
+    dragIndex !== null ||
+    hoveredPointId !== null
+  ) {
+    return;
+  }
   const features = map.queryRenderedFeatures(e.point, {
     layers: [EDIT_IDS.hit]
   });
@@ -466,10 +453,7 @@ function onSegmentMove(e: MapMouseEvent): void {
   hoveredSegIdx = segIdx;
   const seg = routeData.segments[segIdx];
   if (seg === undefined) return;
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- need GeoJSONSource for setData
-  const src = map.getSource(EDIT_IDS.hoverSrc) as GeoJSONSource | undefined;
-  if (src === undefined) return;
-  src.setData({
+  setHoverSource({
     type: 'Feature',
     geometry: { type: 'LineString', coordinates: seg.geometry },
     properties: {}
@@ -479,20 +463,30 @@ function onSegmentMove(e: MapMouseEvent): void {
 function clearHoverHighlight(): void {
   if (hoveredSegIdx === null) return;
   hoveredSegIdx = null;
-  if (map === null) return;
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- need GeoJSONSource for setData
-  const src = map.getSource(EDIT_IDS.hoverSrc) as GeoJSONSource | undefined;
-  if (src !== undefined) {
-    src.setData({ type: 'FeatureCollection', features: [] });
-  }
+  setHoverSource({ type: 'FeatureCollection', features: [] });
 }
 
-function onPointEnter(): void {
+function onPointEnter(e: MapMouseEvent): void {
   if (dragIndex === null) setCursorClass('cursor-pointer');
+  clearHoverHighlight();
+  if (map === null) return;
+  const features = map.queryRenderedFeatures(e.point, {
+    layers: [EDIT_IDS.points]
+  });
+  const id = features[0]?.id as number | undefined;
+  if (id === undefined) return;
+  hoveredPointId = id;
+  map.setFeatureState({ source: EDIT_IDS.pointsSrc, id }, { hover: true });
 }
 
 function onPointLeave(): void {
-  // Don't reset if still over a segment (point sits on top of hit layer)
+  if (hoveredPointId !== null && map !== null) {
+    map.setFeatureState(
+      { source: EDIT_IDS.pointsSrc, id: hoveredPointId },
+      { hover: false }
+    );
+    hoveredPointId = null;
+  }
   if (dragIndex === null) {
     setCursorClass(hoveredSegIdx === null ? null : 'cursor-pointer');
   }

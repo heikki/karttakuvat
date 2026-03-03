@@ -82,25 +82,79 @@ export function createEditLayers(m: MapGL): void {
     type: 'circle',
     source: EDIT_IDS.pointsSrc,
     paint: {
-      'circle-radius': ['match', ['get', 'pointType'], 'photo', 7, 6],
+      'circle-radius': [
+        'case',
+        ['boolean', ['feature-state', 'hover'], false],
+        ['match', ['get', 'pointType'], 'photo', 9, 8],
+        ['match', ['get', 'pointType'], 'photo', 7, 6]
+      ],
       'circle-color': [
         'match',
         ['get', 'pointType'],
         'photo',
         '#60a5fa',
-        '#ffffff'
+        '#93c5fd'
       ],
-      'circle-stroke-width': 2.5,
+      'circle-stroke-width': [
+        'case',
+        ['boolean', ['feature-state', 'hover'], false],
+        3,
+        2.5
+      ],
       'circle-stroke-color': [
         'match',
         ['get', 'pointType'],
         'photo',
         '#1d4ed8',
-        '#1d4ed8'
+        '#3b82f6'
       ]
     },
     layout: { visibility: 'none' }
   });
+}
+
+/** Update adjacent segment endpoints when a point is dragged. */
+export function updateAdjacentSegments(
+  data: RouteData,
+  pointIdx: number,
+  lon: number,
+  lat: number
+): void {
+  const pt = data.points[pointIdx];
+  if (pt === undefined) return;
+  pt.lon = lon;
+  pt.lat = lat;
+  const before = pointIdx - 1;
+  const after = pointIdx;
+  const segBefore = before >= 0 ? data.segments[before] : undefined;
+  if (segBefore !== undefined) {
+    const prev = data.points[pointIdx - 1]!;
+    segBefore.geometry = [
+      [prev.lon, prev.lat],
+      [lon, lat]
+    ];
+  }
+  const segAfter =
+    after < data.segments.length ? data.segments[after] : undefined;
+  if (segAfter !== undefined) {
+    const next = data.points[pointIdx + 1]!;
+    segAfter.geometry = [
+      [lon, lat],
+      [next.lon, next.lat]
+    ];
+  }
+}
+
+/** Concatenate all segment geometries into one coordinate array. */
+export function concatRouteCoords(data: RouteData): Array<[number, number]> {
+  const coords: Array<[number, number]> = [];
+  for (const seg of data.segments) {
+    for (let j = 0; j < seg.geometry.length; j++) {
+      if (coords.length > 0 && j === 0) continue;
+      coords.push(seg.geometry[j]!);
+    }
+  }
+  return coords;
 }
 
 /** Distance from a point to a polyline (in whatever coordinate space the inputs are). */
