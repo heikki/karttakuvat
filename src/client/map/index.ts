@@ -33,7 +33,6 @@ import { ClassicLayer } from './classic-layer';
 import { mapStyles } from './config';
 import { fitToPhotos, initFit } from './fit';
 import { addGpxLayers, initGpx } from './gpx';
-import { addPhotoRouteLayers, initPhotoRoute } from './photo-route';
 import {
   addMeasureLayers,
   exitMeasureMode,
@@ -41,6 +40,7 @@ import {
   isMeasureMode
 } from './measure';
 import { createFlyToPopup, createPanToFitPopup } from './pan';
+import { addPhotoRouteLayers, initPhotoRoute } from './photo-route';
 import {
   enterPlacementMode as enterPlacement,
   isInPlacementMode,
@@ -54,6 +54,12 @@ import {
   reopenPopupFromUrl,
   showPopup
 } from './popup';
+import {
+  addRouteEditLayers,
+  exitRouteEdit,
+  initRouteEdit,
+  isRouteEditMode
+} from './route-edit';
 
 // Global map variable (local to module)
 // eslint-disable-next-line @typescript-eslint/init-declarations -- map is initialized in initMap() which is called before any other usage
@@ -103,6 +109,7 @@ function setMarkerVisibility(visible: boolean) {
 function resetMap() {
   getPopup()?.remove();
   if (isMeasureMode()) exitMeasureMode();
+  if (isRouteEditMode()) exitRouteEdit();
   changeMapStyle('satellite');
   fitToPhotos(true);
 }
@@ -224,6 +231,7 @@ export function initMap() {
     getMarkerRadius
   });
   initMeasure(map, getMarkerLayerId);
+  initRouteEdit(map, getMarkerLayerId);
   initFit(map);
   initPhotoRoute(map);
   initGpx(map);
@@ -275,6 +283,7 @@ export function initMap() {
 
   map.on('load', () => {
     addPhotoRouteLayers();
+    addRouteEditLayers();
     addGpxLayers();
     addPhotoLayers();
     addMeasureLayers();
@@ -361,6 +370,7 @@ function changeMapStyle(styleKey: string) {
 
   const applyLayers = () => {
     addPhotoRouteLayers();
+    addRouteEditLayers();
     addGpxLayers();
     addPhotoLayers();
     addMeasureLayers();

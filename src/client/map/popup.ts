@@ -160,8 +160,8 @@ export function initPopupCallbacks(m: MapGL, callbacks: PopupCallbacks) {
 
 function updatePopupGlobeMask() {
   if (popup === null || map === null) return;
-  const el = popup.getElement();
-  if (!el) return;
+  const el = popup.getElement() as HTMLElement | undefined;
+  if (el === undefined) return;
 
   if (map.getProjection().type !== 'globe') {
     el.style.maskImage = '';
@@ -169,7 +169,7 @@ function updatePopupGlobeMask() {
   }
 
   const lngLat = popup.getLngLat();
-  const occluded = lngLat ? map.transform.isLocationOccluded(lngLat) : false;
+  const occluded = map.transform.isLocationOccluded(lngLat);
 
   if (!occluded) {
     el.style.maskImage = '';
@@ -184,12 +184,17 @@ function updatePopupGlobeMask() {
   // Compute screen-space globe silhouette radius.
   // In 3D: sphere of radius R at distance D from camera.
   // Visual silhouette radius on screen = focalLength * R / sqrt(D² - R²)
-  const t = map.transform as any;
+  const t = map.transform as {
+    worldSize: number;
+    cameraToCenterDistance: number;
+  };
   const R: number =
-    t.worldSize / (2.0 * Math.PI) / Math.cos(map.getCenter().lat * Math.PI / 180);
+    t.worldSize /
+    (2.0 * Math.PI) /
+    Math.cos((map.getCenter().lat * Math.PI) / 180);
   const f: number = t.cameraToCenterDistance; // focal length in pixels
   const D = f + R; // camera-to-sphere-center distance
-  const r = f * R / Math.sqrt(D * D - R * R);
+  const r = (f * R) / Math.sqrt(D * D - R * R);
 
   // clip-path operates in pre-transform space, but the popup is moved via CSS
   // transform. Compensate by subtracting the visual offset from globe coords.
@@ -203,8 +208,7 @@ function updatePopupGlobeMask() {
   // gradient center lands at (cx, cy) in the element's coordinate space.
   const maskSize = Math.max(container.clientWidth, container.clientHeight) * 3;
   const half = maskSize / 2;
-  el.style.maskImage =
-    `radial-gradient(circle ${r}px at center, transparent ${r}px, black ${r}px)`;
+  el.style.maskImage = `radial-gradient(circle ${r}px at center, transparent ${r}px, black ${r}px)`;
   el.style.maskSize = `${maskSize}px ${maskSize}px`;
   el.style.maskPosition = `${cx - half}px ${cy - half}px`;
   el.style.maskRepeat = 'no-repeat';

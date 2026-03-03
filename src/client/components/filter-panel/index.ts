@@ -9,10 +9,12 @@ import {
   MeasureModeExitedEvent,
   OpenExternalMapEvent,
   ResetMapEvent,
+  RouteEditExitedEvent,
   SaveEditsEvent,
   ShowAlbumFilesEvent,
   ToggleMeasureModeEvent,
-  TogglePhotoRouteEvent
+  TogglePhotoRouteEvent,
+  ToggleRouteEditEvent
 } from '@common/events';
 import {
   filtersFromUrl,
@@ -26,51 +28,15 @@ import {
 } from '@common/filter-url';
 import { getYear, isVideo } from '@common/utils';
 
+import {
+  DEFAULT_GPS,
+  DEFAULT_MEDIA,
+  renderFilterBtns,
+  renderSelect,
+  renderStyleBtns
+} from './helpers';
 import { StoreController } from './store-controller';
 import { styles } from './styles';
-
-const DEFAULT_GPS = ['exif', 'inferred', 'user'];
-const DEFAULT_MEDIA = ['photo', 'video'];
-
-function renderSelect(
-  label: string,
-  options: string[],
-  value: string,
-  onChange: (e: Event) => void
-) {
-  return html`
-    <label>${label}</label>
-    <select @change=${onChange}>
-      <option value="all" ?selected=${value === 'all'}>All</option>
-      ${options.map(
-        (o) => html`<option value=${o} ?selected=${o === value}>${o}</option>`
-      )}
-    </select>
-  `;
-}
-
-function renderStyleBtns(
-  items: Array<{ style: string; label: string }>,
-  active: string,
-  onClick: (s: string) => void
-) {
-  return html`
-    <div class="map-type-buttons">
-      ${items.map(
-        (i) => html`
-          <button
-            class="map-type-btn ${i.style === active ? 'active' : ''}"
-            @click=${() => {
-              onClick(i.style);
-            }}
-          >
-            ${i.label}
-          </button>
-        `
-      )}
-    </div>
-  `;
-}
 
 @customElement('filter-panel')
 export class FilterPanel extends LitElement {
@@ -86,6 +52,7 @@ export class FilterPanel extends LitElement {
   @litState() private _markerStyle = 'classic';
   @litState() private _measureActive = false;
   @litState() private _routeActive = false;
+  @litState() private _routeEditActive = false;
 
   private _initialized = false;
   private _gpsClickTimer: ReturnType<typeof setTimeout> | null = null;
@@ -99,6 +66,10 @@ export class FilterPanel extends LitElement {
     document.addEventListener(
       MeasureModeExitedEvent.type,
       this._onMeasureExited
+    );
+    document.addEventListener(
+      RouteEditExitedEvent.type,
+      this._onRouteEditExited
     );
   }
 
@@ -115,11 +86,25 @@ export class FilterPanel extends LitElement {
       MeasureModeExitedEvent.type,
       this._onMeasureExited
     );
+    document.removeEventListener(
+      RouteEditExitedEvent.type,
+      this._onRouteEditExited
+    );
   }
 
   private readonly _onMeasureExited = () => {
     this._measureActive = false;
   };
+  private readonly _onRouteEditExited = () => {
+    this._routeEditActive = false;
+  };
+
+  private _exitRouteEdit() {
+    if (this._routeEditActive) {
+      this._routeEditActive = false;
+      document.dispatchEvent(new ToggleRouteEditEvent());
+    }
+  }
 
   private _restoreFromUrl() {
     const saved = filtersFromUrl();
@@ -224,6 +209,7 @@ export class FilterPanel extends LitElement {
       this._camera = 'all';
     }
     if (this._album === 'all' && this._routeActive) {
+      this._exitRouteEdit();
       this._routeActive = false;
       routeToUrl(false);
       document.dispatchEvent(new TogglePhotoRouteEvent(false));
@@ -289,6 +275,7 @@ export class FilterPanel extends LitElement {
       mapStyleToUrl('satellite');
     }
     this._measureActive = false;
+    this._exitRouteEdit();
     if (this._routeActive) {
       this._routeActive = false;
       document.dispatchEvent(new TogglePhotoRouteEvent(false));
@@ -305,49 +292,6 @@ export class FilterPanel extends LitElement {
     const vc = filtered.filter((p) => isVideo(p)).length;
     if (pc > 0 && vc > 0) return `${pc} photos, ${vc} videos`;
     return vc > 0 ? `${vc} videos` : `${pc} photos`;
-  }
-
-  private _renderFilterBtns(
-    group: 'gps' | 'media',
-    items: Array<{ value: string; label: string; color?: string }>
-  ) {
-    const active = group === 'gps' ? this._gps : this._media;
-    const onClick =
-      group === 'gps'
-        ? (v: string) => {
-            this._onGpsClick(v);
-          }
-        : (v: string) => {
-            this._onMediaClick(v);
-          };
-    const onDbl =
-      group === 'gps'
-        ? (v: string) => {
-            this._onGpsDblClick(v);
-          }
-        : (v: string) => {
-            this._onMediaDblClick(v);
-          };
-    return html`
-      <div class="filter-buttons">
-        ${items.map(
-          (i) => html`
-            <button
-              class="filter-btn ${active.includes(i.value) ? 'active' : ''}"
-              style=${i.color === undefined ? '' : `--btn-color: ${i.color}`}
-              @click=${() => {
-                onClick(i.value);
-              }}
-              @dblclick=${() => {
-                onDbl(i.value);
-              }}
-            >
-              ${i.label}
-            </button>
-          `
-        )}
-      </div>
-    `;
   }
 
   override render() {
@@ -386,17 +330,35 @@ export class FilterPanel extends LitElement {
                   this._onCameraChange
                 )}
                 <label>Media</label>
-                ${this._renderFilterBtns('media', [
-                  { value: 'photo', label: 'Photos' },
-                  { value: 'video', label: 'Videos' }
-                ])}
+                ${renderFilterBtns(
+                  this._media,
+                  [
+                    { value: 'photo', label: 'Photos' },
+                    { value: 'video', label: 'Videos' }
+                  ],
+                  (v) => {
+                    this._onMediaClick(v);
+                  },
+                  (v) => {
+                    this._onMediaDblClick(v);
+                  }
+                )}
                 <label>Location</label>
-                ${this._renderFilterBtns('gps', [
-                  { value: 'exif', label: 'Exif', color: '#3b82f6' },
-                  { value: 'inferred', label: 'Inferred', color: '#f59e0b' },
-                  { value: 'user', label: 'User', color: '#22c55e' },
-                  { value: 'none', label: 'None', color: '#9ca3af' }
-                ])}
+                ${renderFilterBtns(
+                  this._gps,
+                  [
+                    { value: 'exif', label: 'Exif', color: '#3b82f6' },
+                    { value: 'inferred', label: 'Inferred', color: '#f59e0b' },
+                    { value: 'user', label: 'User', color: '#22c55e' },
+                    { value: 'none', label: 'None', color: '#9ca3af' }
+                  ],
+                  (v) => {
+                    this._onGpsClick(v);
+                  },
+                  (v) => {
+                    this._onGpsDblClick(v);
+                  }
+                )}
                 <label>Map</label>
                 ${renderStyleBtns(
                   [
@@ -468,6 +430,7 @@ export class FilterPanel extends LitElement {
                       <button
                         class="view-btn ${this._routeActive ? 'active' : ''}"
                         @click=${() => {
+                          if (this._routeActive) this._exitRouteEdit();
                           this._routeActive = !this._routeActive;
                           routeToUrl(this._routeActive);
                           document.dispatchEvent(
@@ -477,6 +440,21 @@ export class FilterPanel extends LitElement {
                       >
                         Route
                       </button>
+                      ${this._routeActive
+                        ? html`<button
+                            class="view-btn ${this._routeEditActive
+                              ? 'active'
+                              : ''}"
+                            @click=${() => {
+                              this._routeEditActive = !this._routeEditActive;
+                              document.dispatchEvent(
+                                new ToggleRouteEditEvent()
+                              );
+                            }}
+                          >
+                            Edit
+                          </button>`
+                        : nothing}
                     </div>`}
                 <div class="view-buttons">
                   <button

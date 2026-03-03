@@ -24,6 +24,7 @@ import {
   tzOffsetFromCoords,
   tzOffsetToSeconds
 } from './photos-edit';
+import { handleRouteProxy } from './route-proxy';
 
 interface LocationEdit {
   uuid: string;
@@ -395,6 +396,46 @@ export function createApiHandler(
     }
   }
 
+  async function handleGetRoute(album: string): Promise<Response> {
+    try {
+      const { readFile } = await import('node:fs/promises');
+      const filePath = `${dataDir}/albums/${album}/_route.json`;
+      const content = await readFile(filePath, 'utf-8');
+      return new Response(content, {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    } catch {
+      return new Response('Not found', { status: 404 });
+    }
+  }
+
+  async function handlePutRoute(
+    album: string,
+    req: Request
+  ): Promise<Response> {
+    try {
+      const { mkdir, writeFile } = await import('node:fs/promises');
+      const dir = `${dataDir}/albums/${album}`;
+      await mkdir(dir, { recursive: true });
+      const body = await req.text();
+      await writeFile(`${dir}/_route.json`, body, 'utf-8');
+      return Response.json({ ok: true });
+    } catch (err) {
+      console.error('handlePutRoute error:', err);
+      return new Response(`Server error: ${String(err)}`, { status: 500 });
+    }
+  }
+
+  async function handleDeleteRoute(album: string): Promise<Response> {
+    try {
+      const { unlink } = await import('node:fs/promises');
+      await unlink(`${dataDir}/albums/${album}/_route.json`);
+      return Response.json({ ok: true });
+    } catch {
+      return Response.json({ ok: true });
+    }
+  }
+
   /** Route an API request. Returns null if the path doesn't match any API route. */
   // eslint-disable-next-line complexity -- routing dispatch with multiple patterns
   function routeApiRequest(
@@ -417,6 +458,18 @@ export function createApiHandler(
 
     if (pathname === '/api/save-edits' && req.method === 'POST') {
       return handleSaveEdits(req);
+    }
+
+    if (pathname === '/api/route' && req.method === 'POST') {
+      return handleRouteProxy(req);
+    }
+
+    const routeMatch = /^\/api\/albums\/(?<album>[^/]+)\/route$/.exec(pathname);
+    if (routeMatch?.groups !== undefined) {
+      const album = decodeURIComponent(routeMatch.groups.album!);
+      if (req.method === 'GET') return handleGetRoute(album);
+      if (req.method === 'PUT') return handlePutRoute(album, req);
+      if (req.method === 'DELETE') return handleDeleteRoute(album);
     }
 
     const uploadMatch = /^\/api\/albums\/(?<album>.+)\/upload$/.exec(pathname);

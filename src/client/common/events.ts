@@ -101,12 +101,26 @@ export class TogglePhotoRouteEvent extends Event {
   }
 }
 
+export class ToggleRouteEditEvent extends Event {
+  static readonly type = 'toggle-route-edit';
+  constructor() {
+    super(ToggleRouteEditEvent.type);
+  }
+}
+
 /* ── Map status events (map → filter-panel) ── */
 
 export class MeasureModeExitedEvent extends Event {
   static readonly type = 'measure-mode-exited';
   constructor() {
     super(MeasureModeExitedEvent.type);
+  }
+}
+
+export class RouteEditExitedEvent extends Event {
+  static readonly type = 'route-edit-exited';
+  constructor() {
+    super(RouteEditExitedEvent.type);
   }
 }
 
@@ -137,7 +151,9 @@ declare global {
     [OpenExternalMapEvent.type]: OpenExternalMapEvent;
     [SaveEditsEvent.type]: SaveEditsEvent;
     [TogglePhotoRouteEvent.type]: TogglePhotoRouteEvent;
+    [ToggleRouteEditEvent.type]: ToggleRouteEditEvent;
     [MeasureModeExitedEvent.type]: MeasureModeExitedEvent;
+    [RouteEditExitedEvent.type]: RouteEditExitedEvent;
     [ShowAlbumFilesEvent.type]: ShowAlbumFilesEvent;
   }
 }
