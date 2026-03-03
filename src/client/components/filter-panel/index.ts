@@ -208,11 +208,13 @@ export class FilterPanel extends LitElement {
     if (this._camera !== 'all' && !cameraOpts.includes(this._camera)) {
       this._camera = 'all';
     }
-    if (this._album === 'all' && this._routeActive) {
+    if (this._routeActive) {
       this._exitRouteEdit();
-      this._routeActive = false;
-      routeToUrl(false);
-      document.dispatchEvent(new TogglePhotoRouteEvent(false));
+      if (this._album === 'all') {
+        this._routeActive = false;
+        routeToUrl(false);
+        document.dispatchEvent(new TogglePhotoRouteEvent(false));
+      }
     }
     this._applyFilters();
   };

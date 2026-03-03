@@ -37,6 +37,7 @@ export const ALL_ROUTE_LAYERS = [OUTLINE_LAYER, LINE_LAYER, HIGHLIGHT_LAYER];
 let map: MapGL | null = null;
 let visible = false;
 let savedRouteData: RouteData | null = null;
+let currentAlbum = 'all';
 
 export function initPhotoRoute(m: MapGL): void {
   map = m;
@@ -47,7 +48,32 @@ export function initPhotoRoute(m: MapGL): void {
 
   // Rebuild route when filtered photos change
   subscribe(() => {
-    if (visible) updateRoute();
+    if (visible) onPhotosChanged();
+  });
+}
+
+function onPhotosChanged(): void {
+  const album = state.filters.album;
+  if (album === currentAlbum) {
+    updateRoute();
+    return;
+  }
+  // Album changed — clear old route data and reload for new album
+  currentAlbum = album;
+  savedRouteData = null;
+  if (album === 'all') {
+    updateRoute();
+    return;
+  }
+  void loadSavedRoute(album).then((data) => {
+    if (state.filters.album !== album || !visible) return;
+    if (data === null) {
+      updateRoute();
+      return;
+    }
+    syncPhotoPoints(data);
+    savedRouteData = data;
+    applyRouteData(data);
   });
 }
 
@@ -124,6 +150,7 @@ export function setPhotoRouteVisible(show: boolean): void {
   if (show) {
     // Try to load saved route
     const album = state.filters.album;
+    currentAlbum = album;
     if (album === 'all') {
       updateRoute();
     } else {
@@ -303,7 +330,9 @@ function getMovedPhotoLocation(
 ): { lon: number; lat: number } | null {
   if (pt.type !== 'photo' || pt.uuid === undefined) return null;
   const loc = locMap.get(pt.uuid);
-  if (loc === undefined || (loc.lon === pt.lon && loc.lat === pt.lat)) return null;
+  if (loc === undefined || (loc.lon === pt.lon && loc.lat === pt.lat)) {
+    return null;
+  }
   return loc;
 }
 

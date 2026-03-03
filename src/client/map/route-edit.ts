@@ -371,13 +371,17 @@ function showRouteError(msg: string): void {
     'font:13px/1.4 -apple-system,sans-serif;z-index:1500;pointer-events:none;' +
     'box-shadow:0 4px 12px rgba(0,0,0,0.3)';
   map.getContainer().appendChild(el);
-  setTimeout(() => el.remove(), 3000);
+  setTimeout(() => {
+    el.remove();
+  }, 3000);
 }
 
 // --- Drag handler ---
 
 function onPointMouseDown(e: MapMouseEvent): void {
-  if (map === null || routeData === null || e.originalEvent.button !== 0) return;
+  if (map === null || routeData === null || e.originalEvent.button !== 0) {
+    return;
+  }
 
   const features = map.queryRenderedFeatures(e.point, {
     layers: [EDIT_IDS.points]
@@ -389,7 +393,9 @@ function onPointMouseDown(e: MapMouseEvent): void {
 }
 
 function onSegmentMouseDown(e: MapMouseEvent): void {
-  if (map === null || routeData === null || e.originalEvent.button !== 0) return;
+  if (map === null || routeData === null || e.originalEvent.button !== 0) {
+    return;
+  }
 
   // Don't start segment drag if already on a point
   const pointFeatures = map.queryRenderedFeatures(e.point, {
