@@ -102,6 +102,21 @@ When the user selects an album that has associated GPX files, the visible tracks
 
 When an album is selected, the user clicks the "Files" button in the filter panel to open the album files modal. The modal lists all GPX and markdown files associated with the album. The user can upload new files via drag-and-drop or file picker, toggle file visibility (hidden files are excluded from the map), or delete files. Changes take effect immediately on the map.
 
+## View a photo route
+
+When an album is selected, the user clicks the "Route" button in the filter panel. A blue line appears connecting all filtered photos in chronological order. If a previously edited route with custom waypoints exists for this album, it is loaded from the server. Clicking "Route" again hides the route.
+
+## Edit a photo route
+
+With the route visible, the user clicks the "Edit" button. The cursor changes to a crosshair and the route becomes interactive:
+
+- **Add a waypoint**: click on a route segment to insert a new control point
+- **Remove a waypoint**: click on an existing waypoint (smaller dot) to delete it
+- **Move a point**: drag any point to a new position; routed segments update automatically
+- **Change routing method**: right-click a segment to choose between straight, driving, walking, hiking, or cycling (uses OpenRouteService)
+
+Changes are auto-saved. Exit edit mode with Escape or by clicking "Edit" again. Switching to "all albums" exits edit mode automatically.
+
 ## Measure distances on the map
 
 The user clicks the "Measure" button in the filter panel. The button highlights blue and the cursor becomes a crosshair. Each click on the map adds a point, connected by a dashed red line to previous points. A floating overlay at the top of the screen shows the cumulative distance.
@@ -118,6 +133,7 @@ The user clicks the panel header ("Karttakuvat" title area) to collapse the pane
 - **Lightbox**: click outside the image, press Escape, or press Space
 - **Metadata modal**: click backdrop, press Escape, or click X
 - **Measurement mode**: press Escape or click "Measure" button
+- **Route edit mode**: press Escape or click "Edit" button
 - **Placement mode**: press Escape
 - **Date edit mode**: press Escape or click "done"
-- Priority order: metadata modal > date edit > placement > measurement > lightbox > popup
+- Priority order: metadata modal > date edit > placement > route edit > measurement > lightbox > popup

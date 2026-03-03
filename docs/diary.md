@@ -2,12 +2,12 @@
 
 Geotagged photo map viewer with Apple Photos integration.
 
-## Project Stats (as of 23.02.2026)
+## Project Stats (as of 03.03.2026)
 
-- **TypeScript files**: 44
-- **Lines of code**: 9,857
-- **Total commits**: 453
-- **Total tokens**: 1,001M | **Total cost**: $617
+- **TypeScript files**: 49
+- **Lines of code**: 11,407
+- **Total commits**: 465
+- **Total tokens**: 1,114M | **Total cost**: $684
 
 ## Updating This Diary
 
@@ -26,6 +26,22 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 - Use flat bullet lists (no bold subsections or nested structure)
 - Focus on significant features and fixes, skip minor tweaks
 - Describe final outcomes, not intermediate attempts that were reverted
+
+## 03.03.2026 — Photo Route Display & Interactive Editing
+
+**Tokens**: 70M | **Cost**: $41
+
+- Added album photo route display: connects filtered photos chronologically with a blue line on the map, toggled via "Route" button in the filter panel
+- Added interactive route editing with OpenRouteService integration: add/remove/drag waypoints, choose routing method per segment (straight, driving, walking, hiking, cycling)
+- Routes saved per album to server, with auto-save on edit and URL state persistence
+- Segment right-click popup to switch routing method, hover highlight on segments and waypoints
+- Distinguished waypoints (smaller markers) from photo points in route edit mode
+
+## 26.02.2026 — Popup Globe Masking
+
+**Tokens**: 15M | **Cost**: $10
+
+- Masked popup behind globe edge in 3D projection so it clips correctly when the marker is near the horizon
 
 ## 23.02.2026 — Map Stability Fixes & Diagnostics
 

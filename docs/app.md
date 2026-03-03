@@ -214,6 +214,57 @@ Displays GPX track data on the map when an album is selected.
 
 GPX track visibility is controlled per-file via the album files modal. Hidden files are excluded from track rendering on the map. Visibility state is persisted in the `album_files` table in `app.db`.
 
+## Photo Route
+
+Displays a route connecting filtered album photos in chronological order. Only available when a specific album is selected (not "all albums").
+
+### Route Display
+
+When toggled on via the "Route" button in the filter panel, a route line connects all filtered photos sorted by UTC time. Three map layers:
+
+- **Route outline** (`photo-route-outline`): Black line (width 4, opacity 0.3)
+- **Route line** (`photo-route-line`): Blue line (#60a5fa, width 2)
+- **Route highlight** (`photo-route-highlight`): White line (width 2, hidden by default)
+
+If a saved route exists for the album (with custom waypoints or routing methods), it is loaded from the server. Otherwise, a default straight-line route is built from the filtered photos.
+
+### Route Editing
+
+Activated via the "Edit" button (appears when route is visible). Enters an interactive editing mode with crosshair cursor and six map layers for points, lines, and hit targets.
+
+**Operations:**
+
+- **Add waypoint**: Click on a route segment to insert a waypoint at that position
+- **Remove waypoint**: Click on an existing waypoint to delete it (photo points cannot be removed)
+- **Drag point**: Mousedown + drag any point to move it; adjacent segments update in real-time
+- **Change routing method**: Right-click a segment to open a popup with method options
+
+**Routing methods** (per segment):
+
+- **Straight**: Direct line between points (default)
+- **Driving**: OpenRouteService driving-car profile
+- **Walking**: ORS foot-walking profile
+- **Hiking**: ORS foot-hiking profile
+- **Cycling**: ORS cycling-regular profile
+
+Non-straight segments are automatically re-routed via ORS when waypoints are added or dragged.
+
+**Point types** (visual distinction in edit mode):
+
+- **Photo points**: Larger circles (3–10px), color-coded by GPS type
+- **Waypoints**: Smaller circles (1.5–5px), same color coding
+
+**Persistence**: Routes are auto-saved to the server (1s debounce) via PUT `/api/albums/{album}/route`. Route visibility is persisted in URL params.
+
+**Exit**: Press Escape or click the "Edit" button again. Switching to "all albums" also exits edit mode.
+
+### Route API
+
+- `GET /api/albums/{album}/route` — load saved route data
+- `PUT /api/albums/{album}/route` — save route (points + segments with geometries)
+- `DELETE /api/albums/{album}/route` — clear saved route
+- `POST /api/route` — proxy to OpenRouteService for segment routing (requires ORS API key via env var or DB setting)
+
 ## Measurement Mode
 
 Interactive distance measurement tool for measuring distances on the map.
@@ -238,6 +289,8 @@ Fixed top-right (220px wide). Collapsible — clicking the header toggles the pa
 - "Fit" button — fits map to filtered photos and opens popup on first photo
 - "Reset" button — closes popup, exits measure mode, resets all filters to defaults, resets map style to satellite, clears URL params, fits to all photos
 - "Measure" button — toggles distance measurement mode (highlighted blue when active)
+- "Route" button (conditional) — toggles photo route display (only shown when a specific album is selected)
+- "Edit" button (conditional) — enters route editing mode (only shown when route is visible)
 - "Files" button (conditional) — opens album files management modal (only shown when an album is selected)
 - "Apple Maps" button — opens Apple Maps at the current map center or selected photo location (satellite view)
 - "Google Maps" button — opens Google Maps at the current map center or selected photo location
@@ -252,6 +305,7 @@ App state is persisted in URL query parameters:
 - **Map view**: `lat`, `lon`, `z` (zoom) — updated on every map move
 - **Map style**: `style` (e.g. `topo`, `mml_maastokartta`). Default `satellite` is omitted.
 - **Marker style**: `markers` (e.g. `points`). Default `classic` is omitted.
+- **Route**: `route` (present when route is visible for the selected album)
 
 On startup, saved URL state is restored: filters are applied, map view is positioned, map style is set, marker style is set, and the selected photo popup is reopened. The Reset button clears all URL params.
 
@@ -327,6 +381,7 @@ Dev builds use `data/` in the project root. Installed builds use `~/Library/Appl
 | Escape     | Metadata modal open | Close metadata modal           |
 | Escape     | Date edit mode      | Exit date edit mode            |
 | Escape     | Measure mode        | Exit measurement mode          |
+| Escape     | Route edit mode     | Exit route edit mode           |
 | Escape     | Placement mode      | Cancel placement mode          |
 | Escape     | Lightbox open       | Close lightbox                 |
 | Escape     | Popup open          | Close popup                    |
