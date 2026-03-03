@@ -82,8 +82,7 @@ export function addPhotoRouteLayers(): void {
     source: ROUTE_SOURCE,
     paint: {
       'line-color': '#60a5fa',
-      'line-width': 2,
-      'line-dasharray': [6, 4]
+      'line-width': 2
     },
     layout: {
       'visibility': visible ? 'visible' : 'none',

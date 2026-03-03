@@ -8,6 +8,7 @@ export const EDIT_IDS = {
   lineOutline: 'route-edit-line-outline',
   line: 'route-edit-line-layer',
   pointsSrc: 'route-edit-points',
+  pointsOutline: 'route-edit-points-outline',
   points: 'route-edit-points-layer',
   hitSrc: 'route-edit-hit',
   hit: 'route-edit-hit-layer',
@@ -19,6 +20,7 @@ export const ALL_EDIT_LAYERS = [
   EDIT_IDS.hit,
   EDIT_IDS.hover,
   EDIT_IDS.points,
+  EDIT_IDS.pointsOutline,
   EDIT_IDS.line,
   EDIT_IDS.lineOutline
 ];
@@ -53,14 +55,14 @@ export function createEditLayers(m: MapGL): void {
     id: EDIT_IDS.lineOutline,
     type: 'line',
     source: EDIT_IDS.lineSrc,
-    paint: { 'line-color': 'rgba(0, 0, 0, 0.15)', 'line-width': 7 },
+    paint: { 'line-color': 'rgba(0, 0, 0, 0.3)', 'line-width': 4 },
     layout: lineLayout
   });
   m.addLayer({
     id: EDIT_IDS.line,
     type: 'line',
     source: EDIT_IDS.lineSrc,
-    paint: { 'line-color': 'rgba(220, 38, 38, 0.5)', 'line-width': 4 },
+    paint: { 'line-color': '#60a5fa', 'line-width': 2 },
     layout: lineLayout
   });
   m.addLayer({
@@ -77,37 +79,66 @@ export function createEditLayers(m: MapGL): void {
     paint: { 'line-color': 'rgba(255, 255, 255, 0.6)', 'line-width': 6 },
     layout: lineLayout
   });
+  // Photo points: same size as classic markers (zoom-interpolated)
+  // Waypoints: half size
+  const pointRadius = [
+    'interpolate',
+    ['linear'],
+    ['zoom'],
+    2,
+    ['match', ['get', 'pointType'], 'photo', 3, 1.5],
+    8,
+    ['match', ['get', 'pointType'], 'photo', 6, 3],
+    14,
+    ['match', ['get', 'pointType'], 'photo', 10, 5]
+  ] as unknown as number;
+
+  const outlineRadius = [
+    'interpolate',
+    ['linear'],
+    ['zoom'],
+    2,
+    ['match', ['get', 'pointType'], 'photo', 4, 2],
+    8,
+    ['match', ['get', 'pointType'], 'photo', 7.5, 4],
+    14,
+    ['match', ['get', 'pointType'], 'photo', 12, 6.5]
+  ] as unknown as number;
+
+  const gpsColor = [
+    'match',
+    ['get', 'gps'],
+    'exif',
+    '#3b82f6',
+    'user',
+    '#22c55e',
+    'inferred',
+    '#f59e0b',
+    '#9ca3af'
+  ] as unknown as string;
+
+  // White outline circle behind colored fill (same approach as classic markers)
+  m.addLayer({
+    id: EDIT_IDS.pointsOutline,
+    type: 'circle',
+    source: EDIT_IDS.pointsSrc,
+    paint: {
+      'circle-color': '#fff',
+      'circle-radius': outlineRadius,
+      'circle-pitch-alignment': 'map'
+    },
+    layout: { visibility: 'none' }
+  });
+
+  // Colored fill on top — GPS-based color, no stroke
   m.addLayer({
     id: EDIT_IDS.points,
     type: 'circle',
     source: EDIT_IDS.pointsSrc,
     paint: {
-      'circle-radius': [
-        'case',
-        ['boolean', ['feature-state', 'hover'], false],
-        ['match', ['get', 'pointType'], 'photo', 9, 8],
-        ['match', ['get', 'pointType'], 'photo', 7, 6]
-      ],
-      'circle-color': [
-        'match',
-        ['get', 'pointType'],
-        'photo',
-        '#60a5fa',
-        '#93c5fd'
-      ],
-      'circle-stroke-width': [
-        'case',
-        ['boolean', ['feature-state', 'hover'], false],
-        3,
-        2.5
-      ],
-      'circle-stroke-color': [
-        'match',
-        ['get', 'pointType'],
-        'photo',
-        '#1d4ed8',
-        '#3b82f6'
-      ]
+      'circle-color': gpsColor,
+      'circle-radius': pointRadius,
+      'circle-pitch-alignment': 'map'
     },
     layout: { visibility: 'none' }
   });

@@ -2,6 +2,7 @@ import type { GeoJSONSource, Map as MapGL, MapMouseEvent } from 'maplibre-gl';
 
 import { state } from '@common/data';
 import { RouteEditExitedEvent, ToggleRouteEditEvent } from '@common/events';
+import type { Photo } from '@common/types';
 
 import {
   buildDefaultRoute,
@@ -105,13 +106,7 @@ function exitEditMode(): void {
   map.off('mouseenter', EDIT_IDS.points, onPointEnter);
   map.off('mouseleave', EDIT_IDS.points, onPointLeave);
   clearHoverHighlight();
-  if (hoveredPointId !== null) {
-    map.setFeatureState(
-      { source: EDIT_IDS.pointsSrc, id: hoveredPointId },
-      { hover: false }
-    );
-    hoveredPointId = null;
-  }
+  hoveredPointId = null;
   document.removeEventListener('keydown', onKeyDown);
 
   // Clean up any drag handlers
@@ -145,13 +140,21 @@ function updateEditSources(): void {
     | GeoJSONSource
     | undefined;
   if (pointsSrc !== undefined) {
+    const photoMap = new Map<string, Photo>();
+    for (const p of state.filteredPhotos) photoMap.set(p.uuid, p);
     pointsSrc.setData({
       type: 'FeatureCollection',
       features: routeData.points.map((p, i) => ({
         type: 'Feature' as const,
         id: i,
         geometry: { type: 'Point' as const, coordinates: [p.lon, p.lat] },
-        properties: { index: i, pointType: p.type, uuid: p.uuid ?? '' }
+        properties: {
+          index: i,
+          pointType: p.type,
+          uuid: p.uuid ?? '',
+          gps:
+            (p.uuid === undefined ? null : photoMap.get(p.uuid)?.gps) ?? 'none'
+        }
       }))
     });
   }
@@ -176,7 +179,10 @@ function updateEditSources(): void {
   // Keep route data in sync (for save/load) but don't update display layers
   setSavedRouteData(routeData);
 
-  // Ensure points layer stays on top
+  // Ensure points layers stay on top (outline first, then fill)
+  if (map.getLayer(EDIT_IDS.pointsOutline) !== undefined) {
+    map.moveLayer(EDIT_IDS.pointsOutline);
+  }
   if (map.getLayer(EDIT_IDS.points) !== undefined) {
     map.moveLayer(EDIT_IDS.points);
   }
@@ -476,17 +482,10 @@ function onPointEnter(e: MapMouseEvent): void {
   const id = features[0]?.id as number | undefined;
   if (id === undefined) return;
   hoveredPointId = id;
-  map.setFeatureState({ source: EDIT_IDS.pointsSrc, id }, { hover: true });
 }
 
 function onPointLeave(): void {
-  if (hoveredPointId !== null && map !== null) {
-    map.setFeatureState(
-      { source: EDIT_IDS.pointsSrc, id: hoveredPointId },
-      { hover: false }
-    );
-    hoveredPointId = null;
-  }
+  hoveredPointId = null;
   if (dragIndex === null) {
     setCursorClass(hoveredSegIdx === null ? null : 'cursor-pointer');
   }
