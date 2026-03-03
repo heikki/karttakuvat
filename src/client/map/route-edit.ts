@@ -488,7 +488,7 @@ function clearHoverHighlight(): void {
 }
 
 function onPointEnter(): void {
-  if (dragIndex === null) setCursorClass('cursor-grab');
+  if (dragIndex === null) setCursorClass('cursor-pointer');
 }
 
 function onPointLeave(): void {
