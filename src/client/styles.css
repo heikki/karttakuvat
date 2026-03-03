@@ -41,6 +41,15 @@ body {
 canvas.crosshair {
   cursor: crosshair !important;
 }
+canvas.cursor-pointer {
+  cursor: pointer !important;
+}
+canvas.cursor-grab {
+  cursor: grab !important;
+}
+canvas.cursor-grabbing {
+  cursor: grabbing !important;
+}
 
 /* Measure distance overlay */
 .measure-overlay {

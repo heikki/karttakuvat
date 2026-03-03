@@ -347,7 +347,7 @@ function onPointMouseDown(e: MapMouseEvent): void {
 
   e.preventDefault();
   map.dragPan.disable();
-  map.getCanvas().style.cursor = 'grabbing';
+  setCursorClass('cursor-grabbing');
 
   map.on('mousemove', onDragMove);
   map.on('mouseup', onDragEnd);
@@ -425,23 +425,30 @@ function endDrag(): void {
   dragIndex = null;
   if (map === null) return;
   map.dragPan.enable();
-  map.getCanvas().style.cursor = 'crosshair';
+  setCursorClass(null);
   map.off('mousemove', onDragMove);
   map.off('mouseup', onDragEnd);
+}
+
+// --- Cursor helpers ---
+
+const CURSOR_CLASSES = ['cursor-pointer', 'cursor-grab', 'cursor-grabbing'];
+
+function setCursorClass(cls: string | null): void {
+  if (map === null) return;
+  const canvas = map.getCanvas();
+  for (const c of CURSOR_CLASSES) canvas.classList.remove(c);
+  if (cls !== null) canvas.classList.add(cls);
 }
 
 // --- Hover handlers ---
 
 function onSegmentEnter(): void {
-  if (map !== null && dragIndex === null) {
-    map.getCanvas().style.cursor = 'pointer';
-  }
+  if (dragIndex === null) setCursorClass('cursor-pointer');
 }
 
 function onSegmentLeave(): void {
-  if (map !== null && dragIndex === null) {
-    map.getCanvas().style.cursor = 'crosshair';
-  }
+  if (dragIndex === null) setCursorClass(null);
   clearHoverHighlight();
 }
 
@@ -481,15 +488,11 @@ function clearHoverHighlight(): void {
 }
 
 function onPointEnter(): void {
-  if (map !== null && dragIndex === null) {
-    map.getCanvas().style.cursor = 'grab';
-  }
+  if (dragIndex === null) setCursorClass('cursor-grab');
 }
 
 function onPointLeave(): void {
-  if (map !== null && dragIndex === null) {
-    map.getCanvas().style.cursor = 'crosshair';
-  }
+  if (dragIndex === null) setCursorClass(null);
 }
 
 function onKeyDown(e: KeyboardEvent): void {
