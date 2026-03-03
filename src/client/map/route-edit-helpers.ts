@@ -274,7 +274,6 @@ export function createSegmentPopup(opts: SegmentPopupOpts): HTMLElement {
   el.innerHTML = [
     '<button data-method="straight">Straight</button>',
     '<button data-method="driving">Drive</button>',
-    '<button data-method="walking">Walk</button>',
     '<button data-method="hiking">Hike</button>',
     '<button data-method="none">None</button>'
   ].join('');
