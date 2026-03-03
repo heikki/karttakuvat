@@ -363,14 +363,17 @@ export function insertWaypointInRoute(
   data.segments.splice(segIdx, 1, seg1, seg2);
 }
 
-/** Change a segment's routing method. Returns true if async rerouting is needed. */
+/** Change a segment's routing method. Returns false if the routing API call failed. */
 export async function applySegmentMethod(
   data: RouteData,
   segIdx: number,
   method: RouteSegment['method']
-): Promise<void> {
+): Promise<boolean> {
   const seg = data.segments[segIdx];
-  if (seg === undefined) return;
+  if (seg === undefined) return false;
+
+  const prevMethod = seg.method;
+  const prevGeometry = seg.geometry;
   seg.method = method;
 
   if (method === 'straight') {
@@ -380,9 +383,24 @@ export async function applySegmentMethod(
       [startPt.lon, startPt.lat],
       [endPt.lon, endPt.lat]
     ];
-  } else {
-    await rerouteSegment(data, segIdx);
+    return true;
   }
+
+  const startPt = data.points[segIdx]!;
+  const endPt = data.points[segIdx + 1]!;
+  const coords = await fetchRouteGeometry(
+    [startPt.lon, startPt.lat],
+    [endPt.lon, endPt.lat],
+    method
+  );
+  if (coords === null) {
+    // Revert on failure
+    seg.method = prevMethod;
+    seg.geometry = prevGeometry;
+    return false;
+  }
+  seg.geometry = coords;
+  return true;
 }
 
 /** Remove a waypoint from routeData, merging adjacent segments. Returns the merge method. */

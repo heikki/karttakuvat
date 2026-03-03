@@ -339,9 +339,13 @@ function showSegmentPopup(segIdx: number, lon: number, lat: number): void {
     currentMethod: routeData?.segments[segIdx]?.method ?? 'straight',
     onSelect: (method) => {
       if (routeData !== null) {
-        void applySegmentMethod(routeData, segIdx, method).then(() => {
+        void applySegmentMethod(routeData, segIdx, method).then((ok) => {
           updateEditSources();
-          scheduleAutoSave();
+          if (ok) {
+            scheduleAutoSave();
+          } else {
+            showRouteError('Routing failed. Check your API key.');
+          }
         });
       }
       removePopup();
@@ -355,6 +359,19 @@ function removePopup(): void {
     popupEl.remove();
     popupEl = null;
   }
+}
+
+function showRouteError(msg: string): void {
+  if (map === null) return;
+  const el = document.createElement('div');
+  el.textContent = msg;
+  el.style.cssText =
+    'position:absolute;top:12px;left:50%;transform:translateX(-50%);' +
+    'background:rgba(220,38,38,0.9);color:#fff;padding:8px 16px;border-radius:8px;' +
+    'font:13px/1.4 -apple-system,sans-serif;z-index:1500;pointer-events:none;' +
+    'box-shadow:0 4px 12px rgba(0,0,0,0.3)';
+  map.getContainer().appendChild(el);
+  setTimeout(() => el.remove(), 3000);
 }
 
 // --- Drag handler ---
