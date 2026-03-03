@@ -10,20 +10,19 @@ import {
   setRouteData,
   setRouteEditStyle,
   setSavedRouteData,
-  type RouteData,
-  type RoutePoint,
-  type RouteSegment
+  type RouteData
 } from './photo-route';
-import { createSegmentPopup, distToPolyline } from './route-edit-helpers';
-
-// Sources and layers for edit mode
-const LINE_SOURCE = 'route-edit-line';
-const LINE_OUTLINE_LAYER = 'route-edit-line-outline';
-const LINE_LAYER = 'route-edit-line-layer';
-const POINTS_SOURCE = 'route-edit-points';
-const POINTS_LAYER = 'route-edit-points-layer';
-const HIT_SOURCE = 'route-edit-hit';
-const HIT_LAYER = 'route-edit-hit-layer';
+import {
+  ALL_EDIT_LAYERS,
+  applySegmentMethod,
+  createEditLayers,
+  createSegmentPopup,
+  EDIT_IDS,
+  findNearestSegment,
+  insertWaypointInRoute,
+  removeWaypointFromRoute,
+  rerouteSegment
+} from './route-edit-helpers';
 
 // Module state
 let map: MapGL | null = null;
@@ -33,6 +32,7 @@ let routeData: RouteData | null = null;
 let dragIndex: number | null = null;
 let popupEl: HTMLElement | null = null;
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
+let hoveredSegIdx: number | null = null;
 
 export function isRouteEditMode(): boolean {
   return isEditActive;
@@ -55,72 +55,7 @@ export function initRouteEdit(
 
 export function addRouteEditLayers(): void {
   if (map === null) return;
-
-  // Clean up existing
-  for (const id of [HIT_LAYER, POINTS_LAYER, LINE_LAYER, LINE_OUTLINE_LAYER]) {
-    if (map.getLayer(id) !== undefined) map.removeLayer(id);
-  }
-  for (const id of [HIT_SOURCE, POINTS_SOURCE, LINE_SOURCE]) {
-    if (map.getSource(id) !== undefined) map.removeSource(id);
-  }
-
-  const empty = { type: 'FeatureCollection' as const, features: [] };
-
-  map.addSource(LINE_SOURCE, { type: 'geojson', data: empty });
-  map.addSource(POINTS_SOURCE, { type: 'geojson', data: empty });
-  map.addSource(HIT_SOURCE, { type: 'geojson', data: empty });
-
-  // Transparent red route line for edit mode
-  map.addLayer({
-    id: LINE_OUTLINE_LAYER,
-    type: 'line',
-    source: LINE_SOURCE,
-    paint: { 'line-color': 'rgba(0, 0, 0, 0.15)', 'line-width': 7 },
-    layout: { 'visibility': 'none', 'line-cap': 'round', 'line-join': 'round' }
-  });
-
-  map.addLayer({
-    id: LINE_LAYER,
-    type: 'line',
-    source: LINE_SOURCE,
-    paint: { 'line-color': 'rgba(220, 38, 38, 0.5)', 'line-width': 4 },
-    layout: { 'visibility': 'none', 'line-cap': 'round', 'line-join': 'round' }
-  });
-
-  // Invisible wide line for click targeting on segments
-  map.addLayer({
-    id: HIT_LAYER,
-    type: 'line',
-    source: HIT_SOURCE,
-    paint: { 'line-color': 'rgba(0,0,0,0)', 'line-width': 16 },
-    layout: { visibility: 'none' }
-  });
-
-  // Point circles for route points
-  map.addLayer({
-    id: POINTS_LAYER,
-    type: 'circle',
-    source: POINTS_SOURCE,
-    paint: {
-      'circle-radius': ['match', ['get', 'pointType'], 'photo', 7, 6],
-      'circle-color': [
-        'match',
-        ['get', 'pointType'],
-        'photo',
-        '#60a5fa',
-        '#ffffff'
-      ],
-      'circle-stroke-width': 2.5,
-      'circle-stroke-color': [
-        'match',
-        ['get', 'pointType'],
-        'photo',
-        '#1d4ed8',
-        '#1d4ed8'
-      ]
-    },
-    layout: { visibility: 'none' }
-  });
+  createEditLayers(map);
 }
 
 function enterEditMode(): void {
@@ -138,7 +73,12 @@ function enterEditMode(): void {
 
   map.on('click', onMapClick);
   map.on('contextmenu', onRightClick);
-  map.on('mousedown', POINTS_LAYER, onPointMouseDown);
+  map.on('mousedown', EDIT_IDS.points, onPointMouseDown);
+  map.on('mouseenter', EDIT_IDS.hit, onSegmentEnter);
+  map.on('mouseleave', EDIT_IDS.hit, onSegmentLeave);
+  map.on('mousemove', EDIT_IDS.hit, onSegmentMove);
+  map.on('mouseenter', EDIT_IDS.points, onPointEnter);
+  map.on('mouseleave', EDIT_IDS.points, onPointLeave);
   document.addEventListener('keydown', onKeyDown);
 }
 
@@ -155,7 +95,13 @@ function exitEditMode(): void {
 
   map.off('click', onMapClick);
   map.off('contextmenu', onRightClick);
-  map.off('mousedown', POINTS_LAYER, onPointMouseDown);
+  map.off('mousedown', EDIT_IDS.points, onPointMouseDown);
+  map.off('mouseenter', EDIT_IDS.hit, onSegmentEnter);
+  map.off('mouseleave', EDIT_IDS.hit, onSegmentLeave);
+  map.off('mousemove', EDIT_IDS.hit, onSegmentMove);
+  map.off('mouseenter', EDIT_IDS.points, onPointEnter);
+  map.off('mouseleave', EDIT_IDS.points, onPointLeave);
+  clearHoverHighlight();
   document.removeEventListener('keydown', onKeyDown);
 
   // Clean up any drag handlers
@@ -173,7 +119,7 @@ export function exitRouteEdit(): void {
 function setLayerVisibility(show: boolean): void {
   if (map === null) return;
   const v = show ? 'visible' : 'none';
-  for (const id of [LINE_OUTLINE_LAYER, LINE_LAYER, POINTS_LAYER, HIT_LAYER]) {
+  for (const id of ALL_EDIT_LAYERS) {
     if (map.getLayer(id) !== undefined) {
       map.setLayoutProperty(id, 'visibility', v);
     }
@@ -185,7 +131,9 @@ function updateEditSources(): void {
 
   // Update points source
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- need GeoJSONSource for setData
-  const pointsSrc = map.getSource(POINTS_SOURCE) as GeoJSONSource | undefined;
+  const pointsSrc = map.getSource(EDIT_IDS.pointsSrc) as
+    | GeoJSONSource
+    | undefined;
   if (pointsSrc !== undefined) {
     pointsSrc.setData({
       type: 'FeatureCollection',
@@ -199,7 +147,7 @@ function updateEditSources(): void {
 
   // Update hit source — line segments for click targeting
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- need GeoJSONSource for setData
-  const hitSrc = map.getSource(HIT_SOURCE) as GeoJSONSource | undefined;
+  const hitSrc = map.getSource(EDIT_IDS.hitSrc) as GeoJSONSource | undefined;
   if (hitSrc !== undefined) {
     hitSrc.setData({
       type: 'FeatureCollection',
@@ -218,15 +166,15 @@ function updateEditSources(): void {
   setSavedRouteData(routeData);
 
   // Ensure points layer stays on top
-  if (map.getLayer(POINTS_LAYER) !== undefined) {
-    map.moveLayer(POINTS_LAYER);
+  if (map.getLayer(EDIT_IDS.points) !== undefined) {
+    map.moveLayer(EDIT_IDS.points);
   }
 }
 
 function updateLineSrc(): void {
   if (map === null || routeData === null) return;
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- need GeoJSONSource for setData
-  const lineSrc = map.getSource(LINE_SOURCE) as GeoJSONSource | undefined;
+  const lineSrc = map.getSource(EDIT_IDS.lineSrc) as GeoJSONSource | undefined;
   if (lineSrc === undefined) return;
 
   const allCoords: Array<[number, number]> = [];
@@ -265,7 +213,7 @@ function onMapClick(e: MapMouseEvent): void {
 
   // 1. Check if clicking on a route edit point
   const pointFeatures = map.queryRenderedFeatures(e.point, {
-    layers: [POINTS_LAYER]
+    layers: [EDIT_IDS.points]
   });
   if (pointFeatures.length > 0) {
     const idx = pointFeatures[0]!.properties.index as number;
@@ -290,7 +238,7 @@ function onMapClick(e: MapMouseEvent): void {
   // 3. Add new waypoint — on segment if hit, otherwise nearest segment
   removePopup();
   const hitFeatures = map.queryRenderedFeatures(e.point, {
-    layers: [HIT_LAYER]
+    layers: [EDIT_IDS.hit]
   });
   if (hitFeatures.length > 0) {
     const segIdx = hitFeatures[0]!.properties.segIndex as number;
@@ -305,7 +253,7 @@ function onRightClick(e: MapMouseEvent): void {
   e.preventDefault();
 
   const hitFeatures = map.queryRenderedFeatures(e.point, {
-    layers: [HIT_LAYER]
+    layers: [EDIT_IDS.hit]
   });
   if (hitFeatures.length > 0) {
     const segIdx = hitFeatures[0]!.properties.segIndex as number;
@@ -317,63 +265,23 @@ function addWaypointAtClick(lon: number, lat: number): void {
   if (routeData === null || routeData.segments.length === 0 || map === null) {
     return;
   }
-
-  // Find nearest segment using screen-space distance (pixels)
-  // This is critical for back-and-forth routes where segments overlap geographically
-  const m = map;
-  const clickPx = m.project([lon, lat]);
-  const toScreen = (c: [number, number]): [number, number] => {
-    const p = m.project(c);
-    return [p.x, p.y];
-  };
-  let bestIdx = 0;
-  let bestDist = Infinity;
-  for (let i = 0; i < routeData.segments.length; i++) {
-    const seg = routeData.segments[i]!;
-    const screenCoords = seg.geometry.map(toScreen);
-    const dist = distToPolyline(clickPx.x, clickPx.y, screenCoords);
-    if (dist < bestDist) {
-      bestDist = dist;
-      bestIdx = i;
-    }
-  }
-
+  const bestIdx = findNearestSegment(map, routeData, lon, lat);
   insertWaypoint(bestIdx, lon, lat);
 }
 
 function insertWaypoint(segIdx: number, lon: number, lat: number): void {
   if (routeData === null) return;
 
-  const newPoint: RoutePoint = { type: 'waypoint', lon, lat };
-  routeData.points.splice(segIdx + 1, 0, newPoint);
+  const method = routeData.segments[segIdx]?.method ?? 'straight';
+  insertWaypointInRoute(routeData, segIdx, lon, lat);
 
-  const oldSeg = routeData.segments[segIdx]!;
-  const prevPt = routeData.points[segIdx]!;
-  const nextPt = routeData.points[segIdx + 2]!;
-  const method = oldSeg.method;
-  const seg1: RouteSegment = {
-    method,
-    geometry: [
-      [prevPt.lon, prevPt.lat],
-      [lon, lat]
-    ]
-  };
-  const seg2: RouteSegment = {
-    method,
-    geometry: [
-      [lon, lat],
-      [nextPt.lon, nextPt.lat]
-    ]
-  };
-  routeData.segments.splice(segIdx, 1, seg1, seg2);
-
-  // If original was routed, re-fetch both new sub-segments
   if (method !== 'straight') {
-    void Promise.all([rerouteSegment(segIdx), rerouteSegment(segIdx + 1)]).then(
-      () => {
-        updateEditSources();
-      }
-    );
+    void Promise.all([
+      rerouteSegment(routeData, segIdx),
+      rerouteSegment(routeData, segIdx + 1)
+    ]).then(() => {
+      updateEditSources();
+    });
   }
 
   updateEditSources();
@@ -382,28 +290,13 @@ function insertWaypoint(segIdx: number, lon: number, lat: number): void {
 
 function removeWaypoint(pointIdx: number): void {
   if (routeData === null) return;
-  if (routeData.points[pointIdx]?.type !== 'waypoint') return;
 
-  // Remove point and merge two adjacent segments into one
   const segBefore = pointIdx - 1;
-  const prevPt = routeData.points[pointIdx - 1]!;
-  const nextPt = routeData.points[pointIdx + 1]!;
-
-  // Use the method from the segment before the removed point
-  const method = routeData.segments[segBefore]?.method ?? 'straight';
-
-  routeData.points.splice(pointIdx, 1);
-  const merged: RouteSegment = {
-    method,
-    geometry: [
-      [prevPt.lon, prevPt.lat],
-      [nextPt.lon, nextPt.lat]
-    ]
-  };
-  routeData.segments.splice(segBefore, 2, merged);
+  const method = removeWaypointFromRoute(routeData, pointIdx);
+  if (method === null) return;
 
   if (method !== 'straight') {
-    void rerouteSegment(segBefore);
+    void rerouteSegment(routeData, segBefore);
   }
 
   updateEditSources();
@@ -415,17 +308,20 @@ function removeWaypoint(pointIdx: number): void {
 function showSegmentPopup(segIdx: number, lon: number, lat: number): void {
   if (map === null) return;
   removePopup();
-
   popupEl = createSegmentPopup({
     map,
     lngLat: [lon, lat],
     currentMethod: routeData?.segments[segIdx]?.method ?? 'straight',
     onSelect: (method) => {
-      void changeSegmentMethod(segIdx, method);
+      if (routeData !== null) {
+        void applySegmentMethod(routeData, segIdx, method).then(() => {
+          updateEditSources();
+          scheduleAutoSave();
+        });
+      }
       removePopup();
     }
   });
-
   map.getContainer().appendChild(popupEl);
 }
 
@@ -436,76 +332,13 @@ function removePopup(): void {
   }
 }
 
-async function changeSegmentMethod(
-  segIdx: number,
-  method: RouteSegment['method']
-): Promise<void> {
-  if (routeData === null) return;
-  const seg = routeData.segments[segIdx];
-  if (seg === undefined) return;
-
-  seg.method = method;
-
-  if (method === 'straight') {
-    // Just use straight line between endpoints
-    const startPt = routeData.points[segIdx]!;
-    const endPt = routeData.points[segIdx + 1]!;
-    seg.geometry = [
-      [startPt.lon, startPt.lat],
-      [endPt.lon, endPt.lat]
-    ];
-    updateEditSources();
-    scheduleAutoSave();
-  } else {
-    await rerouteSegment(segIdx);
-    updateEditSources();
-    scheduleAutoSave();
-  }
-}
-
-async function rerouteSegment(segIdx: number): Promise<void> {
-  if (routeData === null) return;
-  const seg = routeData.segments[segIdx];
-  if (seg === undefined || seg.method === 'straight') return;
-
-  const startPt = routeData.points[segIdx]!;
-  const endPt = routeData.points[segIdx + 1]!;
-
-  try {
-    const resp = await fetch('/api/route', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        coordinates: [
-          [startPt.lon, startPt.lat],
-          [endPt.lon, endPt.lat]
-        ],
-        profile: seg.method
-      })
-    });
-
-    if (!resp.ok) return;
-
-    const data = (await resp.json()) as {
-      geometry: { coordinates: Array<[number, number]> };
-    };
-    seg.geometry = data.geometry.coordinates;
-  } catch {
-    // Fall back to straight line on error
-    seg.geometry = [
-      [startPt.lon, startPt.lat],
-      [endPt.lon, endPt.lat]
-    ];
-  }
-}
-
 // --- Drag handler ---
 
 function onPointMouseDown(e: MapMouseEvent): void {
   if (map === null || routeData === null) return;
 
   const features = map.queryRenderedFeatures(e.point, {
-    layers: [POINTS_LAYER]
+    layers: [EDIT_IDS.points]
   });
   if (features.length === 0) return;
 
@@ -569,13 +402,13 @@ function onDragEnd(): void {
 
   const promises: Array<Promise<void>> = [];
   if (segBefore >= 0 && routeData.segments[segBefore]?.method !== 'straight') {
-    promises.push(rerouteSegment(segBefore));
+    promises.push(rerouteSegment(routeData, segBefore));
   }
   if (
     segAfter < routeData.segments.length &&
     routeData.segments[segAfter]?.method !== 'straight'
   ) {
-    promises.push(rerouteSegment(segAfter));
+    promises.push(rerouteSegment(routeData, segAfter));
   }
 
   if (promises.length > 0) {
@@ -597,10 +430,68 @@ function endDrag(): void {
   map.off('mouseup', onDragEnd);
 }
 
-// --- Key handler ---
+// --- Hover handlers ---
+
+function onSegmentEnter(): void {
+  if (map !== null && dragIndex === null) {
+    map.getCanvas().style.cursor = 'pointer';
+  }
+}
+
+function onSegmentLeave(): void {
+  if (map !== null && dragIndex === null) {
+    map.getCanvas().style.cursor = 'crosshair';
+  }
+  clearHoverHighlight();
+}
+
+function onSegmentMove(e: MapMouseEvent): void {
+  if (map === null || routeData === null || dragIndex !== null) return;
+  const features = map.queryRenderedFeatures(e.point, {
+    layers: [EDIT_IDS.hit]
+  });
+  if (features.length === 0) {
+    clearHoverHighlight();
+    return;
+  }
+  const segIdx = features[0]!.properties.segIndex as number;
+  if (segIdx === hoveredSegIdx) return;
+  hoveredSegIdx = segIdx;
+  const seg = routeData.segments[segIdx];
+  if (seg === undefined) return;
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- need GeoJSONSource for setData
+  const src = map.getSource(EDIT_IDS.hoverSrc) as GeoJSONSource | undefined;
+  if (src === undefined) return;
+  src.setData({
+    type: 'Feature',
+    geometry: { type: 'LineString', coordinates: seg.geometry },
+    properties: {}
+  });
+}
+
+function clearHoverHighlight(): void {
+  if (hoveredSegIdx === null) return;
+  hoveredSegIdx = null;
+  if (map === null) return;
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- need GeoJSONSource for setData
+  const src = map.getSource(EDIT_IDS.hoverSrc) as GeoJSONSource | undefined;
+  if (src !== undefined) {
+    src.setData({ type: 'FeatureCollection', features: [] });
+  }
+}
+
+function onPointEnter(): void {
+  if (map !== null && dragIndex === null) {
+    map.getCanvas().style.cursor = 'grab';
+  }
+}
+
+function onPointLeave(): void {
+  if (map !== null && dragIndex === null) {
+    map.getCanvas().style.cursor = 'crosshair';
+  }
+}
 
 function onKeyDown(e: KeyboardEvent): void {
-  if (e.key === 'Escape') {
-    exitEditMode();
-  }
+  if (e.key === 'Escape') exitEditMode();
 }

@@ -1,6 +1,107 @@
 import type { Map as MapGL } from 'maplibre-gl';
 
-import type { RouteSegment } from './photo-route';
+import type { RouteData, RoutePoint, RouteSegment } from './photo-route';
+
+/** Layer/source IDs for route edit mode. */
+export const EDIT_IDS = {
+  lineSrc: 'route-edit-line',
+  lineOutline: 'route-edit-line-outline',
+  line: 'route-edit-line-layer',
+  pointsSrc: 'route-edit-points',
+  points: 'route-edit-points-layer',
+  hitSrc: 'route-edit-hit',
+  hit: 'route-edit-hit-layer',
+  hoverSrc: 'route-edit-hover',
+  hover: 'route-edit-hover-layer'
+} as const;
+
+export const ALL_EDIT_LAYERS = [
+  EDIT_IDS.hit,
+  EDIT_IDS.hover,
+  EDIT_IDS.points,
+  EDIT_IDS.line,
+  EDIT_IDS.lineOutline
+];
+const ALL_SOURCES = [
+  EDIT_IDS.hitSrc,
+  EDIT_IDS.hoverSrc,
+  EDIT_IDS.pointsSrc,
+  EDIT_IDS.lineSrc
+];
+
+/** Add all route-edit sources and layers to the map. */
+export function createEditLayers(m: MapGL): void {
+  for (const id of ALL_EDIT_LAYERS) {
+    if (m.getLayer(id) !== undefined) m.removeLayer(id);
+  }
+  for (const id of ALL_SOURCES) {
+    if (m.getSource(id) !== undefined) m.removeSource(id);
+  }
+
+  const empty = { type: 'FeatureCollection' as const, features: [] };
+  for (const id of ALL_SOURCES) {
+    m.addSource(id, { type: 'geojson', data: empty });
+  }
+
+  const lineLayout = {
+    'visibility': 'none' as const,
+    'line-cap': 'round' as const,
+    'line-join': 'round' as const
+  };
+
+  m.addLayer({
+    id: EDIT_IDS.lineOutline,
+    type: 'line',
+    source: EDIT_IDS.lineSrc,
+    paint: { 'line-color': 'rgba(0, 0, 0, 0.15)', 'line-width': 7 },
+    layout: lineLayout
+  });
+  m.addLayer({
+    id: EDIT_IDS.line,
+    type: 'line',
+    source: EDIT_IDS.lineSrc,
+    paint: { 'line-color': 'rgba(220, 38, 38, 0.5)', 'line-width': 4 },
+    layout: lineLayout
+  });
+  m.addLayer({
+    id: EDIT_IDS.hit,
+    type: 'line',
+    source: EDIT_IDS.hitSrc,
+    paint: { 'line-color': 'rgba(0,0,0,0)', 'line-width': 16 },
+    layout: { visibility: 'none' }
+  });
+  m.addLayer({
+    id: EDIT_IDS.hover,
+    type: 'line',
+    source: EDIT_IDS.hoverSrc,
+    paint: { 'line-color': 'rgba(255, 255, 255, 0.6)', 'line-width': 6 },
+    layout: lineLayout
+  });
+  m.addLayer({
+    id: EDIT_IDS.points,
+    type: 'circle',
+    source: EDIT_IDS.pointsSrc,
+    paint: {
+      'circle-radius': ['match', ['get', 'pointType'], 'photo', 7, 6],
+      'circle-color': [
+        'match',
+        ['get', 'pointType'],
+        'photo',
+        '#60a5fa',
+        '#ffffff'
+      ],
+      'circle-stroke-width': 2.5,
+      'circle-stroke-color': [
+        'match',
+        ['get', 'pointType'],
+        'photo',
+        '#1d4ed8',
+        '#1d4ed8'
+      ]
+    },
+    layout: { visibility: 'none' }
+  });
+}
 
 /** Distance from a point to a polyline (in whatever coordinate space the inputs are). */
 export function distToPolyline(
@@ -23,6 +124,31 @@ export function distToPolyline(
     if (d < minDist) minDist = d;
   }
   return minDist;
+}
+
+/** Find the nearest segment index to a screen point using pixel-space distance. */
+export function findNearestSegment(
+  mapInstance: MapGL,
+  data: RouteData,
+  lon: number,
+  lat: number
+): number {
+  const clickPx = mapInstance.project([lon, lat]);
+  const toScreen = (c: [number, number]): [number, number] => {
+    const p = mapInstance.project(c);
+    return [p.x, p.y];
+  };
+  let bestIdx = 0;
+  let bestDist = Infinity;
+  for (let i = 0; i < data.segments.length; i++) {
+    const screenCoords = data.segments[i]!.geometry.map(toScreen);
+    const dist = distToPolyline(clickPx.x, clickPx.y, screenCoords);
+    if (dist < bestDist) {
+      bestDist = dist;
+      bestIdx = i;
+    }
+  }
+  return bestIdx;
 }
 
 interface SegmentPopupOpts {
@@ -77,4 +203,123 @@ export function createSegmentPopup(opts: SegmentPopupOpts): HTMLElement {
   }
 
   return el;
+}
+
+/** Fetch routed geometry from the server for a segment. */
+export async function fetchRouteGeometry(
+  start: [number, number],
+  end: [number, number],
+  profile: string
+): Promise<Array<[number, number]> | null> {
+  try {
+    const resp = await fetch('/api/route', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ coordinates: [start, end], profile })
+    });
+    if (!resp.ok) return null;
+    const data = (await resp.json()) as {
+      geometry: { coordinates: Array<[number, number]> };
+    };
+    return data.geometry.coordinates;
+  } catch {
+    return null;
+  }
+}
+
+/** Re-route a single segment in-place using the routing API. */
+export async function rerouteSegment(
+  routeData: RouteData,
+  segIdx: number
+): Promise<void> {
+  const seg = routeData.segments[segIdx];
+  if (seg === undefined || seg.method === 'straight') return;
+
+  const startPt = routeData.points[segIdx]!;
+  const endPt = routeData.points[segIdx + 1]!;
+  const coords = await fetchRouteGeometry(
+    [startPt.lon, startPt.lat],
+    [endPt.lon, endPt.lat],
+    seg.method
+  );
+  seg.geometry = coords ?? [
+    [startPt.lon, startPt.lat],
+    [endPt.lon, endPt.lat]
+  ];
+}
+
+/** Insert a waypoint into routeData at the given segment, splitting it. */
+export function insertWaypointInRoute(
+  data: RouteData,
+  segIdx: number,
+  lon: number,
+  lat: number
+): void {
+  const newPoint: RoutePoint = { type: 'waypoint', lon, lat };
+  data.points.splice(segIdx + 1, 0, newPoint);
+
+  const oldSeg = data.segments[segIdx]!;
+  const prevPt = data.points[segIdx]!;
+  const nextPt = data.points[segIdx + 2]!;
+  const seg1: RouteSegment = {
+    method: oldSeg.method,
+    geometry: [
+      [prevPt.lon, prevPt.lat],
+      [lon, lat]
+    ]
+  };
+  const seg2: RouteSegment = {
+    method: oldSeg.method,
+    geometry: [
+      [lon, lat],
+      [nextPt.lon, nextPt.lat]
+    ]
+  };
+  data.segments.splice(segIdx, 1, seg1, seg2);
+}
+
+/** Change a segment's routing method. Returns true if async rerouting is needed. */
+export async function applySegmentMethod(
+  data: RouteData,
+  segIdx: number,
+  method: RouteSegment['method']
+): Promise<void> {
+  const seg = data.segments[segIdx];
+  if (seg === undefined) return;
+  seg.method = method;
+
+  if (method === 'straight') {
+    const startPt = data.points[segIdx]!;
+    const endPt = data.points[segIdx + 1]!;
+    seg.geometry = [
+      [startPt.lon, startPt.lat],
+      [endPt.lon, endPt.lat]
+    ];
+  } else {
+    await rerouteSegment(data, segIdx);
+  }
+}
+
+/** Remove a waypoint from routeData, merging adjacent segments. Returns the merge method. */
+export function removeWaypointFromRoute(
+  data: RouteData,
+  pointIdx: number
+): RouteSegment['method'] | null {
+  if (data.points[pointIdx]?.type !== 'waypoint') return null;
+
+  const segBefore = pointIdx - 1;
+  const prevPt = data.points[pointIdx - 1]!;
+  const nextPt = data.points[pointIdx + 1]!;
+  const method = data.segments[segBefore]?.method ?? 'straight';
+
+  data.points.splice(pointIdx, 1);
+  const merged: RouteSegment = {
+    method,
+    geometry: [
+      [prevPt.lon, prevPt.lat],
+      [nextPt.lon, nextPt.lat]
+    ]
+  };
+  data.segments.splice(segBefore, 2, merged);
+  return method;
 }
