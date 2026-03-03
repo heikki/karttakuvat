@@ -131,6 +131,7 @@ export function setPhotoRouteVisible(show: boolean): void {
         if (data === null) {
           updateRoute();
         } else {
+          syncPhotoPoints(data);
           savedRouteData = data;
           applyRouteData(data);
         }

@@ -75,9 +75,10 @@ function enterEditMode(): void {
   if (isEditActive || map === null) return;
   isEditActive = true;
 
-  // Build route data from saved route or default
+  // Build route data from saved route or default, sync photo positions
   routeData = getSavedRouteData() ?? buildDefaultRoute();
   if (routeData === null) return;
+  syncPhotoPoints(routeData);
 
   map.getCanvas().classList.add('crosshair');
   setRouteEditStyle(true);
