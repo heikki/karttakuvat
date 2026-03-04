@@ -1,7 +1,6 @@
 import type { MapStyles } from '@common/types';
 
 const mmlKey = process.env.PUBLIC_MML_API_KEY ?? '';
-const tfKey = process.env.PUBLIC_THUNDERFOREST_API_KEY ?? '';
 
 const mmlTile = (layer: string, ext: string) =>
   `https://avoin-karttakuva.maanmittauslaitos.fi/avoin/wmts/1.0.0/${layer}/default/WGS84_Pseudo-Mercator/{z}/{y}/{x}.${ext}?api-key=${mmlKey}`;
@@ -31,19 +30,20 @@ export function mapStyles(): MapStyles {
     topo: {
       version: 8,
       sources: {
-        thunderforest: {
+        'google-terrain': {
           type: 'raster',
           tiles: [
-            `https://a.tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=${tfKey}`,
-            `https://b.tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=${tfKey}`,
-            `https://c.tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=${tfKey}`
+            'https://mt0.google.com/vt/lyrs=p&x={x}&y={y}&z={z}',
+            'https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}',
+            'https://mt2.google.com/vt/lyrs=p&x={x}&y={y}&z={z}',
+            'https://mt3.google.com/vt/lyrs=p&x={x}&y={y}&z={z}'
           ],
           tileSize: 256,
-          maxzoom: 22,
-          attribution: '© Thunderforest, © OpenStreetMap contributors'
+          maxzoom: 20,
+          attribution: '© Google'
         }
       },
-      layers: [{ id: 'thunderforest', type: 'raster', source: 'thunderforest' }]
+      layers: [{ id: 'google-terrain', type: 'raster', source: 'google-terrain' }]
     },
     mml_maastokartta: {
       version: 8,

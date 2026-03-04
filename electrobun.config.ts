@@ -69,9 +69,6 @@ export default {
         define: {
           'process.env.PUBLIC_MML_API_KEY': JSON.stringify(
             process.env.PUBLIC_MML_API_KEY ?? ''
-          ),
-          'process.env.PUBLIC_THUNDERFOREST_API_KEY': JSON.stringify(
-            process.env.PUBLIC_THUNDERFOREST_API_KEY ?? ''
           )
         }
       }
