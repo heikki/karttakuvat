@@ -4,6 +4,7 @@
  * Used by sync.ts and app-db.ts.
  */
 
+import { dateToUtc } from './date-utils';
 import type { PhotoRecord } from './photos-db';
 import { tzOffsetFromCoords, tzOffsetFromTzName } from './photos-edit';
 
@@ -38,45 +39,6 @@ function formatDuration(seconds: number | null): string | null {
   return `${h}:${String(m).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 }
 
-/** Convert local date + tz offset to UTC sortable string. */
-function dateToUtc(dateStr: string, tz: string | null): string {
-  if (dateStr === '' || tz === null || tz === '') return dateStr;
-  try {
-    const match =
-      /^(?<yr>\d{4}):(?<mo>\d{2}):(?<dy>\d{2}) (?<hr>\d{2}):(?<mi>\d{2}):(?<sc>\d{2})$/v.exec(
-        dateStr
-      );
-    if (match?.groups === undefined) return dateStr;
-    const g = match.groups as {
-      yr: string;
-      mo: string;
-      dy: string;
-      hr: string;
-      mi: string;
-      sc: string;
-    };
-    const sign = tz.startsWith('+') ? 1 : -1;
-    const tzH = parseInt(tz.slice(1, 3), 10);
-    const tzM = parseInt(tz.slice(4, 6), 10);
-    const offsetMs = sign * (tzH * 3600000 + tzM * 60000);
-
-    const d = new Date(
-      Date.UTC(
-        parseInt(g.yr, 10),
-        parseInt(g.mo, 10) - 1,
-        parseInt(g.dy, 10),
-        parseInt(g.hr, 10),
-        parseInt(g.mi, 10),
-        parseInt(g.sc, 10)
-      ) - offsetMs
-    );
-
-    const pad = (n: number) => String(n).padStart(2, '0');
-    return `${d.getUTCFullYear()}:${pad(d.getUTCMonth() + 1)}:${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
-  } catch {
-    return dateStr;
-  }
-}
 
 /** Sort albums and albumUuids together alphabetically by album name. */
 function sortedAlbums(record: PhotoRecord): {

@@ -152,9 +152,9 @@ function openExternalMap(target: 'apple' | 'google') {
 
 export function initMap() {
   const savedView = mapViewFromUrl();
-  const center: [number, number] =
-    savedView === null ? [29.52, 64.13] : [savedView.lon, savedView.lat];
-  const zoom = savedView === null ? 10 : savedView.zoom;
+  const center: [number, number] | undefined =
+    savedView !== null ? [savedView.lon, savedView.lat] : undefined;
+  const zoom = savedView?.zoom;
   map = new MapGL({
     container: 'map',
     style: applyGlobeProjection(mapStyles().satellite as StyleSpecification),

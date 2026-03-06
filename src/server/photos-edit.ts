@@ -12,6 +12,7 @@ import { join } from 'node:path';
 import { Database } from 'bun:sqlite';
 
 import { runAppleScript } from '../../resources/native/native-bridge';
+import { exifDatePattern, tzOffsetToSeconds } from './date-utils';
 
 // Use require() for geo-tz: its CJS build declares ESM exports incorrectly,
 // causing bundler failures in Electrobun's Bun version.
@@ -128,10 +129,7 @@ export function tzOffsetFromTzName(
 ): string | null {
   try {
     // Parse "YYYY:MM:DD HH:MM:SS" into components
-    const match =
-      /^(?<yr>\d{4}):(?<mo>\d{2}):(?<dy>\d{2}) (?<hr>\d{2}):(?<mi>\d{2}):(?<sc>\d{2})$/v.exec(
-        dateStr
-      );
+    const match = exifDatePattern.exec(dateStr);
     if (match?.groups === undefined) return null;
     const { yr, mo, dy, hr, mi } = match.groups;
 
@@ -162,12 +160,4 @@ export function tzOffsetFromTzName(
   }
 }
 
-/**
- * Convert UTC offset string like "+03:00" to seconds.
- */
-export function tzOffsetToSeconds(offset: string): number {
-  const sign = offset.startsWith('+') ? 1 : -1;
-  const h = parseInt(offset.slice(1, 3), 10);
-  const m = parseInt(offset.slice(4, 6), 10);
-  return sign * (h * 3600 + m * 60);
-}
+export { tzOffsetToSeconds } from './date-utils';

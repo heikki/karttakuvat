@@ -64,6 +64,6 @@ export async function handleRouteProxy(req: Request): Promise<Response> {
     return await fetchRoute(apiKey, body.coordinates, orsProfile);
   } catch (err) {
     console.error('handleRouteProxy error:', err);
-    return new Response(`Server error: ${String(err)}`, { status: 500 });
+    return new Response('Internal server error', { status: 500 });
   }
 }

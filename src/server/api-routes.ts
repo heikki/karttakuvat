@@ -7,6 +7,7 @@ import {
   updateItemDate,
   updateItemLocation
 } from './app-db';
+import { applyHourOffset, tzOffsetHours, tzOffsetToSeconds } from './date-utils';
 import type { ImageCache } from './image-cache';
 import type { ItemEntry } from './items';
 import {
@@ -21,10 +22,14 @@ import {
   setLocation,
   setTimezone,
   tzNameFromCoords,
-  tzOffsetFromCoords,
-  tzOffsetToSeconds
+  tzOffsetFromCoords
 } from './photos-edit';
 import { handleRouteProxy } from './route-proxy';
+
+function serverError(context: string, err: unknown): Response {
+  console.error(`${context} error:`, err);
+  return new Response('Internal server error', { status: 500 });
+}
 
 interface LocationEdit {
   uuid: string;
@@ -47,27 +52,6 @@ type ItemRecord = Pick<
   'uuid' | 'date' | 'tz' | 'lat' | 'lon' | 'gps' | 'gps_accuracy'
 >;
 
-const datePattern =
-  /^(?<yr>\d{4}):(?<mo>\d{2}):(?<dy>\d{2}) (?<hr>\d{2}):(?<mi>\d{2}):(?<sc>\d{2})$/v;
-
-function applyHourOffset(dateStr: string, hours: number): string {
-  if (dateStr === '' || hours === 0) return dateStr;
-  const match = datePattern.exec(dateStr);
-  if (match?.groups === undefined) return dateStr;
-  const { yr, mo, dy, hr, mi, sc } = match.groups;
-  const d = new Date(
-    parseInt(yr!, 10),
-    parseInt(mo!, 10) - 1,
-    parseInt(dy!, 10),
-    parseInt(hr!, 10),
-    parseInt(mi!, 10),
-    parseInt(sc!, 10)
-  );
-  d.setTime(d.getTime() + Math.round(hours * 3600000));
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}:${pad(d.getMonth() + 1)}:${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-}
-
 const scriptLogBuffer: string[] = [];
 
 function logEditResult(label: string, uuid: string, error?: string): void {
@@ -87,13 +71,6 @@ export function flushLogBuffer(): string[] {
   return lines;
 }
 
-function tzOffsetHours(tz: string | null): number {
-  if (tz === null || tz === '') return 0;
-  const sign = tz.startsWith('+') ? 1 : -1;
-  const h = parseInt(tz.slice(1, 3), 10);
-  const m = parseInt(tz.slice(4, 6), 10);
-  return sign * (h + m / 60);
-}
 
 function applyLocationEdits(
   items: ItemRecord[],
@@ -247,8 +224,7 @@ export function createApiHandler(
 
       return Response.json({ ok: true, files: results });
     } catch (err) {
-      console.error('handleUploadAlbumFile error:', err);
-      return new Response(`Server error: ${String(err)}`, { status: 500 });
+      return serverError('handleUploadAlbumFile', err);
     }
   }
 
@@ -283,8 +259,7 @@ export function createApiHandler(
       deleteAlbumFile(album, filename);
       return Response.json({ ok: true });
     } catch (err) {
-      console.error('handleDeleteAlbumFile error:', err);
-      return new Response(`Server error: ${String(err)}`, { status: 500 });
+      return serverError('handleDeleteAlbumFile', err);
     }
   }
 
@@ -300,10 +275,7 @@ export function createApiHandler(
         setFileVisible(album, filename, visible);
         return Response.json({ ok: true });
       })
-      .catch((err: unknown) => {
-        console.error('handleSetFileVisibility error:', err);
-        return new Response(`Server error: ${String(err)}`, { status: 500 });
-      });
+      .catch((err: unknown) => serverError('handleSetFileVisibility', err));
   }
 
   function handleGetMetadata(uuid: string): Response {
@@ -314,7 +286,7 @@ export function createApiHandler(
       }
       return Response.json(record);
     } catch (err) {
-      return new Response(`Error: ${String(err)}`, { status: 500 });
+      return serverError('handleGetMetadata', err);
     }
   }
 
@@ -371,8 +343,7 @@ export function createApiHandler(
 
       return Response.json({ ok: true });
     } catch (err) {
-      console.error('handleSaveEdits error:', err);
-      return new Response(`Server error: ${String(err)}`, { status: 500 });
+      return serverError('handleSaveEdits', err);
     }
   }
 
@@ -421,8 +392,7 @@ export function createApiHandler(
       await writeFile(`${dir}/_route.json`, body, 'utf-8');
       return Response.json({ ok: true });
     } catch (err) {
-      console.error('handlePutRoute error:', err);
-      return new Response(`Server error: ${String(err)}`, { status: 500 });
+      return serverError('handlePutRoute', err);
     }
   }
 
