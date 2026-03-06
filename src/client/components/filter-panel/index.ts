@@ -9,12 +9,8 @@ import {
   MeasureModeExitedEvent,
   OpenExternalMapEvent,
   ResetMapEvent,
-  RouteEditExitedEvent,
   SaveEditsEvent,
-  ShowAlbumFilesEvent,
-  ToggleMeasureModeEvent,
-  TogglePhotoRouteEvent,
-  ToggleRouteEditEvent
+  ToggleMeasureModeEvent
 } from '@common/events';
 import {
   filtersFromUrl,
@@ -22,12 +18,12 @@ import {
   mapStyleFromUrl,
   mapStyleToUrl,
   markerStyleFromUrl,
-  markerStyleToUrl,
-  routeFromUrl,
-  routeToUrl
+  markerStyleToUrl
 } from '@common/filter-url';
 import { getYear, isVideo } from '@common/utils';
 
+import type { AlbumControls } from './album-controls';
+import './album-controls';
 import {
   DEFAULT_GPS,
   DEFAULT_MEDIA,
@@ -51,8 +47,6 @@ export class FilterPanel extends LitElement {
   @litState() private _mapStyle = 'satellite';
   @litState() private _markerStyle = 'classic';
   @litState() private _measureActive = false;
-  @litState() private _routeActive = false;
-  @litState() private _routeEditActive = false;
 
   private _initialized = false;
   private _gpsClickTimer: ReturnType<typeof setTimeout> | null = null;
@@ -60,16 +54,16 @@ export class FilterPanel extends LitElement {
 
   static override styles = styles;
 
+  private get _albumControls(): AlbumControls | null {
+    return this.renderRoot.querySelector('album-controls');
+  }
+
   override connectedCallback() {
     super.connectedCallback();
     this._restoreFromUrl();
     document.addEventListener(
       MeasureModeExitedEvent.type,
       this._onMeasureExited
-    );
-    document.addEventListener(
-      RouteEditExitedEvent.type,
-      this._onRouteEditExited
     );
   }
 
@@ -86,25 +80,11 @@ export class FilterPanel extends LitElement {
       MeasureModeExitedEvent.type,
       this._onMeasureExited
     );
-    document.removeEventListener(
-      RouteEditExitedEvent.type,
-      this._onRouteEditExited
-    );
   }
 
   private readonly _onMeasureExited = () => {
     this._measureActive = false;
   };
-  private readonly _onRouteEditExited = () => {
-    this._routeEditActive = false;
-  };
-
-  private _exitRouteEdit() {
-    if (this._routeEditActive) {
-      this._routeEditActive = false;
-      document.dispatchEvent(new ToggleRouteEditEvent());
-    }
-  }
 
   private _restoreFromUrl() {
     const saved = filtersFromUrl();
@@ -115,7 +95,6 @@ export class FilterPanel extends LitElement {
       if (saved.gps !== undefined) this._gps = saved.gps;
       if (saved.media !== undefined) this._media = saved.media;
     }
-    this._routeActive = routeFromUrl();
     const mapStyle = mapStyleFromUrl();
     if (mapStyle !== null) this._mapStyle = mapStyle;
     const markerStyle = markerStyleFromUrl();
@@ -134,9 +113,7 @@ export class FilterPanel extends LitElement {
     this._applyFilters();
     document.dispatchEvent(new ChangeMapStyleEvent(this._mapStyle));
     document.dispatchEvent(new ChangeMarkerStyleEvent(this._markerStyle));
-    if (this._routeActive) {
-      document.dispatchEvent(new TogglePhotoRouteEvent(true));
-    }
+    this._albumControls?.applyInitialState();
   }
 
   private _getYearPhotos() {
@@ -208,14 +185,6 @@ export class FilterPanel extends LitElement {
     if (this._camera !== 'all' && !cameraOpts.includes(this._camera)) {
       this._camera = 'all';
     }
-    if (this._routeActive) {
-      this._exitRouteEdit();
-      if (this._album === 'all') {
-        this._routeActive = false;
-        routeToUrl(false);
-        document.dispatchEvent(new TogglePhotoRouteEvent(false));
-      }
-    }
     this._applyFilters();
   };
 
@@ -277,11 +246,7 @@ export class FilterPanel extends LitElement {
       mapStyleToUrl('satellite');
     }
     this._measureActive = false;
-    this._exitRouteEdit();
-    if (this._routeActive) {
-      this._routeActive = false;
-      document.dispatchEvent(new TogglePhotoRouteEvent(false));
-    }
+    this._albumControls?.reset();
     this._applyFilters();
     history.replaceState(null, '', location.pathname);
     document.dispatchEvent(new ResetMapEvent());
@@ -416,48 +381,7 @@ export class FilterPanel extends LitElement {
                     Measure
                   </button>
                 </div>
-                ${this._album === 'all'
-                  ? nothing
-                  : html` <div class="view-buttons">
-                      <button
-                        class="view-btn"
-                        @click=${() => {
-                          document.dispatchEvent(
-                            new ShowAlbumFilesEvent(this._album)
-                          );
-                        }}
-                      >
-                        Files
-                      </button>
-                      <button
-                        class="view-btn ${this._routeActive ? 'active' : ''}"
-                        @click=${() => {
-                          if (this._routeActive) this._exitRouteEdit();
-                          this._routeActive = !this._routeActive;
-                          routeToUrl(this._routeActive);
-                          document.dispatchEvent(
-                            new TogglePhotoRouteEvent(this._routeActive)
-                          );
-                        }}
-                      >
-                        Route
-                      </button>
-                      ${this._routeActive
-                        ? html`<button
-                            class="view-btn ${this._routeEditActive
-                              ? 'active'
-                              : ''}"
-                            @click=${() => {
-                              this._routeEditActive = !this._routeEditActive;
-                              document.dispatchEvent(
-                                new ToggleRouteEditEvent()
-                              );
-                            }}
-                          >
-                            Edit
-                          </button>`
-                        : nothing}
-                    </div>`}
+                <album-controls .album=${this._album}></album-controls>
                 <div class="view-buttons">
                   <button
                     class="view-btn"

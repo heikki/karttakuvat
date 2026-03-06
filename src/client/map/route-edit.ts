@@ -14,6 +14,7 @@ import {
   syncPhotoPoints,
   type RouteData
 } from './photo-route';
+import { setLayersVisibility } from './map-utils';
 import {
   ALL_EDIT_LAYERS,
   applySegmentMethod,
@@ -136,12 +137,7 @@ export function exitRouteEdit(): void {
 
 function setLayerVisibility(show: boolean): void {
   if (map === null) return;
-  const v = show ? 'visible' : 'none';
-  for (const id of ALL_EDIT_LAYERS) {
-    if (map.getLayer(id) !== undefined) {
-      map.setLayoutProperty(id, 'visibility', v);
-    }
-  }
+  setLayersVisibility(map, ALL_EDIT_LAYERS, show);
 }
 
 function updateEditSources(): void {

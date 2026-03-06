@@ -1,6 +1,7 @@
 import type { Feature, LineString } from 'geojson';
 import type { Map as MapGL } from 'maplibre-gl';
 
+import { cleanupMapLayers } from './map-utils';
 import type { RouteData, RoutePoint, RouteSegment } from './photo-route';
 
 /** Layer/source IDs for route edit mode. */
@@ -34,12 +35,7 @@ const ALL_SOURCES = [
 
 /** Add all route-edit sources and layers to the map. */
 export function createEditLayers(m: MapGL): void {
-  for (const id of ALL_EDIT_LAYERS) {
-    if (m.getLayer(id) !== undefined) m.removeLayer(id);
-  }
-  for (const id of ALL_SOURCES) {
-    if (m.getSource(id) !== undefined) m.removeSource(id);
-  }
+  cleanupMapLayers(m, ALL_EDIT_LAYERS, ALL_SOURCES);
 
   const empty = { type: 'FeatureCollection' as const, features: [] };
   for (const id of ALL_SOURCES) {

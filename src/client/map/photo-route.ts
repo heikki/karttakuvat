@@ -6,6 +6,8 @@ import { TogglePhotoRouteEvent } from '@common/events';
 import { getEffectiveLocation } from '@common/photo-utils';
 import type { Photo } from '@common/types';
 import { toUtcSortKey } from '@common/utils';
+import { cleanupMapLayers, setLayersVisibility } from './map-utils';
+import { buildRouteLineFeatures } from './route-edit-helpers';
 
 // Types for route data
 export interface RoutePoint {
@@ -80,11 +82,7 @@ function onPhotosChanged(): void {
 export function addPhotoRouteLayers(): void {
   if (map === null) return;
 
-  // Clean up existing
-  for (const id of ALL_ROUTE_LAYERS) {
-    if (map.getLayer(id) !== undefined) map.removeLayer(id);
-  }
-  if (map.getSource(ROUTE_SOURCE) !== undefined) map.removeSource(ROUTE_SOURCE);
+  cleanupMapLayers(map, ALL_ROUTE_LAYERS, [ROUTE_SOURCE]);
 
   const empty: FeatureCollection = { type: 'FeatureCollection', features: [] };
 
@@ -140,12 +138,7 @@ export function setPhotoRouteVisible(show: boolean): void {
   visible = show;
   if (map === null) return;
 
-  const vis = show ? 'visible' : 'none';
-  for (const id of ALL_ROUTE_LAYERS) {
-    if (map.getLayer(id) !== undefined) {
-      map.setLayoutProperty(id, 'visibility', vis);
-    }
-  }
+  setLayersVisibility(map, ALL_ROUTE_LAYERS, show);
 
   if (show) {
     // Try to load saved route
@@ -176,12 +169,7 @@ export function isPhotoRouteVisible(): boolean {
 /** Hide/show the default route layers during edit mode. */
 export function setRouteEditStyle(editing: boolean): void {
   if (map === null) return;
-  const v = editing ? 'none' : visible ? 'visible' : 'none';
-  for (const id of ALL_ROUTE_LAYERS) {
-    if (map.getLayer(id) !== undefined) {
-      map.setLayoutProperty(id, 'visibility', v);
-    }
-  }
+  setLayersVisibility(map, ALL_ROUTE_LAYERS, !editing && visible);
 }
 
 /** Get the current saved route data (if any). */
@@ -290,34 +278,7 @@ function applyRouteData(data: RouteData): void {
   const src = map.getSource(ROUTE_SOURCE) as GeoJSONSource | undefined;
   if (src === undefined) return;
 
-  // Build separate LineStrings, breaking at 'none' segments
-  const features: Array<Feature<LineString>> = [];
-  let current: Array<[number, number]> = [];
-  for (const seg of data.segments) {
-    if (seg.method === 'none') {
-      if (current.length >= 2) {
-        features.push({
-          type: 'Feature',
-          geometry: { type: 'LineString', coordinates: current },
-          properties: {}
-        });
-      }
-      current = [];
-      continue;
-    }
-    for (let i = 0; i < seg.geometry.length; i++) {
-      if (current.length > 0 && i === 0) continue;
-      current.push(seg.geometry[i]!);
-    }
-  }
-  if (current.length >= 2) {
-    features.push({
-      type: 'Feature',
-      geometry: { type: 'LineString', coordinates: current },
-      properties: {}
-    });
-  }
-
+  const features = buildRouteLineFeatures(data);
   src.setData({ type: 'FeatureCollection', features });
 }
 

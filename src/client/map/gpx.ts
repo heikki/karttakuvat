@@ -1,9 +1,8 @@
-import turfDistance from '@turf/distance';
-import { point } from '@turf/helpers';
 import type { Feature, FeatureCollection, LineString, Point } from 'geojson';
 import type { GeoJSONSource, Map as MapGL } from 'maplibre-gl';
 
 import { state, subscribe } from '@common/data';
+import { cleanupMapLayers, computePathDistance } from './map-utils';
 
 // Sources and layers
 const TRACK_SOURCE = 'gpx-tracks';
@@ -53,12 +52,7 @@ export function initGpx(m: MapGL): void {
 export function addGpxLayers(): void {
   if (map === null) return;
 
-  for (const id of ALL_LAYERS) {
-    if (map.getLayer(id) !== undefined) map.removeLayer(id);
-  }
-  for (const id of ALL_SOURCES) {
-    if (map.getSource(id) !== undefined) map.removeSource(id);
-  }
+  cleanupMapLayers(map, ALL_LAYERS, ALL_SOURCES);
 
   map.addSource(TRACK_SOURCE, {
     type: 'geojson',
@@ -194,7 +188,7 @@ function parseTracks(doc: Document, filename: string, color: string): void {
     const { coords, elevations } = extractTrackPoints(trk);
     if (coords.length < 2) continue;
 
-    const distance = computeTrackDistance(coords);
+    const distance = computePathDistance(coords);
     const { gain, loss } = computeElevation(elevations);
 
     trackFeatures.push({
@@ -252,15 +246,6 @@ function parseWaypoints(doc: Document, color: string): void {
   }
 }
 
-function computeTrackDistance(coords: Array<[number, number]>): number {
-  let total = 0;
-  for (let i = 1; i < coords.length; i++) {
-    total += turfDistance(point(coords[i - 1]!), point(coords[i]!), {
-      units: 'kilometers'
-    });
-  }
-  return total;
-}
 
 function computeElevation(elevations: number[]): {
   gain: number;

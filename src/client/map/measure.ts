@@ -1,8 +1,7 @@
-import turfDistance from '@turf/distance';
-import { point } from '@turf/helpers';
 import type { GeoJSONSource, Map as MapGL, MapMouseEvent } from 'maplibre-gl';
 
 import { MeasureModeExitedEvent, ToggleMeasureModeEvent } from '@common/events';
+import { cleanupMapLayers, computePathDistance, setLayersVisibility } from './map-utils';
 
 // eslint-disable-next-line @typescript-eslint/init-declarations -- initialized in initMeasure() before any usage
 let map: MapGL;
@@ -30,12 +29,7 @@ export function initMeasure(m: MapGL, getMarkerLayerId: () => string | null) {
 }
 
 export function addMeasureLayers() {
-  if (map.getLayer(POINT_LAYER) !== undefined) map.removeLayer(POINT_LAYER);
-  if (map.getLayer(LINE_LAYER) !== undefined) map.removeLayer(LINE_LAYER);
-  if (map.getSource(POINT_SOURCE) !== undefined) {
-    map.removeSource(POINT_SOURCE);
-  }
-  if (map.getSource(LINE_SOURCE) !== undefined) map.removeSource(LINE_SOURCE);
+  cleanupMapLayers(map, [POINT_LAYER, LINE_LAYER], [POINT_SOURCE, LINE_SOURCE]);
 
   map.addSource(POINT_SOURCE, {
     type: 'geojson',
@@ -107,13 +101,7 @@ function updateSources() {
 }
 
 function computeDistance(): number {
-  let total = 0;
-  for (let i = 1; i < coords.length; i++) {
-    total += turfDistance(point(coords[i - 1]!), point(coords[i]!), {
-      units: 'kilometers'
-    });
-  }
-  return total;
+  return computePathDistance(coords);
 }
 
 function formatDistance(km: number): string {
@@ -149,12 +137,7 @@ function removeOverlay() {
 }
 
 function setLayerVisibility(visible: boolean) {
-  const v = visible ? 'visible' : 'none';
-  for (const id of [POINT_LAYER, LINE_LAYER]) {
-    if (map.getLayer(id) !== undefined) {
-      map.setLayoutProperty(id, 'visibility', v);
-    }
-  }
+  setLayersVisibility(map, [POINT_LAYER, LINE_LAYER], visible);
 }
 
 function onMapClick(e: MapMouseEvent) {
