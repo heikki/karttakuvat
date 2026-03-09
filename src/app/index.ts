@@ -505,6 +505,93 @@ ApplicationMenu.on('application-menu-clicked', (event: unknown) => {
   }
 });
 
+// Back up album data to iCloud Drive (non-blocking, production only)
+async function backupAlbumsToICloud(): Promise<void> {
+  const icloudBase = join(
+    process.env.HOME!,
+    'Library/Mobile Documents/com~apple~CloudDocs'
+  );
+  if (!existsSync(icloudBase)) return;
+
+  const localAlbums = join(dataDir, 'albums');
+  if (!existsSync(localAlbums)) return;
+
+  const backupRoot = join(icloudBase, 'Karttakuvat');
+  const latestDir = join(backupRoot, 'latest');
+  const snapshotsDir = join(backupRoot, 'snapshots');
+  const { readdir, copyFile, mkdir, stat, rm } = await import(
+    'node:fs/promises'
+  );
+
+  // 1. Mirror local albums → latest/ (incremental, mtime-based)
+  const albums = await readdir(localAlbums, { withFileTypes: true });
+  for (const entry of albums) {
+    if (!entry.isDirectory()) continue;
+    const srcDir = join(localAlbums, entry.name);
+    const destDir = join(latestDir, entry.name);
+    await mkdir(destDir, { recursive: true });
+
+    const files = await readdir(srcDir);
+    for (const file of files) {
+      const src = join(srcDir, file);
+      const dest = join(destDir, file);
+      try {
+        const srcStat = await stat(src);
+        let needsCopy = true;
+        try {
+          const destStat = await stat(dest);
+          needsCopy = srcStat.mtimeMs > destStat.mtimeMs;
+        } catch {
+          /* dest doesn't exist */
+        }
+        if (needsCopy) await copyFile(src, dest);
+      } catch {
+        /* skip unreadable files */
+      }
+    }
+  }
+
+  // 2. Create daily snapshot if none exists for today
+  const today = new Date().toISOString().slice(0, 10);
+  const todaySnapshot = join(snapshotsDir, today);
+  if (!existsSync(todaySnapshot)) {
+    const latestAlbums = await readdir(latestDir, { withFileTypes: true });
+    for (const entry of latestAlbums) {
+      if (!entry.isDirectory()) continue;
+      const srcDir = join(latestDir, entry.name);
+      const destDir = join(todaySnapshot, entry.name);
+      await mkdir(destDir, { recursive: true });
+      const files = await readdir(srcDir);
+      for (const file of files) {
+        await copyFile(join(srcDir, file), join(destDir, file));
+      }
+    }
+  }
+
+  // 3. Prune snapshots older than 30 days
+  try {
+    const snapshots = await readdir(snapshotsDir);
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 30);
+    const cutoffStr = cutoff.toISOString().slice(0, 10);
+    for (const name of snapshots) {
+      if (name < cutoffStr) {
+        await rm(join(snapshotsDir, name), { recursive: true });
+      }
+    }
+  } catch {
+    /* no snapshots dir yet */
+  }
+
+  console.log('[main] Albums backed up to iCloud');
+}
+
+if (!isDev) {
+  backupAlbumsToICloud().catch((err: Error) => {
+    console.log('[main] iCloud backup skipped:', err.message);
+  });
+}
+
 // Auto-sync on startup, then show app
 void (async () => {
   await runSyncQuiet();
