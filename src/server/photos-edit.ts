@@ -12,7 +12,7 @@ import { join } from 'node:path';
 import { Database } from 'bun:sqlite';
 
 import { runAppleScript } from '../../resources/native/native-bridge';
-import { exifDatePattern, tzOffsetToSeconds } from './date-utils';
+import { exifDatePattern } from './date-utils';
 
 // Use require() for geo-tz: its CJS build declares ESM exports incorrectly,
 // causing bundler failures in Electrobun's Bun version.

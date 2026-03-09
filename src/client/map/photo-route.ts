@@ -6,6 +6,7 @@ import { TogglePhotoRouteEvent } from '@common/events';
 import { getEffectiveLocation } from '@common/photo-utils';
 import type { Photo } from '@common/types';
 import { toUtcSortKey } from '@common/utils';
+
 import { cleanupMapLayers, setLayersVisibility } from './map-utils';
 import { buildRouteLineFeatures } from './route-edit-helpers';
 

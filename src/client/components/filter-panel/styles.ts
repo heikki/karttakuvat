@@ -8,12 +8,7 @@ export const styles = css`
   }
   :host {
     display: block;
-    position: absolute;
-    top: 10px;
-    right: 10px;
     user-select: none;
-    z-index: 1000;
-    width: 220px;
     font-family:
       -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
@@ -118,6 +113,11 @@ export const styles = css`
   .view-btn:hover {
     background: #48484a;
     border-color: #48484a;
+  }
+  .view-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+    pointer-events: none;
   }
   .view-btn.active {
     background: #007aff;

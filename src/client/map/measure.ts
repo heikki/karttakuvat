@@ -1,7 +1,12 @@
 import type { GeoJSONSource, Map as MapGL, MapMouseEvent } from 'maplibre-gl';
 
 import { MeasureModeExitedEvent, ToggleMeasureModeEvent } from '@common/events';
-import { cleanupMapLayers, computePathDistance, setLayersVisibility } from './map-utils';
+
+import {
+  cleanupMapLayers,
+  computePathDistance,
+  setLayersVisibility
+} from './map-utils';
 
 // eslint-disable-next-line @typescript-eslint/init-declarations -- initialized in initMeasure() before any usage
 let map: MapGL;

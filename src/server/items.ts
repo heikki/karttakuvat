@@ -39,7 +39,6 @@ function formatDuration(seconds: number | null): string | null {
   return `${h}:${String(m).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 }
 
-
 /** Sort albums and albumUuids together alphabetically by album name. */
 function sortedAlbums(record: PhotoRecord): {
   albums: string[];

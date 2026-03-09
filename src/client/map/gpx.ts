@@ -2,6 +2,7 @@ import type { Feature, FeatureCollection, LineString, Point } from 'geojson';
 import type { GeoJSONSource, Map as MapGL } from 'maplibre-gl';
 
 import { state, subscribe } from '@common/data';
+
 import { cleanupMapLayers, computePathDistance } from './map-utils';
 
 // Sources and layers
@@ -245,7 +246,6 @@ function parseWaypoints(doc: Document, color: string): void {
     });
   }
 }
-
 
 function computeElevation(elevations: number[]): {
   gain: number;

@@ -1,4 +1,4 @@
-import { html, LitElement, nothing } from 'lit';
+import { css, html, LitElement, nothing } from 'lit';
 import { customElement, state as litState } from 'lit/decorators.js';
 
 import { applyFilters, clearPendingEdits } from '@common/data';
@@ -23,7 +23,9 @@ import {
 import { getYear, isVideo } from '@common/utils';
 
 import type { AlbumControls } from './album-controls';
+
 import './album-controls';
+
 import {
   DEFAULT_GPS,
   DEFAULT_MEDIA,
@@ -33,6 +35,16 @@ import {
 } from './helpers';
 import { StoreController } from './store-controller';
 import { styles } from './styles';
+
+const panelStyles = css`
+  :host {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 1000;
+    width: 220px;
+  }
+`;
 
 @customElement('filter-panel')
 export class FilterPanel extends LitElement {
@@ -52,7 +64,7 @@ export class FilterPanel extends LitElement {
   private _gpsClickTimer: ReturnType<typeof setTimeout> | null = null;
   private _mediaClickTimer: ReturnType<typeof setTimeout> | null = null;
 
-  static override styles = styles;
+  static override styles = [styles, panelStyles];
 
   private get _albumControls(): AlbumControls | null {
     return this.renderRoot.querySelector('album-controls');

@@ -67,7 +67,11 @@ export function createEditLayers(m: MapGL): void {
     type: 'line',
     source: EDIT_IDS.hitSrc,
     paint: { 'line-color': 'rgba(0,0,0,0)', 'line-width': 16 },
-    layout: { visibility: 'none' }
+    layout: {
+      'visibility': 'none' as const,
+      'line-cap': 'round' as const,
+      'line-join': 'round' as const
+    }
   });
   m.addLayer({
     id: EDIT_IDS.hover,
@@ -244,6 +248,7 @@ export function findNearestSegment(
   let bestIdx = 0;
   let bestDist = Infinity;
   for (let i = 0; i < data.segments.length; i++) {
+    if (data.segments[i]!.method === 'none') continue;
     const screenCoords = data.segments[i]!.geometry.map(toScreen);
     const dist = distToPolyline(clickPx.x, clickPx.y, screenCoords);
     if (dist < bestDist) {

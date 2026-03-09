@@ -43,7 +43,9 @@ export function mapStyles(): MapStyles {
           attribution: '© Google'
         }
       },
-      layers: [{ id: 'google-terrain', type: 'raster', source: 'google-terrain' }]
+      layers: [
+        { id: 'google-terrain', type: 'raster', source: 'google-terrain' }
+      ]
     },
     mml_maastokartta: {
       version: 8,

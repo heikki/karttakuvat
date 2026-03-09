@@ -7,7 +7,11 @@ import {
   updateItemDate,
   updateItemLocation
 } from './app-db';
-import { applyHourOffset, tzOffsetHours, tzOffsetToSeconds } from './date-utils';
+import {
+  applyHourOffset,
+  tzOffsetHours,
+  tzOffsetToSeconds
+} from './date-utils';
 import type { ImageCache } from './image-cache';
 import type { ItemEntry } from './items';
 import {
@@ -70,7 +74,6 @@ export function flushLogBuffer(): string[] {
   const lines = scriptLogBuffer.splice(0);
   return lines;
 }
-
 
 function applyLocationEdits(
   items: ItemRecord[],

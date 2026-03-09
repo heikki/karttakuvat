@@ -1,5 +1,5 @@
-import { html, LitElement, nothing, type PropertyValues } from 'lit';
-import { customElement, property, state as litState } from 'lit/decorators.js';
+import { html, LitElement, type PropertyValues } from 'lit';
+import { customElement, state as litState, property } from 'lit/decorators.js';
 
 import {
   RouteEditExitedEvent,
@@ -82,11 +82,12 @@ export class AlbumControls extends LitElement {
   }
 
   override render() {
-    if (this.album === 'all') return nothing;
+    const disabled = this.album === 'all';
     return html`
       <div class="view-buttons">
         <button
           class="view-btn"
+          ?disabled=${disabled}
           @click=${() => {
             document.dispatchEvent(new ShowAlbumFilesEvent(this.album));
           }}
@@ -95,6 +96,7 @@ export class AlbumControls extends LitElement {
         </button>
         <button
           class="view-btn ${this._routeActive ? 'active' : ''}"
+          ?disabled=${disabled}
           @click=${() => {
             if (this._routeActive) this._exitRouteEdit();
             this._routeActive = !this._routeActive;
@@ -106,17 +108,16 @@ export class AlbumControls extends LitElement {
         >
           Route
         </button>
-        ${this._routeActive
-          ? html`<button
-              class="view-btn ${this._routeEditActive ? 'active' : ''}"
-              @click=${() => {
-                this._routeEditActive = !this._routeEditActive;
-                document.dispatchEvent(new ToggleRouteEditEvent());
-              }}
-            >
-              Edit
-            </button>`
-          : nothing}
+        <button
+          class="view-btn ${this._routeEditActive ? 'active' : ''}"
+          ?disabled=${disabled || !this._routeActive}
+          @click=${() => {
+            this._routeEditActive = !this._routeEditActive;
+            document.dispatchEvent(new ToggleRouteEditEvent());
+          }}
+        >
+          Edit
+        </button>
       </div>
     `;
   }

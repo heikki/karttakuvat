@@ -31,9 +31,7 @@ export function setLayersVisibility(
 }
 
 /** Total distance along a coordinate path in kilometers. */
-export function computePathDistance(
-  coords: Array<[number, number]>
-): number {
+export function computePathDistance(coords: Array<[number, number]>): number {
   let total = 0;
   for (let i = 1; i < coords.length; i++) {
     total += turfDistance(point(coords[i - 1]!), point(coords[i]!), {

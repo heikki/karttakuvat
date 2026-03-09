@@ -4,6 +4,7 @@ import { state, subscribe } from '@common/data';
 import { RouteEditExitedEvent, ToggleRouteEditEvent } from '@common/events';
 import type { Photo } from '@common/types';
 
+import { setLayersVisibility } from './map-utils';
 import {
   buildDefaultRoute,
   getSavedRouteData,
@@ -14,7 +15,6 @@ import {
   syncPhotoPoints,
   type RouteData
 } from './photo-route';
-import { setLayersVisibility } from './map-utils';
 import {
   ALL_EDIT_LAYERS,
   applySegmentMethod,
@@ -219,6 +219,17 @@ function scheduleAutoSave(): void {
 
 // --- Click handler ---
 
+/** Find the first non-'none' segment index from hit query results. */
+function firstClickableHit(
+  features: Array<{ properties: Record<string, unknown> }>
+): number | null {
+  for (const f of features) {
+    const idx = f.properties.segIndex as number;
+    if (routeData?.segments[idx]?.method !== 'none') return idx;
+  }
+  return null;
+}
+
 function consumeDragFromSegment(): boolean {
   if (!dragFromSegment) return false;
   dragFromSegment = false;
@@ -253,11 +264,11 @@ function onMapClick(e: MapMouseEvent): void {
   const hitFeatures = map.queryRenderedFeatures(e.point, {
     layers: [EDIT_IDS.hit]
   });
-  if (hitFeatures.length > 0) {
-    const segIdx = hitFeatures[0]!.properties.segIndex as number;
-    insertWaypoint(segIdx, e.lngLat.lng, e.lngLat.lat);
-  } else {
+  const hitSegIdx = firstClickableHit(hitFeatures);
+  if (hitSegIdx === null) {
     addWaypointAtClick(e.lngLat.lng, e.lngLat.lat);
+  } else {
+    insertWaypoint(hitSegIdx, e.lngLat.lng, e.lngLat.lat);
   }
 }
 
@@ -395,10 +406,8 @@ function onSegmentMouseDown(e: MapMouseEvent): void {
   const hitFeatures = map.queryRenderedFeatures(e.point, {
     layers: [EDIT_IDS.hit]
   });
-  if (hitFeatures.length === 0) return;
-
-  const segIdx = hitFeatures[0]!.properties.segIndex as number;
-  if (routeData.segments[segIdx]?.method === 'none') return;
+  const segIdx = firstClickableHit(hitFeatures);
+  if (segIdx === null) return;
   insertWaypointInRoute(routeData, segIdx, e.lngLat.lng, e.lngLat.lat);
   updateEditSources();
 
@@ -504,11 +513,11 @@ function onSegmentMove(e: MapMouseEvent): void {
   const features = map.queryRenderedFeatures(e.point, {
     layers: [EDIT_IDS.hit]
   });
-  if (features.length === 0) {
+  const segIdx = firstClickableHit(features);
+  if (segIdx === null) {
     clearHoverHighlight();
     return;
   }
-  const segIdx = features[0]!.properties.segIndex as number;
   if (segIdx === hoveredSegIdx) return;
   hoveredSegIdx = segIdx;
   const seg = routeData.segments[segIdx];

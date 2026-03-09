@@ -153,7 +153,7 @@ function openExternalMap(target: 'apple' | 'google') {
 export function initMap() {
   const savedView = mapViewFromUrl();
   const center: [number, number] | undefined =
-    savedView !== null ? [savedView.lon, savedView.lat] : undefined;
+    savedView === null ? undefined : [savedView.lon, savedView.lat];
   const zoom = savedView?.zoom;
   map = new MapGL({
     container: 'map',
