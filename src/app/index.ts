@@ -76,6 +76,10 @@ ApplicationMenu.setApplicationMenu([
     submenu: [
       { label: 'About Karttakuvat', action: 'about' },
       { type: 'divider' },
+      { role: 'hide', accelerator: 'CmdOrCtrl+H' },
+      { role: 'hideOthers', accelerator: 'Alt+CmdOrCtrl+H' },
+      { role: 'showAll' },
+      { type: 'divider' },
       {
         label: 'Quit Karttakuvat',
         action: 'quit',
