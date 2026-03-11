@@ -113,7 +113,7 @@ With the route visible, the user clicks the "Edit" button. The cursor changes to
 - **Add a waypoint**: click on a route segment to insert a new control point
 - **Remove a waypoint**: click on an existing waypoint (smaller dot) to delete it
 - **Move a point**: drag any point to a new position; routed segments update automatically
-- **Change routing method**: right-click a segment to choose between straight, driving, walking, hiking, or cycling (uses OpenRouteService)
+- **Change routing method**: right-click a segment to choose between straight, driving, hiking, or none (driving/hiking use OpenRouteService; none hides the segment)
 
 Changes are auto-saved. Exit edit mode with Escape or by clicking "Edit" again. Switching to "all albums" exits edit mode automatically.
 

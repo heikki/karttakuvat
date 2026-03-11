@@ -519,9 +519,8 @@ async function backupAlbumsToICloud(): Promise<void> {
   const backupRoot = join(icloudBase, 'Karttakuvat');
   const latestDir = join(backupRoot, 'latest');
   const snapshotsDir = join(backupRoot, 'snapshots');
-  const { readdir, copyFile, mkdir, stat, rm } = await import(
-    'node:fs/promises'
-  );
+  const { readdir, copyFile, mkdir, stat, rm } =
+    await import('node:fs/promises');
 
   // 1. Mirror local albums → latest/ (incremental, mtime-based)
   const albums = await readdir(localAlbums, { withFileTypes: true });

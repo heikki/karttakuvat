@@ -46,7 +46,7 @@ Changing any filter recomputes the filtered set and notifies:
 MapLibre GL JS with raster tile sources. Style switching via buttons:
 
 - **Aerial** (default): Google Satellite
-- **Topo**: Thunderforest Outdoors (requires API key)
+- **Topo**: Google Terrain
 - **Maasto**: MML Maastokartta over white background (requires MML API key)
 - **Orto**: MML Ortokuva over white background (requires MML API key)
 
@@ -243,11 +243,10 @@ Activated via the "Edit" button (appears when route is visible). Enters an inter
 
 - **Straight**: Direct line between points (default)
 - **Driving**: OpenRouteService driving-car profile
-- **Walking**: ORS foot-walking profile
 - **Hiking**: ORS foot-hiking profile
-- **Cycling**: ORS cycling-regular profile
+- **None**: Hides the segment (no line drawn)
 
-Non-straight segments are automatically re-routed via ORS when waypoints are added or dragged.
+Routed segments (driving/hiking) are automatically re-routed via ORS when waypoints are added or dragged. Waypoints cannot be inserted on "none" segments.
 
 **Point types** (visual distinction in edit mode):
 
@@ -353,6 +352,14 @@ Menu actions trigger scripts (`sync.ts`) via `Bun.spawn()`. Progress is shown in
 ### Auto-Sync on Startup
 
 On launch, the app automatically runs a quiet sync (`sync.ts`) in the background. Progress is shown in the window title. On success, the webview reloads silently. On failure, the error is logged but no dialog is shown.
+
+### iCloud Drive Backup
+
+On startup (production only), the app backs up album data to iCloud Drive at `~/Library/Mobile Documents/com~apple~CloudDocs/Karttakuvat/`. Skipped silently if iCloud Drive is not available.
+
+- **Incremental mirror**: copies `albums/` to `Karttakuvat/latest/`, skipping files that haven't changed (mtime-based)
+- **Daily snapshots**: creates a dated copy in `Karttakuvat/snapshots/YYYY-MM-DD/` once per day
+- **Pruning**: removes snapshots older than 30 days
 
 ### Image Cache
 

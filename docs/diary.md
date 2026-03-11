@@ -2,12 +2,12 @@
 
 Geotagged photo map viewer with Apple Photos integration.
 
-## Project Stats (as of 03.03.2026)
+## Project Stats (as of 11.03.2026)
 
 - **TypeScript files**: 49
-- **Lines of code**: 11,407
-- **Total commits**: 465
-- **Total tokens**: 1,114M | **Total cost**: $684
+- **Lines of code**: 11,703
+- **Total commits**: 481
+- **Total tokens**: 1,077M | **Total cost**: $660
 
 ## Updating This Diary
 
@@ -26,6 +26,23 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 - Use flat bullet lists (no bold subsections or nested structure)
 - Focus on significant features and fixes, skip minor tweaks
 - Describe final outcomes, not intermediate attempts that were reverted
+
+## 09.03.2026 — iCloud Backup & UI Polish
+
+- Added iCloud Drive backup of album data on startup: incremental mirror to `latest/`, daily snapshots, 30-day pruning
+- Fixed filter panel layout to keep album control buttons (Route, Edit, Files) always visible
+- Extracted shared map utilities and album controls into reusable components
+- Extracted shared date utilities and sanitized error responses
+
+## 04.03.2026 — Google Terrain & Route Refinements
+
+**Tokens**: 3M | **Cost**: $1
+
+- Replaced Thunderforest Outdoors topo map with Google Terrain tiles (no API key needed)
+- Added "none" segment type to hide route segments between points
+- Removed walking and cycling routing options (kept straight, driving, hiking)
+- Fixed route not hiding when switching between albums
+- Removed tile freeze detection banner (false positives)
 
 ## 03.03.2026 — Photo Route Display & Interactive Editing
 
