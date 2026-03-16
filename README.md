@@ -23,3 +23,9 @@ To build and install to `/Applications`:
 ```bash
 bun install:app
 ```
+
+## Docs
+
+- [App spec](docs/app.md) — current behavior
+- [User flows](docs/flows.md) — interaction flows
+- [Development diary](docs/diary.md) — project stats
