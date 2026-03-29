@@ -156,18 +156,27 @@ extern "C" int extractVideoFrame(const char* videoPath, const char* outPath, int
 // ---------- runAppleScript ----------
 
 extern "C" int runAppleScript(const char* script, char* errBuf, int errBufLen) {
-    @autoreleasepool {
-        NSString* source = [NSString stringWithUTF8String:script];
-        NSAppleScript* appleScript = [[NSAppleScript alloc] initWithSource:source];
-        NSDictionary* errorInfo = nil;
-        [appleScript executeAndReturnError:&errorInfo];
-        if (errorInfo != nil) {
-            NSString* msg = errorInfo[NSAppleScriptErrorMessage]
-                            ?: [errorInfo description];
-            const char* utf8 = [msg UTF8String];
-            strlcpy(errBuf, utf8, errBufLen);
-            return 1;
+    // NSAppleScript must run on the main thread.
+    __block int result = 0;
+    void (^block)(void) = ^{
+        @autoreleasepool {
+            NSString* source = [NSString stringWithUTF8String:script];
+            NSAppleScript* appleScript = [[NSAppleScript alloc] initWithSource:source];
+            NSDictionary* errorInfo = nil;
+            [appleScript executeAndReturnError:&errorInfo];
+            if (errorInfo != nil) {
+                NSString* msg = errorInfo[NSAppleScriptErrorMessage]
+                                ?: [errorInfo description];
+                const char* utf8 = [msg UTF8String];
+                strlcpy(errBuf, utf8, errBufLen);
+                result = 1;
+            }
         }
-        return 0;
+    };
+    if ([NSThread isMainThread]) {
+        block();
+    } else {
+        dispatch_sync(dispatch_get_main_queue(), block);
     }
+    return result;
 }

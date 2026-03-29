@@ -80,7 +80,7 @@ const server = serve({
   routes: {
     '/': indexHtml
   },
-  development: true,
+  development: false,
   async fetch(req) {
     const start = performance.now();
     const url = new URL(req.url);
