@@ -27,6 +27,13 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 - Focus on significant features and fixes, skip minor tweaks
 - Describe final outcomes, not intermediate attempts that were reverted
 
+## 29.03.2026 — Crash Fix: NSAppleScript Thread Safety
+
+- Analysed a production crash log: `EXC_BREAKPOINT / SIGTRAP` with ARM64 pointer authentication trap (PAC IB) on a Bun internal worker thread
+- Root cause: `NSAppleScript` is not thread-safe and must run on the main thread; Bun's `fetch` handler can be dispatched to worker threads, so AppleScript was being called from the wrong thread, corrupting Objective-C runtime state
+- Fixed by wrapping `runAppleScript()` in the native bridge to dispatch via `dispatch_sync(dispatch_get_main_queue(), ...)` when not already on main thread
+- Also fixed `development: true` being passed to `Bun.serve()` in the production app (changes internal Bun threading and error handling behaviour)
+
 ## 09.03.2026 — iCloud Backup & UI Polish
 
 - Added iCloud Drive backup of album data on startup: incremental mirror to `latest/`, daily snapshots, 30-day pruning
