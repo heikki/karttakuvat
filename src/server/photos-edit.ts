@@ -16,8 +16,11 @@ import { exifDatePattern } from './date-utils';
 
 // Use require() for geo-tz: its CJS build declares ESM exports incorrectly,
 // causing bundler failures in Electrobun's Bun version.
+// Use geo-tz/all (comprehensive dataset) so Iceland returns Atlantic/Reykjavik
+// instead of Africa/Abidjan (the default "alike since 1970" dataset merges
+// timezones with identical rules and picks the highest-population one).
 // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/consistent-type-imports -- CJS interop
-const { find: geoTzFind } = require('geo-tz') as typeof import('geo-tz');
+const { find: geoTzFind } = require('geo-tz/all') as typeof import('geo-tz');
 
 // ---------- AppleScript helpers ----------
 

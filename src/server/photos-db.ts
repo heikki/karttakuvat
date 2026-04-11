@@ -643,7 +643,13 @@ export function queryMetadata(
   set('uuid', row.uuid);
   set('filename', row.filename);
   set('original_filename', row.original_filename);
-  set('date', fmtCoreDataDate(row.date_created));
+  set(
+    'date',
+    formatDate(
+      typeof row.date_created === 'number' ? row.date_created : null,
+      typeof row.tz_offset === 'number' ? row.tz_offset : null
+    )
+  );
   set('date_added', fmtCoreDataDate(row.date_added));
   set('date_modified', fmtCoreDataDate(row.date_modified));
   set('title', row.title);
