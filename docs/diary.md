@@ -2,12 +2,12 @@
 
 Geotagged photo map viewer with Apple Photos integration.
 
-## Project Stats (as of 11.03.2026)
+## Project Stats (as of 11.04.2026)
 
-- **TypeScript files**: 49
-- **Lines of code**: 11,703
-- **Total commits**: 481
-- **Total tokens**: 1,077M | **Total cost**: $660
+- **TypeScript files**: 53
+- **Lines of code**: 11,971
+- **Total commits**: 414
+- **Total tokens**: ~1,098M | **Total cost**: ~$668
 
 ## Updating This Diary
 
@@ -26,6 +26,14 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 - Use flat bullet lists (no bold subsections or nested structure)
 - Focus on significant features and fixes, skip minor tweaks
 - Describe final outcomes, not intermediate attempts that were reverted
+
+## 11.04.2026 — Timezone Audit & Bulk Fix
+
+**Tokens**: 21M | **Cost**: $8
+
+- Switched `geo-tz` → `geo-tz/all` so coordinates in Iceland return `Atlantic/Reykjavik` instead of the population-alias `Africa/Abidjan`
+- Wrote `scripts/fix-timezones.ts` to bulk-correct 1359+ photos where iPhone recorded Helsinki timezone abroad: fixes `ZDATECREATED`, `ZTIMEZONEOFFSET`, and `ZTIMEZONENAME` in Photos.sqlite while preserving displayed local time, and updates `tz` in app.db
+- Fixed metadata modal `Date` field to show local capture time instead of UTC
 
 ## 29.03.2026 — Crash Fix: NSAppleScript Thread Safety
 

@@ -184,11 +184,11 @@ Controls: left/right arrows (click or keyboard), Space or backdrop click to clos
 
 ## Metadata Modal
 
-Full-screen overlay showing detailed photo metadata from Photos.app (via osxphotos).
+Full-screen overlay showing detailed photo metadata from Photos.app (via direct Photos.sqlite query).
 
 - Activated by info button on popup or lightbox overlay
 - Fetches from `/api/metadata/:uuid`
-- Shows table of metadata fields: filename, original filename, dates (created/added/modified), timezone, title, description, keywords, albums, persons, camera, lens, aperture, shutter speed, ISO, focal length, flash, dimensions, file size, duration, UTI, coordinates, GPS accuracy, flags (favorite, hidden, video, HDR, screenshot), UUID (with copy button)
+- Shows table of metadata fields: filename, original filename, dates (created as local time / added / modified as UTC), timezone, title, description, keywords, albums, persons, camera, lens, aperture, shutter speed, ISO, focal length, flash, dimensions, file size, duration, UTI, coordinates, GPS accuracy, flags (favorite, hidden, video, HDR, screenshot), UUID (with copy button)
 - Empty/false fields are hidden
 - Close with X button, backdrop click, or Escape
 - Blocks all keyboard events except Escape while open
