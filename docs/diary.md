@@ -2,12 +2,12 @@
 
 Geotagged photo map viewer with Apple Photos integration.
 
-## Project Stats (as of 11.04.2026)
+## Project Stats (as of 12.04.2026)
 
 - **TypeScript files**: 53
-- **Lines of code**: 11,971
-- **Total commits**: 414
-- **Total tokens**: ~1,098M | **Total cost**: ~$668
+- **Lines of code**: 12,004
+- **Total commits**: 416
+- **Total tokens**: ~1,101M | **Total cost**: ~$670
 
 ## Updating This Diary
 
@@ -26,6 +26,12 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 - Use flat bullet lists (no bold subsections or nested structure)
 - Focus on significant features and fixes, skip minor tweaks
 - Describe final outcomes, not intermediate attempts that were reverted
+
+## 12.04.2026 — Fix Time Edits Wrong in Photos
+
+**Tokens**: 3M | **Cost**: $2
+
+- Fixed time edits saving 2 h off in Apple Photos: AppleScript dates use system local time but Photos stores UTC; when system tz ≠ photo tz the displayed time was off by the difference — fixed by adjusting the target time by `(systemTz − photoTz)` before calling `setDateTime`
 
 ## 11.04.2026 — Timezone Audit & Bulk Fix
 
