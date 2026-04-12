@@ -9,6 +9,7 @@ import {
 } from './app-db';
 import {
   applyHourOffset,
+  systemTzOffsetHours,
   tzOffsetHours,
   tzOffsetToSeconds
 } from './date-utils';
@@ -148,8 +149,19 @@ function processTimeEdits(
   for (const edit of edits) {
     const item = itemsByUuid.get(edit.uuid);
     if (item === undefined) continue;
+
+    // target is the desired local time in the photo's timezone
     const target = applyHourOffset(item.date, edit.hours);
-    const [datePart, timePart] = target.split(' ');
+
+    // AppleScript creates dates in the system's local timezone, but Photos
+    // stores them as UTC by subtracting the system offset. To end up with the
+    // right UTC value in Photos, adjust by (systemTz - photoTz) so Photos
+    // displays the correct local time when it adds back the photo's tz offset.
+    const photoTzHours = tzOffsetHours(item.tz);
+    const sysTzHours = systemTzOffsetHours(target);
+    const scriptTarget = applyHourOffset(target, sysTzHours - photoTzHours);
+
+    const [datePart, timePart] = scriptTarget.split(' ');
     if (datePart === undefined || timePart === undefined) continue;
 
     try {

@@ -84,3 +84,24 @@ export function tzOffsetToSeconds(offset: string): number {
   const { sign, h, m } = parseTzOffset(offset);
   return sign * (h * 3600 + m * 60);
 }
+
+/**
+ * Get the system (OS) timezone offset in fractional hours at the date given
+ * by an EXIF date string. DST-aware: uses the actual offset for that date.
+ *
+ * e.g. "2024:07:01 12:00:00" in Finland → +3 (EEST)
+ *      "2024:01:15 12:00:00" in Finland → +2 (EET)
+ */
+export function systemTzOffsetHours(dateStr: string): number {
+  const match = exifDatePattern.exec(dateStr);
+  if (match?.groups === undefined) {
+    return -new Date().getTimezoneOffset() / 60;
+  }
+  const { yr, mo, dy } = match.groups;
+  const d = new Date(
+    parseInt(yr!, 10),
+    parseInt(mo!, 10) - 1,
+    parseInt(dy!, 10)
+  );
+  return -d.getTimezoneOffset() / 60;
+}
