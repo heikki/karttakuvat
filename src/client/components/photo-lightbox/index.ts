@@ -24,6 +24,8 @@ export class PhotoLightbox extends LitElement {
   @property({ type: Number }) currentIndex = 0;
   @property({ type: Number }) totalCount = 0;
 
+  private _hideControlsTimer: ReturnType<typeof setTimeout> | null = null;
+
   show(index: number) {
     this.currentIndex = index;
     const photo = state.filteredPhotos[index];
@@ -36,6 +38,10 @@ export class PhotoLightbox extends LitElement {
   hide() {
     this.active = false;
     this.photo = null;
+    if (this._hideControlsTimer !== null) {
+      clearTimeout(this._hideControlsTimer);
+      this._hideControlsTimer = null;
+    }
   }
 
   private _navigate(delta: number) {
@@ -85,6 +91,9 @@ export class PhotoLightbox extends LitElement {
     video {
       background: #000;
       outline: none;
+    }
+    video::-webkit-media-controls-overlay-enclosure {
+      display: none !important;
     }
     .info {
       color: white;
@@ -188,6 +197,17 @@ export class PhotoLightbox extends LitElement {
     this.hide();
   }
 
+  private _onVideoMouseMove() {
+    const video = this.shadowRoot?.querySelector('video');
+    if (video === undefined || video === null) return;
+    video.controls = true;
+    if (this._hideControlsTimer !== null) clearTimeout(this._hideControlsTimer);
+    this._hideControlsTimer = setTimeout(() => {
+      video.controls = false;
+      this._hideControlsTimer = null;
+    }, 3000);
+  }
+
   private _onInfoClick(e: Event) {
     e.stopPropagation();
     if (this.photo !== null) {
@@ -209,8 +229,10 @@ export class PhotoLightbox extends LitElement {
               poster=${getFullUrl(photo)}
               autoplay
               muted
-              controls
               playsinline
+              @mousemove=${() => {
+                this._onVideoMouseMove();
+              }}
             ></video>`
           : html`<img src=${getFullUrl(photo)} alt="" />`}
         <div class="top-left">
