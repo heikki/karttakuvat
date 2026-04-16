@@ -28,19 +28,14 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 - Describe final outcomes, not intermediate attempts that were reverted
 - Keep entries compact — each bullet one concise sentence, avoid sub-bullets or prose explanations
 
-## 17.04.2026 — Dependency Upgrades
+## 17.04.2026 — In-App Video Playback & Dependency Upgrades
 
-**Tokens**: ~1M | **Cost**: ~$1
-
-- Upgraded electrobun 1.13.1 → 1.16.0 and dropped the local patch: both issues fixed upstream (rmdirSync→rmSync via PR #171, setApplicationMenu GC bug via native strdup fix in commit 9a647cd)
-- Updated maplibre-gl 5.16→5.23, geo-tz 8.1.5→8.1.6, eslint, prettier, @types/bun; added @types/three required by new electrobun
-
-## 17.04.2026 — In-App Video Playback
-
-**Tokens**: ~12M | **Cost**: ~$7
+**Tokens**: ~13M | **Cost**: ~$8
 
 - Videos play inline in the lightbox, streamed from the Photos library originals via range-aware `GET /video/:uuid` — no copying or transcoding
 - Native controls auto-hide after 3 s and reappear on mouse move; Space toggles play/pause; mute state persists across videos in the session
+- Upgraded electrobun 1.13.1 → 1.16.0 and dropped the local patch: both issues fixed upstream (rmdirSync→rmSync via PR #171, setApplicationMenu GC bug via native strdup fix)
+- Updated maplibre-gl 5.16→5.23, geo-tz, eslint, prettier, @types/bun; added @types/three required by new electrobun
 
 ## 12.04.2026 — Fix Time Edits Wrong in Photos
 
