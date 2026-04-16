@@ -387,19 +387,19 @@ Dev builds use `data/` in the project root. Installed builds use `~/Library/Appl
 
 ## Keyboard Shortcuts
 
-| Key        | Context             | Action                         |
-| ---------- | ------------------- | ------------------------------ |
-| Escape     | Metadata modal open | Close metadata modal           |
-| Escape     | Date edit mode      | Exit date edit mode            |
-| Escape     | Measure mode        | Exit measurement mode          |
-| Escape     | Route edit mode     | Exit route edit mode           |
-| Escape     | Placement mode      | Cancel placement mode          |
-| Escape     | Lightbox open       | Close lightbox                 |
-| Escape     | Popup open          | Close popup                    |
-| Space      | Lightbox open (photo) | Close lightbox               |
-| Space      | Lightbox open (video) | Toggle play/pause            |
-| Space      | Popup open          | Open lightbox                  |
-| Left/Right | Lightbox open       | Navigate photos                |
-| Left/Right | Popup open          | Navigate photos (all filtered) |
-| Enter      | Date input focused  | Apply manual date              |
-| Shift+D    | Any                 | Toggle diagnostics overlay     |
+| Key        | Context               | Action                         |
+| ---------- | --------------------- | ------------------------------ |
+| Escape     | Metadata modal open   | Close metadata modal           |
+| Escape     | Date edit mode        | Exit date edit mode            |
+| Escape     | Measure mode          | Exit measurement mode          |
+| Escape     | Route edit mode       | Exit route edit mode           |
+| Escape     | Placement mode        | Cancel placement mode          |
+| Escape     | Lightbox open         | Close lightbox                 |
+| Escape     | Popup open            | Close popup                    |
+| Space      | Lightbox open (photo) | Close lightbox                 |
+| Space      | Lightbox open (video) | Toggle play/pause              |
+| Space      | Popup open            | Open lightbox                  |
+| Left/Right | Lightbox open         | Navigate photos                |
+| Left/Right | Popup open            | Navigate photos (all filtered) |
+| Enter      | Date input focused    | Apply manual date              |
+| Shift+D    | Any                   | Toggle diagnostics overlay     |
