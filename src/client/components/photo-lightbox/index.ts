@@ -173,7 +173,11 @@ export class PhotoLightbox extends LitElement {
       e.stopImmediatePropagation();
       const video = this.shadowRoot?.querySelector('video');
       if (video !== undefined && video !== null) {
-        if (video.paused) { void video.play(); } else { video.pause(); }
+        if (video.paused) {
+          void video.play();
+        } else {
+          video.pause();
+        }
       } else {
         this.hide();
       }

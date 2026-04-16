@@ -13,24 +13,32 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { Database } from 'bun:sqlite';
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/consistent-type-imports
+// eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/consistent-type-imports -- geo-tz CJS interop required for Bun bundler
 const { find: geoTzFind } = require('geo-tz/all') as typeof import('geo-tz');
 
 const CORE_DATA_EPOCH = 978307200; // 2001-01-01 00:00:00 UTC in Unix seconds
 const FIX = process.argv.includes('--fix');
-const ALBUM_FILTER = process.argv.find((a) => a.startsWith('--album='))?.slice(8) ?? null;
+const ALBUM_FILTER =
+  process.argv.find((a) => a.startsWith('--album='))?.slice(8) ?? null;
 
 const libraryPath = join(homedir(), 'Pictures/Photos Library.photoslibrary');
 const photosDbPath = join(libraryPath, 'database/Photos.sqlite');
-const appDbPath = join(homedir(), 'Library/Application Support/karttakuvat/app.db');
+const appDbPath = join(
+  homedir(),
+  'Library/Application Support/karttakuvat/app.db'
+);
 
-const photosDb = new Database(photosDbPath, FIX ? { readwrite: true } : { readonly: true });
+const photosDb = new Database(
+  photosDbPath,
+  FIX ? { readwrite: true } : { readonly: true }
+);
 
 // Discover dynamic join table
 const tables = photosDb
-  .query<{ name: string }, []>(
-    "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'Z_%ASSETS' AND name GLOB 'Z_[0-9]*ASSETS' ORDER BY name"
-  )
+  .query<
+    { name: string },
+    []
+  >("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'Z_%ASSETS' AND name GLOB 'Z_[0-9]*ASSETS' ORDER BY name")
   .all();
 
 let joinTable = '';
@@ -52,10 +60,10 @@ for (const { name } of tables) {
 }
 
 const albumJoin =
-  joinTable !== ''
-    ? `LEFT JOIN ${joinTable} ja ON a.Z_PK = ja.${assetCol}
-       LEFT JOIN ZGENERICALBUM al ON ja.${albumCol} = al.Z_PK`
-    : '';
+  joinTable === ''
+    ? ''
+    : `LEFT JOIN ${joinTable} ja ON a.Z_PK = ja.${assetCol}
+       LEFT JOIN ZGENERICALBUM al ON ja.${albumCol} = al.Z_PK`;
 
 interface Row {
   uuid: string;
@@ -93,23 +101,31 @@ const rows = photosDb
   )
   .all();
 
+const GMT_RE = /^GMT(?:(?<sign>[+-])(?<h>\d{2}):(?<m>\d{2}))?$/;
+
+function parseGmtOffset(s: string): number | null {
+  const match = GMT_RE.exec(s);
+  if (match === null) return null;
+  if (match.groups?.sign === undefined) return 0;
+  const sign = match.groups.sign === '+' ? 1 : -1;
+  return (
+    sign * (parseInt(match.groups.h!, 10) * 60 + parseInt(match.groups.m!, 10))
+  );
+}
+
 function tzOffsetMinutes(tzName: string, refDate: Date): number | null {
-  // Raw offset: GMT+HH:MM or GMT-HH:MM or GMT
-  const rawMatch = /^GMT(?:([+-])(\d{2}):(\d{2}))?$/.exec(tzName);
-  if (rawMatch !== null) {
-    if (rawMatch[1] === undefined) return 0;
-    const sign = rawMatch[1] === '+' ? 1 : -1;
-    return sign * (parseInt(rawMatch[2]!, 10) * 60 + parseInt(rawMatch[3]!, 10));
-  }
+  const rawResult = parseGmtOffset(tzName);
+  if (rawResult !== null) return rawResult;
   try {
-    const fmt = new Intl.DateTimeFormat('en-US', { timeZone: tzName, timeZoneName: 'longOffset' });
-    const part = fmt.formatToParts(refDate).find((p) => p.type === 'timeZoneName');
+    const fmt = new Intl.DateTimeFormat('en-US', {
+      timeZone: tzName,
+      timeZoneName: 'longOffset'
+    });
+    const part = fmt
+      .formatToParts(refDate)
+      .find((p) => p.type === 'timeZoneName');
     if (part === undefined) return null;
-    const m = /^GMT(?:([+-])(\d{2}):(\d{2}))?$/.exec(part.value);
-    if (m === null) return null;
-    if (m[1] === undefined) return 0;
-    const sign = m[1] === '+' ? 1 : -1;
-    return sign * (parseInt(m[2]!, 10) * 60 + parseInt(m[3]!, 10));
+    return parseGmtOffset(part.value);
   } catch {
     return null;
   }
@@ -130,14 +146,19 @@ function formatTzOffset(minutes: number): string {
   return `${sign}${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
-const filtered = ALBUM_FILTER !== null
-  ? rows.filter((r) => r.albums?.toLowerCase().includes(ALBUM_FILTER!.toLowerCase()))
-  : rows;
+const filtered =
+  ALBUM_FILTER === null
+    ? rows
+    : rows.filter(
+        (r) =>
+          r.albums?.toLowerCase().includes(ALBUM_FILTER.toLowerCase()) === true
+      );
 
-console.log(`${FIX ? 'FIXING' : 'DRY RUN'} — ${filtered.length} photos${ALBUM_FILTER !== null ? ` in album "${ALBUM_FILTER}"` : ''}\n`);
+console.log(
+  `${FIX ? 'FIXING' : 'DRY RUN'} — ${filtered.length} photos${ALBUM_FILTER === null ? '' : ` in album "${ALBUM_FILTER}"`}\n`
+);
 
 let fixed = 0;
-let skipped = 0;
 
 // Two statements for Photos.sqlite: timezone columns + ZDATECREATED
 const updateTzStmt = FIX
@@ -146,9 +167,7 @@ const updateTzStmt = FIX
     )
   : null;
 const updateDateStmt = FIX
-  ? photosDb.prepare(
-      'UPDATE ZASSET SET ZDATECREATED = ? WHERE ZUUID = ?'
-    )
+  ? photosDb.prepare('UPDATE ZASSET SET ZDATECREATED = ? WHERE ZUUID = ?')
   : null;
 
 let appDb: Database | null = null;
@@ -159,7 +178,9 @@ if (FIX) {
     appDb = new Database(appDbPath, { readwrite: true });
     appUpdateStmt = appDb.prepare('UPDATE items SET tz = ? WHERE uuid = ?');
   } catch {
-    console.warn('Warning: could not open app.db — Photos.sqlite will be fixed but app cache may be stale until next sync');
+    console.warn(
+      'Warning: could not open app.db — Photos.sqlite will be fixed but app cache may be stale until next sync'
+    );
   }
 }
 
@@ -186,25 +207,42 @@ for (const row of filtered) {
   if (expectedTzName === undefined) continue;
 
   const utcDate = new Date((row.date_created + CORE_DATA_EPOCH) * 1000);
-  const storedOffset = row.tz_offset !== null ? Math.round(row.tz_offset / 60) : null;
+  const storedOffset =
+    row.tz_offset === null ? null : Math.round(row.tz_offset / 60);
   const expectedOffset = tzOffsetMinutes(expectedTzName, utcDate);
 
   if (storedOffset === null || expectedOffset === null) continue;
 
   const album = row.albums ?? '—';
 
-  if (storedOffset !== expectedOffset) {
+  if (storedOffset === expectedOffset) {
+    // Offset correct but IANA name wrong (e.g. GMT+0100 → Europe/Paris)
+    if (row.tz_name !== expectedTzName) {
+      const localDate = formatLocalDate(
+        row.date_created + CORE_DATA_EPOCH,
+        storedOffset
+      );
+      if (!byAlbumName.has(album)) byAlbumName.set(album, []);
+      byAlbumName.get(album)!.push({ row, expectedTzName, localDate });
+    }
+  } else {
     const diffMin = storedOffset - expectedOffset;
     const newDateCreated = row.date_created + diffMin * 60;
-    const localDate = formatLocalDate(row.date_created + CORE_DATA_EPOCH, storedOffset);
+    const localDate = formatLocalDate(
+      row.date_created + CORE_DATA_EPOCH,
+      storedOffset
+    );
     const newOffsetSec = expectedOffset * 60;
     if (!byAlbum.has(album)) byAlbum.set(album, []);
-    byAlbum.get(album)!.push({ row, expectedTzName, expectedOffset, diffMin, newDateCreated, localDate, newOffsetSec });
-  } else if (row.tz_name !== expectedTzName) {
-    // Offset correct but IANA name wrong (e.g. GMT+0100 → Europe/Paris)
-    const localDate = formatLocalDate(row.date_created + CORE_DATA_EPOCH, storedOffset);
-    if (!byAlbumName.has(album)) byAlbumName.set(album, []);
-    byAlbumName.get(album)!.push({ row, expectedTzName, localDate });
+    byAlbum.get(album)!.push({
+      row,
+      expectedTzName,
+      expectedOffset,
+      diffMin,
+      newDateCreated,
+      localDate,
+      newOffsetSec
+    });
   }
 }
 
@@ -215,7 +253,15 @@ let fixedName = 0;
 for (const [album, changes] of byAlbum) {
   changes.sort((a, b) => a.localDate.localeCompare(b.localDate));
   console.log(`\n[${album}] — ${changes.length} photos (offset wrong)`);
-  for (const { row, expectedTzName, diffMin, localDate, expectedOffset, newDateCreated, newOffsetSec } of changes) {
+  for (const {
+    row,
+    expectedTzName,
+    diffMin,
+    localDate,
+    expectedOffset,
+    newDateCreated,
+    newOffsetSec
+  } of changes) {
     const diffH = diffMin / 60;
     const diffStr = diffH > 0 ? `+${diffH}h` : `${diffH}h`;
     console.log(
@@ -247,8 +293,10 @@ for (const [album, changes] of byAlbumName) {
 
 if (FIX) photosDb.run('COMMIT');
 
-skipped = rows.length - fixed - fixedName;
-console.log(`\n${FIX ? 'Fixed' : 'Would fix'}: ${fixed} offset + ${fixedName} name  |  Unchanged: ${skipped}`);
+const skipped = rows.length - fixed - fixedName;
+console.log(
+  `\n${FIX ? 'Fixed' : 'Would fix'}: ${fixed} offset + ${fixedName} name  |  Unchanged: ${skipped}`
+);
 if (!FIX) console.log('\nRun with --fix to apply changes.');
 
 photosDb.close();
