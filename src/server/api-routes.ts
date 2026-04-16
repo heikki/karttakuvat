@@ -30,6 +30,7 @@ import {
   tzOffsetFromCoords
 } from './photos-edit';
 import { handleRouteProxy } from './route-proxy';
+import { defaultLibraryPath, serveVideo } from './video-stream';
 
 function serverError(context: string, err: unknown): Response {
   console.error(`${context} error:`, err);
@@ -176,6 +177,7 @@ function processTimeEdits(
 
 interface ApiHandlerOptions {
   imageCache?: ImageCache;
+  libraryPath?: string;
 }
 
 /**
@@ -187,6 +189,7 @@ export function createApiHandler(
   options: ApiHandlerOptions = {}
 ) {
   const { imageCache } = options;
+  const libraryPath = options.libraryPath ?? defaultLibraryPath();
   let photosDb: ReturnType<typeof openPhotosDb> | null = null;
   let assetIndex: Map<string, AssetRecord> | null = null;
 
@@ -512,6 +515,18 @@ export function createApiHandler(
         return handleImageRequest(
           imageMatch.groups.id!,
           imageMatch.groups.size! as 'full' | 'thumb'
+        );
+      }
+    }
+
+    // Direct video streaming from the Photos library (range-aware)
+    if (req.method === 'GET') {
+      const videoMatch = /^\/video\/(?<id>[A-F0-9-]+)$/i.exec(pathname);
+      if (videoMatch?.groups !== undefined) {
+        return serveVideo(
+          libraryPath,
+          getAssetIndex().get(videoMatch.groups.id!),
+          req
         );
       }
     }

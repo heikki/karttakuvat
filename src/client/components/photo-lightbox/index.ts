@@ -5,7 +5,13 @@ import { state } from '@common/data';
 import { ShowLightboxEvent, ShowMetadataEvent } from '@common/events';
 import { getEffectiveDate, getEffectiveLocation } from '@common/photo-utils';
 import type { Photo } from '@common/types';
-import { formatCoords, formatDate, getFullUrl, isVideo } from '@common/utils';
+import {
+  formatCoords,
+  formatDate,
+  getFullUrl,
+  getVideoUrl,
+  isVideo
+} from '@common/utils';
 
 function stopPropagation(e: Event) {
   e.stopPropagation();
@@ -67,25 +73,21 @@ export class PhotoLightbox extends LitElement {
       display: flex;
       align-items: center;
       justify-content: center;
-      max-width: 95%;
-      max-height: 95%;
+      width: 100%;
+      height: 100%;
     }
-    img {
-      max-width: 95vw;
-      max-height: 95vh;
+    img,
+    video {
+      max-width: 100vw;
+      max-height: 100vh;
       object-fit: contain;
     }
+    video {
+      background: #000;
+      outline: none;
+    }
     .info {
-      position: absolute;
-      bottom: 10px;
-      left: 10px;
       color: white;
-      font-size: 12px;
-      background: rgba(0, 0, 0, 0.5);
-      padding: 4px 8px;
-      border-radius: 6px;
-      pointer-events: none;
-      z-index: 5;
     }
     .overlay-buttons {
       position: absolute;
@@ -118,8 +120,7 @@ export class PhotoLightbox extends LitElement {
     .info-btn {
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cline x1='12' y1='16' x2='12' y2='12'/%3E%3Cline x1='12' y1='8' x2='12.01' y2='8'/%3E%3C/svg%3E");
     }
-    .camera-overlay {
-      display: none;
+    .top-left {
       position: absolute;
       top: 10px;
       left: 10px;
@@ -128,38 +129,15 @@ export class PhotoLightbox extends LitElement {
       font-size: 12px;
       padding: 4px 8px;
       border-radius: 6px;
-      pointer-events: none;
       z-index: 5;
+      pointer-events: none;
+    }
+    .camera-overlay {
+      display: none;
+      font-weight: 500;
+      margin-bottom: 2px;
     }
     .camera-overlay.visible {
-      display: block;
-    }
-    .play-overlay {
-      display: none;
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 80px;
-      height: 80px;
-      background: rgba(0, 0, 0, 0.5);
-      border-radius: 50%;
-      pointer-events: none;
-      z-index: 10;
-    }
-    .play-overlay::after {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 54%;
-      transform: translate(-50%, -50%);
-      width: 0;
-      height: 0;
-      border-style: solid;
-      border-width: 16px 0 16px 28px;
-      border-color: transparent transparent transparent white;
-    }
-    :host([active]) .play-overlay.video {
       display: block;
     }
   `;
@@ -192,8 +170,13 @@ export class PhotoLightbox extends LitElement {
     if (e.key === 'ArrowLeft') this._navigate(-1);
     if (e.key === ' ') {
       e.preventDefault();
-      this.hide();
       e.stopImmediatePropagation();
+      const video = this.shadowRoot?.querySelector('video');
+      if (video !== undefined && video !== null) {
+        if (video.paused) { void video.play(); } else { video.pause(); }
+      } else {
+        this.hide();
+      }
     }
   };
 
@@ -216,11 +199,24 @@ export class PhotoLightbox extends LitElement {
 
     return html`
       <div class="image-wrap" @click=${stopPropagation}>
-        <img src=${getFullUrl(photo)} alt="" />
-        <div class="camera-overlay ${photo.camera === null ? '' : 'visible'}">
-          ${photo.camera ?? ''}
+        ${isVideo(photo)
+          ? html`<video
+              src=${getVideoUrl(photo)}
+              poster=${getFullUrl(photo)}
+              autoplay
+              muted
+              controls
+              playsinline
+            ></video>`
+          : html`<img src=${getFullUrl(photo)} alt="" />`}
+        <div class="top-left">
+          <div class="camera-overlay ${photo.camera === null ? '' : 'visible'}">
+            ${photo.camera ?? ''}
+          </div>
+          <div class="info">
+            ${formatDate(effectiveDate, photo.tz)}<br />${formatCoords(loc)}
+          </div>
         </div>
-        <div class="play-overlay ${isVideo(photo) ? 'video' : ''}"></div>
         <div class="overlay-buttons">
           <button
             class="overlay-btn info-btn"
@@ -240,9 +236,6 @@ export class PhotoLightbox extends LitElement {
                   e.stopPropagation();
                 }}
               ></a>`}
-        </div>
-        <div class="info">
-          ${formatDate(effectiveDate, photo.tz)}<br />${formatCoords(loc)}
         </div>
       </div>
     `;

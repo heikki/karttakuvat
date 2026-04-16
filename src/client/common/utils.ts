@@ -116,6 +116,10 @@ export function getFullUrl(photo: Photo): string {
   return photo.full;
 }
 
+export function getVideoUrl(photo: Photo): string {
+  return `video/${photo.uuid}`;
+}
+
 export const exifDatePattern =
   /^(?<yr>\d{4}):(?<mo>\d{2}):(?<dy>\d{2}) (?<hr>\d{2}):(?<mi>\d{2}):(?<sc>\d{2})$/;
 
