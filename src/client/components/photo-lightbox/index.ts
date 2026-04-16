@@ -25,6 +25,7 @@ export class PhotoLightbox extends LitElement {
   @property({ type: Number }) totalCount = 0;
 
   private _hideControlsTimer: ReturnType<typeof setTimeout> | null = null;
+  private _videoMuted = false;
 
   show(index: number) {
     this.currentIndex = index;
@@ -228,11 +229,14 @@ export class PhotoLightbox extends LitElement {
               src=${getVideoUrl(photo)}
               poster=${getFullUrl(photo)}
               autoplay
-              muted
               playsinline
               @mousemove=${() => {
                 this._onVideoMouseMove();
               }}
+              @volumechange=${(e: Event) => {
+                this._videoMuted = (e.target as HTMLVideoElement).muted;
+              }}
+              .muted=${this._videoMuted}
             ></video>`
           : html`<img src=${getFullUrl(photo)} alt="" />`}
         <div class="top-left">
