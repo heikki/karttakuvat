@@ -180,7 +180,9 @@ Pending edits are reflected immediately on the map (markers move to new position
 
 Full-screen overlay for browsing all filtered photos sequentially. Activated by clicking image in popup or pressing Space when popup is open.
 
-Controls: left/right arrows (click or keyboard), Space or backdrop click to close, Escape to close. Shows date with timezone, coordinates, camera name overlay, and "Open in Photos" / info overlay buttons. Video items get a play overlay icon.
+Controls: left/right arrows (click or keyboard), Escape or backdrop click to close. Shows date with timezone, coordinates, and camera name in a shared pill in the top-left corner, plus "Open in Photos" and info buttons in the top-right.
+
+**Videos**: played inline via `<video>` element with the original file streamed from the Photos library (HTTP range-aware, no copying or transcoding). Native controls appear on mouse movement and hide after 3 seconds of inactivity. Space toggles play/pause. Mute state is shared across videos within the same session.
 
 ## Metadata Modal
 
@@ -365,6 +367,8 @@ On startup (production only), the app backs up album data to iCloud Drive at `~/
 
 Images are converted on demand from the Apple Photos library using a native ObjC++ dylib (`libkarttakuvat.dylib`) loaded via `bun:ffi`. The dylib uses ImageIO for HEIC/JPEG conversion and thumbnailing, and AVFoundation for video frame extraction — no subprocess spawning or temp directories needed. Full-size and thumbnail images are cached in `{dataDir}/cache/full/` and `{dataDir}/cache/thumb/` respectively, validated by source file mtime. The "Clear Cache" menu action deletes both cache directories and reloads the webview.
 
+Videos in the lightbox are streamed directly from `Photos Library.photoslibrary/originals/` via `GET /video/:uuid` with HTTP range support (seeking). No conversion or caching — the original `.mov`/`.mp4` file is served with `Content-Type: video/quicktime` or `video/mp4`.
+
 ### Window State Persistence
 
 Window position and size are saved to the `settings` table in `app.db` (key `window`) on move/resize (debounced 500ms) and restored on launch.
@@ -392,7 +396,8 @@ Dev builds use `data/` in the project root. Installed builds use `~/Library/Appl
 | Escape     | Placement mode      | Cancel placement mode          |
 | Escape     | Lightbox open       | Close lightbox                 |
 | Escape     | Popup open          | Close popup                    |
-| Space      | Lightbox open       | Close lightbox                 |
+| Space      | Lightbox open (photo) | Close lightbox               |
+| Space      | Lightbox open (video) | Toggle play/pause            |
 | Space      | Popup open          | Open lightbox                  |
 | Left/Right | Lightbox open       | Navigate photos                |
 | Left/Right | Popup open          | Navigate photos (all filtered) |

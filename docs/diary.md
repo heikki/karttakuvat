@@ -2,12 +2,12 @@
 
 Geotagged photo map viewer with Apple Photos integration.
 
-## Project Stats (as of 12.04.2026)
+## Project Stats (as of 17.04.2026)
 
-- **TypeScript files**: 53
-- **Lines of code**: 12,004
-- **Total commits**: 416
-- **Total tokens**: ~1,101M | **Total cost**: ~$670
+- **TypeScript files**: 54
+- **Lines of code**: 12,235
+- **Total commits**: 421
+- **Total tokens**: ~1,113M | **Total cost**: ~$677
 
 ## Updating This Diary
 
@@ -26,6 +26,14 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 - Use flat bullet lists (no bold subsections or nested structure)
 - Focus on significant features and fixes, skip minor tweaks
 - Describe final outcomes, not intermediate attempts that were reverted
+- Keep entries compact — each bullet one concise sentence, avoid sub-bullets or prose explanations
+
+## 17.04.2026 — In-App Video Playback
+
+**Tokens**: ~12M | **Cost**: ~$7
+
+- Videos play inline in the lightbox, streamed from the Photos library originals via range-aware `GET /video/:uuid` — no copying or transcoding
+- Native controls auto-hide after 3 s and reappear on mouse move; Space toggles play/pause; mute state persists across videos in the session
 
 ## 12.04.2026 — Fix Time Edits Wrong in Photos
 
