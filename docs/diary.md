@@ -6,8 +6,8 @@ Geotagged photo map viewer with Apple Photos integration.
 
 - **TypeScript files**: 54
 - **Lines of code**: 12,235
-- **Total commits**: 421
-- **Total tokens**: ~1,113M | **Total cost**: ~$677
+- **Total commits**: 423
+- **Total tokens**: ~1,128M | **Total cost**: ~$683
 
 ## Updating This Diary
 
@@ -27,6 +27,13 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 - Focus on significant features and fixes, skip minor tweaks
 - Describe final outcomes, not intermediate attempts that were reverted
 - Keep entries compact — each bullet one concise sentence, avoid sub-bullets or prose explanations
+
+## 17.04.2026 — Dependency Upgrades
+
+**Tokens**: ~1M | **Cost**: ~$1
+
+- Upgraded electrobun 1.13.1 → 1.16.0 and dropped the local patch: both issues fixed upstream (rmdirSync→rmSync via PR #171, setApplicationMenu GC bug via native strdup fix in commit 9a647cd)
+- Updated maplibre-gl 5.16→5.23, geo-tz 8.1.5→8.1.6, eslint, prettier, @types/bun; added @types/three required by new electrobun
 
 ## 17.04.2026 — In-App Video Playback
 
