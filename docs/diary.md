@@ -30,9 +30,10 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 
 ## 18.04.2026 — Reset & Fit Improvements
 
-- Fixed Reset not persisting state: the old `history.replaceState` bypassed the save pipeline entirely; replaced with `resetAllViewParams()` (clears all URL params atomically) + `flushViewState()` (saves immediately, bypassing debounce)
-- Reset now also resets marker style to Classic and dispatches the change event, which was previously never cleared
-- Fit button now selects the oldest visible photo by date; pressing Fit again when the oldest is already open selects the newest instead
+- Fixed Reset not persisting state: old `history.replaceState` bypassed the save pipeline; now clears all URL params atomically and saves immediately
+- Reset now also resets marker style to Classic
+- Fixed reset fit animation being interrupted by a stale deferred `panToFitPopup` callback calling `map.stop()`
+- Fit button selects oldest visible photo; if oldest is already selected, selects newest instead
 
 ## 17.04.2026 — In-App Video Playback & Dependency Upgrades
 
