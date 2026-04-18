@@ -28,7 +28,7 @@ function showOldestOrNewestPopup() {
     0
   );
   const target =
-    getPhotoUuid() === photos[oldestIdx]?.uuid ? newestIdx : oldestIdx;
+    getPhotoUuid() === photos[oldestIdx]!.uuid ? newestIdx : oldestIdx;
   showPopup(target);
 }
 
