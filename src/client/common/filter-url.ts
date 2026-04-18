@@ -19,9 +19,10 @@ interface SavedFilters {
 
 let viewSaveTimer: ReturnType<typeof setTimeout> | null = null;
 
-function saveViewState(params: URLSearchParams): void {
+function saveViewState(params: URLSearchParams, immediate = false): void {
   if (viewSaveTimer !== null) clearTimeout(viewSaveTimer);
-  viewSaveTimer = setTimeout(() => {
+  const doSave = () => {
+    viewSaveTimer = null;
     const obj = Object.fromEntries(params);
     delete obj.id;
     const qs = new URLSearchParams(obj).toString();
@@ -31,13 +32,18 @@ function saveViewState(params: URLSearchParams): void {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(obj)
     });
-  }, 1000);
+  };
+  if (immediate) {
+    doSave();
+  } else {
+    viewSaveTimer = setTimeout(doSave, 1000);
+  }
 }
 
 let pendingUrlParams: URLSearchParams | null = null;
 let urlUpdateTimer: ReturnType<typeof setTimeout> | null = null;
 
-function flushUrl() {
+function flushUrl(immediate = false) {
   if (pendingUrlParams === null) return;
   const qs = pendingUrlParams.toString();
   try {
@@ -45,9 +51,21 @@ function flushUrl() {
   } catch {
     // SecurityError: browser rate-limits replaceState (100/10s)
   }
-  saveViewState(pendingUrlParams);
+  saveViewState(pendingUrlParams, immediate);
   pendingUrlParams = null;
   urlUpdateTimer = null;
+}
+
+export function flushViewState(): void {
+  if (urlUpdateTimer !== null) {
+    clearTimeout(urlUpdateTimer);
+    urlUpdateTimer = null;
+  }
+  flushUrl(true);
+}
+
+export function resetAllViewParams(): void {
+  updateUrl(new URLSearchParams());
 }
 
 function updateUrl(params: URLSearchParams): void {

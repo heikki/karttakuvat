@@ -15,10 +15,12 @@ import {
 import {
   filtersFromUrl,
   filtersToUrl,
+  flushViewState,
   mapStyleFromUrl,
   mapStyleToUrl,
   markerStyleFromUrl,
-  markerStyleToUrl
+  markerStyleToUrl,
+  resetAllViewParams
 } from '@common/filter-url';
 import { getYear, isVideo } from '@common/utils';
 
@@ -253,14 +255,25 @@ export class FilterPanel extends LitElement {
     this._camera = 'all';
     this._gps = [...DEFAULT_GPS];
     this._media = [...DEFAULT_MEDIA];
-    if (this._mapStyle !== 'satellite') {
-      this._mapStyle = 'satellite';
-      mapStyleToUrl('satellite');
+    this._mapStyle = 'satellite';
+    if (this._markerStyle !== 'classic') {
+      this._markerStyle = 'classic';
+      document.dispatchEvent(new ChangeMarkerStyleEvent('classic'));
     }
     this._measureActive = false;
     this._albumControls?.reset();
-    this._applyFilters();
-    history.replaceState(null, '', location.pathname);
+    applyFilters(
+      {
+        year: this._year,
+        gps: this._gps,
+        media: this._media,
+        album: this._album,
+        camera: this._camera
+      },
+      this._getCameraPhotos()
+    );
+    resetAllViewParams();
+    flushViewState();
     document.dispatchEvent(new ResetMapEvent());
   }
 
