@@ -319,6 +319,7 @@ export function showPopup(index: number) {
     removeCanvasZoomOverride();
     dateEditMode = false;
     highlightFn(null);
+    popup = null;
     popupPhotoIndex = null;
     photoUuid = null;
     popupElement = null;

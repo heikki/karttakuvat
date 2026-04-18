@@ -89,9 +89,9 @@ function panBy(map: MapGL, panX: number, panY: number, duration: number) {
 export function createPanToFitPopup(map: MapGL) {
   return (_coords: [number, number]) => {
     afterPopupLayout(map, () => {
-      map.stop();
       const rects = getPopupRect(map);
       if (rects === null) return;
+      map.stop();
       const { panX, panY } = calculatePanOffset(rects.mapRect, rects.popupRect);
       panBy(map, panX, panY, 300);
     });
