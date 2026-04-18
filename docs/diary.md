@@ -28,6 +28,12 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 - Describe final outcomes, not intermediate attempts that were reverted
 - Keep entries compact — each bullet one concise sentence, avoid sub-bullets or prose explanations
 
+## 18.04.2026 — Reset & Fit Improvements
+
+- Fixed Reset not persisting state: the old `history.replaceState` bypassed the save pipeline entirely; replaced with `resetAllViewParams()` (clears all URL params atomically) + `flushViewState()` (saves immediately, bypassing debounce)
+- Reset now also resets marker style to Classic and dispatches the change event, which was previously never cleared
+- Fit button now selects the oldest visible photo by date; pressing Fit again when the oldest is already open selects the newest instead
+
 ## 17.04.2026 — In-App Video Playback & Dependency Upgrades
 
 **Tokens**: ~13M | **Cost**: ~$8
