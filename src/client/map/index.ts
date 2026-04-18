@@ -111,7 +111,7 @@ function resetMap() {
   if (isMeasureMode()) exitMeasureMode();
   if (isRouteEditMode()) exitRouteEdit();
   changeMapStyle('satellite');
-  fitToPhotos(true);
+  fitToPhotos(true, false, true);
 }
 
 function applyGlobeProjection(style: StyleSpecification): StyleSpecification {

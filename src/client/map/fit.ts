@@ -21,6 +21,20 @@ function showFirstPopup() {
   showPopup(0);
 }
 
+function showLatestPopup() {
+  if (state.filteredPhotos.length === 0) return;
+  let latestIndex = 0;
+  let latestDate = state.filteredPhotos[0]?.date ?? '';
+  for (let i = 1; i < state.filteredPhotos.length; i++) {
+    const d = state.filteredPhotos[i]?.date ?? '';
+    if (d > latestDate) {
+      latestDate = d;
+      latestIndex = i;
+    }
+  }
+  showPopup(latestIndex);
+}
+
 function computePhotoBounds(): LngLatBounds {
   const bounds = new LngLatBounds();
   state.filteredPhotos.forEach((p) => bounds.extend([p.lon ?? 0, p.lat ?? 0]));
@@ -34,11 +48,16 @@ function isSinglePointBounds(bounds: LngLatBounds): boolean {
   );
 }
 
-function triggerPostFitActions(animate: boolean, selectFirst: boolean) {
-  if (animate && selectFirst) {
-    void map.once('moveend', showFirstPopup);
-  } else if (selectFirst) {
-    showFirstPopup();
+function triggerPostFitActions(
+  animate: boolean,
+  selectFirst: boolean,
+  selectLatest: boolean
+) {
+  const show = selectLatest ? showLatestPopup : showFirstPopup;
+  if (animate && (selectFirst || selectLatest)) {
+    void map.once('moveend', show);
+  } else if (selectFirst || selectLatest) {
+    show();
   }
 }
 
@@ -49,7 +68,11 @@ function computeTopPadding(): number {
   return Math.max(50, popupEl.getBoundingClientRect().height + 60);
 }
 
-export function fitToPhotos(animate = false, selectFirst = false) {
+export function fitToPhotos(
+  animate = false,
+  selectFirst = false,
+  selectLatest = false
+) {
   if (state.filteredPhotos.length === 0) return;
   const bounds = computePhotoBounds();
   const duration = animate ? 500 : 0;
@@ -57,7 +80,7 @@ export function fitToPhotos(animate = false, selectFirst = false) {
   if (isSinglePointBounds(bounds)) {
     const center = bounds.getCenter();
     map.flyTo({ center: [center.lng, center.lat], zoom: 14, duration });
-    triggerPostFitActions(animate, selectFirst);
+    triggerPostFitActions(animate, selectFirst, selectLatest);
     return;
   }
 
@@ -66,5 +89,5 @@ export function fitToPhotos(animate = false, selectFirst = false) {
     maxZoom: 18,
     duration
   });
-  triggerPostFitActions(animate, selectFirst);
+  triggerPostFitActions(animate, selectFirst, selectLatest);
 }
