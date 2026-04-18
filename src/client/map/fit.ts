@@ -4,7 +4,7 @@ import type { Map as MapGL } from 'maplibre-gl';
 import { state } from '@common/data';
 import { FitToPhotosEvent } from '@common/events';
 
-import { getPopup, showPopup } from './popup';
+import { getPhotoUuid, getPopup, showPopup } from './popup';
 
 // eslint-disable-next-line @typescript-eslint/init-declarations -- set in initFit
 let map: MapGL;
@@ -16,9 +16,20 @@ export function initFit(m: MapGL) {
   });
 }
 
-function showFirstPopup() {
-  if (state.filteredPhotos[0] === undefined) return;
-  showPopup(0);
+function showOldestOrNewestPopup() {
+  const photos = state.filteredPhotos;
+  if (photos.length === 0) return;
+  const oldestIdx = photos.reduce(
+    (min, p, i) => (p.date < photos[min]!.date ? i : min),
+    0
+  );
+  const newestIdx = photos.reduce(
+    (max, p, i) => (p.date > photos[max]!.date ? i : max),
+    0
+  );
+  const target =
+    getPhotoUuid() === photos[oldestIdx]?.uuid ? newestIdx : oldestIdx;
+  showPopup(target);
 }
 
 function computePhotoBounds(): LngLatBounds {
@@ -36,9 +47,9 @@ function isSinglePointBounds(bounds: LngLatBounds): boolean {
 
 function triggerPostFitActions(animate: boolean, selectFirst: boolean) {
   if (animate && selectFirst) {
-    void map.once('moveend', showFirstPopup);
+    void map.once('moveend', showOldestOrNewestPopup);
   } else if (selectFirst) {
-    showFirstPopup();
+    showOldestOrNewestPopup();
   }
 }
 
