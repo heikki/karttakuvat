@@ -27,9 +27,14 @@ function showOldestOrNewestPopup() {
     (max, p, i) => (p.date > photos[max]!.date ? i : max),
     0
   );
-  const target =
-    getPhotoUuid() === photos[oldestIdx]!.uuid ? newestIdx : oldestIdx;
-  showPopup(target);
+  const selectedUuid = getPhotoUuid();
+  if (selectedUuid === photos[oldestIdx]!.uuid) {
+    showPopup(newestIdx);
+  } else if (selectedUuid === photos[newestIdx]!.uuid) {
+    showPopup(oldestIdx);
+  } else if (selectedUuid === null) {
+    showPopup(oldestIdx);
+  }
 }
 
 function computePhotoBounds(): LngLatBounds {

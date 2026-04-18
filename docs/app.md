@@ -99,7 +99,7 @@ Default center: Kuhmo, Finland (29.52, 64.13). Zoom 10. Box zoom, double-click z
 ### Map Fitting
 
 - **Initial load**: fit to all photos (skipped if map view is restored from URL)
-- **"Fit" button**: fits to all filtered photos with animation, then opens popup on the oldest photo by date; if the oldest is already selected, opens the newest instead
+- **"Fit" button**: fits to all filtered photos with animation; keeps current selection unless the oldest or newest photo is selected — selecting the oldest toggles to newest and vice versa; selects oldest if nothing is open
 - **Padding**: top dynamic (350 in mercator; in globe: popup height + 60 or 50 if no popup), bottom 40, left 50, right 270 (accounts for filter panel)
 - **Max zoom**: 18
 - **Single point**: centers at zoom 14 instead of fitting bounds
@@ -287,7 +287,7 @@ Fixed top-right (220px wide). Collapsible — clicking the header toggles the pa
 - Title "Karttakuvat" (clickable header to collapse/expand)
 - Item count (photos and/or videos)
 - Filter section: Year, Album, Camera dropdowns; Media and Location toggle buttons; Map style buttons; Marker style buttons (Classic/Points)
-- "Fit" button — fits map to filtered photos; opens oldest photo popup, or newest if oldest is already selected
+- "Fit" button — fits map to filtered photos; keeps current selection unless oldest or newest is open (toggles between them); selects oldest if nothing is open
 - "Reset" button — closes popup, exits measure mode, resets all filters/map style/marker style to defaults, clears and immediately persists all URL params, fits to all photos
 - "Measure" button — toggles distance measurement mode (highlighted blue when active)
 - "Route" button (conditional) — toggles photo route display (only shown when a specific album is selected)
