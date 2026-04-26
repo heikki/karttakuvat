@@ -11,24 +11,33 @@ Geotagged photo map viewer with Apple Photos integration.
 
 ## Updating This Diary
 
-Run these commands to gather data:
+Refresh the Project Stats block when adding entries; gather data with:
 
 ```bash
-bunx ccusage                    # Token usage and cost per day
+bunx ccusage --json             # Token usage and cost per day
 git log --oneline | wc -l       # Total commits
-find . -name "*.ts" -o -name "*.tsx" | grep -v node_modules | grep -v .claude | xargs wc -l | tail -1  # Lines
+find . -name "*.ts" | grep -v node_modules | xargs wc -l | tail -1  # Lines
 git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent commits
 ```
 
 **Style guide:**
 
-- Include token usage and cost from `bunx ccusage` when available
-- Use flat bullet lists (no bold subsections or nested structure)
-- Focus on significant features and fixes, skip minor tweaks
-- Describe final outcomes, not intermediate attempts that were reverted
-- Keep entries compact — each bullet one concise sentence, avoid sub-bullets or prose explanations
+- Add `**Tokens**: NM | **Cost**: $N` from `bunx ccusage --json` for the entry's date; omit only if no record.
+- One short bullet (≲100 chars) per change; flat list, no sub-bullets or prose.
+- Skip minor tweaks — only significant features and fixes belong in the entry, especially on busy days.
+- State the user-visible change only; skip mechanism and backstory unless that _is_ the change.
+- Describe final outcomes, not reverted intermediate attempts.
+
+## 26.04.2026 — Lightbox Zoom & Cropped Dimensions
+
+**Tokens**: 5M | **Cost**: $4
+
+- Lightbox: pinch-to-zoom and two-finger pan on trackpads
+- Metadata: dimensions show post-crop size, with original appended when different
 
 ## 18.04.2026 — Reset & Fit Improvements
+
+**Tokens**: 15M | **Cost**: $6
 
 - Fixed Reset not persisting state: old `history.replaceState` bypassed the save pipeline; now clears all URL params atomically and saves immediately
 - Reset now also resets marker style to Classic
@@ -59,6 +68,8 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 - Fixed metadata modal `Date` field to show local capture time instead of UTC
 
 ## 29.03.2026 — Crash Fix: NSAppleScript Thread Safety
+
+**Tokens**: 3M | **Cost**: $1
 
 - Analysed a production crash log: `EXC_BREAKPOINT / SIGTRAP` with ARM64 pointer authentication trap (PAC IB) on a Bun internal worker thread
 - Root cause: `NSAppleScript` is not thread-safe and must run on the main thread; Bun's `fetch` handler can be dispatched to worker threads, so AppleScript was being called from the wrong thread, corrupting Objective-C runtime state
