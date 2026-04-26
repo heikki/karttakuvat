@@ -460,13 +460,20 @@ function fmtCoreDataDate(v: unknown): string | null {
     .replace(/\.\d+Z$/, '');
 }
 
+function formatDimPair(w: unknown, h: unknown): string | null {
+  if (typeof w !== 'number' || typeof h !== 'number') return null;
+  if (w <= 0 || h <= 0) return null;
+  return `${w}×${h}`;
+}
+
 function formatMetaDimensions(row: MetaRow, set: SetFn): void {
-  const w = row.original_width ?? row.width;
-  const h = row.original_height ?? row.height;
-  if (typeof w === 'number' && typeof h === 'number' && w > 0 && h > 0) {
-    set('width', w);
-    set('height', h);
-  }
+  const cur = formatDimPair(row.width, row.height);
+  const orig = formatDimPair(row.original_width, row.original_height);
+  const dimensions =
+    cur !== null && orig !== null && cur !== orig
+      ? `${cur} (original ${orig})`
+      : (cur ?? orig);
+  if (dimensions !== null) set('dimensions', dimensions);
   if (typeof row.original_filesize === 'number' && row.original_filesize > 0) {
     const mb = row.original_filesize / 1024 / 1024;
     set('original_filesize', `${mb.toFixed(1)} MB`);
