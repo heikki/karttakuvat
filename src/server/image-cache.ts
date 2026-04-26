@@ -46,7 +46,10 @@ function createThumbnail(fullPath: string, thumbPath: string): boolean {
 
 // ---------- Path resolution ----------
 
-function resolveOriginalPath(
+export const PHOTO_EDIT_EXT = /\.(?:jpe?g|heic|heif|tiff?)$/i;
+export const VIDEO_EDIT_EXT = /\.(?:mov|mp4|m4v)$/i;
+
+export function resolveOriginalPath(
   libraryPath: string,
   directory: string | null,
   filename: string | null
@@ -56,10 +59,11 @@ function resolveOriginalPath(
   return existsSync(p) ? p : null;
 }
 
-function resolveEditedPath(
+export function resolveEditedPath(
   libraryPath: string,
   directory: string | null,
-  filename: string | null
+  filename: string | null,
+  extPattern: RegExp
 ): string | null {
   if (directory === null || filename === null) return null;
   const rendersDir = join(libraryPath, 'resources', 'renders', directory);
@@ -69,7 +73,7 @@ function resolveEditedPath(
   try {
     const files = readdirSync(rendersDir);
     const rendered = files.find(
-      (f) => f.startsWith(stem) && /\.(?:jpe?g|heic|heif|tiff?)$/i.test(f)
+      (f) => f.startsWith(stem) && extPattern.test(f)
     );
     if (rendered !== undefined) return join(rendersDir, rendered);
   } catch {
@@ -86,10 +90,12 @@ function getSourceMtime(
 ): number | null {
   // For edited assets, check the rendered version first
   if (asset.hasEdits) {
+    const pattern = asset.type === 'video' ? VIDEO_EDIT_EXT : PHOTO_EDIT_EXT;
     const editedPath = resolveEditedPath(
       libraryPath,
       asset.directory,
-      asset.filename
+      asset.filename,
+      pattern
     );
     if (editedPath !== null) {
       try {
@@ -120,7 +126,12 @@ function convertEditedPhoto(
   filename: string | null,
   outputPath: string
 ): boolean {
-  const renderedPath = resolveEditedPath(libraryPath, directory, filename);
+  const renderedPath = resolveEditedPath(
+    libraryPath,
+    directory,
+    filename,
+    PHOTO_EDIT_EXT
+  );
   if (renderedPath !== null) {
     const ext = extname(renderedPath).toLowerCase();
     if (ext === '.jpg' || ext === '.jpeg') {
@@ -154,9 +165,12 @@ function convertFull(
   const { directory, filename } = asset;
 
   if (asset.type === 'video') {
-    const originalPath = resolveOriginalPath(libraryPath, directory, filename);
-    if (originalPath === null) return false;
-    return extractVideoFrame(originalPath, outputPath);
+    const sourcePath =
+      (asset.hasEdits
+        ? resolveEditedPath(libraryPath, directory, filename, VIDEO_EDIT_EXT)
+        : null) ?? resolveOriginalPath(libraryPath, directory, filename);
+    if (sourcePath === null) return false;
+    return extractVideoFrame(sourcePath, outputPath);
   }
 
   if (asset.hasEdits) {

@@ -8,6 +8,11 @@
 import { homedir } from 'node:os';
 import { extname, join } from 'node:path';
 
+import {
+  resolveEditedPath,
+  resolveOriginalPath,
+  VIDEO_EDIT_EXT
+} from './image-cache';
 import type { AssetRecord } from './photos-db';
 
 function videoMimeType(filename: string): string {
@@ -42,27 +47,44 @@ export function defaultLibraryPath(): string {
   return join(homedir(), 'Pictures/Photos Library.photoslibrary');
 }
 
-/** Serve the original video for a UUID, honoring the Range header for seeking. */
+function resolveVideoPath(
+  libraryPath: string,
+  asset: AssetRecord
+): string | null {
+  if (asset.directory === null || asset.filename === null) return null;
+  const edited = asset.hasEdits
+    ? resolveEditedPath(
+        libraryPath,
+        asset.directory,
+        asset.filename,
+        VIDEO_EDIT_EXT
+      )
+    : null;
+  return (
+    edited ?? resolveOriginalPath(libraryPath, asset.directory, asset.filename)
+  );
+}
+
+/**
+ * Serve the video for a UUID, honoring the Range header for seeking.
+ * Prefers the edited rendition when one exists, so playback matches Photos.
+ */
 export async function serveVideo(
   libraryPath: string,
   asset: AssetRecord | undefined,
   req: Request
 ): Promise<Response | null> {
   if (asset?.type !== 'video') return null;
-  if (asset.directory === null || asset.filename === null) return null;
 
-  const filePath = join(
-    libraryPath,
-    'originals',
-    asset.directory,
-    asset.filename
-  );
+  const filePath = resolveVideoPath(libraryPath, asset);
+  if (filePath === null) return null;
+
   const file = Bun.file(filePath);
   const exists = await file.exists();
   if (!exists) return null;
 
   const size = file.size;
-  const contentType = videoMimeType(asset.filename);
+  const contentType = videoMimeType(filePath);
   const rangeHeader = req.headers.get('range');
 
   if (rangeHeader === null) {

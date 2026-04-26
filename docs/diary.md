@@ -2,16 +2,21 @@
 
 Geotagged photo map viewer with Apple Photos integration.
 
-## Project Stats (as of 17.04.2026)
+## Project Stats (as of 26.04.2026)
 
-- **TypeScript files**: 54
-- **Lines of code**: 12,235
-- **Total commits**: 423
-- **Total tokens**: ~1,128M | **Total cost**: ~$683
+- **TypeScript files**: 55
+- **Lines of code**: 12,421
+- **Total commits**: 438
+- **Total tokens**: ~1,160M | **Total cost**: ~$702
 
 ## Updating This Diary
 
-Refresh the Project Stats block when adding entries; gather data with:
+When adding an entry:
+
+1. Write the entry under a new `## DD.MM.YYYY` heading.
+2. Refresh the Project Stats block at the top — file count, LOC, commits, cumulative tokens/cost.
+
+Gather data with:
 
 ```bash
 bunx ccusage --json             # Token usage and cost per day
@@ -30,10 +35,11 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 
 ## 26.04.2026 — Lightbox Zoom & Cropped Dimensions
 
-**Tokens**: 5M | **Cost**: $4
+**Tokens**: 17M | **Cost**: $13
 
 - Lightbox: pinch-to-zoom and two-finger pan on trackpads
 - Metadata: dimensions show post-crop size, with original appended when different
+- Videos edited in Photos (rotated/trimmed) now play and thumbnail with the edit applied
 
 ## 18.04.2026 — Reset & Fit Improvements
 
