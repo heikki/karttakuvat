@@ -180,7 +180,7 @@ Pending edits are reflected immediately on the map (markers move to new position
 
 Full-screen overlay for browsing all filtered photos sequentially. Activated by clicking image in popup or pressing Space when popup is open.
 
-Controls: left/right arrows (click or keyboard), Escape or backdrop click to close. Shows date with timezone, coordinates, and camera name in a shared pill in the top-left corner, plus "Open in Photos" and info buttons in the top-right.
+Controls: left/right arrow keys to navigate, Escape or backdrop click to close. Trackpad pinch zooms (anchored at cursor, 1×–8×) and two-finger scroll pans when zoomed in; zoom resets when navigating to another photo. Shows date with timezone, coordinates, and camera name in a shared pill in the top-left corner, plus "Open in Photos" and info buttons in the top-right.
 
 **Videos**: played inline via `<video>` element with the original file streamed from the Photos library (HTTP range-aware, no copying or transcoding). Native controls appear on mouse movement and hide after 3 seconds of inactivity. Space toggles play/pause. Mute state is shared across videos within the same session.
 

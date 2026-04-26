@@ -26,6 +26,10 @@ export class PhotoLightbox extends LitElement {
 
   private _hideControlsTimer: ReturnType<typeof setTimeout> | null = null;
   private _videoMuted = false;
+  private _scale = 1;
+  private _tx = 0;
+  private _ty = 0;
+  private _gestureStartScale = 1;
 
   show(index: number) {
     this.currentIndex = index;
@@ -53,6 +57,86 @@ export class PhotoLightbox extends LitElement {
     this.photo = state.filteredPhotos[newIndex] ?? null;
     this.totalCount = total;
   }
+
+  private _resetTransform() {
+    this._scale = 1;
+    this._tx = 0;
+    this._ty = 0;
+    this._applyTransform();
+  }
+
+  private _applyTransform() {
+    const el = this.shadowRoot?.querySelector<HTMLElement>('img, video');
+    if (el === null || el === undefined) return;
+    el.style.transform = `translate(${this._tx}px, ${this._ty}px) scale(${this._scale})`;
+    el.style.cursor = this._scale > 1 ? 'grab' : '';
+  }
+
+  private _clampPan() {
+    const el = this.shadowRoot?.querySelector<HTMLElement>('img, video');
+    const wrap = this.shadowRoot?.querySelector<HTMLElement>('.image-wrap');
+    if (el === null || el === undefined) return;
+    if (wrap === null || wrap === undefined) return;
+    const baseW = el.clientWidth;
+    const baseH = el.clientHeight;
+    if (baseW === 0 || baseH === 0) return;
+    const maxX = Math.max(0, (baseW * this._scale - wrap.clientWidth) / 2);
+    const maxY = Math.max(0, (baseH * this._scale - wrap.clientHeight) / 2);
+    this._tx = Math.max(-maxX, Math.min(maxX, this._tx));
+    this._ty = Math.max(-maxY, Math.min(maxY, this._ty));
+  }
+
+  private _zoomAt(clientX: number, clientY: number, newScale: number) {
+    const wrap = this.shadowRoot?.querySelector<HTMLElement>('.image-wrap');
+    if (wrap === null || wrap === undefined) return;
+    const clamped = Math.max(1, Math.min(8, newScale));
+    if (clamped === this._scale) return;
+    const rect = wrap.getBoundingClientRect();
+    const cx = clientX - rect.left - rect.width / 2;
+    const cy = clientY - rect.top - rect.height / 2;
+    const ratio = clamped / this._scale;
+    this._tx = cx - (cx - this._tx) * ratio;
+    this._ty = cy - (cy - this._ty) * ratio;
+    this._scale = clamped;
+    if (this._scale === 1) {
+      this._tx = 0;
+      this._ty = 0;
+    }
+    this._clampPan();
+    this._applyTransform();
+  }
+
+  private readonly _onWheel = (e: WheelEvent) => {
+    if (!this.active) return;
+    if (this._scale <= 1) return;
+    e.preventDefault();
+    this._tx -= e.deltaX;
+    this._ty -= e.deltaY;
+    this._clampPan();
+    this._applyTransform();
+  };
+
+  private readonly _onGestureStart = (e: Event) => {
+    if (!this.active) return;
+    e.preventDefault();
+    this._gestureStartScale = this._scale;
+  };
+
+  private readonly _onGestureChange = (e: Event) => {
+    if (!this.active) return;
+    e.preventDefault();
+    const ge = e as Event & {
+      scale: number;
+      clientX: number;
+      clientY: number;
+    };
+    this._zoomAt(ge.clientX, ge.clientY, this._gestureStartScale * ge.scale);
+  };
+
+  private readonly _onGestureEnd = (e: Event) => {
+    if (!this.active) return;
+    e.preventDefault();
+  };
 
   static override styles = css`
     *,
@@ -156,12 +240,24 @@ export class PhotoLightbox extends LitElement {
     super.connectedCallback();
     document.addEventListener('keydown', this._onKeydown);
     document.addEventListener(ShowLightboxEvent.type, this._onShowLightbox);
+    this.addEventListener('wheel', this._onWheel, { passive: false });
+    this.addEventListener('gesturestart', this._onGestureStart);
+    this.addEventListener('gesturechange', this._onGestureChange);
+    this.addEventListener('gestureend', this._onGestureEnd);
   }
 
   override disconnectedCallback() {
     super.disconnectedCallback();
     document.removeEventListener('keydown', this._onKeydown);
     document.removeEventListener(ShowLightboxEvent.type, this._onShowLightbox);
+    this.removeEventListener('wheel', this._onWheel);
+    this.removeEventListener('gesturestart', this._onGestureStart);
+    this.removeEventListener('gesturechange', this._onGestureChange);
+    this.removeEventListener('gestureend', this._onGestureEnd);
+  }
+
+  override updated(changed: Map<string, unknown>) {
+    if (changed.has('photo')) this._resetTransform();
   }
 
   private readonly _onShowLightbox = (e: ShowLightboxEvent) => {
