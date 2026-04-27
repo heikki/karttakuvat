@@ -13,8 +13,8 @@ import {
 } from '@common/photo-utils';
 import type { Photo } from '@common/types';
 import {
+  formatCoords,
   formatDate,
-  formatLocation,
   getThumbUrl,
   isVideo
 } from '@common/utils';
@@ -329,7 +329,7 @@ export class PhotoPopup extends LitElement {
     const loc = getEffectiveLocation(photo);
 
     return html`
-      ${formatLocation(photo)}
+      ${formatCoords(getEffectiveLocation(photo))}
       <span class="action-buttons">
         <button
           class="action-btn"

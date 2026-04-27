@@ -33,6 +33,12 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 - State the user-visible change only; skip mechanism and backstory unless that _is_ the change.
 - Describe final outcomes, not reverted intermediate attempts.
 
+## 27.04.2026 — Popup Coordinate & Location Pending-Edit Fix
+
+**Tokens**: 1M | **Cost**: $1
+
+- Popup now shows pending location coordinates immediately after placement (was showing stale coords until save)
+
 ## 26.04.2026 — Lightbox Zoom & Cropped Dimensions
 
 **Tokens**: 17M | **Cost**: $13
