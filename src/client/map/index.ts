@@ -4,11 +4,7 @@ import {
   NavigationControl,
   ScaleControl
 } from 'maplibre-gl';
-import type {
-  MapLayerMouseEvent,
-  MapMouseEvent,
-  StyleSpecification
-} from 'maplibre-gl';
+import type { MapLayerMouseEvent, StyleSpecification } from 'maplibre-gl';
 
 import { state, subscribe } from '@common/data';
 import {
@@ -258,6 +254,19 @@ export function initMap() {
     }
   });
 
+  // Background click dismisses an open popup unless the click hits a marker.
+  // Independent of marker style, so registered once instead of via
+  // setupMarkerInteractions (which re-binds on marker style swap).
+  map.on('click', (e) => {
+    if (isInPlacementMode()) return;
+    const id = getMarkerLayerId();
+    if (id !== null) {
+      const features = map.queryRenderedFeatures(e.point, { layers: [id] });
+      if (features.length > 0) return;
+    }
+    getPopup()?.remove();
+  });
+
   map.on('load', () => {
     addPhotoRouteLayers();
     addRouteEditLayers();
@@ -438,32 +447,13 @@ function setupMarkerInteractions() {
     }
   };
 
-  const onMapClick = (e: MapMouseEvent) => {
-    // In placement mode, don't close popups on empty clicks
-    if (isInPlacementMode()) return;
-
-    const id = getMarkerLayerId();
-    if (id !== null) {
-      const features = map.queryRenderedFeatures(e.point, {
-        layers: [id]
-      });
-      if (features.length > 0) return;
-    }
-    const popup = getPopup();
-    if (popup !== null) {
-      popup.remove();
-    }
-  };
-
   map.on('click', layerId, onLayerClick);
   map.on('mouseenter', layerId, onMouseEnter);
   map.on('mouseleave', layerId, onMouseLeave);
-  map.on('click', onMapClick);
 
   interactionCleanup = () => {
     map.off('click', layerId, onLayerClick);
     map.off('mouseenter', layerId, onMouseEnter);
     map.off('mouseleave', layerId, onMouseLeave);
-    map.off('click', onMapClick);
   };
 }
