@@ -329,7 +329,7 @@ export class PhotoPopup extends LitElement {
     const loc = getEffectiveLocation(photo);
 
     return html`
-      ${formatCoords(getEffectiveLocation(photo))}
+      ${formatCoords(loc)}
       <span class="action-buttons">
         <button
           class="action-btn"
