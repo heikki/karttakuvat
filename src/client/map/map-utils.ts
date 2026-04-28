@@ -2,20 +2,6 @@ import turfDistance from '@turf/distance';
 import { point } from '@turf/helpers';
 import type { Map as MapGL } from 'maplibre-gl';
 
-/** Remove layers and sources by ID, skipping any that don't exist. */
-export function cleanupMapLayers(
-  map: MapGL,
-  layerIds: string[],
-  sourceIds: string[]
-): void {
-  for (const id of layerIds) {
-    if (map.getLayer(id) !== undefined) map.removeLayer(id);
-  }
-  for (const id of sourceIds) {
-    if (map.getSource(id) !== undefined) map.removeSource(id);
-  }
-}
-
 /** Set visibility on multiple layers at once. */
 export function setLayersVisibility(
   map: MapGL,

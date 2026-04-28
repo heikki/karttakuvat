@@ -336,32 +336,49 @@ function reopenPopup() {
   showPopup(index);
 }
 
+// Carry app-owned sources and layers across a basemap swap. App-owned =
+// anything in previousStyle not declared by any basemap config. The
+// next-basemap check guards against duplicate-ID crashes from auto-injected
+// layers.
+function transformStyle(
+  previousStyle: StyleSpecification | undefined,
+  nextStyle: StyleSpecification
+): StyleSpecification {
+  if (previousStyle === undefined) return nextStyle;
+
+  const allBasemaps = Object.values(mapStyles()) as StyleSpecification[];
+  const bmLayers = new Set(
+    allBasemaps.flatMap((s) => s.layers.map((l) => l.id))
+  );
+  const bmSources = new Set(allBasemaps.flatMap((s) => Object.keys(s.sources)));
+  const nextLayerIds = new Set(nextStyle.layers.map((l) => l.id));
+  const nextSourceIds = new Set(Object.keys(nextStyle.sources));
+
+  const appLayers = previousStyle.layers.filter(
+    (l) => !bmLayers.has(l.id) && !nextLayerIds.has(l.id)
+  );
+  const appSources: typeof nextStyle.sources = {};
+  for (const [id, src] of Object.entries(previousStyle.sources)) {
+    if (!bmSources.has(id) && !nextSourceIds.has(id)) appSources[id] = src;
+  }
+
+  return {
+    ...nextStyle,
+    sources: { ...nextStyle.sources, ...appSources },
+    layers: [...nextStyle.layers, ...appLayers]
+  };
+}
+
 function changeMapStyle(styleKey: string) {
-  const style = mapStyles()[styleKey as keyof MapStyles] as
+  const next = mapStyles()[styleKey as keyof MapStyles] as
     | StyleSpecification
     | undefined;
-  if (style === undefined) return;
+  if (next === undefined) return;
 
   // Stop any ongoing animation to prevent MapLibre crash during style change
   map.stop();
 
-  const applyLayers = () => {
-    addPhotoRouteLayers();
-    addRouteEditLayers();
-    addGpxLayers();
-    addPhotoLayers();
-    addMeasureLayers();
-    setupMarkerInteractions();
-    updateMarkers();
-    if (isInPlacementMode()) {
-      currentLayer?.toggle(false);
-    } else {
-      reopenPopup();
-    }
-  };
-
-  void map.once('style.load', applyLayers);
-  map.setStyle(applyGlobeProjection(style));
+  map.setStyle(applyGlobeProjection(next), { transformStyle });
 }
 
 function changeMarkerStyle(styleKey: string) {

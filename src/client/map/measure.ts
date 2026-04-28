@@ -2,11 +2,7 @@ import type { GeoJSONSource, Map as MapGL, MapMouseEvent } from 'maplibre-gl';
 
 import { MeasureModeExitedEvent, ToggleMeasureModeEvent } from '@common/events';
 
-import {
-  cleanupMapLayers,
-  computePathDistance,
-  setLayersVisibility
-} from './map-utils';
+import { computePathDistance, setLayersVisibility } from './map-utils';
 
 // eslint-disable-next-line @typescript-eslint/init-declarations -- initialized in initMeasure() before any usage
 let map: MapGL;
@@ -34,8 +30,6 @@ export function initMeasure(m: MapGL, getMarkerLayerId: () => string | null) {
 }
 
 export function addMeasureLayers() {
-  cleanupMapLayers(map, [POINT_LAYER, LINE_LAYER], [POINT_SOURCE, LINE_SOURCE]);
-
   map.addSource(POINT_SOURCE, {
     type: 'geojson',
     data: { type: 'FeatureCollection', features: [] }

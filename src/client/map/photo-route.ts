@@ -7,7 +7,7 @@ import { getEffectiveLocation } from '@common/photo-utils';
 import type { Photo } from '@common/types';
 import { toUtcSortKey } from '@common/utils';
 
-import { cleanupMapLayers, setLayersVisibility } from './map-utils';
+import { setLayersVisibility } from './map-utils';
 import { buildRouteLineFeatures } from './route-edit-helpers';
 
 // Types for route data
@@ -82,8 +82,6 @@ function onPhotosChanged(): void {
 
 export function addPhotoRouteLayers(): void {
   if (map === null) return;
-
-  cleanupMapLayers(map, ALL_ROUTE_LAYERS, [ROUTE_SOURCE]);
 
   const empty: FeatureCollection = { type: 'FeatureCollection', features: [] };
 

@@ -12,12 +12,7 @@ import {
   getEffectiveLocation
 } from '@common/photo-utils';
 import type { Photo } from '@common/types';
-import {
-  formatCoords,
-  formatDate,
-  getThumbUrl,
-  isVideo
-} from '@common/utils';
+import { formatCoords, formatDate, getThumbUrl, isVideo } from '@common/utils';
 
 export interface PopupActions {
   copyLocation: () => void;

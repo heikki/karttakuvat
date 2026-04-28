@@ -3,7 +3,7 @@ import type { GeoJSONSource, Map as MapGL } from 'maplibre-gl';
 
 import { state, subscribe } from '@common/data';
 
-import { cleanupMapLayers, computePathDistance } from './map-utils';
+import { computePathDistance } from './map-utils';
 
 // Sources and layers
 const TRACK_SOURCE = 'gpx-tracks';
@@ -12,14 +12,6 @@ const TRACK_OUTLINE_LAYER = 'gpx-track-outline';
 const TRACK_LINE_LAYER = 'gpx-track-line';
 const WAYPOINT_CIRCLE_LAYER = 'gpx-waypoint-circles';
 const WAYPOINT_LABEL_LAYER = 'gpx-waypoint-labels';
-
-const ALL_LAYERS = [
-  TRACK_OUTLINE_LAYER,
-  TRACK_LINE_LAYER,
-  WAYPOINT_CIRCLE_LAYER,
-  WAYPOINT_LABEL_LAYER
-];
-const ALL_SOURCES = [TRACK_SOURCE, WAYPOINT_SOURCE];
 
 // Module state
 let map: MapGL | null = null;
@@ -52,8 +44,6 @@ export function initGpx(m: MapGL): void {
 
 export function addGpxLayers(): void {
   if (map === null) return;
-
-  cleanupMapLayers(map, ALL_LAYERS, ALL_SOURCES);
 
   map.addSource(TRACK_SOURCE, {
     type: 'geojson',
