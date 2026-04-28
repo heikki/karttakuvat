@@ -275,7 +275,6 @@ export function initMap() {
     addMeasureLayers();
     setupMarkerInteractions();
 
-    updateMarkers();
     reopenPopupFromUrl();
     if (savedView === null && state.filteredPhotos.length > 0) {
       fitToPhotos();
@@ -300,7 +299,7 @@ export function initMap() {
   subscribe(() => {
     if (currentLayer === null) return;
     const uuid = getPhotoUuid();
-    updateMarkers();
+    currentLayer.setMarkers(state.filteredPhotos);
     const popup = getPopup();
     if (popup !== null) {
       if (uuid !== null) {
@@ -331,10 +330,6 @@ export function initMap() {
   document.addEventListener(OpenExternalMapEvent.type, (e) => {
     openExternalMap(e.provider);
   });
-}
-
-function updateMarkers() {
-  currentLayer?.setMarkers(state.filteredPhotos);
 }
 
 function reopenPopup() {
@@ -396,7 +391,6 @@ function changeMarkerStyle(styleKey: string) {
   if (currentLayer === null) return;
   addPhotoLayers();
   setupMarkerInteractions();
-  updateMarkers();
   if (isInPlacementMode()) {
     currentLayer.toggle(false);
   } else {
@@ -407,7 +401,7 @@ function changeMarkerStyle(styleKey: string) {
 function addPhotoLayers() {
   currentLayer?.uninstall();
   currentLayer = markerStyles[currentMarkerStyle]!();
-  currentLayer.install(map);
+  currentLayer.install(map, state.filteredPhotos);
 }
 
 function setupMarkerInteractions() {

@@ -69,7 +69,7 @@ export class PointsLayer implements MarkerLayer {
   private readonly bloom = new BloomLayer();
   private map: MapGL | null = null;
 
-  install(map: MapGL) {
+  install(map: MapGL, photos: Photo[]) {
     this.map = map;
 
     map.addLayer(this.bloom);
@@ -103,6 +103,8 @@ export class PointsLayer implements MarkerLayer {
       paint: hitAreaPaint,
       filter: ['==', ['get', 'uuid'], '']
     });
+
+    this.setMarkers(photos);
   }
 
   uninstall() {

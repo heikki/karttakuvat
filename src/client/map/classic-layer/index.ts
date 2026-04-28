@@ -102,7 +102,7 @@ export class ClassicLayer implements MarkerLayer {
   readonly id = 'classic-hit-area';
   private map: MapGL | null = null;
 
-  install(map: MapGL) {
+  install(map: MapGL, photos: Photo[]) {
     this.map = map;
 
     map.addSource(SOURCE, {
@@ -190,6 +190,8 @@ export class ClassicLayer implements MarkerLayer {
       },
       filter: ['==', ['get', 'uuid'], '']
     });
+
+    this.setMarkers(photos);
   }
 
   uninstall() {

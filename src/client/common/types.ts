@@ -32,7 +32,7 @@ export interface MapStyles {
 
 export interface MarkerLayer {
   readonly id: string;
-  install: (map: MapGL) => void;
+  install: (map: MapGL, photos: Photo[]) => void;
   uninstall: () => void;
   toggle: (visible: boolean) => void;
   highlight: (photo: Photo | null) => void;
