@@ -50,7 +50,7 @@ MapLibre GL JS with raster tile sources. Style switching via buttons:
 - **Maasto**: MML Maastokartta over white background (requires MML API key)
 - **Orto**: MML Ortokuva over white background (requires MML API key)
 
-Selected map style is persisted in URL params (default `satellite` is omitted from URL). Style switching tears down and re-adds all layers (GPX, photo, measure) after the new style loads.
+Selected map style is persisted in URL params (default `satellite` is omitted from URL). App-owned layers (GPX, photo, route, measure) persist across style swaps via MapLibre's `transformStyle` callback.
 
 ### Projection
 
@@ -205,7 +205,7 @@ Displays GPX track data on the map when an album is selected.
 - Computes total track distance (via `@turf/distance`) and elevation gain/loss
 - Each album gets a color from a rotating palette of 8 colors
 
-### GPX Layers (4 layers, re-added after map style changes)
+### GPX Layers (4 layers)
 
 - **Track outline** (`gpx-track-outline`): Black shadow line (width 6, opacity 0.4)
 - **Track line** (`gpx-track-line`): Colored line (width 3, opacity 0.85), rounded caps and joins
@@ -277,8 +277,6 @@ Interactive distance measurement tool for measuring distances on the map.
 5. Click an existing measurement point: removes it from the path
 6. Escape or click "Measure" button again: exits measurement mode and clears all points
 7. "Reset" button also exits measurement mode
-
-Measurement layers (points + line) are re-added after map style changes to persist across tile source switches.
 
 ## Filter Panel
 

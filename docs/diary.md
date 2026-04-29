@@ -2,12 +2,12 @@
 
 Geotagged photo map viewer with Apple Photos integration.
 
-## Project Stats (as of 26.04.2026)
+## Project Stats (as of 29.04.2026)
 
 - **TypeScript files**: 55
-- **Lines of code**: 12,421
-- **Total commits**: 438
-- **Total tokens**: ~1,160M | **Total cost**: ~$702
+- **Lines of code**: 12,386
+- **Total commits**: 443
+- **Total tokens**: ~1,210M | **Total cost**: ~$730
 
 ## Updating This Diary
 
@@ -32,6 +32,21 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 - Skip minor tweaks — only significant features and fixes belong in the entry, especially on busy days.
 - State the user-visible change only; skip mechanism and backstory unless that _is_ the change.
 - Describe final outcomes, not reverted intermediate attempts.
+
+## 29.04.2026 — Map: Basemap Swap via transformStyle
+
+**Tokens**: 46M | **Cost**: $24
+
+- Basemap swaps now preserve all app layers (markers, GPX, routes, measure) via MapLibre's `transformStyle` instead of tearing them down and re-adding after load
+- Removed `cleanupMapLayers` — was only needed by the old tear-down/re-add pattern
+- Background-click-to-dismiss bound once at boot instead of re-bound on each marker style swap
+- `MarkerLayer.install` now accepts photos and self-initializes; `updateMarkers` wrapper inlined into its only caller
+
+## 28.04.2026 — Code Review
+
+**Tokens**: 3M | **Cost**: $2
+
+- `/simplify` audit of recent popup changes; code was clean — one minor cleanup: popup `loc` variable reuse
 
 ## 27.04.2026 — Popup Coordinate & Location Pending-Edit Fix
 

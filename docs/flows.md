@@ -40,7 +40,7 @@ The user clicks location toggle buttons (Exif, Inferred, User, None). Same singl
 
 ## Switch map style
 
-The user clicks one of the map style buttons (Aerial, Topo, Maasto, Orto). The active button gets highlighted. Map tiles change while keeping the same view position. Photo markers, GPX tracks, and measurement layers reappear after the new tiles load. The selected style is saved in the URL.
+The user clicks one of the map style buttons (Aerial, Topo, Maasto, Orto). The active button gets highlighted. Map tiles change while keeping the same view position; photo markers, GPX tracks, and other overlay layers stay visible across the swap. The selected style is saved in the URL.
 
 ## Switch marker style
 
