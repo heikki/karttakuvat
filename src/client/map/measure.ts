@@ -71,9 +71,9 @@ export function addMeasureLayers() {
 }
 
 function updateSources() {
-  const pointSource = map.getSource(POINT_SOURCE);
+  const pointSource = map.getSource<GeoJSONSource>(POINT_SOURCE);
   if (pointSource !== undefined) {
-    (pointSource as GeoJSONSource).setData({
+    pointSource.setData({
       type: 'FeatureCollection',
       features: coords.map((c, i) => ({
         type: 'Feature' as const,
@@ -83,9 +83,9 @@ function updateSources() {
     });
   }
 
-  const lineSource = map.getSource(LINE_SOURCE);
+  const lineSource = map.getSource<GeoJSONSource>(LINE_SOURCE);
   if (lineSource !== undefined) {
-    (lineSource as GeoJSONSource).setData(
+    lineSource.setData(
       coords.length >= 2
         ? {
             type: 'Feature',

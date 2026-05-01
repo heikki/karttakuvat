@@ -144,10 +144,7 @@ function updateEditSources(): void {
   if (map === null || routeData === null) return;
 
   // Update points source
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- need GeoJSONSource for setData
-  const pointsSrc = map.getSource(EDIT_IDS.pointsSrc) as
-    | GeoJSONSource
-    | undefined;
+  const pointsSrc = map.getSource<GeoJSONSource>(EDIT_IDS.pointsSrc);
   if (pointsSrc !== undefined) {
     const photoMap = new Map<string, Photo>();
     for (const p of state.filteredPhotos) photoMap.set(p.uuid, p);
@@ -169,8 +166,7 @@ function updateEditSources(): void {
   }
 
   // Update hit source — line segments for click targeting
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- need GeoJSONSource for setData
-  const hitSrc = map.getSource(EDIT_IDS.hitSrc) as GeoJSONSource | undefined;
+  const hitSrc = map.getSource<GeoJSONSource>(EDIT_IDS.hitSrc);
   if (hitSrc !== undefined) {
     hitSrc.setData({
       type: 'FeatureCollection',
@@ -199,8 +195,7 @@ function updateEditSources(): void {
 
 function updateLineSrc(): void {
   if (map === null || routeData === null) return;
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- need GeoJSONSource for setData
-  const src = map.getSource(EDIT_IDS.lineSrc) as GeoJSONSource | undefined;
+  const src = map.getSource<GeoJSONSource>(EDIT_IDS.lineSrc);
   if (src === undefined) return;
   const features = buildRouteLineFeatures(routeData);
   src.setData({ type: 'FeatureCollection', features });
@@ -496,8 +491,7 @@ function onSegmentLeave(): void {
 
 function setHoverSource(geojson: object): void {
   if (map === null) return;
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- need GeoJSONSource for setData
-  const src = map.getSource(EDIT_IDS.hoverSrc) as GeoJSONSource | undefined;
+  const src = map.getSource<GeoJSONSource>(EDIT_IDS.hoverSrc);
   src?.setData(geojson as GeoJSON.GeoJSON);
 }
 

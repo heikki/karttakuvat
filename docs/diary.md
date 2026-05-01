@@ -2,12 +2,12 @@
 
 Geotagged photo map viewer with Apple Photos integration.
 
-## Project Stats (as of 30.04.2026)
+## Project Stats (as of 01.05.2026)
 
 - **TypeScript files**: 55
-- **Lines of code**: 12,542
-- **Total commits**: 445
-- **Total tokens**: ~1,221M | **Total cost**: ~$736
+- **Lines of code**: 12,567
+- **Total commits**: 446
+- **Total tokens**: ~1,231M | **Total cost**: ~$745
 
 ## Updating This Diary
 
@@ -19,7 +19,7 @@ When adding an entry:
 Gather data with:
 
 ```bash
-bunx ccusage --json             # Token usage and cost per day
+bunx ccusage                    # Token usage and cost per day
 git log --oneline | wc -l       # Total commits
 find . -name "*.ts" | grep -v node_modules | xargs wc -l | tail -1  # Lines
 git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent commits
@@ -27,11 +27,18 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 
 **Style guide:**
 
-- Add `**Tokens**: NM | **Cost**: $N` from `bunx ccusage --json` for the entry's date; omit only if no record.
+- Add `**Tokens**: NM | **Cost**: $N` from `bunx ccusage` for the entry's date; omit only if no record.
 - One short bullet (≲100 chars) per change; flat list, no sub-bullets or prose.
 - Skip minor tweaks — only significant features and fixes belong in the entry, especially on busy days.
 - State the user-visible change only; skip mechanism and backstory unless that _is_ the change.
 - Describe final outcomes, not reverted intermediate attempts.
+
+## 01.05.2026 — Route: Targeted Waypoint Splicing
+
+**Tokens**: 10M | **Cost**: $8.83
+
+- Replaced the backtrack-heuristic orphaned-waypoint pruner with targeted adjacent removal: when a photo point moves or reorders, waypoints immediately before/after it are spliced
+- `getSource<GeoJSONSource>()` typed generics replace `as GeoJSONSource` casts across gpx, measure, photo-route, and route-edit
 
 ## 30.04.2026 — Route Reorder on Time Edits
 

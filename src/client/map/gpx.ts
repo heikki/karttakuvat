@@ -254,22 +254,22 @@ function computeElevation(elevations: number[]): {
 function updateSources(): void {
   if (map === null) return;
 
-  const trackSrc = map.getSource(TRACK_SOURCE);
+  const trackSrc = map.getSource<GeoJSONSource>(TRACK_SOURCE);
   if (trackSrc !== undefined) {
     const fc: FeatureCollection = {
       type: 'FeatureCollection',
       features: trackFeatures
     };
-    (trackSrc as GeoJSONSource).setData(fc);
+    trackSrc.setData(fc);
   }
 
-  const wptSrc = map.getSource(WAYPOINT_SOURCE);
+  const wptSrc = map.getSource<GeoJSONSource>(WAYPOINT_SOURCE);
   if (wptSrc !== undefined) {
     const fc: FeatureCollection = {
       type: 'FeatureCollection',
       features: waypointFeatures
     };
-    (wptSrc as GeoJSONSource).setData(fc);
+    wptSrc.setData(fc);
   }
 }
 

@@ -273,8 +273,7 @@ function getSortedLocatedPhotos(): Array<{
 /** Apply RouteData to the display source. */
 function applyRouteData(data: RouteData): void {
   if (map === null) return;
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- getSource returns Source, need GeoJSONSource for setData
-  const src = map.getSource(ROUTE_SOURCE) as GeoJSONSource | undefined;
+  const src = map.getSource<GeoJSONSource>(ROUTE_SOURCE);
   if (src === undefined) return;
 
   const features = buildRouteLineFeatures(data);
@@ -375,10 +374,52 @@ function resetSegmentsAroundIndex(
   }
 }
 
+/** Remove waypoint at index k, merging the surrounding segments. */
+function removeWaypointAt(data: RouteData, k: number): void {
+  const { points, segments } = data;
+  if (k === points.length - 1) {
+    points.splice(k, 1);
+    segments.splice(k - 1, 1);
+    return;
+  }
+  points.splice(k, 1);
+  segments.splice(k, 1);
+  if (k > 0) {
+    segments[k - 1] = makeStraightSegment(points[k - 1]!, points[k]!);
+  }
+}
+
+/**
+ * Splice waypoints immediately adjacent to the point at idx. Used after a
+ * photo's coordinate changes (relocate or chronological reorder) to discard
+ * waypoints that are likely stale. Returns the new index of the original
+ * point (decremented if a preceding waypoint was removed) and whether any
+ * waypoint was removed.
+ */
+function removeAdjacentWaypoints(
+  data: RouteData,
+  idx: number
+): { idx: number; removed: boolean } {
+  const { points } = data;
+  let cur = idx;
+  let removed = false;
+  if (cur + 1 < points.length && points[cur + 1]!.type === 'waypoint') {
+    removeWaypointAt(data, cur + 1);
+    removed = true;
+  }
+  if (cur > 0 && points[cur - 1]!.type === 'waypoint') {
+    removeWaypointAt(data, cur - 1);
+    cur -= 1;
+    removed = true;
+  }
+  return { idx: cur, removed };
+}
+
 /**
  * Reorder photo points in route data to match current chronological order.
- * Waypoints stay at their current indices. Segments adjacent to moved points
- * are reset to straight-line. Returns true if any reordering occurred.
+ * Segments adjacent to moved points are reset to straight-line, and waypoints
+ * adjacent to moved points are spliced (likely stale after the swap).
+ * Returns true if any reordering occurred.
  */
 function reorderRoutePhotoPoints(data: RouteData): boolean {
   const sortKeys = buildPhotoSortKeys();
@@ -392,52 +433,40 @@ function reorderRoutePhotoPoints(data: RouteData): boolean {
 
   const uuidToPoint = snapshotPointsByUuid(points, photoIndices);
 
+  const movedIndices: number[] = [];
   for (let i = 0; i < photoIndices.length; i++) {
     const idx = photoIndices[i]!;
     if (currentUuids[i] === sortedUuids[i]) continue;
     const newPt = { ...uuidToPoint.get(sortedUuids[i]!)! };
     points[idx] = newPt;
     resetSegmentsAroundIndex(data, idx, newPt);
+    movedIndices.push(idx);
+  }
+
+  // Drop adjacent waypoints back-to-front so splices don't shift unvisited indices
+  for (let i = movedIndices.length - 1; i >= 0; i--) {
+    removeAdjacentWaypoints(data, movedIndices[i]!);
   }
 
   return true;
 }
 
 /**
- * Remove waypoints that cause large backtracks (detour ≥ 2× direct distance).
- * These are typically waypoints left stranded after a photo reorder.
- * Returns true if any waypoints were removed.
+ * Sync photo point coordinates in route data with current effective locations.
+ * When a photo's coord changes, splice any waypoint immediately before or
+ * after it (likely stale). Returns true if any waypoint was removed.
  */
-function pruneOrphanedWaypoints(data: RouteData): boolean {
-  const { points, segments } = data;
-  let removed = false;
-  // Iterate backwards so splicing doesn't shift unvisited indices
-  for (let i = points.length - 2; i >= 1; i--) {
-    const pt = points[i]!;
-    if (pt.type !== 'waypoint') continue;
-    const prev = points[i - 1]!;
-    const next = points[i + 1]!;
-    const dPrevWp = Math.hypot(pt.lon - prev.lon, pt.lat - prev.lat);
-    const dWpNext = Math.hypot(next.lon - pt.lon, next.lat - pt.lat);
-    const dDirect = Math.hypot(next.lon - prev.lon, next.lat - prev.lat);
-    if (dDirect < 1e-8) continue;
-    if ((dPrevWp + dWpNext) / dDirect >= 2.0 && dDirect > 0.02) {
-      points.splice(i, 1);
-      segments.splice(i, 1);
-      segments[i - 1] = makeStraightSegment(prev, next);
-      removed = true;
-    }
-  }
-  return removed;
-}
-
-/** Sync photo point coordinates in route data with current effective locations. */
-export function syncPhotoPoints(data: RouteData): void {
+export function syncPhotoPoints(data: RouteData): boolean {
   const locMap = buildPhotoLocationMap();
   const { points, segments } = data;
-  for (let i = 0; i < points.length; i++) {
+  let removed = false;
+  let i = 0;
+  while (i < points.length) {
     const loc = getMovedPhotoLocation(points[i]!, locMap);
-    if (loc === null) continue;
+    if (loc === null) {
+      i++;
+      continue;
+    }
     const pt = points[i]!;
     pt.lon = loc.lon;
     pt.lat = loc.lat;
@@ -466,24 +495,26 @@ export function syncPhotoPoints(data: RouteData): void {
         };
       }
     }
+    const result = removeAdjacentWaypoints(data, i);
+    if (result.removed) removed = true;
+    i = result.idx + 1;
   }
+  return removed;
 }
 
 function updateRoute(): void {
   if (map === null) return;
 
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- getSource returns Source, need GeoJSONSource for setData
-  const src = map.getSource(ROUTE_SOURCE) as GeoJSONSource | undefined;
+  const src = map.getSource<GeoJSONSource>(ROUTE_SOURCE);
   if (src === undefined) return;
 
   // Use saved route data if available, syncing photo locations and order
   if (savedRouteData !== null) {
-    syncPhotoPoints(savedRouteData);
+    const synced = syncPhotoPoints(savedRouteData);
     const reordered = reorderRoutePhotoPoints(savedRouteData);
-    const pruned = pruneOrphanedWaypoints(savedRouteData);
     applyRouteData(savedRouteData);
     // Persist changes only when no pending edits (committed state)
-    if ((reordered || pruned) && state.pendingTimeEdits.size === 0) {
+    if ((synced || reordered) && state.pendingTimeEdits.size === 0) {
       const album = state.filters.album;
       if (album !== 'all') void saveRoute(album, savedRouteData);
     }
