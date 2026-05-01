@@ -2,12 +2,12 @@
 
 Geotagged photo map viewer with Apple Photos integration.
 
-## Project Stats (as of 29.04.2026)
+## Project Stats (as of 30.04.2026)
 
 - **TypeScript files**: 55
-- **Lines of code**: 12,386
-- **Total commits**: 443
-- **Total tokens**: ~1,210M | **Total cost**: ~$730
+- **Lines of code**: 12,542
+- **Total commits**: 445
+- **Total tokens**: ~1,221M | **Total cost**: ~$736
 
 ## Updating This Diary
 
@@ -32,6 +32,12 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 - Skip minor tweaks — only significant features and fixes belong in the entry, especially on busy days.
 - State the user-visible change only; skip mechanism and backstory unless that _is_ the change.
 - Describe final outcomes, not reverted intermediate attempts.
+
+## 30.04.2026 — Route Reorder on Time Edits
+
+**Tokens**: 11M | **Cost**: $6
+
+- Saved photo route auto-reorders photo points to chronological order when times are edited, and prunes waypoints left stranded by the reorder
 
 ## 29.04.2026 — Map: Basemap Swap via transformStyle
 

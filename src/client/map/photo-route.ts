@@ -3,7 +3,7 @@ import type { GeoJSONSource, Map as MapGL } from 'maplibre-gl';
 
 import { state, subscribe } from '@common/data';
 import { TogglePhotoRouteEvent } from '@common/events';
-import { getEffectiveLocation } from '@common/photo-utils';
+import { getEffectiveDate, getEffectiveLocation } from '@common/photo-utils';
 import type { Photo } from '@common/types';
 import { toUtcSortKey } from '@common/utils';
 
@@ -261,7 +261,7 @@ function getSortedLocatedPhotos(): Array<{
     located.push({
       photo,
       loc,
-      sortKey: toUtcSortKey(photo.date, photo.tz)
+      sortKey: toUtcSortKey(getEffectiveDate(photo), photo.tz)
     });
   }
   located.sort((a, b) =>
@@ -303,20 +303,169 @@ function getMovedPhotoLocation(
   return loc;
 }
 
+function makeStraightSegment(from: RoutePoint, to: RoutePoint): RouteSegment {
+  return {
+    method: 'straight',
+    geometry: [
+      [from.lon, from.lat],
+      [to.lon, to.lat]
+    ]
+  };
+}
+
+function buildPhotoSortKeys(): Map<string, string> {
+  const m = new Map<string, string>();
+  for (const photo of state.filteredPhotos) {
+    if (photo.date !== '') {
+      m.set(photo.uuid, toUtcSortKey(getEffectiveDate(photo), photo.tz));
+    }
+  }
+  return m;
+}
+
+function collectSortablePhotoIndices(
+  points: RoutePoint[],
+  sortKeys: Map<string, string>
+): number[] {
+  const indices: number[] = [];
+  for (let i = 0; i < points.length; i++) {
+    const pt = points[i]!;
+    if (pt.type === 'photo' && pt.uuid !== undefined && sortKeys.has(pt.uuid)) {
+      indices.push(i);
+    }
+  }
+  return indices;
+}
+
+function computeSortedUuids(
+  currentUuids: string[],
+  sortKeys: Map<string, string>
+): string[] {
+  return [...currentUuids].sort((a, b) => {
+    const ka = sortKeys.get(a)!;
+    const kb = sortKeys.get(b)!;
+    return ka < kb ? -1 : ka > kb ? 1 : 0;
+  });
+}
+
+function snapshotPointsByUuid(
+  points: RoutePoint[],
+  indices: number[]
+): Map<string, RoutePoint> {
+  const m = new Map<string, RoutePoint>();
+  for (const i of indices) {
+    const pt = points[i]!;
+    m.set(pt.uuid!, { ...pt });
+  }
+  return m;
+}
+
+function resetSegmentsAroundIndex(
+  data: RouteData,
+  idx: number,
+  pt: RoutePoint
+): void {
+  const { points, segments } = data;
+  if (idx > 0 && idx - 1 < segments.length) {
+    segments[idx - 1] = makeStraightSegment(points[idx - 1]!, pt);
+  }
+  const next = points[idx + 1];
+  if (idx < segments.length && next !== undefined) {
+    segments[idx] = makeStraightSegment(pt, next);
+  }
+}
+
+/**
+ * Reorder photo points in route data to match current chronological order.
+ * Waypoints stay at their current indices. Segments adjacent to moved points
+ * are reset to straight-line. Returns true if any reordering occurred.
+ */
+function reorderRoutePhotoPoints(data: RouteData): boolean {
+  const sortKeys = buildPhotoSortKeys();
+  const { points } = data;
+  const photoIndices = collectSortablePhotoIndices(points, sortKeys);
+  if (photoIndices.length < 2) return false;
+
+  const currentUuids = photoIndices.map((i) => points[i]!.uuid!);
+  const sortedUuids = computeSortedUuids(currentUuids, sortKeys);
+  if (currentUuids.every((uuid, i) => uuid === sortedUuids[i])) return false;
+
+  const uuidToPoint = snapshotPointsByUuid(points, photoIndices);
+
+  for (let i = 0; i < photoIndices.length; i++) {
+    const idx = photoIndices[i]!;
+    if (currentUuids[i] === sortedUuids[i]) continue;
+    const newPt = { ...uuidToPoint.get(sortedUuids[i]!)! };
+    points[idx] = newPt;
+    resetSegmentsAroundIndex(data, idx, newPt);
+  }
+
+  return true;
+}
+
+/**
+ * Remove waypoints that cause large backtracks (detour ≥ 2× direct distance).
+ * These are typically waypoints left stranded after a photo reorder.
+ * Returns true if any waypoints were removed.
+ */
+function pruneOrphanedWaypoints(data: RouteData): boolean {
+  const { points, segments } = data;
+  let removed = false;
+  // Iterate backwards so splicing doesn't shift unvisited indices
+  for (let i = points.length - 2; i >= 1; i--) {
+    const pt = points[i]!;
+    if (pt.type !== 'waypoint') continue;
+    const prev = points[i - 1]!;
+    const next = points[i + 1]!;
+    const dPrevWp = Math.hypot(pt.lon - prev.lon, pt.lat - prev.lat);
+    const dWpNext = Math.hypot(next.lon - pt.lon, next.lat - pt.lat);
+    const dDirect = Math.hypot(next.lon - prev.lon, next.lat - prev.lat);
+    if (dDirect < 1e-8) continue;
+    if ((dPrevWp + dWpNext) / dDirect >= 2.0 && dDirect > 0.02) {
+      points.splice(i, 1);
+      segments.splice(i, 1);
+      segments[i - 1] = makeStraightSegment(prev, next);
+      removed = true;
+    }
+  }
+  return removed;
+}
+
 /** Sync photo point coordinates in route data with current effective locations. */
 export function syncPhotoPoints(data: RouteData): void {
   const locMap = buildPhotoLocationMap();
-  for (let i = 0; i < data.points.length; i++) {
-    const loc = getMovedPhotoLocation(data.points[i]!, locMap);
+  const { points, segments } = data;
+  for (let i = 0; i < points.length; i++) {
+    const loc = getMovedPhotoLocation(points[i]!, locMap);
     if (loc === null) continue;
-    const pt = data.points[i]!;
+    const pt = points[i]!;
     pt.lon = loc.lon;
     pt.lat = loc.lat;
     const coord: [number, number] = [loc.lon, loc.lat];
-    const before = data.segments[i - 1];
-    if (before?.method === 'straight') before.geometry.splice(-1, 1, coord);
-    const after = data.segments[i];
-    if (after?.method === 'straight') after.geometry.splice(0, 1, coord);
+    const before = segments[i - 1];
+    if (before !== undefined) {
+      if (before.method === 'straight') {
+        before.geometry.splice(-1, 1, coord);
+      } else {
+        const prev = points[i - 1]!;
+        segments[i - 1] = {
+          method: 'straight',
+          geometry: [[prev.lon, prev.lat], coord]
+        };
+      }
+    }
+    const after = segments[i];
+    if (after !== undefined) {
+      if (after.method === 'straight') {
+        after.geometry.splice(0, 1, coord);
+      } else {
+        const next = points[i + 1]!;
+        segments[i] = {
+          method: 'straight',
+          geometry: [coord, [next.lon, next.lat]]
+        };
+      }
+    }
   }
 }
 
@@ -327,10 +476,17 @@ function updateRoute(): void {
   const src = map.getSource(ROUTE_SOURCE) as GeoJSONSource | undefined;
   if (src === undefined) return;
 
-  // Use saved route data if available, syncing photo locations
+  // Use saved route data if available, syncing photo locations and order
   if (savedRouteData !== null) {
     syncPhotoPoints(savedRouteData);
+    const reordered = reorderRoutePhotoPoints(savedRouteData);
+    const pruned = pruneOrphanedWaypoints(savedRouteData);
     applyRouteData(savedRouteData);
+    // Persist changes only when no pending edits (committed state)
+    if ((reordered || pruned) && state.pendingTimeEdits.size === 0) {
+      const album = state.filters.album;
+      if (album !== 'all') void saveRoute(album, savedRouteData);
+    }
     return;
   }
 
