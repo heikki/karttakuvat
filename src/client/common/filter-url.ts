@@ -24,7 +24,6 @@ function saveViewState(params: URLSearchParams, immediate = false): void {
   const doSave = () => {
     viewSaveTimer = null;
     const obj = Object.fromEntries(params);
-    delete obj.id;
     const qs = new URLSearchParams(obj).toString();
     localStorage.setItem('viewState', qs);
     void fetch('/api/view-state', {
