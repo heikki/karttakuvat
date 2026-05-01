@@ -47,8 +47,8 @@ MapLibre GL JS with raster tile sources. Style switching via buttons:
 
 - **Aerial** (default): Google Satellite
 - **Topo**: Google Terrain
-- **Maasto**: MML Maastokartta over white background (requires MML API key)
-- **Orto**: MML Ortokuva over white background (requires MML API key)
+- **Maasto**: MML Maastokartta over white background (hidden when `PUBLIC_MML_API_KEY` is not set)
+- **Orto**: MML Ortokuva over white background (hidden when `PUBLIC_MML_API_KEY` is not set)
 
 Selected map style is persisted in URL params (default `satellite` is omitted from URL). App-owned layers (GPX, photo, route, measure) persist across style swaps via MapLibre's `transformStyle` callback.
 
@@ -244,11 +244,11 @@ Activated via the "Edit" button (appears when route is visible). Enters an inter
 **Routing methods** (per segment):
 
 - **Straight**: Direct line between points (default)
-- **Driving**: OpenRouteService driving-car profile
-- **Hiking**: ORS foot-hiking profile
+- **Driving**: OpenRouteService driving-car profile (hidden when `PUBLIC_ORS_API_KEY` is not set)
+- **Hiking**: ORS foot-hiking profile (hidden when `PUBLIC_ORS_API_KEY` is not set)
 - **None**: Hides the segment (no line drawn)
 
-Routed segments (driving/hiking) are automatically re-routed via ORS when waypoints are added or dragged. Waypoints cannot be inserted on "none" segments.
+Routed segments (driving/hiking) are automatically re-routed via ORS when waypoints are added or dragged. If the ORS key is missing, saved driving/hiking segments downgrade to straight on the next edit. Waypoints cannot be inserted on "none" segments.
 
 **Point types** (visual distinction in edit mode):
 

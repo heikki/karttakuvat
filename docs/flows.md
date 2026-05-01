@@ -40,7 +40,7 @@ The user clicks location toggle buttons (Exif, Inferred, User, None). Same singl
 
 ## Switch map style
 
-The user clicks one of the map style buttons (Aerial, Topo, Maasto, Orto). The active button gets highlighted. Map tiles change while keeping the same view position; photo markers, GPX tracks, and other overlay layers stay visible across the swap. The selected style is saved in the URL.
+The user clicks one of the map style buttons (Aerial, Topo, plus Maasto and Orto when an MML API key is configured). The active button gets highlighted. Map tiles change while keeping the same view position; photo markers, GPX tracks, and other overlay layers stay visible across the swap. The selected style is saved in the URL.
 
 ## Switch marker style
 
@@ -113,7 +113,7 @@ With the route visible, the user clicks the "Edit" button. The cursor changes to
 - **Add a waypoint**: click on a route segment to insert a new control point
 - **Remove a waypoint**: click on an existing waypoint (smaller dot) to delete it
 - **Move a point**: drag any point to a new position; routed segments update automatically
-- **Change routing method**: right-click a segment to choose between straight, driving, hiking, or none (driving/hiking use OpenRouteService; none hides the segment)
+- **Change routing method**: right-click a segment to choose between straight, none, plus driving and hiking when an OpenRouteService API key is configured (none hides the segment)
 
 Changes are auto-saved. Exit edit mode with Escape or by clicking "Edit" again. Switching to "all albums" exits edit mode automatically.
 
