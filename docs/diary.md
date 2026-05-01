@@ -4,10 +4,10 @@ Geotagged photo map viewer with Apple Photos integration.
 
 ## Project Stats (as of 01.05.2026)
 
-- **TypeScript files**: 55
-- **Lines of code**: 12,567
-- **Total commits**: 446
-- **Total tokens**: ~1,231M | **Total cost**: ~$745
+- **TypeScript files**: 56
+- **Lines of code**: 12,616
+- **Total commits**: 447
+- **Total tokens**: ~1,240M | **Total cost**: ~$752
 
 ## Updating This Diary
 
@@ -33,12 +33,12 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 - State the user-visible change only; skip mechanism and backstory unless that _is_ the change.
 - Describe final outcomes, not reverted intermediate attempts.
 
-## 01.05.2026 — Route: Targeted Waypoint Splicing
+## 01.05.2026 — Optional API Keys
 
-**Tokens**: 10M | **Cost**: $8.83
+**Tokens**: 19M | **Cost**: $15.44
 
-- Replaced the backtrack-heuristic orphaned-waypoint pruner with targeted adjacent removal: when a photo point moves or reorders, waypoints immediately before/after it are spliced
-- `getSource<GeoJSONSource>()` typed generics replace `as GeoJSONSource` casts across gpx, measure, photo-route, and route-edit
+- MML and ORS API keys are now optional in `.env`. Without the MML key the Maasto and Orto basemaps are hidden; without the ORS key the Drive and Hike routing methods are hidden
+- Photo route: when a photo point moves or its time changes, adjacent waypoints are cleaned up so the route stays tidy
 
 ## 30.04.2026 — Route Reorder on Time Edits
 

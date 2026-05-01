@@ -12,6 +12,7 @@ import {
   SaveEditsEvent,
   ToggleMeasureModeEvent
 } from '@common/events';
+import { HAS_MML } from '@common/features';
 import {
   filtersFromUrl,
   filtersToUrl,
@@ -37,6 +38,15 @@ import {
 } from './helpers';
 import { StoreController } from './store-controller';
 import { styles } from './styles';
+
+function resolveSavedMapStyle(saved: string | null): string | null {
+  if (saved === null) return null;
+  if (!HAS_MML && saved.startsWith('mml_')) {
+    mapStyleToUrl('satellite');
+    return 'satellite';
+  }
+  return saved;
+}
 
 const panelStyles = css`
   :host {
@@ -109,8 +119,7 @@ export class FilterPanel extends LitElement {
       if (saved.gps !== undefined) this._gps = saved.gps;
       if (saved.media !== undefined) this._media = saved.media;
     }
-    const mapStyle = mapStyleFromUrl();
-    if (mapStyle !== null) this._mapStyle = mapStyle;
+    this._mapStyle = resolveSavedMapStyle(mapStyleFromUrl()) ?? this._mapStyle;
     const markerStyle = markerStyleFromUrl();
     if (markerStyle !== null) this._markerStyle = markerStyle;
   }
@@ -356,8 +365,12 @@ export class FilterPanel extends LitElement {
                   [
                     { style: 'satellite', label: 'Aerial' },
                     { style: 'topo', label: 'Topo' },
-                    { style: 'mml_maastokartta', label: 'Maasto' },
-                    { style: 'mml_ortokuva', label: 'Orto' }
+                    ...(HAS_MML
+                      ? [
+                          { style: 'mml_maastokartta', label: 'Maasto' },
+                          { style: 'mml_ortokuva', label: 'Orto' }
+                        ]
+                      : [])
                   ],
                   this._mapStyle,
                   (s) => {

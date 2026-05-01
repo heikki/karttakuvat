@@ -1,6 +1,8 @@
 import type { Feature, LineString } from 'geojson';
 import type { Map as MapGL } from 'maplibre-gl';
 
+import { HAS_ROUTING } from '@common/features';
+
 import type { RouteData, RoutePoint, RouteSegment } from './photo-route';
 
 /** Layer/source IDs for route edit mode. */
@@ -271,8 +273,12 @@ export function createSegmentPopup(opts: SegmentPopupOpts): HTMLElement {
   el.className = 'route-edit-popup';
   el.innerHTML = [
     '<button data-method="straight">Straight</button>',
-    '<button data-method="driving">Drive</button>',
-    '<button data-method="hiking">Hike</button>',
+    ...(HAS_ROUTING
+      ? [
+          '<button data-method="driving">Drive</button>',
+          '<button data-method="hiking">Hike</button>'
+        ]
+      : []),
     '<button data-method="none">None</button>'
   ].join('');
 
@@ -343,11 +349,17 @@ export async function rerouteSegment(
 
   const startPt = routeData.points[segIdx]!;
   const endPt = routeData.points[segIdx + 1]!;
-  const coords = await fetchRouteGeometry(
-    [startPt.lon, startPt.lat],
-    [endPt.lon, endPt.lat],
-    seg.method
-  );
+  const coords = HAS_ROUTING
+    ? await fetchRouteGeometry(
+        [startPt.lon, startPt.lat],
+        [endPt.lon, endPt.lat],
+        seg.method
+      )
+    : null;
+  if (coords === null && !HAS_ROUTING) {
+    // Routing unavailable: downgrade the saved method so it stays consistent.
+    seg.method = 'straight';
+  }
   seg.geometry = coords ?? [
     [startPt.lon, startPt.lat],
     [endPt.lon, endPt.lat]

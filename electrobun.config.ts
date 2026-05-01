@@ -69,6 +69,9 @@ export default {
         define: {
           'process.env.PUBLIC_MML_API_KEY': JSON.stringify(
             process.env.PUBLIC_MML_API_KEY ?? ''
+          ),
+          'process.env.PUBLIC_ORS_API_KEY': JSON.stringify(
+            process.env.PUBLIC_ORS_API_KEY ?? ''
           )
         }
       }
