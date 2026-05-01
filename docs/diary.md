@@ -5,9 +5,9 @@ Geotagged photo map viewer with Apple Photos integration.
 ## Project Stats (as of 01.05.2026)
 
 - **TypeScript files**: 56
-- **Lines of code**: 12,616
-- **Total commits**: 447
-- **Total tokens**: ~1,240M | **Total cost**: ~$752
+- **Lines of code**: 12,617
+- **Total commits**: 450
+- **Total tokens**: ~1,251M | **Total cost**: ~$759
 
 ## Updating This Diary
 
@@ -35,10 +35,11 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 
 ## 01.05.2026 — Optional API Keys
 
-**Tokens**: 19M | **Cost**: $15.44
+**Tokens**: 29M | **Cost**: $22
 
 - MML and ORS API keys are now optional in `.env`. Without the MML key the Maasto and Orto basemaps are hidden; without the ORS key the Drive and Hike routing methods are hidden
 - Photo route: when a photo point moves or its time changes, adjacent waypoints are cleaned up so the route stays tidy
+- App now creates the user data directory on first launch — previously `app.db` could fail to open on a clean machine
 
 ## 30.04.2026 — Route Reorder on Time Edits
 

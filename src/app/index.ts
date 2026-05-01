@@ -55,6 +55,7 @@ function findDataDir(): string {
 const dataDir = findDataDir();
 console.log(`[main] Data directory: ${dataDir}`);
 
+mkdirSync(dataDir, { recursive: true });
 openAppDb(dataDir);
 const imageCache = createImageCache({ cacheDir: join(dataDir, 'cache') });
 const { routeApiRequest } = createApiHandler(dataDir, { imageCache });
