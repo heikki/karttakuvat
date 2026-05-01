@@ -1,20 +1,14 @@
 # Karttakuvat
 
-Geolocation photo visualization app. Displays geotagged photographs from Apple Photos on an interactive map.
+Globe view of an Apple Photos library — fix missing locations and wrong dates or timezones in place.
+
+Photos and videos can be browsed in a built-in full-screen lightbox.
 
 ![Karttakuvat](screenshot.png)
 
 ## Setup
 
-Requires macOS, [Bun](https://bun.sh/), and Apple Photos with geotagged photos. Optional API keys can be added to `.env` to enable extra features:
-
-```
-PUBLIC_MML_API_KEY=your-key
-PUBLIC_ORS_API_KEY=your-key
-```
-
-- Without `PUBLIC_MML_API_KEY` ([MML](https://www.maanmittauslaitos.fi/rajapinnat/api-avaimen-ohje)) the Maasto and Orto basemaps are hidden.
-- Without `PUBLIC_ORS_API_KEY` ([OpenRouteService](https://openrouteservice.org/)) the Drive and Hike routing methods are hidden; Straight and None still work.
+Requires macOS, [Bun](https://bun.sh/), and Apple Photos with geotagged photos.
 
 ```bash
 bun install
@@ -26,6 +20,17 @@ To build and install to `/Applications`:
 ```bash
 bun install:app
 ```
+
+### Optional API keys
+
+Add either to `.env` to unlock extra features. Both are optional.
+
+```
+PUBLIC_MML_API_KEY=your-key   # MML — Maasto/Orto basemaps
+PUBLIC_ORS_API_KEY=your-key   # OpenRouteService — Drive/Hike routing
+```
+
+Get keys from [MML](https://www.maanmittauslaitos.fi/rajapinnat/api-avaimen-ohje) and [OpenRouteService](https://openrouteservice.org/).
 
 ## Docs
 
