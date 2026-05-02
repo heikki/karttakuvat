@@ -2,9 +2,9 @@ import { html, LitElement, type PropertyValues } from 'lit';
 import { customElement, state as litState, property } from 'lit/decorators.js';
 
 import {
-  RouteEditExitedEvent,
+  RouteEditModeEvent,
+  RouteVisibilityEvent,
   ShowAlbumFilesEvent,
-  TogglePhotoRouteEvent,
   ToggleRouteEditEvent
 } from '@common/events';
 import { routeFromUrl, routeToUrl } from '@common/filter-url';
@@ -24,21 +24,21 @@ export class AlbumControls extends LitElement {
     super.connectedCallback();
     this._routeActive = routeFromUrl();
     document.addEventListener(
-      RouteEditExitedEvent.type,
-      this._onRouteEditExited
+      RouteEditModeEvent.type,
+      this._onRouteEditModeChange
     );
   }
 
   override disconnectedCallback() {
     super.disconnectedCallback();
     document.removeEventListener(
-      RouteEditExitedEvent.type,
-      this._onRouteEditExited
+      RouteEditModeEvent.type,
+      this._onRouteEditModeChange
     );
   }
 
-  private readonly _onRouteEditExited = () => {
-    this._routeEditActive = false;
+  private readonly _onRouteEditModeChange = (e: RouteEditModeEvent) => {
+    this._routeEditActive = e.active;
   };
 
   override willUpdate(changed: PropertyValues) {
@@ -52,7 +52,7 @@ export class AlbumControls extends LitElement {
         if (this.album === 'all') {
           this._routeActive = false;
           routeToUrl(false);
-          document.dispatchEvent(new TogglePhotoRouteEvent(false));
+          document.dispatchEvent(new RouteVisibilityEvent(false));
         }
       }
     }
@@ -63,14 +63,14 @@ export class AlbumControls extends LitElement {
     this._exitRouteEdit();
     if (this._routeActive) {
       this._routeActive = false;
-      document.dispatchEvent(new TogglePhotoRouteEvent(false));
+      document.dispatchEvent(new RouteVisibilityEvent(false));
     }
   }
 
   /** Activate route display if URL indicated it should be on. */
   applyInitialState(): void {
     if (this._routeActive) {
-      document.dispatchEvent(new TogglePhotoRouteEvent(true));
+      document.dispatchEvent(new RouteVisibilityEvent(true));
     }
   }
 
@@ -101,9 +101,7 @@ export class AlbumControls extends LitElement {
             if (this._routeActive) this._exitRouteEdit();
             this._routeActive = !this._routeActive;
             routeToUrl(this._routeActive);
-            document.dispatchEvent(
-              new TogglePhotoRouteEvent(this._routeActive)
-            );
+            document.dispatchEvent(new RouteVisibilityEvent(this._routeActive));
           }}
         >
           Route

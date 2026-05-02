@@ -1,7 +1,12 @@
-import type { GeoJSONSource, Map as MapGL, MapMouseEvent } from 'maplibre-gl';
+import type {
+  GeoJSONSource,
+  Map as MapGL,
+  MapLayerMouseEvent,
+  MapMouseEvent
+} from 'maplibre-gl';
 
 import { state, subscribe } from '@common/data';
-import { RouteEditExitedEvent, ToggleRouteEditEvent } from '@common/events';
+import { RouteEditModeEvent, ToggleRouteEditEvent } from '@common/events';
 import type { Photo } from '@common/types';
 
 import {
@@ -9,7 +14,6 @@ import {
   getRouteData,
   saveRoute,
   setRouteData,
-  setRouteEditStyle,
   type RouteData
 } from '.';
 import { setLayersVisibility } from '../map-utils';
@@ -130,17 +134,18 @@ export function exitRouteEdit(): void {
 function enterEditMode(): void {
   if (isActive() || map === null) return;
 
-  // Build route data from saved route or default, sync photo positions
-  const existing = getRouteData();
-  routeData = existing ?? buildDefaultRoute();
+  // Build route data from saved route or default, sync photo positions.
+  // exitEditMode pushes routeData back into the display module; nothing
+  // reads getRouteData() between enter and exit so we don't push it now.
+  routeData = getRouteData() ?? buildDefaultRoute();
   if (routeData === null) return;
-  if (existing === null) setRouteData(routeData);
   syncPhotoPoints(routeData);
 
   suppressNextMapClick = false;
   map.getCanvas().classList.add('crosshair');
-  setRouteEditStyle(true);
+  document.dispatchEvent(new RouteEditModeEvent(true));
   setLayerVisibility(true);
+  raiseEditPoints();
   updateEditSources();
 
   map.on('click', onMapClick);
@@ -168,7 +173,7 @@ function exitEditMode(): void {
   removePopup();
   // Restore blue display layers with current edit data
   if (routeData !== null) setRouteData(routeData);
-  setRouteEditStyle(false);
+  document.dispatchEvent(new RouteEditModeEvent(false));
   setLayerVisibility(false);
 
   map.off('click', onMapClick);
@@ -180,8 +185,6 @@ function exitEditMode(): void {
   map.off('mouseenter', EDIT_IDS.points, onPointEnter);
   map.off('mouseleave', EDIT_IDS.points, onPointLeave);
   document.removeEventListener('keydown', onKeyDown);
-
-  document.dispatchEvent(new RouteEditExitedEvent());
 }
 
 function setLayerVisibility(show: boolean): void {
@@ -228,8 +231,11 @@ function updateEditSources(): void {
   }
 
   updateLineSrc();
+}
 
-  // Ensure points layers stay on top (outline first, then fill)
+/** Bring edit-mode points on top of marker/photo layers added after our edit layers. */
+function raiseEditPoints(): void {
+  if (map === null) return;
   if (map.getLayer(EDIT_IDS.pointsOutline) !== undefined) {
     map.moveLayer(EDIT_IDS.pointsOutline);
   }
@@ -261,8 +267,9 @@ function scheduleAutoSave(): void {
 
 /** Find the first non-'none' segment index from hit query results. */
 function firstClickableHit(
-  features: Array<{ properties: Record<string, unknown> }>
+  features: Array<{ properties: Record<string, unknown> }> | undefined
 ): number | null {
+  if (features === undefined) return null;
   for (const f of features) {
     const idx = f.properties.segIndex as number;
     if (routeData?.segments[idx]?.method !== 'none') return idx;
@@ -415,19 +422,17 @@ function showRouteError(msg: string): void {
 
 // ---------- Drag ----------
 
-function onPointMouseDown(e: MapMouseEvent): void {
+function onPointMouseDown(e: MapLayerMouseEvent): void {
   if (map === null || routeData === null || e.originalEvent.button !== 0) {
     return;
   }
-  const features = map.queryRenderedFeatures(e.point, {
-    layers: [EDIT_IDS.points]
-  });
-  if (features.length === 0) return;
-  const idx = features[0]!.properties.index as number;
+  const feature = e.features?.[0];
+  if (feature === undefined) return;
+  const idx = feature.properties.index as number;
   startDrag(idx, e);
 }
 
-function onSegmentMouseDown(e: MapMouseEvent): void {
+function onSegmentMouseDown(e: MapLayerMouseEvent): void {
   if (map === null || routeData === null || e.originalEvent.button !== 0) {
     return;
   }
@@ -437,10 +442,7 @@ function onSegmentMouseDown(e: MapMouseEvent): void {
   });
   if (pointFeatures.length > 0) return;
 
-  const hitFeatures = map.queryRenderedFeatures(e.point, {
-    layers: [EDIT_IDS.hit]
-  });
-  const segIdx = firstClickableHit(hitFeatures);
+  const segIdx = firstClickableHit(e.features);
   if (segIdx === null) return;
   insertWaypointInRoute(routeData, segIdx, e.lngLat.lng, e.lngLat.lat);
   updateEditSources();
@@ -456,6 +458,9 @@ function startDrag(idx: number, e: MapMouseEvent): void {
   map.dragPan.disable();
   map.on('mousemove', onDragMove);
   map.on('mouseup', onDragEnd);
+  // Fallback: maplibre's mouseup is canvas-bound and won't fire if the
+  // user releases outside the map container.
+  document.addEventListener('mouseup', onDragEnd);
   transition({ kind: 'dragging', pointIdx: idx });
 }
 
@@ -507,6 +512,7 @@ function teardownDragListeners(): void {
   map.dragPan.enable();
   map.off('mousemove', onDragMove);
   map.off('mouseup', onDragEnd);
+  document.removeEventListener('mouseup', onDragEnd);
 }
 
 // ---------- Cursor & hover ----------
@@ -549,7 +555,7 @@ function onSegmentLeave(): void {
   }
 }
 
-function onSegmentMove(e: MapMouseEvent): void {
+function onSegmentMove(e: MapLayerMouseEvent): void {
   if (
     map === null ||
     routeData === null ||
@@ -559,10 +565,7 @@ function onSegmentMove(e: MapMouseEvent): void {
   ) {
     return;
   }
-  const features = map.queryRenderedFeatures(e.point, {
-    layers: [EDIT_IDS.hit]
-  });
-  const segIdx = firstClickableHit(features);
+  const segIdx = firstClickableHit(e.features);
   if (segIdx === null) {
     if (interaction.kind === 'hoveringSegment') {
       transition({ kind: 'idle' });
@@ -575,14 +578,11 @@ function onSegmentMove(e: MapMouseEvent): void {
   transition({ kind: 'hoveringSegment', segIdx });
 }
 
-function onPointEnter(e: MapMouseEvent): void {
+function onPointEnter(e: MapLayerMouseEvent): void {
   if (map === null || interaction === null || interaction.kind === 'dragging') {
     return;
   }
-  const features = map.queryRenderedFeatures(e.point, {
-    layers: [EDIT_IDS.points]
-  });
-  const id = features[0]?.id as number | undefined;
+  const id = e.features?.[0]?.id as number | undefined;
   if (id === undefined) return;
   transition({ kind: 'hoveringPoint', pointId: id });
 }

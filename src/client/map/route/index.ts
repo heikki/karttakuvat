@@ -1,8 +1,12 @@
-import type { Feature, FeatureCollection, LineString } from 'geojson';
+import type { FeatureCollection } from 'geojson';
 import type { GeoJSONSource, Map as MapGL } from 'maplibre-gl';
 
 import { state, subscribe } from '@common/data';
-import { ResetMapEvent, TogglePhotoRouteEvent } from '@common/events';
+import {
+  ResetMapEvent,
+  RouteEditModeEvent,
+  RouteVisibilityEvent
+} from '@common/events';
 import { getEffectiveDate, getEffectiveLocation } from '@common/photo-utils';
 import type { Photo } from '@common/types';
 import { toUtcSortKey } from '@common/utils';
@@ -38,9 +42,8 @@ export interface RouteData {
 const ROUTE_SOURCE = 'photo-route';
 const OUTLINE_LAYER = 'photo-route-outline';
 const LINE_LAYER = 'photo-route-line';
-const HIGHLIGHT_LAYER = 'photo-route-highlight';
 
-const ALL_ROUTE_LAYERS = [OUTLINE_LAYER, LINE_LAYER, HIGHLIGHT_LAYER];
+const ALL_ROUTE_LAYERS = [OUTLINE_LAYER, LINE_LAYER];
 
 // Module state
 let map: MapGL | null = null;
@@ -69,8 +72,14 @@ export function addRouteLayers(): void {
 function initPhotoRoute(m: MapGL): void {
   map = m;
 
-  document.addEventListener(TogglePhotoRouteEvent.type, (e) => {
-    setPhotoRouteVisible(e.show);
+  document.addEventListener(RouteVisibilityEvent.type, (e) => {
+    setPhotoRouteVisible(e.visible);
+  });
+
+  // Hide display layers while edit mode is active so edit owns rendering.
+  document.addEventListener(RouteEditModeEvent.type, (e) => {
+    if (map === null) return;
+    setLayersVisibility(map, ALL_ROUTE_LAYERS, !e.active && visible);
   });
 
   // Rebuild route when filtered photos change
@@ -96,17 +105,11 @@ function onPhotosChanged(): void {
 }
 
 /**
- * Load the saved route for an album (if any), reconcile it with current
- * album membership, photo locations, and dates, then apply to the display
- * source. Persists the reconciled route if its structure changed.
+ * Reconcile route data against current album membership/locations/dates,
+ * apply to the display source, and persist if structure changed and no
+ * edits are pending.
  */
-async function loadAndApplyRoute(album: string): Promise<void> {
-  const data = await loadSavedRoute(album);
-  if (state.filters.album !== album || !visible) return;
-  if (data === null) {
-    updateRoute();
-    return;
-  }
+function reconcileAndApply(album: string, data: RouteData): void {
   const albumPhotos = state.photos.filter((p) => p.albums.includes(album));
   const changed = reconcileRouteWithAlbum(data, albumPhotos);
   routeData = data;
@@ -118,6 +121,17 @@ async function loadAndApplyRoute(album: string): Promise<void> {
   ) {
     void saveRoute(album, data);
   }
+}
+
+/** Load the saved route for an album (if any) and apply it. */
+async function loadAndApplyRoute(album: string): Promise<void> {
+  const data = await loadSavedRoute(album);
+  if (state.filters.album !== album || !visible) return;
+  if (data === null) {
+    updateRoute();
+    return;
+  }
+  reconcileAndApply(album, data);
 }
 
 function addPhotoRouteLayers(): void {
@@ -154,22 +168,6 @@ function addPhotoRouteLayers(): void {
     }
   });
 
-  map.addLayer({
-    id: HIGHLIGHT_LAYER,
-    type: 'line',
-    source: ROUTE_SOURCE,
-    paint: {
-      'line-color': '#ffffff',
-      'line-width': 2,
-      'line-opacity': 0
-    },
-    layout: {
-      'visibility': visible ? 'visible' : 'none',
-      'line-cap': 'round',
-      'line-join': 'round'
-    }
-  });
-
   if (visible) updateRoute();
 }
 
@@ -179,24 +177,22 @@ function setPhotoRouteVisible(show: boolean): void {
 
   setLayersVisibility(map, ALL_ROUTE_LAYERS, show);
 
-  if (!show) {
-    routeData = null;
-    return;
-  }
+  if (!show) return;
 
   const album = state.filters.album;
-  currentAlbum = album;
+  if (album !== currentAlbum) {
+    currentAlbum = album;
+    routeData = null;
+  }
   if (album === 'all') {
     updateRoute();
     return;
   }
+  if (routeData !== null) {
+    reconcileAndApply(album, routeData);
+    return;
+  }
   void loadAndApplyRoute(album);
-}
-
-/** Hide/show the default route layers during edit mode. */
-export function setRouteEditStyle(editing: boolean): void {
-  if (map === null) return;
-  setLayersVisibility(map, ALL_ROUTE_LAYERS, !editing && visible);
 }
 
 /** Get the current route data (if any). */
@@ -296,53 +292,32 @@ function applyRouteData(data: RouteData): void {
   src.setData({ type: 'FeatureCollection', features });
 }
 
+function refreshSavedRoute(data: RouteData): void {
+  const synced = syncPhotoPoints(data);
+  const reordered = reorderRoutePhotoPoints(data);
+  applyRouteData(data);
+  if (!synced && !reordered) return;
+  if (state.pendingEdits.size > 0 || state.pendingTimeEdits.size > 0) return;
+  const album = state.filters.album;
+  if (album !== 'all') void saveRoute(album, data);
+}
+
 function updateRoute(): void {
   if (map === null) return;
 
   const src = map.getSource<GeoJSONSource>(ROUTE_SOURCE);
   if (src === undefined) return;
 
-  // Use saved route data if available, syncing photo locations and order
   if (routeData !== null) {
-    const synced = syncPhotoPoints(routeData);
-    const reordered = reorderRoutePhotoPoints(routeData);
-    applyRouteData(routeData);
-    // Persist changes only when no pending edits (committed state)
-    if ((synced || reordered) && state.pendingTimeEdits.size === 0) {
-      const album = state.filters.album;
-      if (album !== 'all') void saveRoute(album, routeData);
-    }
+    refreshSavedRoute(routeData);
     return;
   }
 
   const album = state.filters.album;
-  if (album === 'all') {
+  const data = album === 'all' ? null : buildDefaultRoute();
+  if (data === null) {
     src.setData({ type: 'FeatureCollection', features: [] });
     return;
   }
-
-  const located = getSortedLocatedPhotos();
-
-  if (located.length < 2) {
-    src.setData({ type: 'FeatureCollection', features: [] });
-    return;
-  }
-
-  const coordinates: Array<[number, number]> = located.map((p) => [
-    p.loc.lon,
-    p.loc.lat
-  ]);
-
-  const feature: Feature<LineString> = {
-    type: 'Feature',
-    geometry: { type: 'LineString', coordinates },
-    properties: {}
-  };
-
-  const fc: FeatureCollection = {
-    type: 'FeatureCollection',
-    features: [feature]
-  };
-
-  src.setData(fc);
+  applyRouteData(data);
 }
