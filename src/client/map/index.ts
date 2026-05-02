@@ -10,7 +10,6 @@ import { state } from '@common/data';
 import {
   ChangeMapStyleEvent,
   OpenExternalMapEvent,
-  PlacementModeEvent,
   ResetMapEvent
 } from '@common/events';
 import { mapViewFromUrl, mapViewToUrl } from '@common/filter-url';
@@ -31,16 +30,11 @@ import {
   getMarkerRadius,
   highlightPhoto,
   initMarkers,
-  isClickOnMarker,
-  setMarkerVisibility
+  isClickOnMarker
 } from './markers';
 import { initMeasure } from './measure';
 import { createFlyToPopup, createPanToFitPopup } from './pan';
-import {
-  enterPlacementMode as enterPlacement,
-  isInPlacementMode,
-  setupPlacement
-} from './placement';
+import { initPlacement, isInPlacementMode } from './placement';
 import { getPhotoUuid, getPopup, initPopupCallbacks, showPopup } from './popup';
 import { initRoute } from './route';
 import { initZAnchors } from './z-anchors';
@@ -242,11 +236,8 @@ export function initMap() {
     showPopup(index);
   });
 
-  setupPlacement(map, setMarkerVisibility);
+  initPlacement(map);
 
-  document.addEventListener(PlacementModeEvent.type, (e) => {
-    if (e.active && e.index !== undefined) enterPlacement(map, e.index);
-  });
   document.addEventListener(ChangeMapStyleEvent.type, (e) => {
     changeMapStyle(e.style);
   });

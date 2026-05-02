@@ -1,5 +1,3 @@
-import type { Photo } from './types';
-
 const opts = { bubbles: true, composed: true };
 
 export class ShowLightboxEvent extends Event {
@@ -14,13 +12,11 @@ export class ShowLightboxEvent extends Event {
 export class PlacementModeEvent extends Event {
   static readonly type = 'placement-mode';
   readonly active: boolean;
-  readonly photo?: Photo;
-  readonly index?: number;
-  constructor(active: boolean, photo?: Photo, index?: number) {
+  readonly photoIndex?: number;
+  constructor(active: boolean, photoIndex?: number) {
     super(PlacementModeEvent.type, opts);
     this.active = active;
-    this.photo = photo;
-    this.index = index;
+    this.photoIndex = photoIndex;
   }
 }
 

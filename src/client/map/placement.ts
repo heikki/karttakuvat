@@ -7,8 +7,6 @@ import type { PlacementPanel } from '@components/placement-panel';
 import { getPopup, showPopup } from './popup';
 
 let placementPhotoIndex: number | null = null;
-// eslint-disable-next-line @typescript-eslint/no-empty-function -- set in setupPlacement
-let markerVisibilityFn: (visible: boolean) => void = () => {};
 
 function getPanel(): PlacementPanel {
   return document.getElementById(
@@ -37,7 +35,6 @@ function exitPlacementMode(map: MapGL) {
   placementPhotoIndex = null;
   map.getCanvas().classList.remove('crosshair');
   hidePlacementPanel();
-  markerVisibilityFn(true);
   document.dispatchEvent(new PlacementModeEvent(false));
 }
 
@@ -54,19 +51,19 @@ function finishPlacement(
   showPopup(photoIndex);
 }
 
-export function enterPlacementMode(map: MapGL, photoIndex: number) {
+function enterPlacementMode(map: MapGL, photoIndex: number) {
   getPopup()?.remove();
   placementPhotoIndex = photoIndex;
   map.getCanvas().classList.add('crosshair');
   showPlacementPanel(photoIndex);
-  markerVisibilityFn(false);
 }
 
-export function setupPlacement(
-  map: MapGL,
-  setVisibility: (visible: boolean) => void
-) {
-  markerVisibilityFn = setVisibility;
+export function initPlacement(map: MapGL) {
+  document.addEventListener(PlacementModeEvent.type, (e) => {
+    if (!e.active) return;
+    if (e.photoIndex === undefined) return;
+    enterPlacementMode(map, e.photoIndex);
+  });
 
   map.on('click', (e) => {
     if (placementPhotoIndex === null) return;

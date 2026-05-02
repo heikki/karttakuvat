@@ -4,11 +4,11 @@ import { state, subscribe } from '@common/data';
 import {
   ChangeMarkerStyleEvent,
   MarkerClickedEvent,
-  MarkersInstalledEvent
+  MarkersInstalledEvent,
+  PlacementModeEvent
 } from '@common/events';
 import type { MarkerLayer, Photo } from '@common/types';
 
-import { isInPlacementMode } from '../placement';
 import { ClassicLayer } from './classic';
 import { PointsLayer } from './points';
 
@@ -22,6 +22,7 @@ let map: MapGL;
 let currentMarkerStyle = 'classic';
 let currentLayer: MarkerLayer | null = null;
 let interactionCleanup: (() => void) | null = null;
+let placementActive = false;
 
 export function initMarkers(m: MapGL): void {
   map = m;
@@ -37,11 +38,16 @@ export function initMarkers(m: MapGL): void {
     if (currentLayer === null) return;
     install();
     bindInteractions();
-    if (isInPlacementMode()) {
+    if (placementActive) {
       currentLayer.toggle(false);
       return;
     }
     document.dispatchEvent(new MarkersInstalledEvent());
+  });
+
+  document.addEventListener(PlacementModeEvent.type, (e) => {
+    placementActive = e.active;
+    currentLayer?.toggle(!e.active);
   });
 
   subscribe(() => {
@@ -53,10 +59,6 @@ export function isClickOnMarker(point: Point): boolean {
   const id = currentLayer?.id;
   if (id === undefined || map.getLayer(id) === undefined) return false;
   return map.queryRenderedFeatures(point, { layers: [id] }).length > 0;
-}
-
-export function setMarkerVisibility(visible: boolean): void {
-  currentLayer?.toggle(visible);
 }
 
 export function highlightPhoto(photo: Photo | null): void {
@@ -82,7 +84,7 @@ function bindInteractions(): void {
   const canvas = map.getCanvas();
 
   const onLayerClick = (e: MapLayerMouseEvent) => {
-    if (isInPlacementMode()) return;
+    if (placementActive) return;
     e.preventDefault();
     e.originalEvent.stopPropagation();
     if (e.features === undefined || e.features.length === 0) return;
@@ -93,10 +95,10 @@ function bindInteractions(): void {
   };
 
   const onMouseEnter = () => {
-    if (!isInPlacementMode()) canvas.style.cursor = 'pointer';
+    if (!placementActive) canvas.style.cursor = 'pointer';
   };
   const onMouseLeave = () => {
-    if (!isInPlacementMode()) canvas.style.cursor = '';
+    if (!placementActive) canvas.style.cursor = '';
   };
 
   map.on('click', layerId, onLayerClick);

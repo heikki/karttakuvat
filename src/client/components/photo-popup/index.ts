@@ -172,7 +172,7 @@ export class PhotoPopup extends LitElement {
   private _onPlacement(e: Event) {
     e.preventDefault();
     if (this.photo !== null) {
-      this.dispatchEvent(new PlacementModeEvent(true, this.photo, this.index));
+      this.dispatchEvent(new PlacementModeEvent(true, this.index));
     }
   }
 
