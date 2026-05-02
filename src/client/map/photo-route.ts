@@ -9,6 +9,11 @@ import { toUtcSortKey } from '@common/utils';
 
 import { setLayersVisibility } from './map-utils';
 import { buildRouteLineFeatures } from './route-edit-helpers';
+import {
+  reconcileRouteWithAlbum,
+  reorderRoutePhotoPoints,
+  syncPhotoPoints
+} from './route-reconcile';
 
 // Types for route data
 export interface RoutePoint {
@@ -68,16 +73,32 @@ function onPhotosChanged(): void {
     updateRoute();
     return;
   }
-  void loadSavedRoute(album).then((data) => {
-    if (state.filters.album !== album || !visible) return;
-    if (data === null) {
-      updateRoute();
-      return;
-    }
-    syncPhotoPoints(data);
-    savedRouteData = data;
-    applyRouteData(data);
-  });
+  void loadAndApplyRoute(album);
+}
+
+/**
+ * Load the saved route for an album (if any), reconcile it with current
+ * album membership, photo locations, and dates, then apply to the display
+ * source. Persists the reconciled route if its structure changed.
+ */
+async function loadAndApplyRoute(album: string): Promise<void> {
+  const data = await loadSavedRoute(album);
+  if (state.filters.album !== album || !visible) return;
+  if (data === null) {
+    updateRoute();
+    return;
+  }
+  const albumPhotos = state.photos.filter((p) => p.albums.includes(album));
+  const changed = reconcileRouteWithAlbum(data, albumPhotos);
+  savedRouteData = data;
+  applyRouteData(data);
+  if (
+    changed &&
+    state.pendingEdits.size === 0 &&
+    state.pendingTimeEdits.size === 0
+  ) {
+    void saveRoute(album, data);
+  }
 }
 
 export function addPhotoRouteLayers(): void {
@@ -139,26 +160,18 @@ export function setPhotoRouteVisible(show: boolean): void {
 
   setLayersVisibility(map, ALL_ROUTE_LAYERS, show);
 
-  if (show) {
-    // Try to load saved route
-    const album = state.filters.album;
-    currentAlbum = album;
-    if (album === 'all') {
-      updateRoute();
-    } else {
-      void loadSavedRoute(album).then((data) => {
-        if (data === null) {
-          updateRoute();
-        } else {
-          syncPhotoPoints(data);
-          savedRouteData = data;
-          applyRouteData(data);
-        }
-      });
-    }
-  } else {
+  if (!show) {
     savedRouteData = null;
+    return;
   }
+
+  const album = state.filters.album;
+  currentAlbum = album;
+  if (album === 'all') {
+    updateRoute();
+    return;
+  }
+  void loadAndApplyRoute(album);
 }
 
 export function isPhotoRouteVisible(): boolean {
@@ -278,228 +291,6 @@ function applyRouteData(data: RouteData): void {
 
   const features = buildRouteLineFeatures(data);
   src.setData({ type: 'FeatureCollection', features });
-}
-
-/** Build a lookup from uuid → effective location for all filtered photos. */
-function buildPhotoLocationMap(): Map<string, { lon: number; lat: number }> {
-  const m = new Map<string, { lon: number; lat: number }>();
-  for (const photo of state.filteredPhotos) {
-    const loc = getEffectiveLocation(photo);
-    if (loc !== null) m.set(photo.uuid, loc);
-  }
-  return m;
-}
-
-function getMovedPhotoLocation(
-  pt: RoutePoint,
-  locMap: Map<string, { lon: number; lat: number }>
-): { lon: number; lat: number } | null {
-  if (pt.type !== 'photo' || pt.uuid === undefined) return null;
-  const loc = locMap.get(pt.uuid);
-  if (loc === undefined || (loc.lon === pt.lon && loc.lat === pt.lat)) {
-    return null;
-  }
-  return loc;
-}
-
-function makeStraightSegment(from: RoutePoint, to: RoutePoint): RouteSegment {
-  return {
-    method: 'straight',
-    geometry: [
-      [from.lon, from.lat],
-      [to.lon, to.lat]
-    ]
-  };
-}
-
-function buildPhotoSortKeys(): Map<string, string> {
-  const m = new Map<string, string>();
-  for (const photo of state.filteredPhotos) {
-    if (photo.date !== '') {
-      m.set(photo.uuid, toUtcSortKey(getEffectiveDate(photo), photo.tz));
-    }
-  }
-  return m;
-}
-
-function collectSortablePhotoIndices(
-  points: RoutePoint[],
-  sortKeys: Map<string, string>
-): number[] {
-  const indices: number[] = [];
-  for (let i = 0; i < points.length; i++) {
-    const pt = points[i]!;
-    if (pt.type === 'photo' && pt.uuid !== undefined && sortKeys.has(pt.uuid)) {
-      indices.push(i);
-    }
-  }
-  return indices;
-}
-
-function computeSortedUuids(
-  currentUuids: string[],
-  sortKeys: Map<string, string>
-): string[] {
-  return [...currentUuids].sort((a, b) => {
-    const ka = sortKeys.get(a)!;
-    const kb = sortKeys.get(b)!;
-    return ka < kb ? -1 : ka > kb ? 1 : 0;
-  });
-}
-
-function snapshotPointsByUuid(
-  points: RoutePoint[],
-  indices: number[]
-): Map<string, RoutePoint> {
-  const m = new Map<string, RoutePoint>();
-  for (const i of indices) {
-    const pt = points[i]!;
-    m.set(pt.uuid!, { ...pt });
-  }
-  return m;
-}
-
-function resetSegmentsAroundIndex(
-  data: RouteData,
-  idx: number,
-  pt: RoutePoint
-): void {
-  const { points, segments } = data;
-  if (idx > 0 && idx - 1 < segments.length) {
-    segments[idx - 1] = makeStraightSegment(points[idx - 1]!, pt);
-  }
-  const next = points[idx + 1];
-  if (idx < segments.length && next !== undefined) {
-    segments[idx] = makeStraightSegment(pt, next);
-  }
-}
-
-/** Remove waypoint at index k, merging the surrounding segments. */
-function removeWaypointAt(data: RouteData, k: number): void {
-  const { points, segments } = data;
-  if (k === points.length - 1) {
-    points.splice(k, 1);
-    segments.splice(k - 1, 1);
-    return;
-  }
-  points.splice(k, 1);
-  segments.splice(k, 1);
-  if (k > 0) {
-    segments[k - 1] = makeStraightSegment(points[k - 1]!, points[k]!);
-  }
-}
-
-/**
- * Splice waypoints immediately adjacent to the point at idx. Used after a
- * photo's coordinate changes (relocate or chronological reorder) to discard
- * waypoints that are likely stale. Returns the new index of the original
- * point (decremented if a preceding waypoint was removed) and whether any
- * waypoint was removed.
- */
-function removeAdjacentWaypoints(
-  data: RouteData,
-  idx: number
-): { idx: number; removed: boolean } {
-  const { points } = data;
-  let cur = idx;
-  let removed = false;
-  if (cur + 1 < points.length && points[cur + 1]!.type === 'waypoint') {
-    removeWaypointAt(data, cur + 1);
-    removed = true;
-  }
-  if (cur > 0 && points[cur - 1]!.type === 'waypoint') {
-    removeWaypointAt(data, cur - 1);
-    cur -= 1;
-    removed = true;
-  }
-  return { idx: cur, removed };
-}
-
-/**
- * Reorder photo points in route data to match current chronological order.
- * Segments adjacent to moved points are reset to straight-line, and waypoints
- * adjacent to moved points are spliced (likely stale after the swap).
- * Returns true if any reordering occurred.
- */
-function reorderRoutePhotoPoints(data: RouteData): boolean {
-  const sortKeys = buildPhotoSortKeys();
-  const { points } = data;
-  const photoIndices = collectSortablePhotoIndices(points, sortKeys);
-  if (photoIndices.length < 2) return false;
-
-  const currentUuids = photoIndices.map((i) => points[i]!.uuid!);
-  const sortedUuids = computeSortedUuids(currentUuids, sortKeys);
-  if (currentUuids.every((uuid, i) => uuid === sortedUuids[i])) return false;
-
-  const uuidToPoint = snapshotPointsByUuid(points, photoIndices);
-
-  const movedIndices: number[] = [];
-  for (let i = 0; i < photoIndices.length; i++) {
-    const idx = photoIndices[i]!;
-    if (currentUuids[i] === sortedUuids[i]) continue;
-    const newPt = { ...uuidToPoint.get(sortedUuids[i]!)! };
-    points[idx] = newPt;
-    resetSegmentsAroundIndex(data, idx, newPt);
-    movedIndices.push(idx);
-  }
-
-  // Drop adjacent waypoints back-to-front so splices don't shift unvisited indices
-  for (let i = movedIndices.length - 1; i >= 0; i--) {
-    removeAdjacentWaypoints(data, movedIndices[i]!);
-  }
-
-  return true;
-}
-
-/**
- * Sync photo point coordinates in route data with current effective locations.
- * When a photo's coord changes, splice any waypoint immediately before or
- * after it (likely stale). Returns true if any waypoint was removed.
- */
-export function syncPhotoPoints(data: RouteData): boolean {
-  const locMap = buildPhotoLocationMap();
-  const { points, segments } = data;
-  let removed = false;
-  let i = 0;
-  while (i < points.length) {
-    const loc = getMovedPhotoLocation(points[i]!, locMap);
-    if (loc === null) {
-      i++;
-      continue;
-    }
-    const pt = points[i]!;
-    pt.lon = loc.lon;
-    pt.lat = loc.lat;
-    const coord: [number, number] = [loc.lon, loc.lat];
-    const before = segments[i - 1];
-    if (before !== undefined) {
-      if (before.method === 'straight') {
-        before.geometry.splice(-1, 1, coord);
-      } else {
-        const prev = points[i - 1]!;
-        segments[i - 1] = {
-          method: 'straight',
-          geometry: [[prev.lon, prev.lat], coord]
-        };
-      }
-    }
-    const after = segments[i];
-    if (after !== undefined) {
-      if (after.method === 'straight') {
-        after.geometry.splice(0, 1, coord);
-      } else {
-        const next = points[i + 1]!;
-        segments[i] = {
-          method: 'straight',
-          geometry: [coord, [next.lon, next.lat]]
-        };
-      }
-    }
-    const result = removeAdjacentWaypoints(data, i);
-    if (result.removed) removed = true;
-    i = result.idx + 1;
-  }
-  return removed;
 }
 
 function updateRoute(): void {

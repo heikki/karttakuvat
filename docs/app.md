@@ -230,6 +230,12 @@ When toggled on via the "Route" button in the filter panel, a route line connect
 
 If a saved route exists for the album (with custom waypoints or routing methods), it is loaded from the server. Otherwise, a default straight-line route is built from the filtered photos.
 
+### Route Reconciliation
+
+When a saved route is loaded (toggle-on or album switch), it is reconciled against the current album: photo points whose photos are no longer in the album (or have lost their location/date) are dropped, remaining points have their coordinates and chronological order refreshed, and photos newly added to the album are inserted at chronologically correct positions with straight-line segments. The reconciled route is persisted if its structure changed and no edits are pending.
+
+Reconciliation runs at load time only — not on every photo edit while the route is hidden — so the file on disk may be briefly stale until the route is next opened. Custom routed segments (driving/hiking) split by an inserted point fall back to straight; the user can re-route them via the Edit UI.
+
 ### Route Editing
 
 Activated via the "Edit" button (appears when route is visible). Enters an interactive editing mode with crosshair cursor and six map layers for points, lines, and hit targets.

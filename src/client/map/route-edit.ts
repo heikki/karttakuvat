@@ -12,7 +12,6 @@ import {
   setRouteData,
   setRouteEditStyle,
   setSavedRouteData,
-  syncPhotoPoints,
   type RouteData
 } from './photo-route';
 import {
@@ -28,6 +27,7 @@ import {
   rerouteSegment,
   updateAdjacentSegments
 } from './route-edit-helpers';
+import { syncPhotoPoints } from './route-reconcile';
 
 // Module state
 let map: MapGL | null = null;
