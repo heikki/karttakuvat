@@ -9,6 +9,8 @@ import type {
 import { getEffectiveCoords } from '@common/data';
 import type { MarkerLayer, Photo } from '@common/types';
 
+import { anchorId } from '../z-anchors';
+
 const gpsColor = [
   'match',
   ['get', 'gps'],
@@ -104,6 +106,7 @@ export class ClassicLayer implements MarkerLayer {
 
   install(map: MapGL, photos: Photo[]) {
     this.map = map;
+    const before = anchorId('markers');
 
     map.addSource(SOURCE, {
       type: 'geojson',
@@ -112,84 +115,99 @@ export class ClassicLayer implements MarkerLayer {
     });
 
     // Transparent hit area — larger than visible markers for easier clicking
-    map.addLayer({
-      id: 'classic-hit-area',
-      type: 'circle',
-      source: SOURCE,
-      layout: { 'circle-sort-key': sortKey },
-      paint: {
-        'circle-color': 'transparent',
-        'circle-radius': hitAreaRadius,
-        'circle-opacity': 0,
-        'circle-pitch-alignment': 'map'
-      }
-    });
+    map.addLayer(
+      {
+        id: 'classic-hit-area',
+        type: 'circle',
+        source: SOURCE,
+        layout: { 'circle-sort-key': sortKey },
+        paint: {
+          'circle-color': 'transparent',
+          'circle-radius': hitAreaRadius,
+          'circle-opacity': 0,
+          'circle-pitch-alignment': 'map'
+        }
+      },
+      before
+    );
 
     // Outline layer — white rings behind all fills
-    map.addLayer({
-      id: 'classic-outlines',
-      type: 'circle',
-      source: SOURCE,
-      layout: { 'circle-sort-key': sortKey },
-      paint: {
-        'circle-color': '#fff',
-        'circle-radius': outlineRadius,
-        'circle-pitch-alignment': 'map'
-      }
-    });
+    map.addLayer(
+      {
+        id: 'classic-outlines',
+        type: 'circle',
+        source: SOURCE,
+        layout: { 'circle-sort-key': sortKey },
+        paint: {
+          'circle-color': '#fff',
+          'circle-radius': outlineRadius,
+          'circle-pitch-alignment': 'map'
+        }
+      },
+      before
+    );
 
     // Fill layer on top — colored dots, no stroke
-    map.addLayer({
-      id: 'classic-markers',
-      type: 'circle',
-      source: SOURCE,
-      layout: { 'circle-sort-key': sortKey },
-      paint: {
-        'circle-color': gpsColor,
-        'circle-radius': radius,
-        'circle-pitch-alignment': 'map'
-      }
-    });
+    map.addLayer(
+      {
+        id: 'classic-markers',
+        type: 'circle',
+        source: SOURCE,
+        layout: { 'circle-sort-key': sortKey },
+        paint: {
+          'circle-color': gpsColor,
+          'circle-radius': radius,
+          'circle-pitch-alignment': 'map'
+        }
+      },
+      before
+    );
 
     // Selected marker — semi-transparent fill with white stroke
-    map.addLayer({
-      id: 'classic-selected-highlight',
-      type: 'circle',
-      source: SOURCE,
-      paint: {
-        'circle-color': 'rgba(0, 0, 0, 0.5)',
-        'circle-radius': selectedRadius,
-        'circle-stroke-width': selectedStroke,
-        'circle-stroke-color': '#fff',
-        'circle-pitch-alignment': 'map'
+    map.addLayer(
+      {
+        id: 'classic-selected-highlight',
+        type: 'circle',
+        source: SOURCE,
+        paint: {
+          'circle-color': 'rgba(0, 0, 0, 0.5)',
+          'circle-radius': selectedRadius,
+          'circle-stroke-width': selectedStroke,
+          'circle-stroke-color': '#fff',
+          'circle-pitch-alignment': 'map'
+        },
+        filter: ['==', ['get', 'uuid'], '']
       },
-      filter: ['==', ['get', 'uuid'], '']
-    });
+      before
+    );
 
     // Selected marker — colored dot with white outline on top of highlight
-    map.addLayer({
-      id: 'classic-selected',
-      type: 'circle',
-      source: SOURCE,
-      paint: {
-        'circle-color': gpsColor,
-        'circle-radius': radius,
-        'circle-stroke-width': [
-          'interpolate',
-          ['linear'],
-          ['zoom'],
-          2,
-          1,
-          8,
-          1.5,
-          14,
-          2
-        ] as ExpressionSpecification,
-        'circle-stroke-color': '#fff',
-        'circle-pitch-alignment': 'map'
+    map.addLayer(
+      {
+        id: 'classic-selected',
+        type: 'circle',
+        source: SOURCE,
+        paint: {
+          'circle-color': gpsColor,
+          'circle-radius': radius,
+          'circle-stroke-width': [
+            'interpolate',
+            ['linear'],
+            ['zoom'],
+            2,
+            1,
+            8,
+            1.5,
+            14,
+            2
+          ] as ExpressionSpecification,
+          'circle-stroke-color': '#fff',
+          'circle-pitch-alignment': 'map'
+        },
+        filter: ['==', ['get', 'uuid'], '']
       },
-      filter: ['==', ['get', 'uuid'], '']
-    });
+      before
+    );
 
     this.setMarkers(photos);
   }

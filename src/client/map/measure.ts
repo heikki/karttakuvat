@@ -7,6 +7,7 @@ import {
 } from '@common/events';
 
 import { computePathDistance, setLayersVisibility } from './map-utils';
+import { anchorId } from './z-anchors';
 
 // eslint-disable-next-line @typescript-eslint/init-declarations -- initialized in initMeasure() before any usage
 let map: MapGL;
@@ -28,6 +29,7 @@ export function isMeasureMode(): boolean {
 export function initMeasure(m: MapGL, getMarkerLayerId: () => string | null) {
   map = m;
   getMarkerLayerIdFn = getMarkerLayerId;
+  m.on('load', addMeasureLayers);
   document.addEventListener(ToggleMeasureModeEvent.type, () => {
     toggleMeasureMode();
   });
@@ -36,7 +38,9 @@ export function initMeasure(m: MapGL, getMarkerLayerId: () => string | null) {
   });
 }
 
-export function addMeasureLayers() {
+function addMeasureLayers() {
+  const before = anchorId('measure');
+
   map.addSource(POINT_SOURCE, {
     type: 'geojson',
     data: { type: 'FeatureCollection', features: [] }
@@ -47,34 +51,40 @@ export function addMeasureLayers() {
     data: { type: 'FeatureCollection', features: [] }
   });
 
-  map.addLayer({
-    id: LINE_LAYER,
-    type: 'line',
-    source: LINE_SOURCE,
-    paint: {
-      'line-color': '#ff4444',
-      'line-width': 2,
-      'line-dasharray': [3, 2]
+  map.addLayer(
+    {
+      id: LINE_LAYER,
+      type: 'line',
+      source: LINE_SOURCE,
+      paint: {
+        'line-color': '#ff4444',
+        'line-width': 2,
+        'line-dasharray': [3, 2]
+      },
+      layout: {
+        visibility: isMeasureActive ? 'visible' : 'none'
+      }
     },
-    layout: {
-      visibility: isMeasureActive ? 'visible' : 'none'
-    }
-  });
+    before
+  );
 
-  map.addLayer({
-    id: POINT_LAYER,
-    type: 'circle',
-    source: POINT_SOURCE,
-    paint: {
-      'circle-radius': 6,
-      'circle-color': '#ff4444',
-      'circle-stroke-width': 2,
-      'circle-stroke-color': '#fff'
+  map.addLayer(
+    {
+      id: POINT_LAYER,
+      type: 'circle',
+      source: POINT_SOURCE,
+      paint: {
+        'circle-radius': 6,
+        'circle-color': '#ff4444',
+        'circle-stroke-width': 2,
+        'circle-stroke-color': '#fff'
+      },
+      layout: {
+        visibility: isMeasureActive ? 'visible' : 'none'
+      }
     },
-    layout: {
-      visibility: isMeasureActive ? 'visible' : 'none'
-    }
-  });
+    before
+  );
 }
 
 function updateSources() {

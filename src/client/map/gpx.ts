@@ -4,6 +4,7 @@ import type { GeoJSONSource, Map as MapGL } from 'maplibre-gl';
 import { state, subscribe } from '@common/data';
 
 import { computePathDistance } from './map-utils';
+import { anchorId } from './z-anchors';
 
 // Sources and layers
 const TRACK_SOURCE = 'gpx-tracks';
@@ -35,6 +36,7 @@ let nextColorIndex = 0;
 
 export function initGpx(m: MapGL): void {
   map = m;
+  m.on('load', addGpxLayers);
   subscribe(() => {
     void loadGpxForAlbum(
       state.filters.album === 'all' ? null : state.filters.album
@@ -42,8 +44,9 @@ export function initGpx(m: MapGL): void {
   });
 }
 
-export function addGpxLayers(): void {
+function addGpxLayers(): void {
   if (map === null) return;
+  const before = anchorId('gpx');
 
   map.addSource(TRACK_SOURCE, {
     type: 'geojson',
@@ -55,65 +58,77 @@ export function addGpxLayers(): void {
     data: { type: 'FeatureCollection', features: waypointFeatures }
   });
 
-  map.addLayer({
-    id: TRACK_OUTLINE_LAYER,
-    type: 'line',
-    source: TRACK_SOURCE,
-    paint: { 'line-color': 'rgba(0, 0, 0, 0.4)', 'line-width': 6 },
-    layout: {
-      'visibility': 'visible',
-      'line-cap': 'round',
-      'line-join': 'round'
-    }
-  });
-
-  map.addLayer({
-    id: TRACK_LINE_LAYER,
-    type: 'line',
-    source: TRACK_SOURCE,
-    paint: {
-      'line-color': ['get', 'color'],
-      'line-width': 3,
-      'line-opacity': 0.85
+  map.addLayer(
+    {
+      id: TRACK_OUTLINE_LAYER,
+      type: 'line',
+      source: TRACK_SOURCE,
+      paint: { 'line-color': 'rgba(0, 0, 0, 0.4)', 'line-width': 6 },
+      layout: {
+        'visibility': 'visible',
+        'line-cap': 'round',
+        'line-join': 'round'
+      }
     },
-    layout: {
-      'visibility': 'visible',
-      'line-cap': 'round',
-      'line-join': 'round'
-    }
-  });
+    before
+  );
 
-  map.addLayer({
-    id: WAYPOINT_CIRCLE_LAYER,
-    type: 'circle',
-    source: WAYPOINT_SOURCE,
-    paint: {
-      'circle-radius': 5,
-      'circle-color': '#ffffff',
-      'circle-stroke-width': 2,
-      'circle-stroke-color': ['get', 'color']
+  map.addLayer(
+    {
+      id: TRACK_LINE_LAYER,
+      type: 'line',
+      source: TRACK_SOURCE,
+      paint: {
+        'line-color': ['get', 'color'],
+        'line-width': 3,
+        'line-opacity': 0.85
+      },
+      layout: {
+        'visibility': 'visible',
+        'line-cap': 'round',
+        'line-join': 'round'
+      }
     },
-    layout: { visibility: 'visible' }
-  });
+    before
+  );
 
-  map.addLayer({
-    id: WAYPOINT_LABEL_LAYER,
-    type: 'symbol',
-    source: WAYPOINT_SOURCE,
-    layout: {
-      'visibility': 'visible',
-      'text-field': ['get', 'name'],
-      'text-size': 11,
-      'text-offset': [0, 1.4],
-      'text-anchor': 'top',
-      'text-optional': true
+  map.addLayer(
+    {
+      id: WAYPOINT_CIRCLE_LAYER,
+      type: 'circle',
+      source: WAYPOINT_SOURCE,
+      paint: {
+        'circle-radius': 5,
+        'circle-color': '#ffffff',
+        'circle-stroke-width': 2,
+        'circle-stroke-color': ['get', 'color']
+      },
+      layout: { visibility: 'visible' }
     },
-    paint: {
-      'text-color': '#ffffff',
-      'text-halo-color': 'rgba(0, 0, 0, 0.7)',
-      'text-halo-width': 1.5
-    }
-  });
+    before
+  );
+
+  map.addLayer(
+    {
+      id: WAYPOINT_LABEL_LAYER,
+      type: 'symbol',
+      source: WAYPOINT_SOURCE,
+      layout: {
+        'visibility': 'visible',
+        'text-field': ['get', 'name'],
+        'text-size': 11,
+        'text-offset': [0, 1.4],
+        'text-anchor': 'top',
+        'text-optional': true
+      },
+      paint: {
+        'text-color': '#ffffff',
+        'text-halo-color': 'rgba(0, 0, 0, 0.7)',
+        'text-halo-width': 1.5
+      }
+    },
+    before
+  );
 }
 
 export async function loadGpxForAlbum(album: string | null): Promise<void> {

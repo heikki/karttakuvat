@@ -9,11 +9,16 @@ import { getPhotoUuid, getPopup, showPopup } from './popup';
 // eslint-disable-next-line @typescript-eslint/init-declarations -- set in initFit
 let map: MapGL;
 
-export function initFit(m: MapGL) {
+export function initFit(m: MapGL, hasSavedView: boolean) {
   map = m;
   document.addEventListener(FitToPhotosEvent.type, (e) => {
     fitToPhotos(e.animate, e.selectFirst);
   });
+  if (!hasSavedView) {
+    m.on('load', () => {
+      if (state.filteredPhotos.length > 0) fitToPhotos();
+    });
+  }
 }
 
 function showOldestOrNewestPopup() {

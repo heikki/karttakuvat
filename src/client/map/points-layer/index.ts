@@ -10,6 +10,7 @@ import type {
 import { getEffectiveCoords } from '@common/data';
 import type { MarkerLayer, Photo } from '@common/types';
 
+import { anchorId } from '../z-anchors';
 import { BloomLayer } from './bloom';
 
 const hitAreaPaint: CircleLayerSpecification['paint'] = {
@@ -71,8 +72,9 @@ export class PointsLayer implements MarkerLayer {
 
   install(map: MapGL, photos: Photo[]) {
     this.map = map;
+    const before = anchorId('markers');
 
-    map.addLayer(this.bloom);
+    map.addLayer(this.bloom, before);
 
     map.addSource(SOURCE, {
       type: 'geojson',
@@ -80,29 +82,38 @@ export class PointsLayer implements MarkerLayer {
       maxzoom: 22
     });
 
-    map.addLayer({
-      id: 'points-markers',
-      type: 'circle',
-      source: SOURCE,
-      layout: { 'circle-sort-key': sortKey },
-      paint: hitAreaPaint
-    });
+    map.addLayer(
+      {
+        id: 'points-markers',
+        type: 'circle',
+        source: SOURCE,
+        layout: { 'circle-sort-key': sortKey },
+        paint: hitAreaPaint
+      },
+      before
+    );
 
-    map.addLayer({
-      id: 'points-dot',
-      type: 'circle',
-      source: SOURCE,
-      layout: { 'circle-sort-key': sortKey },
-      paint: dotPaint
-    });
+    map.addLayer(
+      {
+        id: 'points-dot',
+        type: 'circle',
+        source: SOURCE,
+        layout: { 'circle-sort-key': sortKey },
+        paint: dotPaint
+      },
+      before
+    );
 
-    map.addLayer({
-      id: 'points-selected',
-      type: 'circle',
-      source: SOURCE,
-      paint: hitAreaPaint,
-      filter: ['==', ['get', 'uuid'], '']
-    });
+    map.addLayer(
+      {
+        id: 'points-selected',
+        type: 'circle',
+        source: SOURCE,
+        paint: hitAreaPaint,
+        filter: ['==', ['get', 'uuid'], '']
+      },
+      before
+    );
 
     this.setMarkers(photos);
   }

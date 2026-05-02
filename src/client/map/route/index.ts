@@ -12,6 +12,7 @@ import type { Photo } from '@common/types';
 import { toUtcSortKey } from '@common/utils';
 
 import { setLayersVisibility } from '../map-utils';
+import { anchorId } from '../z-anchors';
 import { addRouteEditLayers, exitRouteEdit, initRouteEdit } from './edit';
 import { buildRouteLineFeatures } from './helpers';
 import {
@@ -58,15 +59,13 @@ export function initRoute(
 ): void {
   initRouteEdit(m, getMarkerLayerId);
   initPhotoRoute(m);
+  m.on('load', () => {
+    addPhotoRouteLayers();
+    addRouteEditLayers();
+  });
   document.addEventListener(ResetMapEvent.type, () => {
     exitRouteEdit();
   });
-}
-
-/** Add all route sources and layers. Called on map style load. */
-export function addRouteLayers(): void {
-  addPhotoRouteLayers();
-  addRouteEditLayers();
 }
 
 function initPhotoRoute(m: MapGL): void {
@@ -141,32 +140,40 @@ function addPhotoRouteLayers(): void {
 
   map.addSource(ROUTE_SOURCE, { type: 'geojson', data: empty });
 
-  map.addLayer({
-    id: OUTLINE_LAYER,
-    type: 'line',
-    source: ROUTE_SOURCE,
-    paint: { 'line-color': 'rgba(0, 0, 0, 0.3)', 'line-width': 4 },
-    layout: {
-      'visibility': visible ? 'visible' : 'none',
-      'line-cap': 'round',
-      'line-join': 'round'
-    }
-  });
+  const before = anchorId('route');
 
-  map.addLayer({
-    id: LINE_LAYER,
-    type: 'line',
-    source: ROUTE_SOURCE,
-    paint: {
-      'line-color': '#60a5fa',
-      'line-width': 2
+  map.addLayer(
+    {
+      id: OUTLINE_LAYER,
+      type: 'line',
+      source: ROUTE_SOURCE,
+      paint: { 'line-color': 'rgba(0, 0, 0, 0.3)', 'line-width': 4 },
+      layout: {
+        'visibility': visible ? 'visible' : 'none',
+        'line-cap': 'round',
+        'line-join': 'round'
+      }
     },
-    layout: {
-      'visibility': visible ? 'visible' : 'none',
-      'line-cap': 'round',
-      'line-join': 'round'
-    }
-  });
+    before
+  );
+
+  map.addLayer(
+    {
+      id: LINE_LAYER,
+      type: 'line',
+      source: ROUTE_SOURCE,
+      paint: {
+        'line-color': '#60a5fa',
+        'line-width': 2
+      },
+      layout: {
+        'visibility': visible ? 'visible' : 'none',
+        'line-cap': 'round',
+        'line-join': 'round'
+      }
+    },
+    before
+  );
 
   if (visible) updateRoute();
 }

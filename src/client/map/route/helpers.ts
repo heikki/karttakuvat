@@ -4,6 +4,7 @@ import type { Map as MapGL } from 'maplibre-gl';
 import { HAS_ROUTING } from '@common/features';
 
 import type { RouteData, RoutePoint, RouteSegment } from '.';
+import { anchorId } from '../z-anchors';
 
 /** Layer/source IDs for route edit mode. */
 export const EDIT_IDS = {
@@ -41,44 +42,57 @@ export function createEditLayers(m: MapGL): void {
     m.addSource(id, { type: 'geojson', data: empty });
   }
 
+  const before = anchorId('route');
   const lineLayout = {
     'visibility': 'none' as const,
     'line-cap': 'round' as const,
     'line-join': 'round' as const
   };
 
-  m.addLayer({
-    id: EDIT_IDS.lineOutline,
-    type: 'line',
-    source: EDIT_IDS.lineSrc,
-    paint: { 'line-color': 'rgba(0, 0, 0, 0.3)', 'line-width': 4 },
-    layout: lineLayout
-  });
-  m.addLayer({
-    id: EDIT_IDS.line,
-    type: 'line',
-    source: EDIT_IDS.lineSrc,
-    paint: { 'line-color': '#60a5fa', 'line-width': 2 },
-    layout: lineLayout
-  });
-  m.addLayer({
-    id: EDIT_IDS.hit,
-    type: 'line',
-    source: EDIT_IDS.hitSrc,
-    paint: { 'line-color': 'rgba(0,0,0,0)', 'line-width': 16 },
-    layout: {
-      'visibility': 'none' as const,
-      'line-cap': 'round' as const,
-      'line-join': 'round' as const
-    }
-  });
-  m.addLayer({
-    id: EDIT_IDS.hover,
-    type: 'line',
-    source: EDIT_IDS.hoverSrc,
-    paint: { 'line-color': 'rgba(255, 255, 255, 0.6)', 'line-width': 6 },
-    layout: lineLayout
-  });
+  m.addLayer(
+    {
+      id: EDIT_IDS.lineOutline,
+      type: 'line',
+      source: EDIT_IDS.lineSrc,
+      paint: { 'line-color': 'rgba(0, 0, 0, 0.3)', 'line-width': 4 },
+      layout: lineLayout
+    },
+    before
+  );
+  m.addLayer(
+    {
+      id: EDIT_IDS.line,
+      type: 'line',
+      source: EDIT_IDS.lineSrc,
+      paint: { 'line-color': '#60a5fa', 'line-width': 2 },
+      layout: lineLayout
+    },
+    before
+  );
+  m.addLayer(
+    {
+      id: EDIT_IDS.hit,
+      type: 'line',
+      source: EDIT_IDS.hitSrc,
+      paint: { 'line-color': 'rgba(0,0,0,0)', 'line-width': 16 },
+      layout: {
+        'visibility': 'none' as const,
+        'line-cap': 'round' as const,
+        'line-join': 'round' as const
+      }
+    },
+    before
+  );
+  m.addLayer(
+    {
+      id: EDIT_IDS.hover,
+      type: 'line',
+      source: EDIT_IDS.hoverSrc,
+      paint: { 'line-color': 'rgba(255, 255, 255, 0.6)', 'line-width': 6 },
+      layout: lineLayout
+    },
+    before
+  );
   // Photo points: same size as classic markers (zoom-interpolated)
   // Waypoints: half size
   const pointRadius = [
@@ -118,30 +132,36 @@ export function createEditLayers(m: MapGL): void {
   ] as unknown as string;
 
   // White outline circle behind colored fill (same approach as classic markers)
-  m.addLayer({
-    id: EDIT_IDS.pointsOutline,
-    type: 'circle',
-    source: EDIT_IDS.pointsSrc,
-    paint: {
-      'circle-color': '#fff',
-      'circle-radius': outlineRadius,
-      'circle-pitch-alignment': 'map'
+  m.addLayer(
+    {
+      id: EDIT_IDS.pointsOutline,
+      type: 'circle',
+      source: EDIT_IDS.pointsSrc,
+      paint: {
+        'circle-color': '#fff',
+        'circle-radius': outlineRadius,
+        'circle-pitch-alignment': 'map'
+      },
+      layout: { visibility: 'none' }
     },
-    layout: { visibility: 'none' }
-  });
+    before
+  );
 
   // Colored fill on top — GPS-based color, no stroke
-  m.addLayer({
-    id: EDIT_IDS.points,
-    type: 'circle',
-    source: EDIT_IDS.pointsSrc,
-    paint: {
-      'circle-color': gpsColor,
-      'circle-radius': pointRadius,
-      'circle-pitch-alignment': 'map'
+  m.addLayer(
+    {
+      id: EDIT_IDS.points,
+      type: 'circle',
+      source: EDIT_IDS.pointsSrc,
+      paint: {
+        'circle-color': gpsColor,
+        'circle-radius': pointRadius,
+        'circle-pitch-alignment': 'map'
+      },
+      layout: { visibility: 'none' }
     },
-    layout: { visibility: 'none' }
-  });
+    before
+  );
 }
 
 /** Update adjacent segment endpoints when a point is dragged. */

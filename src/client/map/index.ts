@@ -28,8 +28,8 @@ import {
 import { ClassicLayer } from './classic-layer';
 import { mapStyles } from './config';
 import { fitToPhotos, initFit } from './fit';
-import { addGpxLayers, initGpx } from './gpx';
-import { addMeasureLayers, initMeasure } from './measure';
+import { initGpx } from './gpx';
+import { initMeasure } from './measure';
 import { createFlyToPopup, createPanToFitPopup } from './pan';
 import {
   enterPlacementMode as enterPlacement,
@@ -37,14 +37,9 @@ import {
   setupPlacement
 } from './placement';
 import { PointsLayer } from './points-layer';
-import {
-  getPhotoUuid,
-  getPopup,
-  initPopupCallbacks,
-  reopenPopupFromUrl,
-  showPopup
-} from './popup';
-import { addRouteLayers, initRoute } from './route';
+import { getPhotoUuid, getPopup, initPopupCallbacks, showPopup } from './popup';
+import { initRoute } from './route';
+import { initZAnchors } from './z-anchors';
 
 // Global map variable (local to module)
 // eslint-disable-next-line @typescript-eslint/init-declarations -- map is initialized in initMap() which is called before any other usage
@@ -183,6 +178,7 @@ export function initMap() {
   };
   const getMarkerRadius = (zoom: number) =>
     currentLayer?.markerRadius(zoom) ?? 0;
+  initZAnchors(map);
   initPopupCallbacks(map, {
     highlight,
     panToFitPopup,
@@ -191,8 +187,9 @@ export function initMap() {
   });
   initMeasure(map, getMarkerLayerId);
   initRoute(map, getMarkerLayerId);
-  initFit(map);
+  initFit(map, savedView !== null);
   initGpx(map);
+  initPhotoLayers(map);
 
   // Init globe background shader
   initGlobeBackground(map.getContainer());
@@ -250,19 +247,6 @@ export function initMap() {
       if (features.length > 0) return;
     }
     getPopup()?.remove();
-  });
-
-  map.on('load', () => {
-    addRouteLayers();
-    addGpxLayers();
-    addPhotoLayers();
-    addMeasureLayers();
-    setupMarkerInteractions();
-
-    reopenPopupFromUrl();
-    if (savedView === null && state.filteredPhotos.length > 0) {
-      fitToPhotos();
-    }
   });
 
   map.on('projectiontransition', () => {
@@ -386,6 +370,13 @@ function addPhotoLayers() {
   currentLayer?.uninstall();
   currentLayer = markerStyles[currentMarkerStyle]!();
   currentLayer.install(map, state.filteredPhotos);
+}
+
+function initPhotoLayers(m: MapGL) {
+  m.on('load', () => {
+    addPhotoLayers();
+    setupMarkerInteractions();
+  });
 }
 
 function setupMarkerInteractions() {

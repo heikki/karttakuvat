@@ -158,6 +158,7 @@ export function initPopupCallbacks(m: MapGL, callbacks: PopupCallbacks) {
   initPopupZoom(m, getSelectedMarkerCoords);
   m.on('zoomend', reanchorPopup);
   m.on('render', updatePopupGlobeMask);
+  m.on('load', reopenPopupFromUrl);
 
   document.addEventListener('keydown', handleKeydown);
   document.addEventListener(ResetMapEvent.type, () => {
