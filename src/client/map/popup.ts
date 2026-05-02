@@ -34,6 +34,8 @@ import {
 } from '@common/utils';
 import type { PhotoPopup, PopupActions } from '@components/photo-popup';
 
+import { getMarkerRadius, highlightPhoto } from './markers';
+import { createFlyToPopup, createPanToFitPopup } from './pan';
 import {
   initPopupZoom,
   installCanvasZoomOverride,
@@ -48,21 +50,17 @@ let popupPhotoIndex: number | null = null;
 let photoUuid: string | null = null;
 let dateEditMode = false;
 
-// Callbacks that will be set by map.ts
-let highlightFn: (photo: Photo | null) => void = () => {
-  /* noop */
-};
-let panToFitPopupFn: (coords: [number, number]) => void = () => {
-  /* noop */
-};
-let flyToPopupFn: (coords: [number, number]) => void = () => {
-  /* noop */
-};
 let map: MapGL | null = null;
-let getMarkerRadiusFn: (zoom: number) => number = () => 0;
+let panToFitPopup: (coords: [number, number]) => void = () => {
+  /* set in initPopup */
+};
+let flyToPopup: (coords: [number, number]) => void = () => {
+  /* set in initPopup */
+};
+
 function popupOffset(): [number, number] {
   const zoom = map?.getZoom() ?? 10;
-  const radius = getMarkerRadiusFn(zoom);
+  const radius = getMarkerRadius(zoom);
   return [0, -(radius * 1.3 + 5)];
 }
 
@@ -145,19 +143,10 @@ const popupActions: PopupActions = {
   }
 };
 
-interface PopupCallbacks {
-  highlight: (photo: Photo | null) => void;
-  panToFitPopup: (coords: [number, number]) => void;
-  flyToPopup: (coords: [number, number]) => void;
-  getMarkerRadius: (zoom: number) => number;
-}
-
-export function initPopupCallbacks(m: MapGL, callbacks: PopupCallbacks) {
+export function initPopup(m: MapGL) {
   map = m;
-  highlightFn = callbacks.highlight;
-  panToFitPopupFn = callbacks.panToFitPopup;
-  flyToPopupFn = callbacks.flyToPopup;
-  getMarkerRadiusFn = callbacks.getMarkerRadius;
+  panToFitPopup = createPanToFitPopup(m);
+  flyToPopup = createFlyToPopup(m);
   initPopupZoom(m, getSelectedMarkerCoords);
   m.on('zoomend', reanchorPopup);
   m.on('render', updatePopupGlobeMask);
@@ -322,7 +311,7 @@ export function showPopup(index: number) {
   dateEditMode = false;
   popupPhotoIndex = index;
   photoUuid = photo.uuid;
-  highlightFn(photo);
+  highlightPhoto(photo);
   photoToUrl(photo.uuid);
 
   popupElement = createPopupElement(photo, index);
@@ -344,7 +333,7 @@ export function showPopup(index: number) {
   popup.on('close', () => {
     removeCanvasZoomOverride();
     dateEditMode = false;
-    highlightFn(null);
+    highlightPhoto(null);
     popup = null;
     popupPhotoIndex = null;
     photoUuid = null;
@@ -352,7 +341,7 @@ export function showPopup(index: number) {
     photoToUrl(null);
   });
 
-  panToFitPopupFn([lon, lat]);
+  panToFitPopup([lon, lat]);
 }
 
 function adjustTime(uuid: string, hours: number) {
@@ -438,7 +427,7 @@ function navigateToPhoto(newIndex: number) {
   dateEditMode = false;
   popupPhotoIndex = newIndex;
   photoUuid = photo.uuid;
-  highlightFn(photo);
+  highlightPhoto(photo);
   photoToUrl(photo.uuid);
 
   syncPopupElement();
@@ -447,5 +436,5 @@ function navigateToPhoto(newIndex: number) {
   const lng = loc?.lon ?? 0;
   const lat = loc?.lat ?? 0;
   popup.setLngLat([lng, lat]);
-  flyToPopupFn([lng, lat]);
+  flyToPopup([lng, lat]);
 }

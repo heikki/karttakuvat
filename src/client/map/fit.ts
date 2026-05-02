@@ -3,18 +3,19 @@ import type { Map as MapGL } from 'maplibre-gl';
 
 import { state } from '@common/data';
 import { FitToPhotosEvent } from '@common/events';
+import { mapViewFromUrl } from '@common/filter-url';
 
 import { getPhotoUuid, getPopup, showPopup } from './popup';
 
 // eslint-disable-next-line @typescript-eslint/init-declarations -- set in initFit
 let map: MapGL;
 
-export function initFit(m: MapGL, hasSavedView: boolean) {
+export function initFit(m: MapGL) {
   map = m;
   document.addEventListener(FitToPhotosEvent.type, (e) => {
     fitToPhotos(e.animate, e.selectFirst);
   });
-  if (!hasSavedView) {
+  if (mapViewFromUrl() === null) {
     m.on('load', () => {
       if (state.filteredPhotos.length > 0) fitToPhotos();
     });

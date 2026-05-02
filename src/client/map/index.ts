@@ -26,16 +26,10 @@ import {
 import { mapStyles } from './config';
 import { fitToPhotos, initFit } from './fit';
 import { initGpx } from './gpx';
-import {
-  getMarkerRadius,
-  highlightPhoto,
-  initMarkers,
-  isClickOnMarker
-} from './markers';
+import { initMarkers, isClickOnMarker } from './markers';
 import { initMeasure } from './measure';
-import { createFlyToPopup, createPanToFitPopup } from './pan';
 import { initPlacement, isInPlacementMode } from './placement';
-import { getPhotoUuid, getPopup, initPopupCallbacks, showPopup } from './popup';
+import { getPhotoUuid, getPopup, initPopup, showPopup } from './popup';
 import { initRoute } from './route';
 import { initZAnchors } from './z-anchors';
 
@@ -152,18 +146,11 @@ export function initMap() {
     console.warn('[MapGL] WebGL context restored');
   });
 
-  const panToFitPopup = createPanToFitPopup(map);
-  const flyToPopup = createFlyToPopup(map);
   initZAnchors(map);
-  initPopupCallbacks(map, {
-    highlight: highlightPhoto,
-    panToFitPopup,
-    flyToPopup,
-    getMarkerRadius
-  });
+  initPopup(map);
   initMeasure(map);
   initRoute(map);
-  initFit(map, savedView !== null);
+  initFit(map);
   initGpx(map);
   initMarkers(map);
 
