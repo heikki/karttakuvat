@@ -12,7 +12,11 @@ import {
   setPendingTimeEdit,
   state
 } from '@common/data';
-import { SaveEditsEvent, ShowLightboxEvent } from '@common/events';
+import {
+  ResetMapEvent,
+  SaveEditsEvent,
+  ShowLightboxEvent
+} from '@common/events';
 import { photoFromUrl, photoToUrl } from '@common/filter-url';
 import {
   computeManualDateOffset,
@@ -156,6 +160,9 @@ export function initPopupCallbacks(m: MapGL, callbacks: PopupCallbacks) {
   m.on('render', updatePopupGlobeMask);
 
   document.addEventListener('keydown', handleKeydown);
+  document.addEventListener(ResetMapEvent.type, () => {
+    popup?.remove();
+  });
 }
 
 function updatePopupGlobeMask() {

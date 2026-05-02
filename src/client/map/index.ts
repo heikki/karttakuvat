@@ -29,7 +29,7 @@ import { ClassicLayer } from './classic-layer';
 import { mapStyles } from './config';
 import { fitToPhotos, initFit } from './fit';
 import { addGpxLayers, initGpx } from './gpx';
-import { addMeasureLayers, exitMeasureMode, initMeasure } from './measure';
+import { addMeasureLayers, initMeasure } from './measure';
 import { createFlyToPopup, createPanToFitPopup } from './pan';
 import {
   enterPlacementMode as enterPlacement,
@@ -92,8 +92,6 @@ function setMarkerVisibility(visible: boolean) {
 }
 
 function resetMap() {
-  getPopup()?.remove();
-  exitMeasureMode();
   changeMapStyle('satellite');
   fitToPhotos(true);
 }

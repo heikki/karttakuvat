@@ -1,6 +1,10 @@
 import type { GeoJSONSource, Map as MapGL, MapMouseEvent } from 'maplibre-gl';
 
-import { MeasureModeExitedEvent, ToggleMeasureModeEvent } from '@common/events';
+import {
+  MeasureModeExitedEvent,
+  ResetMapEvent,
+  ToggleMeasureModeEvent
+} from '@common/events';
 
 import { computePathDistance, setLayersVisibility } from './map-utils';
 
@@ -26,6 +30,9 @@ export function initMeasure(m: MapGL, getMarkerLayerId: () => string | null) {
   getMarkerLayerIdFn = getMarkerLayerId;
   document.addEventListener(ToggleMeasureModeEvent.type, () => {
     toggleMeasureMode();
+  });
+  document.addEventListener(ResetMapEvent.type, () => {
+    exitMeasureMode();
   });
 }
 
@@ -186,7 +193,7 @@ function enterMeasureMode() {
   document.addEventListener('keydown', onKeyDown);
 }
 
-export function exitMeasureMode() {
+function exitMeasureMode() {
   if (!isMeasureActive) return;
   isMeasureActive = false;
   coords.length = 0;
