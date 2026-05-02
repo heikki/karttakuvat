@@ -2,18 +2,19 @@ import type { Feature, FeatureCollection, LineString } from 'geojson';
 import type { GeoJSONSource, Map as MapGL } from 'maplibre-gl';
 
 import { state, subscribe } from '@common/data';
-import { TogglePhotoRouteEvent } from '@common/events';
+import { ResetMapEvent, TogglePhotoRouteEvent } from '@common/events';
 import { getEffectiveDate, getEffectiveLocation } from '@common/photo-utils';
 import type { Photo } from '@common/types';
 import { toUtcSortKey } from '@common/utils';
 
-import { setLayersVisibility } from './map-utils';
-import { buildRouteLineFeatures } from './route-edit-helpers';
+import { setLayersVisibility } from '../map-utils';
+import { addRouteEditLayers, exitRouteEdit, initRouteEdit } from './edit';
+import { buildRouteLineFeatures } from './helpers';
 import {
   reconcileRouteWithAlbum,
   reorderRoutePhotoPoints,
   syncPhotoPoints
-} from './route-reconcile';
+} from './reconcile';
 
 // Types for route data
 export interface RoutePoint {
@@ -34,20 +35,38 @@ export interface RouteData {
 }
 
 // Sources and layers
-export const ROUTE_SOURCE = 'photo-route';
+const ROUTE_SOURCE = 'photo-route';
 const OUTLINE_LAYER = 'photo-route-outline';
 const LINE_LAYER = 'photo-route-line';
 const HIGHLIGHT_LAYER = 'photo-route-highlight';
 
-export const ALL_ROUTE_LAYERS = [OUTLINE_LAYER, LINE_LAYER, HIGHLIGHT_LAYER];
+const ALL_ROUTE_LAYERS = [OUTLINE_LAYER, LINE_LAYER, HIGHLIGHT_LAYER];
 
 // Module state
 let map: MapGL | null = null;
 let visible = false;
-let savedRouteData: RouteData | null = null;
+let routeData: RouteData | null = null;
 let currentAlbum = 'all';
 
-export function initPhotoRoute(m: MapGL): void {
+/** Initialise the route subsystem. Called once at map creation. */
+export function initRoute(
+  m: MapGL,
+  getMarkerLayerId: () => string | null
+): void {
+  initRouteEdit(m, getMarkerLayerId);
+  initPhotoRoute(m);
+  document.addEventListener(ResetMapEvent.type, () => {
+    exitRouteEdit();
+  });
+}
+
+/** Add all route sources and layers. Called on map style load. */
+export function addRouteLayers(): void {
+  addPhotoRouteLayers();
+  addRouteEditLayers();
+}
+
+function initPhotoRoute(m: MapGL): void {
   map = m;
 
   document.addEventListener(TogglePhotoRouteEvent.type, (e) => {
@@ -68,7 +87,7 @@ function onPhotosChanged(): void {
   }
   // Album changed — clear old route data and reload for new album
   currentAlbum = album;
-  savedRouteData = null;
+  routeData = null;
   if (album === 'all') {
     updateRoute();
     return;
@@ -90,7 +109,7 @@ async function loadAndApplyRoute(album: string): Promise<void> {
   }
   const albumPhotos = state.photos.filter((p) => p.albums.includes(album));
   const changed = reconcileRouteWithAlbum(data, albumPhotos);
-  savedRouteData = data;
+  routeData = data;
   applyRouteData(data);
   if (
     changed &&
@@ -101,7 +120,7 @@ async function loadAndApplyRoute(album: string): Promise<void> {
   }
 }
 
-export function addPhotoRouteLayers(): void {
+function addPhotoRouteLayers(): void {
   if (map === null) return;
 
   const empty: FeatureCollection = { type: 'FeatureCollection', features: [] };
@@ -154,14 +173,14 @@ export function addPhotoRouteLayers(): void {
   if (visible) updateRoute();
 }
 
-export function setPhotoRouteVisible(show: boolean): void {
+function setPhotoRouteVisible(show: boolean): void {
   visible = show;
   if (map === null) return;
 
   setLayersVisibility(map, ALL_ROUTE_LAYERS, show);
 
   if (!show) {
-    savedRouteData = null;
+    routeData = null;
     return;
   }
 
@@ -174,34 +193,25 @@ export function setPhotoRouteVisible(show: boolean): void {
   void loadAndApplyRoute(album);
 }
 
-export function isPhotoRouteVisible(): boolean {
-  return visible;
-}
-
 /** Hide/show the default route layers during edit mode. */
 export function setRouteEditStyle(editing: boolean): void {
   if (map === null) return;
   setLayersVisibility(map, ALL_ROUTE_LAYERS, !editing && visible);
 }
 
-/** Get the current saved route data (if any). */
-export function getSavedRouteData(): RouteData | null {
-  return savedRouteData;
+/** Get the current route data (if any). */
+export function getRouteData(): RouteData | null {
+  return routeData;
 }
 
-/** Set route data from external source (route-edit) and update display. */
+/** Set route data and refresh the display source. */
 export function setRouteData(data: RouteData | null): void {
-  savedRouteData = data;
+  routeData = data;
   if (data === null) {
     updateRoute();
   } else {
     applyRouteData(data);
   }
-}
-
-/** Update saved route data reference without updating display layers. */
-export function setSavedRouteData(data: RouteData | null): void {
-  savedRouteData = data;
 }
 
 /** Build the default straight-line route from current filtered photos. */
@@ -231,7 +241,7 @@ export function buildDefaultRoute(): RouteData | null {
 }
 
 /** Load saved route from server. */
-export async function loadSavedRoute(album: string): Promise<RouteData | null> {
+async function loadSavedRoute(album: string): Promise<RouteData | null> {
   try {
     const resp = await fetch(`/api/albums/${encodeURIComponent(album)}/route`);
     if (!resp.ok) return null;
@@ -247,13 +257,6 @@ export async function saveRoute(album: string, data: RouteData): Promise<void> {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data)
-  });
-}
-
-/** Delete saved route from server. */
-export async function deleteRoute(album: string): Promise<void> {
-  await fetch(`/api/albums/${encodeURIComponent(album)}/route`, {
-    method: 'DELETE'
   });
 }
 
@@ -300,14 +303,14 @@ function updateRoute(): void {
   if (src === undefined) return;
 
   // Use saved route data if available, syncing photo locations and order
-  if (savedRouteData !== null) {
-    const synced = syncPhotoPoints(savedRouteData);
-    const reordered = reorderRoutePhotoPoints(savedRouteData);
-    applyRouteData(savedRouteData);
+  if (routeData !== null) {
+    const synced = syncPhotoPoints(routeData);
+    const reordered = reorderRoutePhotoPoints(routeData);
+    applyRouteData(routeData);
     // Persist changes only when no pending edits (committed state)
     if ((synced || reordered) && state.pendingTimeEdits.size === 0) {
       const album = state.filters.album;
-      if (album !== 'all') void saveRoute(album, savedRouteData);
+      if (album !== 'all') void saveRoute(album, routeData);
     }
     return;
   }

@@ -5,9 +5,9 @@ Geotagged photo map viewer with Apple Photos integration.
 ## Project Stats (as of 02.05.2026)
 
 - **TypeScript files**: 57
-- **Lines of code**: 12,792
-- **Total commits**: 451
-- **Total tokens**: ~1,266M | **Total cost**: ~$770
+- **Lines of code**: 12,834
+- **Total commits**: 460
+- **Total tokens**: ~1,291M | **Total cost**: ~$789
 
 ## Updating This Diary
 
@@ -33,11 +33,13 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 - State the user-visible change only; skip mechanism and backstory unless that _is_ the change.
 - Describe final outcomes, not reverted intermediate attempts.
 
-## 02.05.2026 — Photo Route Reconciliation
+## 02.05.2026 — Photo Route Reconciliation & Edit Polish
 
-**Tokens**: 12M | **Cost**: $9
+**Tokens**: 37M | **Cost**: $28
 
 - Photo route now reconciles with album state when shown — drops removed photos, inserts newly added ones at chronological positions, and refreshes coordinates and order
+- Route edit: blue route line now reflects edits immediately on exit (was showing pre-edit geometry until the next interaction)
+- Routed segments (driving/hiking) now downgrade to straight consistently on any ORS failure, not just missing key
 
 ## 01.05.2026 — Optional API Keys
 

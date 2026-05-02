@@ -4,16 +4,15 @@ import { state, subscribe } from '@common/data';
 import { RouteEditExitedEvent, ToggleRouteEditEvent } from '@common/events';
 import type { Photo } from '@common/types';
 
-import { setLayersVisibility } from './map-utils';
 import {
   buildDefaultRoute,
-  getSavedRouteData,
+  getRouteData,
   saveRoute,
   setRouteData,
   setRouteEditStyle,
-  setSavedRouteData,
   type RouteData
-} from './photo-route';
+} from '.';
+import { setLayersVisibility } from '../map-utils';
 import {
   ALL_EDIT_LAYERS,
   applySegmentMethod,
@@ -26,24 +25,73 @@ import {
   removeWaypointFromRoute,
   rerouteSegment,
   updateAdjacentSegments
-} from './route-edit-helpers';
-import { syncPhotoPoints } from './route-reconcile';
+} from './helpers';
+import { syncPhotoPoints } from './reconcile';
 
-// Module state
+// ---------- State machine ----------
+
+/**
+ * Pointer interaction state during edit mode. `null` means edit mode is off.
+ *  - idle: cursor is not over any clickable thing
+ *  - hoveringSegment: cursor is over a route segment (highlight is shown)
+ *  - hoveringPoint: cursor is over a route point (segment highlight is cleared)
+ *  - dragging: a point is being dragged
+ */
+type InteractionState =
+  | { kind: 'idle' }
+  | { kind: 'hoveringSegment'; segIdx: number }
+  | { kind: 'hoveringPoint'; pointId: number }
+  | { kind: 'dragging'; pointIdx: number };
+
 let map: MapGL | null = null;
 let getMarkerLayerIdFn: () => string | null = () => null;
-let isEditActive = false;
+let interaction: InteractionState | null = null;
 let routeData: RouteData | null = null;
-let dragIndex: number | null = null;
 let popupEl: HTMLElement | null = null;
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
-let hoveredSegIdx: number | null = null;
-let hoveredPointId: number | null = null;
-let dragFromSegment = false;
+// Set when a segment-hit mousedown both inserted a waypoint and started a
+// drag, so the trailing click event can be ignored. Cleared on the click
+// (via consume) and on enter/exit (so a stale flag from an Escape-during-drag
+// doesn't leak into the next session).
+let suppressNextMapClick = false;
 
-export function isRouteEditMode(): boolean {
-  return isEditActive;
+function isActive(): boolean {
+  return interaction !== null;
 }
+
+/** Apply a state transition with the appropriate side effects. */
+function transition(next: InteractionState | null): void {
+  const prev = interaction;
+  interaction = next;
+
+  // Segment hover highlight: present iff state is hoveringSegment.
+  const prevSeg = prev?.kind === 'hoveringSegment' ? prev.segIdx : null;
+  const nextSeg = next?.kind === 'hoveringSegment' ? next.segIdx : null;
+  if (prevSeg !== nextSeg) {
+    if (nextSeg === null) {
+      clearHoverHighlight();
+    } else {
+      showHoverHighlight(nextSeg);
+    }
+  }
+
+  setCursorClass(cursorFor(next));
+}
+
+function cursorFor(s: InteractionState | null): string | null {
+  if (s === null) return null;
+  switch (s.kind) {
+    case 'dragging':
+      return 'cursor-grabbing';
+    case 'hoveringSegment':
+    case 'hoveringPoint':
+      return 'cursor-pointer';
+    case 'idle':
+      return null;
+  }
+}
+
+// ---------- Public API ----------
 
 export function initRouteEdit(
   m: MapGL,
@@ -52,7 +100,7 @@ export function initRouteEdit(
   map = m;
   getMarkerLayerIdFn = getMarkerLayerId;
   document.addEventListener(ToggleRouteEditEvent.type, () => {
-    if (isEditActive) {
+    if (isActive()) {
       exitEditMode();
     } else {
       enterEditMode();
@@ -61,7 +109,7 @@ export function initRouteEdit(
 
   // Sync photo point positions when pending edits change
   subscribe(() => {
-    if (isEditActive && routeData !== null) {
+    if (isActive() && routeData !== null) {
       syncPhotoPoints(routeData);
       updateEditSources();
     }
@@ -73,15 +121,23 @@ export function addRouteEditLayers(): void {
   createEditLayers(map);
 }
 
+export function exitRouteEdit(): void {
+  exitEditMode();
+}
+
+// ---------- Lifecycle ----------
+
 function enterEditMode(): void {
-  if (isEditActive || map === null) return;
-  isEditActive = true;
+  if (isActive() || map === null) return;
 
   // Build route data from saved route or default, sync photo positions
-  routeData = getSavedRouteData() ?? buildDefaultRoute();
+  const existing = getRouteData();
+  routeData = existing ?? buildDefaultRoute();
   if (routeData === null) return;
+  if (existing === null) setRouteData(routeData);
   syncPhotoPoints(routeData);
 
+  suppressNextMapClick = false;
   map.getCanvas().classList.add('crosshair');
   setRouteEditStyle(true);
   setLayerVisibility(true);
@@ -91,18 +147,23 @@ function enterEditMode(): void {
   map.on('contextmenu', onRightClick);
   map.on('mousedown', EDIT_IDS.points, onPointMouseDown);
   map.on('mousedown', EDIT_IDS.hit, onSegmentMouseDown);
-  map.on('mouseenter', EDIT_IDS.hit, onSegmentEnter);
   map.on('mouseleave', EDIT_IDS.hit, onSegmentLeave);
   map.on('mousemove', EDIT_IDS.hit, onSegmentMove);
   map.on('mouseenter', EDIT_IDS.points, onPointEnter);
   map.on('mouseleave', EDIT_IDS.points, onPointLeave);
   document.addEventListener('keydown', onKeyDown);
+
+  transition({ kind: 'idle' });
 }
 
 function exitEditMode(): void {
-  if (!isEditActive || map === null) return;
-  isEditActive = false;
+  if (!isActive() || map === null) return;
 
+  // If a drag was in progress, tear down its mousemove/mouseup handlers.
+  if (interaction?.kind === 'dragging') teardownDragListeners();
+
+  transition(null);
+  suppressNextMapClick = false;
   map.getCanvas().classList.remove('crosshair');
   removePopup();
   // Restore blue display layers with current edit data
@@ -114,25 +175,13 @@ function exitEditMode(): void {
   map.off('contextmenu', onRightClick);
   map.off('mousedown', EDIT_IDS.points, onPointMouseDown);
   map.off('mousedown', EDIT_IDS.hit, onSegmentMouseDown);
-  map.off('mouseenter', EDIT_IDS.hit, onSegmentEnter);
   map.off('mouseleave', EDIT_IDS.hit, onSegmentLeave);
   map.off('mousemove', EDIT_IDS.hit, onSegmentMove);
   map.off('mouseenter', EDIT_IDS.points, onPointEnter);
   map.off('mouseleave', EDIT_IDS.points, onPointLeave);
-  clearHoverHighlight();
-  hoveredPointId = null;
   document.removeEventListener('keydown', onKeyDown);
 
-  // Clean up any drag handlers
-  if (dragIndex !== null) {
-    endDrag();
-  }
-
   document.dispatchEvent(new RouteEditExitedEvent());
-}
-
-export function exitRouteEdit(): void {
-  exitEditMode();
 }
 
 function setLayerVisibility(show: boolean): void {
@@ -140,10 +189,11 @@ function setLayerVisibility(show: boolean): void {
   setLayersVisibility(map, ALL_EDIT_LAYERS, show);
 }
 
+// ---------- Source updates ----------
+
 function updateEditSources(): void {
   if (map === null || routeData === null) return;
 
-  // Update points source
   const pointsSrc = map.getSource<GeoJSONSource>(EDIT_IDS.pointsSrc);
   if (pointsSrc !== undefined) {
     const photoMap = new Map<string, Photo>();
@@ -165,7 +215,6 @@ function updateEditSources(): void {
     });
   }
 
-  // Update hit source — line segments for click targeting
   const hitSrc = map.getSource<GeoJSONSource>(EDIT_IDS.hitSrc);
   if (hitSrc !== undefined) {
     hitSrc.setData({
@@ -178,11 +227,7 @@ function updateEditSources(): void {
     });
   }
 
-  // Update edit-mode line source (concatenated route geometry)
   updateLineSrc();
-
-  // Keep route data in sync (for save/load) but don't update display layers
-  setSavedRouteData(routeData);
 
   // Ensure points layers stay on top (outline first, then fill)
   if (map.getLayer(EDIT_IDS.pointsOutline) !== undefined) {
@@ -212,7 +257,7 @@ function scheduleAutoSave(): void {
   }, 1000);
 }
 
-// --- Click handler ---
+// ---------- Click / right-click ----------
 
 /** Find the first non-'none' segment index from hit query results. */
 function firstClickableHit(
@@ -225,12 +270,6 @@ function firstClickableHit(
   return null;
 }
 
-function consumeDragFromSegment(): boolean {
-  if (!dragFromSegment) return false;
-  dragFromSegment = false;
-  return true;
-}
-
 function isClickOnPhotoMarker(point: MapMouseEvent['point']): boolean {
   if (map === null) return false;
   const layerId = getMarkerLayerIdFn();
@@ -239,7 +278,11 @@ function isClickOnPhotoMarker(point: MapMouseEvent['point']): boolean {
 }
 
 function onMapClick(e: MapMouseEvent): void {
-  if (map === null || routeData === null || consumeDragFromSegment()) return;
+  if (map === null || routeData === null) return;
+  if (suppressNextMapClick) {
+    suppressNextMapClick = false;
+    return;
+  }
 
   // 1. Check if clicking on a route edit point
   const pointFeatures = map.queryRenderedFeatures(e.point, {
@@ -251,7 +294,7 @@ function onMapClick(e: MapMouseEvent): void {
     return;
   }
 
-  // 2. Check if clicking on photo markers — pass through
+  // 2. Click-through to photo markers
   if (isClickOnPhotoMarker(e.point)) return;
 
   // 3. Add new waypoint — on segment if hit, otherwise nearest segment
@@ -270,7 +313,6 @@ function onMapClick(e: MapMouseEvent): void {
 function onRightClick(e: MapMouseEvent): void {
   if (map === null || routeData === null) return;
   e.preventDefault();
-
   const hitFeatures = map.queryRenderedFeatures(e.point, {
     layers: [EDIT_IDS.hit]
   });
@@ -323,7 +365,7 @@ function removeWaypoint(pointIdx: number): void {
   scheduleAutoSave();
 }
 
-// --- Segment routing popup ---
+// ---------- Segment routing popup ----------
 
 function showSegmentPopup(segIdx: number, lon: number, lat: number): void {
   if (map === null) return;
@@ -371,18 +413,16 @@ function showRouteError(msg: string): void {
   }, 3000);
 }
 
-// --- Drag handler ---
+// ---------- Drag ----------
 
 function onPointMouseDown(e: MapMouseEvent): void {
   if (map === null || routeData === null || e.originalEvent.button !== 0) {
     return;
   }
-
   const features = map.queryRenderedFeatures(e.point, {
     layers: [EDIT_IDS.points]
   });
   if (features.length === 0) return;
-
   const idx = features[0]!.properties.index as number;
   startDrag(idx, e);
 }
@@ -391,8 +431,7 @@ function onSegmentMouseDown(e: MapMouseEvent): void {
   if (map === null || routeData === null || e.originalEvent.button !== 0) {
     return;
   }
-
-  // Don't start segment drag if already on a point
+  // Don't start segment drag if also on a point
   const pointFeatures = map.queryRenderedFeatures(e.point, {
     layers: [EDIT_IDS.points]
   });
@@ -406,37 +445,43 @@ function onSegmentMouseDown(e: MapMouseEvent): void {
   insertWaypointInRoute(routeData, segIdx, e.lngLat.lng, e.lngLat.lat);
   updateEditSources();
 
-  // The new waypoint is at segIdx + 1 in the points array
-  dragFromSegment = true;
+  // The new waypoint is at segIdx + 1; suppress the trailing click.
+  suppressNextMapClick = true;
   startDrag(segIdx + 1, e);
 }
 
 function startDrag(idx: number, e: MapMouseEvent): void {
   if (map === null) return;
-  dragIndex = idx;
   e.preventDefault();
   map.dragPan.disable();
-  setCursorClass('cursor-grabbing');
   map.on('mousemove', onDragMove);
   map.on('mouseup', onDragEnd);
+  transition({ kind: 'dragging', pointIdx: idx });
 }
 
 function onDragMove(e: MapMouseEvent): void {
-  if (routeData === null || dragIndex === null) return;
-  updateAdjacentSegments(routeData, dragIndex, e.lngLat.lng, e.lngLat.lat);
+  if (routeData === null || interaction?.kind !== 'dragging') return;
+  updateAdjacentSegments(
+    routeData,
+    interaction.pointIdx,
+    e.lngLat.lng,
+    e.lngLat.lat
+  );
   updateEditSources();
 }
 
 function onDragEnd(): void {
-  if (routeData === null || dragIndex === null) return;
+  if (routeData === null || interaction?.kind !== 'dragging') return;
+  const idx = interaction.pointIdx;
+  teardownDragListeners();
+  transition({ kind: 'idle' });
+  rerouteAfterDrag(idx);
+}
 
-  const idx = dragIndex;
-  endDrag();
-
-  // Re-route affected segments if they aren't straight
-  const segBefore = idx - 1;
-  const segAfter = idx;
-
+function rerouteAfterDrag(pointIdx: number): void {
+  if (routeData === null) return;
+  const segBefore = pointIdx - 1;
+  const segAfter = pointIdx;
   const promises: Array<Promise<void>> = [];
   if (segBefore >= 0 && routeData.segments[segBefore]?.method !== 'straight') {
     promises.push(rerouteSegment(routeData, segBefore));
@@ -447,7 +492,6 @@ function onDragEnd(): void {
   ) {
     promises.push(rerouteSegment(routeData, segAfter));
   }
-
   if (promises.length > 0) {
     void Promise.all(promises).then(() => {
       updateEditSources();
@@ -458,16 +502,14 @@ function onDragEnd(): void {
   }
 }
 
-function endDrag(): void {
-  dragIndex = null;
+function teardownDragListeners(): void {
   if (map === null) return;
   map.dragPan.enable();
-  setCursorClass(null);
   map.off('mousemove', onDragMove);
   map.off('mouseup', onDragEnd);
 }
 
-// --- Cursor helpers ---
+// ---------- Cursor & hover ----------
 
 const CURSOR_CLASSES = ['cursor-pointer', 'cursor-grab', 'cursor-grabbing'];
 
@@ -478,42 +520,14 @@ function setCursorClass(cls: string | null): void {
   if (cls !== null) canvas.classList.add(cls);
 }
 
-// --- Hover handlers ---
-
-function onSegmentEnter(): void {
-  if (dragIndex === null) setCursorClass('cursor-pointer');
-}
-
-function onSegmentLeave(): void {
-  if (dragIndex === null) setCursorClass(null);
-  clearHoverHighlight();
-}
-
 function setHoverSource(geojson: object): void {
   if (map === null) return;
   const src = map.getSource<GeoJSONSource>(EDIT_IDS.hoverSrc);
   src?.setData(geojson as GeoJSON.GeoJSON);
 }
 
-function onSegmentMove(e: MapMouseEvent): void {
-  if (
-    map === null ||
-    routeData === null ||
-    dragIndex !== null ||
-    hoveredPointId !== null
-  ) {
-    return;
-  }
-  const features = map.queryRenderedFeatures(e.point, {
-    layers: [EDIT_IDS.hit]
-  });
-  const segIdx = firstClickableHit(features);
-  if (segIdx === null) {
-    clearHoverHighlight();
-    return;
-  }
-  if (segIdx === hoveredSegIdx) return;
-  hoveredSegIdx = segIdx;
+function showHoverHighlight(segIdx: number): void {
+  if (routeData === null) return;
   const seg = routeData.segments[segIdx];
   if (seg === undefined) return;
   setHoverSource({
@@ -524,27 +538,58 @@ function onSegmentMove(e: MapMouseEvent): void {
 }
 
 function clearHoverHighlight(): void {
-  if (hoveredSegIdx === null) return;
-  hoveredSegIdx = null;
   setHoverSource({ type: 'FeatureCollection', features: [] });
 }
 
+// ---------- Hover handlers ----------
+
+function onSegmentLeave(): void {
+  if (interaction?.kind === 'hoveringSegment') {
+    transition({ kind: 'idle' });
+  }
+}
+
+function onSegmentMove(e: MapMouseEvent): void {
+  if (
+    map === null ||
+    routeData === null ||
+    interaction === null ||
+    interaction.kind === 'dragging' ||
+    interaction.kind === 'hoveringPoint'
+  ) {
+    return;
+  }
+  const features = map.queryRenderedFeatures(e.point, {
+    layers: [EDIT_IDS.hit]
+  });
+  const segIdx = firstClickableHit(features);
+  if (segIdx === null) {
+    if (interaction.kind === 'hoveringSegment') {
+      transition({ kind: 'idle' });
+    }
+    return;
+  }
+  if (interaction.kind === 'hoveringSegment' && interaction.segIdx === segIdx) {
+    return;
+  }
+  transition({ kind: 'hoveringSegment', segIdx });
+}
+
 function onPointEnter(e: MapMouseEvent): void {
-  if (dragIndex === null) setCursorClass('cursor-pointer');
-  clearHoverHighlight();
-  if (map === null) return;
+  if (map === null || interaction === null || interaction.kind === 'dragging') {
+    return;
+  }
   const features = map.queryRenderedFeatures(e.point, {
     layers: [EDIT_IDS.points]
   });
   const id = features[0]?.id as number | undefined;
   if (id === undefined) return;
-  hoveredPointId = id;
+  transition({ kind: 'hoveringPoint', pointId: id });
 }
 
 function onPointLeave(): void {
-  hoveredPointId = null;
-  if (dragIndex === null) {
-    setCursorClass(hoveredSegIdx === null ? null : 'cursor-pointer');
+  if (interaction?.kind === 'hoveringPoint') {
+    transition({ kind: 'idle' });
   }
 }
 

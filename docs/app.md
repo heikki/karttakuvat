@@ -254,7 +254,7 @@ Activated via the "Edit" button (appears when route is visible). Enters an inter
 - **Hiking**: ORS foot-hiking profile (hidden when `PUBLIC_ORS_API_KEY` is not set)
 - **None**: Hides the segment (no line drawn)
 
-Routed segments (driving/hiking) are automatically re-routed via ORS when waypoints are added or dragged. If the ORS key is missing, saved driving/hiking segments downgrade to straight on the next edit. Waypoints cannot be inserted on "none" segments.
+Routed segments (driving/hiking) are automatically re-routed via ORS when waypoints are added or dragged. On routing failure (no ORS key, request error, etc.), the segment's method downgrades to straight. Waypoints cannot be inserted on "none" segments.
 
 **Point types** (visual distinction in edit mode):
 

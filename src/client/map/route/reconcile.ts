@@ -3,7 +3,7 @@ import { getEffectiveDate, getEffectiveLocation } from '@common/photo-utils';
 import type { Photo } from '@common/types';
 import { toUtcSortKey } from '@common/utils';
 
-import type { RouteData, RoutePoint, RouteSegment } from './photo-route';
+import type { RouteData, RoutePoint, RouteSegment } from '.';
 
 function makeStraightSegment(from: RoutePoint, to: RoutePoint): RouteSegment {
   return {

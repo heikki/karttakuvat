@@ -3,7 +3,7 @@ import type { Map as MapGL } from 'maplibre-gl';
 
 import { HAS_ROUTING } from '@common/features';
 
-import type { RouteData, RoutePoint, RouteSegment } from './photo-route';
+import type { RouteData, RoutePoint, RouteSegment } from '.';
 
 /** Layer/source IDs for route edit mode. */
 export const EDIT_IDS = {
@@ -315,29 +315,38 @@ export function createSegmentPopup(opts: SegmentPopupOpts): HTMLElement {
   return el;
 }
 
+type RouteFetchResult =
+  | { ok: true; coords: Array<[number, number]> }
+  | { ok: false; reason: 'no-key' | 'request-failed' };
+
 /** Fetch routed geometry from the server for a segment. */
 export async function fetchRouteGeometry(
   start: [number, number],
   end: [number, number],
   profile: string
-): Promise<Array<[number, number]> | null> {
+): Promise<RouteFetchResult> {
+  if (!HAS_ROUTING) return { ok: false, reason: 'no-key' };
   try {
     const resp = await fetch('/api/route', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ coordinates: [start, end], profile })
     });
-    if (!resp.ok) return null;
+    if (!resp.ok) return { ok: false, reason: 'request-failed' };
     const data = (await resp.json()) as {
       geometry: { coordinates: Array<[number, number]> };
     };
-    return data.geometry.coordinates;
+    return { ok: true, coords: data.geometry.coordinates };
   } catch {
-    return null;
+    return { ok: false, reason: 'request-failed' };
   }
 }
 
-/** Re-route a single segment in-place using the routing API. */
+/**
+ * Re-route a single segment in-place using the routing API.
+ * On failure (no key or transient request error) downgrades the
+ * segment's method to 'straight' so method and geometry stay consistent.
+ */
 export async function rerouteSegment(
   routeData: RouteData,
   segIdx: number
@@ -349,21 +358,20 @@ export async function rerouteSegment(
 
   const startPt = routeData.points[segIdx]!;
   const endPt = routeData.points[segIdx + 1]!;
-  const coords = HAS_ROUTING
-    ? await fetchRouteGeometry(
-        [startPt.lon, startPt.lat],
-        [endPt.lon, endPt.lat],
-        seg.method
-      )
-    : null;
-  if (coords === null && !HAS_ROUTING) {
-    // Routing unavailable: downgrade the saved method so it stays consistent.
-    seg.method = 'straight';
-  }
-  seg.geometry = coords ?? [
+  const result = await fetchRouteGeometry(
     [startPt.lon, startPt.lat],
-    [endPt.lon, endPt.lat]
-  ];
+    [endPt.lon, endPt.lat],
+    seg.method
+  );
+  if (result.ok) {
+    seg.geometry = result.coords;
+  } else {
+    seg.method = 'straight';
+    seg.geometry = [
+      [startPt.lon, startPt.lat],
+      [endPt.lon, endPt.lat]
+    ];
+  }
 }
 
 /** Insert a waypoint into routeData at the given segment, splitting it. */
@@ -421,18 +429,18 @@ export async function applySegmentMethod(
 
   const startPt = data.points[segIdx]!;
   const endPt = data.points[segIdx + 1]!;
-  const coords = await fetchRouteGeometry(
+  const result = await fetchRouteGeometry(
     [startPt.lon, startPt.lat],
     [endPt.lon, endPt.lat],
     method
   );
-  if (coords === null) {
-    // Revert on failure
+  if (!result.ok) {
+    // Revert on failure (user-triggered change should stay at prev method)
     seg.method = prevMethod;
     seg.geometry = prevGeometry;
     return false;
   }
-  seg.geometry = coords;
+  seg.geometry = result.coords;
   return true;
 }
 
