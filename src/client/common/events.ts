@@ -11,14 +11,32 @@ export class ShowLightboxEvent extends Event {
   }
 }
 
-export class EnterPlacementEvent extends Event {
-  static readonly type = 'enter-placement';
-  readonly photo: Photo;
-  readonly index: number;
-  constructor(photo: Photo, index: number) {
-    super(EnterPlacementEvent.type, opts);
+export class PlacementModeEvent extends Event {
+  static readonly type = 'placement-mode';
+  readonly active: boolean;
+  readonly photo?: Photo;
+  readonly index?: number;
+  constructor(active: boolean, photo?: Photo, index?: number) {
+    super(PlacementModeEvent.type, opts);
+    this.active = active;
     this.photo = photo;
     this.index = index;
+  }
+}
+
+export class MarkerClickedEvent extends Event {
+  static readonly type = 'marker-clicked';
+  readonly index: number;
+  constructor(index: number) {
+    super(MarkerClickedEvent.type);
+    this.index = index;
+  }
+}
+
+export class MarkersInstalledEvent extends Event {
+  static readonly type = 'markers-installed';
+  constructor() {
+    super(MarkersInstalledEvent.type);
   }
 }
 
@@ -138,12 +156,12 @@ export class ShowAlbumFilesEvent extends Event {
 declare global {
   interface HTMLElementEventMap {
     [ShowLightboxEvent.type]: ShowLightboxEvent;
-    [EnterPlacementEvent.type]: EnterPlacementEvent;
+    [PlacementModeEvent.type]: PlacementModeEvent;
     [ShowMetadataEvent.type]: ShowMetadataEvent;
   }
   interface DocumentEventMap {
     [ShowLightboxEvent.type]: ShowLightboxEvent;
-    [EnterPlacementEvent.type]: EnterPlacementEvent;
+    [PlacementModeEvent.type]: PlacementModeEvent;
     [ShowMetadataEvent.type]: ShowMetadataEvent;
     [ChangeMapStyleEvent.type]: ChangeMapStyleEvent;
     [ChangeMarkerStyleEvent.type]: ChangeMarkerStyleEvent;
@@ -157,5 +175,7 @@ declare global {
     [MeasureModeExitedEvent.type]: MeasureModeExitedEvent;
     [RouteEditModeEvent.type]: RouteEditModeEvent;
     [ShowAlbumFilesEvent.type]: ShowAlbumFilesEvent;
+    [MarkerClickedEvent.type]: MarkerClickedEvent;
+    [MarkersInstalledEvent.type]: MarkersInstalledEvent;
   }
 }

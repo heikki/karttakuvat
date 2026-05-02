@@ -10,7 +10,7 @@ import type {
 import { getEffectiveCoords } from '@common/data';
 import type { MarkerLayer, Photo } from '@common/types';
 
-import { anchorId } from '../z-anchors';
+import { anchorId } from '../../z-anchors';
 import { BloomLayer } from './bloom';
 
 const hitAreaPaint: CircleLayerSpecification['paint'] = {

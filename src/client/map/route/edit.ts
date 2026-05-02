@@ -17,6 +17,7 @@ import {
   type RouteData
 } from '.';
 import { setLayersVisibility } from '../map-utils';
+import { isClickOnMarker } from '../markers';
 import {
   ALL_EDIT_LAYERS,
   applySegmentMethod,
@@ -48,7 +49,6 @@ type InteractionState =
   | { kind: 'dragging'; pointIdx: number };
 
 let map: MapGL | null = null;
-let getMarkerLayerIdFn: () => string | null = () => null;
 let interaction: InteractionState | null = null;
 let routeData: RouteData | null = null;
 let popupEl: HTMLElement | null = null;
@@ -97,12 +97,8 @@ function cursorFor(s: InteractionState | null): string | null {
 
 // ---------- Public API ----------
 
-export function initRouteEdit(
-  m: MapGL,
-  getMarkerLayerId: () => string | null
-): void {
+export function initRouteEdit(m: MapGL): void {
   map = m;
-  getMarkerLayerIdFn = getMarkerLayerId;
   document.addEventListener(ToggleRouteEditEvent.type, () => {
     if (isActive()) {
       exitEditMode();
@@ -278,10 +274,7 @@ function firstClickableHit(
 }
 
 function isClickOnPhotoMarker(point: MapMouseEvent['point']): boolean {
-  if (map === null) return false;
-  const layerId = getMarkerLayerIdFn();
-  if (layerId === null || map.getLayer(layerId) === undefined) return false;
-  return map.queryRenderedFeatures(point, { layers: [layerId] }).length > 0;
+  return isClickOnMarker(point);
 }
 
 function onMapClick(e: MapMouseEvent): void {

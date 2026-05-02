@@ -53,11 +53,8 @@ let routeData: RouteData | null = null;
 let currentAlbum = 'all';
 
 /** Initialise the route subsystem. Called once at map creation. */
-export function initRoute(
-  m: MapGL,
-  getMarkerLayerId: () => string | null
-): void {
-  initRouteEdit(m, getMarkerLayerId);
+export function initRoute(m: MapGL): void {
+  initRouteEdit(m);
   initPhotoRoute(m);
   m.on('load', () => {
     addPhotoRouteLayers();

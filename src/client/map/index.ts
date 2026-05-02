@@ -4,19 +4,18 @@ import {
   NavigationControl,
   ScaleControl
 } from 'maplibre-gl';
-import type { MapLayerMouseEvent, StyleSpecification } from 'maplibre-gl';
+import type { StyleSpecification } from 'maplibre-gl';
 
-import { state, subscribe } from '@common/data';
+import { state } from '@common/data';
 import {
   ChangeMapStyleEvent,
-  ChangeMarkerStyleEvent,
-  EnterPlacementEvent,
   OpenExternalMapEvent,
+  PlacementModeEvent,
   ResetMapEvent
 } from '@common/events';
 import { mapViewFromUrl, mapViewToUrl } from '@common/filter-url';
 import { getEffectiveLocation } from '@common/photo-utils';
-import type { MapStyles, MarkerLayer, Photo } from '@common/types';
+import type { MapStyles } from '@common/types';
 
 import {
   initGlobeBackground,
@@ -25,10 +24,16 @@ import {
   startGlobeBackground,
   stopGlobeBackground
 } from './background';
-import { ClassicLayer } from './classic-layer';
 import { mapStyles } from './config';
 import { fitToPhotos, initFit } from './fit';
 import { initGpx } from './gpx';
+import {
+  getMarkerRadius,
+  highlightPhoto,
+  initMarkers,
+  isClickOnMarker,
+  setMarkerVisibility
+} from './markers';
 import { initMeasure } from './measure';
 import { createFlyToPopup, createPanToFitPopup } from './pan';
 import {
@@ -36,7 +41,6 @@ import {
   isInPlacementMode,
   setupPlacement
 } from './placement';
-import { PointsLayer } from './points-layer';
 import { getPhotoUuid, getPopup, initPopupCallbacks, showPopup } from './popup';
 import { initRoute } from './route';
 import { initZAnchors } from './z-anchors';
@@ -67,23 +71,6 @@ function showMapError(msg: string, onClick?: () => void) {
     });
     if (onClick !== undefined) onClick();
   };
-}
-
-const markerStyles: Record<string, () => MarkerLayer> = {
-  points: () => new PointsLayer(),
-  classic: () => new ClassicLayer()
-};
-
-let currentMarkerStyle = 'classic';
-let currentLayer: MarkerLayer | null = null;
-let interactionCleanup: (() => void) | null = null;
-
-function getMarkerLayerId(): string | null {
-  return currentLayer?.id ?? null;
-}
-
-function setMarkerVisibility(visible: boolean) {
-  currentLayer?.toggle(visible);
 }
 
 function resetMap() {
@@ -173,23 +160,18 @@ export function initMap() {
 
   const panToFitPopup = createPanToFitPopup(map);
   const flyToPopup = createFlyToPopup(map);
-  const highlight = (photo: Photo | null) => {
-    currentLayer?.highlight(photo);
-  };
-  const getMarkerRadius = (zoom: number) =>
-    currentLayer?.markerRadius(zoom) ?? 0;
   initZAnchors(map);
   initPopupCallbacks(map, {
-    highlight,
+    highlight: highlightPhoto,
     panToFitPopup,
     flyToPopup,
     getMarkerRadius
   });
-  initMeasure(map, getMarkerLayerId);
-  initRoute(map, getMarkerLayerId);
+  initMeasure(map);
+  initRoute(map);
   initFit(map, savedView !== null);
   initGpx(map);
-  initPhotoLayers(map);
+  initMarkers(map);
 
   // Init globe background shader
   initGlobeBackground(map.getContainer());
@@ -241,11 +223,7 @@ export function initMap() {
   // setupMarkerInteractions (which re-binds on marker style swap).
   map.on('click', (e) => {
     if (isInPlacementMode()) return;
-    const id = getMarkerLayerId();
-    if (id !== null) {
-      const features = map.queryRenderedFeatures(e.point, { layers: [id] });
-      if (features.length > 0) return;
-    }
+    if (isClickOnMarker(e.point)) return;
     getPopup()?.remove();
   });
 
@@ -264,33 +242,13 @@ export function initMap() {
     showPopup(index);
   });
 
-  subscribe(() => {
-    if (currentLayer === null) return;
-    const uuid = getPhotoUuid();
-    currentLayer.setMarkers(state.filteredPhotos);
-    const popup = getPopup();
-    if (popup !== null) {
-      if (uuid !== null) {
-        const newIndex = state.filteredPhotos.findIndex((p) => p.uuid === uuid);
-        if (newIndex !== -1) {
-          showPopup(newIndex);
-          return;
-        }
-      }
-      popup.remove();
-    }
-  });
-
   setupPlacement(map, setMarkerVisibility);
 
-  document.addEventListener(EnterPlacementEvent.type, (e) => {
-    enterPlacement(map, e.index);
+  document.addEventListener(PlacementModeEvent.type, (e) => {
+    if (e.active && e.index !== undefined) enterPlacement(map, e.index);
   });
   document.addEventListener(ChangeMapStyleEvent.type, (e) => {
     changeMapStyle(e.style);
-  });
-  document.addEventListener(ChangeMarkerStyleEvent.type, (e) => {
-    changeMarkerStyle(e.style);
   });
   document.addEventListener(ResetMapEvent.type, () => {
     resetMap();
@@ -298,14 +256,6 @@ export function initMap() {
   document.addEventListener(OpenExternalMapEvent.type, (e) => {
     openExternalMap(e.provider);
   });
-}
-
-function reopenPopup() {
-  const uuid = getPhotoUuid();
-  if (uuid === null) return;
-  const index = state.filteredPhotos.findIndex((p) => p.uuid === uuid);
-  if (index === -1) return;
-  showPopup(index);
 }
 
 // Carry app-owned sources and layers across a basemap swap. App-owned =
@@ -351,78 +301,4 @@ function changeMapStyle(styleKey: string) {
   map.stop();
 
   map.setStyle(applyGlobeProjection(next), { transformStyle });
-}
-
-function changeMarkerStyle(styleKey: string) {
-  if (!(styleKey in markerStyles)) return;
-  currentMarkerStyle = styleKey;
-  if (currentLayer === null) return;
-  addPhotoLayers();
-  setupMarkerInteractions();
-  if (isInPlacementMode()) {
-    currentLayer.toggle(false);
-  } else {
-    reopenPopup();
-  }
-}
-
-function addPhotoLayers() {
-  currentLayer?.uninstall();
-  currentLayer = markerStyles[currentMarkerStyle]!();
-  currentLayer.install(map, state.filteredPhotos);
-}
-
-function initPhotoLayers(m: MapGL) {
-  m.on('load', () => {
-    addPhotoLayers();
-    setupMarkerInteractions();
-  });
-}
-
-function setupMarkerInteractions() {
-  // Remove previous handlers before adding new ones
-  if (interactionCleanup !== null) {
-    interactionCleanup();
-  }
-
-  const layerId = currentLayer?.id;
-  if (layerId === undefined) return;
-
-  const onLayerClick = (e: MapLayerMouseEvent) => {
-    // In placement mode, let the map-level click handler handle it
-    if (isInPlacementMode()) return;
-
-    e.preventDefault();
-    e.originalEvent.stopPropagation();
-
-    if (e.features === undefined || e.features.length === 0) {
-      return;
-    }
-    const feature = e.features[0]!;
-    const clickedIndex = feature.properties.index as number | undefined;
-
-    if (clickedIndex === undefined) return;
-    showPopup(clickedIndex);
-  };
-
-  const onMouseEnter = () => {
-    if (!isInPlacementMode()) {
-      map.getCanvas().style.cursor = 'pointer';
-    }
-  };
-  const onMouseLeave = () => {
-    if (!isInPlacementMode()) {
-      map.getCanvas().style.cursor = '';
-    }
-  };
-
-  map.on('click', layerId, onLayerClick);
-  map.on('mouseenter', layerId, onMouseEnter);
-  map.on('mouseleave', layerId, onMouseLeave);
-
-  interactionCleanup = () => {
-    map.off('click', layerId, onLayerClick);
-    map.off('mouseenter', layerId, onMouseEnter);
-    map.off('mouseleave', layerId, onMouseLeave);
-  };
 }

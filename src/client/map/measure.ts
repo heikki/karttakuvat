@@ -7,11 +7,11 @@ import {
 } from '@common/events';
 
 import { computePathDistance, setLayersVisibility } from './map-utils';
+import { isClickOnMarker } from './markers';
 import { anchorId } from './z-anchors';
 
 // eslint-disable-next-line @typescript-eslint/init-declarations -- initialized in initMeasure() before any usage
 let map: MapGL;
-let getMarkerLayerIdFn: () => string | null = () => null;
 let isMeasureActive = false;
 const coords: Array<[number, number]> = [];
 
@@ -26,9 +26,8 @@ export function isMeasureMode(): boolean {
   return isMeasureActive;
 }
 
-export function initMeasure(m: MapGL, getMarkerLayerId: () => string | null) {
+export function initMeasure(m: MapGL) {
   map = m;
-  getMarkerLayerIdFn = getMarkerLayerId;
   m.on('load', addMeasureLayers);
   document.addEventListener(ToggleMeasureModeEvent.type, () => {
     toggleMeasureMode();
@@ -169,13 +168,7 @@ function onMapClick(e: MapMouseEvent) {
   }
 
   // Ignore clicks on photo markers
-  const markerLayerId = getMarkerLayerIdFn();
-  if (markerLayerId !== null && map.getLayer(markerLayerId) !== undefined) {
-    const photoFeatures = map.queryRenderedFeatures(e.point, {
-      layers: [markerLayerId]
-    });
-    if (photoFeatures.length > 0) return;
-  }
+  if (isClickOnMarker(e.point)) return;
 
   coords.push([e.lngLat.lng, e.lngLat.lat]);
   updateSources();

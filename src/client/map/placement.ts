@@ -1,6 +1,7 @@
 import type { Map as MapGL } from 'maplibre-gl';
 
 import { addPendingEdit, state } from '@common/data';
+import { PlacementModeEvent } from '@common/events';
 import type { PlacementPanel } from '@components/placement-panel';
 
 import { getPopup, showPopup } from './popup';
@@ -37,6 +38,7 @@ function exitPlacementMode(map: MapGL) {
   map.getCanvas().classList.remove('crosshair');
   hidePlacementPanel();
   markerVisibilityFn(true);
+  document.dispatchEvent(new PlacementModeEvent(false));
 }
 
 function finishPlacement(

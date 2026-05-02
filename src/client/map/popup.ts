@@ -10,9 +10,12 @@ import {
   getCopiedLocation,
   getEffectiveCoords,
   setPendingTimeEdit,
-  state
+  state,
+  subscribe
 } from '@common/data';
 import {
+  MarkerClickedEvent,
+  MarkersInstalledEvent,
   ResetMapEvent,
   SaveEditsEvent,
   ShowLightboxEvent
@@ -164,6 +167,21 @@ export function initPopupCallbacks(m: MapGL, callbacks: PopupCallbacks) {
   document.addEventListener(ResetMapEvent.type, () => {
     popup?.remove();
   });
+  document.addEventListener(MarkerClickedEvent.type, (e) => {
+    showPopup(e.index);
+  });
+  document.addEventListener(MarkersInstalledEvent.type, reanchorByUuid);
+  subscribe(reanchorByUuid);
+}
+
+function reanchorByUuid() {
+  if (popup === null || photoUuid === null) return;
+  const newIndex = state.filteredPhotos.findIndex((p) => p.uuid === photoUuid);
+  if (newIndex === -1) {
+    popup.remove();
+    return;
+  }
+  showPopup(newIndex);
 }
 
 function updatePopupGlobeMask() {
