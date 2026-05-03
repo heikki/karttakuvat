@@ -15,7 +15,7 @@ UI is built with Lit web components (`LitElement`):
 
 ### Map modules
 
-The map is composed of small sibling modules under `src/client/map/` — `selection`, `markers/`, `route/`, `gpx`, `measure`, `placement`, `popup/`, `fit`, `z-anchors`. Each `default-exports` a small object whose public methods drop the redundant module-name affix (e.g. `selection.init`, `popup.get`, `route.save`); consumers always import via `import name from './module'`. Each module's `init(map)` wires its own state (via `map.on('load', ...)` for layer setup, plus signal effects).
+The map is composed of small sibling modules under `src/client/map/` — `selection`, `markers/`, `route/`, `gpx`, `measure`, `placement`, `popup/`, `fit`, `z-anchors`. Each `default-exports` a small object whose public methods drop the redundant module-name affix (e.g. `selection.init`, `popup.get`, `route.save`); consumers always import via `import name from './module'`. Each module's `init(map)` wires its own state — adds sources/layers, registers signal effects, binds map handlers. All inits run from a single `map.once('load')` in `index.ts` so every `addSource`/`addLayer` call lands on a ready map.
 
 ### State and commands
 
@@ -43,10 +43,10 @@ State is held in `@lit-labs/signals`, organised into a few stores. Lit component
 
 View-state signals (`mapStyle`, `markerStyle`, `routeVisible`, `selectedPhotoUuid`) seed from the URL synchronously at module load, before any rendering, so subsequent reads always see the intended starting state.
 
-1. `map.init()` — creates the MapLibre map with globe projection (using the URL-restored `viewState.mapStyle`), then calls `selection.init`, `zAnchors.init`, `popup.init`, `measure.init`, `route.init`, `fit.init`, `gpx.init`, `markers.init`, `placement.init` and starts the globe background shader. Each module registers its own `map.on('load')` handler for layer setup plus any `effect()`s on the signals it cares about.
+1. `map.init()` — creates the MapLibre map with globe projection (using the URL-restored `viewState.mapStyle`), starts the globe background shader, and registers a single `map.once('load')` handler that runs every module init in sequence.
 2. `loadPhotos()` — fetches items from `/api/items`, sorts by date, and writes them into `data.photos`. The `filteredPhotos` computed re-derives, fanning out to every effect that reads it.
 3. `<filter-panel>` detects loaded photos via `updated()`, restores filter component state from URL, and writes the normalized values into `data.filters`. The signal change cascades through any consumer that reads filters.
-4. On map load: each module's load handler adds its own sources/layers using its z-anchor as `beforeId`. The popup remounts via the selection effect; fit zooms to filtered photos unless a map view was restored from URL.
+4. On map load: module inits fire in order — `selection`, `zAnchors`, `markers`, `popup`, `measure`, `route`, `fit`, `gpx`, `placement`. zAnchors must come first (its anchor layers are referenced as `beforeId` by every other module's `addLayer`); markers comes before popup so the popup's mount sees the marker layer via `markers.getRadius()`. Each module adds its own sources/layers and wires its `effect()`s. Fit zooms to filtered photos unless a map view was restored from URL.
 
 ## Filters
 
