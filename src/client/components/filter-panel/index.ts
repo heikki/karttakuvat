@@ -1,7 +1,7 @@
 import { css, html, LitElement, nothing } from 'lit';
 import { customElement, state as litState } from 'lit/decorators.js';
 
-import { applyFilters } from '@common/data';
+import { applyFilters, state, subscribe } from '@common/data';
 import * as edits from '@common/edits';
 import {
   ChangeMapStyleEvent,
@@ -37,7 +37,6 @@ import {
   renderSelect,
   renderStyleBtns
 } from './helpers';
-import { StoreController } from './store-controller';
 import { styles } from './styles';
 
 function resolveSavedMapStyle(saved: string | null): string | null {
@@ -61,7 +60,8 @@ const panelStyles = css`
 
 @customElement('filter-panel')
 export class FilterPanel extends LitElement {
-  private readonly _store = new StoreController(this);
+  private _unsubData?: () => void;
+  private _unsubEdits?: () => void;
 
   @litState() private _year = 'all';
   @litState() private _album = 'all';
@@ -86,6 +86,12 @@ export class FilterPanel extends LitElement {
   override connectedCallback() {
     super.connectedCallback();
     this._restoreFromUrl();
+    this._unsubData = subscribe(() => {
+      this.requestUpdate();
+    });
+    this._unsubEdits = edits.subscribe(() => {
+      this.requestUpdate();
+    });
     document.addEventListener(
       MeasureModeExitedEvent.type,
       this._onMeasureExited
@@ -93,18 +99,22 @@ export class FilterPanel extends LitElement {
   }
 
   override updated() {
-    if (!this._initialized && this._store.photos.length > 0) {
+    if (!this._initialized && state.photos.length > 0) {
       this._initialized = true;
       this._applyInitialFilters();
     }
   }
 
   override disconnectedCallback() {
-    super.disconnectedCallback();
+    this._unsubData?.();
+    this._unsubEdits?.();
+    this._unsubData = undefined;
+    this._unsubEdits = undefined;
     document.removeEventListener(
       MeasureModeExitedEvent.type,
       this._onMeasureExited
     );
+    super.disconnectedCallback();
   }
 
   private readonly _onMeasureExited = () => {
@@ -142,8 +152,8 @@ export class FilterPanel extends LitElement {
 
   private _getYearPhotos() {
     return this._year === 'all'
-      ? this._store.photos
-      : this._store.photos.filter((p) => getYear(p) === this._year);
+      ? state.photos
+      : state.photos.filter((p) => getYear(p) === this._year);
   }
 
   private _getAlbumOptions() {
@@ -287,8 +297,8 @@ export class FilterPanel extends LitElement {
     document.dispatchEvent(new ResetMapEvent());
   }
 
-  private _renderStats() {
-    const filtered = this._store.filteredPhotos;
+  private static _renderStats() {
+    const filtered = state.filteredPhotos;
     if (filtered.length === 0) return 'No results';
     const pc = filtered.filter((p) => !isVideo(p)).length;
     const vc = filtered.filter((p) => isVideo(p)).length;
@@ -299,10 +309,10 @@ export class FilterPanel extends LitElement {
   override render() {
     const years = [
       ...new Set(
-        this._store.photos.map(getYear).filter((y): y is string => y !== null)
+        state.photos.map(getYear).filter((y): y is string => y !== null)
       )
     ].sort();
-    const editCount = this._store.editCount;
+    const editCount = edits.getCount();
     return html`
       <div class="wrapper">
         <div
@@ -312,7 +322,7 @@ export class FilterPanel extends LitElement {
           }}
         >
           <h2>Karttakuvat</h2>
-          <p>${this._renderStats()}</p>
+          <p>${FilterPanel._renderStats()}</p>
         </div>
         ${this._collapsed
           ? nothing
@@ -446,12 +456,12 @@ export class FilterPanel extends LitElement {
                       <span class="count">${editCount}</span> pending edits
                       <div class="edit-buttons">
                         <button
-                          ?disabled=${this._store.isSaving}
+                          ?disabled=${edits.getIsSaving()}
                           @click=${() => {
                             document.dispatchEvent(new SaveEditsEvent());
                           }}
                         >
-                          ${this._store.isSaving
+                          ${edits.getIsSaving()
                             ? 'Saving...'
                             : 'Save to Photos'}
                         </button>
