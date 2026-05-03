@@ -1,3 +1,4 @@
+import { SignalWatcher } from '@lit-labs/signals';
 import { css, html, LitElement, nothing } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 
@@ -18,7 +19,7 @@ function stopPropagation(e: Event) {
 }
 
 @customElement('photo-lightbox')
-export class PhotoLightbox extends LitElement {
+export class PhotoLightbox extends SignalWatcher(LitElement) {
   @property({ type: Boolean, reflect: true }) active = false;
   @property({ attribute: false }) photo: Photo | null = null;
   @property({ type: Number }) currentIndex = 0;

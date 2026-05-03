@@ -40,8 +40,10 @@ function init(m: MapGL): void {
   });
 
   selection.subscribe(refreshView);
-  effect(refreshView);
-  edits.subscribe(refreshView);
+  effect(() => {
+    edits.pendingCoords.get();
+    refreshView();
+  });
 }
 
 function getRadius(zoom: number): number {

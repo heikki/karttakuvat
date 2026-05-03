@@ -1,70 +1,58 @@
+import { computed, signal } from '@lit-labs/signals';
+
 import type { Photo } from '@common/types';
 import { exifDatePattern } from '@common/utils';
 
-const pendingCoords = new Map<string, { lat: number; lon: number }>();
-const pendingTimeOffsets = new Map<string, number>();
-let saving = false;
-
-type Listener = () => void;
-const listeners: Listener[] = [];
-
-function notify(): void {
-  for (const fn of [...listeners]) fn();
-}
-
-export function subscribe(fn: Listener): () => void {
-  listeners.push(fn);
-  return () => {
-    const i = listeners.indexOf(fn);
-    if (i > -1) listeners.splice(i, 1);
-  };
-}
-
-export function setCoord(uuid: string, lat: number, lon: number): void {
-  pendingCoords.set(uuid, { lat, lon });
-  notify();
-}
-
-export function getEffectiveCoords(photo: Photo): {
+interface Coord {
   lat: number;
   lon: number;
-} {
-  const pending = pendingCoords.get(photo.uuid);
+}
+
+export const pendingCoords = signal<Map<string, Coord>>(new Map());
+export const pendingTimeOffsets = signal<Map<string, number>>(new Map());
+export const saving = signal(false);
+
+export const editCount = computed(
+  () => pendingCoords.get().size + pendingTimeOffsets.get().size
+);
+
+export function getEffectiveCoords(photo: Photo): Coord {
+  const pending = pendingCoords.get().get(photo.uuid);
   if (pending !== undefined) return pending;
   return { lat: photo.lat ?? 0, lon: photo.lon ?? 0 };
 }
 
-export function getEffectiveLocation(
-  photo: Photo
-): { lat: number; lon: number } | null {
+export function getEffectiveLocation(photo: Photo): Coord | null {
   if (
     photo.lat === null &&
     photo.lon === null &&
-    !pendingCoords.has(photo.uuid)
+    !pendingCoords.get().has(photo.uuid)
   ) {
     return null;
   }
   return getEffectiveCoords(photo);
 }
 
+export function setCoord(uuid: string, lat: number, lon: number): void {
+  const next = new Map(pendingCoords.get());
+  next.set(uuid, { lat, lon });
+  pendingCoords.set(next);
+}
+
 export function addTimeOffset(uuid: string, deltaHours: number): void {
-  const current = pendingTimeOffsets.get(uuid) ?? 0;
-  const total = current + deltaHours;
-  if (total === 0) {
-    pendingTimeOffsets.delete(uuid);
-  } else {
-    pendingTimeOffsets.set(uuid, total);
-  }
-  notify();
+  const cur = pendingTimeOffsets.get();
+  const total = (cur.get(uuid) ?? 0) + deltaHours;
+  const next = new Map(cur);
+  if (total === 0) next.delete(uuid);
+  else next.set(uuid, total);
+  pendingTimeOffsets.set(next);
 }
 
 export function setTimeOffset(uuid: string, totalHours: number): void {
-  if (totalHours === 0) {
-    pendingTimeOffsets.delete(uuid);
-  } else {
-    pendingTimeOffsets.set(uuid, totalHours);
-  }
-  notify();
+  const next = new Map(pendingTimeOffsets.get());
+  if (totalHours === 0) next.delete(uuid);
+  else next.set(uuid, totalHours);
+  pendingTimeOffsets.set(next);
 }
 
 function applyHourOffset(dateStr: string, hours: number): string {
@@ -86,7 +74,7 @@ function applyHourOffset(dateStr: string, hours: number): string {
 }
 
 export function getEffectiveDate(photo: Photo): string {
-  const offset = pendingTimeOffsets.get(photo.uuid) ?? 0;
+  const offset = pendingTimeOffsets.get().get(photo.uuid) ?? 0;
   if (offset === 0) return photo.date;
   return applyHourOffset(photo.date, offset);
 }
@@ -96,34 +84,22 @@ export function getCoordEdits(): Array<{
   lat: number;
   lon: number;
 }> {
-  return Array.from(pendingCoords.entries()).map(([uuid, c]) => ({
+  return Array.from(pendingCoords.get().entries()).map(([uuid, c]) => ({
     uuid,
     ...c
   }));
 }
 
 export function getTimeEdits(): Array<{ uuid: string; hours: number }> {
-  return Array.from(pendingTimeOffsets.entries()).map(([uuid, hours]) => ({
-    uuid,
-    hours
-  }));
-}
-
-export function getCount(): number {
-  return pendingCoords.size + pendingTimeOffsets.size;
+  return Array.from(pendingTimeOffsets.get().entries()).map(
+    ([uuid, hours]) => ({
+      uuid,
+      hours
+    })
+  );
 }
 
 export function clear(): void {
-  pendingCoords.clear();
-  pendingTimeOffsets.clear();
-  notify();
-}
-
-export function getIsSaving(): boolean {
-  return saving;
-}
-
-export function setSaving(s: boolean): void {
-  saving = s;
-  notify();
+  pendingCoords.set(new Map());
+  pendingTimeOffsets.set(new Map());
 }

@@ -51,8 +51,6 @@ const panelStyles = css`
 
 @customElement('filter-panel')
 export class FilterPanel extends SignalWatcher(LitElement) {
-  private _unsubEdits?: () => void;
-
   @litState() private _year = 'all';
   @litState() private _album = 'all';
   @litState() private _camera = 'all';
@@ -75,9 +73,6 @@ export class FilterPanel extends SignalWatcher(LitElement) {
   override connectedCallback() {
     super.connectedCallback();
     this._restoreFromUrl();
-    this._unsubEdits = edits.subscribe(() => {
-      this.requestUpdate();
-    });
     document.addEventListener(
       MeasureModeExitedEvent.type,
       this._onMeasureExited
@@ -92,8 +87,6 @@ export class FilterPanel extends SignalWatcher(LitElement) {
   }
 
   override disconnectedCallback() {
-    this._unsubEdits?.();
-    this._unsubEdits = undefined;
     document.removeEventListener(
       MeasureModeExitedEvent.type,
       this._onMeasureExited
@@ -249,7 +242,8 @@ export class FilterPanel extends SignalWatcher(LitElement) {
       album: this._album,
       camera: this._camera
     });
-    const editCount = edits.getCount();
+    const editCount = edits.editCount.get();
+    const isSaving = edits.saving.get();
     return html`
       <div class="wrapper">
         <div
@@ -391,14 +385,12 @@ export class FilterPanel extends SignalWatcher(LitElement) {
                       <span class="count">${editCount}</span> pending edits
                       <div class="edit-buttons">
                         <button
-                          ?disabled=${edits.getIsSaving()}
+                          ?disabled=${isSaving}
                           @click=${() => {
                             document.dispatchEvent(new SaveEditsEvent());
                           }}
                         >
-                          ${edits.getIsSaving()
-                            ? 'Saving...'
-                            : 'Save to Photos'}
+                          ${isSaving ? 'Saving...' : 'Save to Photos'}
                         </button>
                         <button
                           class="secondary"

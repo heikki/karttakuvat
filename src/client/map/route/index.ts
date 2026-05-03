@@ -85,9 +85,10 @@ function initPhotoRoute(m: MapGL): void {
   };
   effect(() => {
     data.filteredPhotos.get();
+    edits.pendingCoords.get();
+    edits.pendingTimeOffsets.get();
     onChange();
   });
-  edits.subscribe(onChange);
 }
 
 function onPhotosChanged(): void {
@@ -116,7 +117,7 @@ function reconcileAndApply(album: string, route: RouteData): void {
   const changed = reconcileRouteWithAlbum(route, albumPhotos);
   routeData = route;
   applyRouteData(route);
-  if (changed && edits.getCount() === 0) {
+  if (changed && edits.editCount.get() === 0) {
     void save(album, route);
   }
 }
@@ -303,7 +304,7 @@ function refreshSavedRoute(route: RouteData): void {
   const reordered = reorderRoutePhotoPoints(route);
   applyRouteData(route);
   if (!synced && !reordered) return;
-  if (edits.getCount() > 0) return;
+  if (edits.editCount.get() > 0) return;
   const album = data.filters.get().album;
   if (album !== 'all') void save(album, route);
 }

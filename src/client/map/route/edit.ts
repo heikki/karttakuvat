@@ -11,6 +11,7 @@ import {
   RouteEditModeChangedEvent,
   ToggleRouteEditEvent
 } from '@common/events';
+import { effect } from '@common/signals';
 import type { Photo } from '@common/types';
 
 import route, { type RouteData } from '.';
@@ -104,7 +105,9 @@ export function initRouteEdit(m: MapGL): void {
   });
 
   // Sync photo point positions when pending edits change
-  edits.subscribe(() => {
+  effect(() => {
+    edits.pendingCoords.get();
+    edits.pendingTimeOffsets.get();
     if (isActive() && routeData !== null) {
       syncPhotoPoints(routeData);
       updateEditSources();

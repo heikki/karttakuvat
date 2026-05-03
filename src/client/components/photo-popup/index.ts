@@ -1,3 +1,4 @@
+import { SignalWatcher } from '@lit-labs/signals';
 import { css, html, LitElement, nothing } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 
@@ -28,7 +29,7 @@ export interface PopupActions {
 }
 
 @customElement('photo-popup')
-export class PhotoPopup extends LitElement {
+export class PhotoPopup extends SignalWatcher(LitElement) {
   @property({ attribute: false }) photo: Photo | null = null;
   @property({ type: Number }) index = 0;
   @property({ type: Boolean }) dateEditMode = false;

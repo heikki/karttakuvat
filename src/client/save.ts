@@ -7,7 +7,7 @@ async function saveEdits() {
   const timeEdits = edits.getTimeEdits();
   if (coordEdits.length === 0 && timeEdits.length === 0) return;
 
-  edits.setSaving(true);
+  edits.saving.set(true);
 
   try {
     const response = await fetch('/api/save-edits', {
@@ -28,7 +28,7 @@ async function saveEdits() {
       `Failed to save edits: ${err instanceof Error ? err.message : String(err)}`
     );
   } finally {
-    edits.setSaving(false);
+    edits.saving.set(false);
   }
 }
 

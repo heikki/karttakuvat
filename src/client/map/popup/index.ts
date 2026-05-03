@@ -8,6 +8,7 @@ import {
   EnterPlacementModeEvent,
   ShowLightboxEvent
 } from '@common/events';
+import { effect } from '@common/signals';
 import type { Photo } from '@common/types';
 import { getThumbUrl } from '@common/utils';
 import type { PhotoPopup, PopupActions } from '@components/photo-popup';
@@ -117,7 +118,11 @@ function init(m: MapGL) {
   // reset fires first and the subsequent Lit re-sync reads the fresh value.
   popupEdits.initPopupEdits();
   selection.subscribe(applySelection);
-  edits.subscribe(applySelection);
+  effect(() => {
+    edits.pendingCoords.get();
+    edits.pendingTimeOffsets.get();
+    applySelection();
+  });
   popupEdits.subscribe(applySelection);
 }
 
