@@ -4,8 +4,12 @@ import type { ElectrobunConfig } from 'electrobun';
 
 const baseDir = resolve('.');
 
+// Aliases never include extensions, so we always append one. Listing
+// '/index.ts' as a candidate (rather than relying on directory fall-through)
+// matters because existsSync returns true for directories, which would
+// otherwise short-circuit to a path Bun then can't read.
 function resolveWithExtensions(basePath: string): string {
-  for (const ext of ['', '.ts', '.tsx', '.js', '/index.ts', '/index.js']) {
+  for (const ext of ['.ts', '.tsx', '.js', '/index.ts', '/index.js']) {
     const candidate = basePath + ext;
     if (existsSync(candidate)) return candidate;
   }
@@ -94,7 +98,8 @@ export default {
 
     mac: {
       icons: 'resources/icon.iconset',
-      defaultRenderer: 'native'
+      defaultRenderer: 'native',
+      createDmg: false
     }
   }
 } satisfies ElectrobunConfig;
