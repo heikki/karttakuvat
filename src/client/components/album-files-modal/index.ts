@@ -1,7 +1,7 @@
 import { css, html, LitElement, nothing } from 'lit';
 import { customElement, state as litState, property } from 'lit/decorators.js';
 
-import { ShowAlbumFilesEvent } from '@common/events';
+import { AlbumFilesChangedEvent, ShowAlbumFilesEvent } from '@common/events';
 
 interface AlbumFile {
   name: string;
@@ -197,9 +197,7 @@ export class AlbumFilesModal extends LitElement {
       );
       const data = (await res.json()) as AlbumFile[];
       this._files = data.sort((a, b) => a.name.localeCompare(b.name));
-      void import('../../map/gpx').then((gpx) => {
-        gpx.default.reloadTracks();
-      });
+      document.dispatchEvent(new AlbumFilesChangedEvent());
     } catch {
       this._files = [];
     }
@@ -221,9 +219,7 @@ export class AlbumFilesModal extends LitElement {
         this._files = this._files.map((f) =>
           f.name === file.name ? { ...f, visible: newVisible } : f
         );
-        void import('../../map/gpx').then((gpx) => {
-          gpx.default.reloadTracks();
-        });
+        document.dispatchEvent(new AlbumFilesChangedEvent());
       }
     } catch (err) {
       console.error('Toggle visibility failed:', err);
@@ -238,11 +234,7 @@ export class AlbumFilesModal extends LitElement {
       );
       if (res.ok) {
         this._files = this._files.filter((f) => f.name !== filename);
-        if (filename.toLowerCase().endsWith('.gpx')) {
-          void import('../../map/gpx').then((gpx) => {
-            gpx.default.reloadTracks();
-          });
-        }
+        document.dispatchEvent(new AlbumFilesChangedEvent());
       }
     } catch (err) {
       console.error('Delete failed:', err);

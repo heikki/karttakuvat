@@ -131,6 +131,13 @@ export class ShowAlbumFilesEvent extends Event {
   }
 }
 
+export class AlbumFilesChangedEvent extends Event {
+  static readonly type = 'album-files-changed';
+  constructor() {
+    super(AlbumFilesChangedEvent.type);
+  }
+}
+
 declare global {
   interface HTMLElementEventMap {
     [ShowLightboxEvent.type]: ShowLightboxEvent;
@@ -153,5 +160,6 @@ declare global {
     [MeasureModeExitedEvent.type]: MeasureModeExitedEvent;
     [RouteEditModeEvent.type]: RouteEditModeEvent;
     [ShowAlbumFilesEvent.type]: ShowAlbumFilesEvent;
+    [AlbumFilesChangedEvent.type]: AlbumFilesChangedEvent;
   }
 }
