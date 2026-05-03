@@ -59,9 +59,6 @@ export function getDateEditMode(): boolean {
 
 let lastUuid: string | null = null;
 
-// Auto-reset date edit mode when the popup closes or moves to a different
-// photo. Registered before popup/index.ts's applySelection effect so this
-// reset runs first and the Lit re-sync sees the fresh value.
 export function initPopupEdits(): void {
   effect(() => {
     const uuid = selection.selectedPhotoUuid.get();
@@ -142,8 +139,8 @@ export function applyManualDateToCurrent(value: string): void {
   if (parsed === null) return;
   const offset = computeManualDateOffset(photo.date, parsed);
   if (offset === null) return;
-  // Set before edit so the implicit sync triggered by setTimeOffset's notify
-  // reads dateEditMode = false.
+  // Must precede setTimeOffset — its signal write triggers a popup re-sync
+  // that reads dateEditMode.
   dateEditMode = false;
   edits.setTimeOffset(photo.uuid, offset);
 }

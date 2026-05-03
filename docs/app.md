@@ -15,15 +15,25 @@ UI is built with Lit web components (`LitElement`):
 
 ### Map modules
 
-The map is composed of small sibling modules under `src/client/map/` — `selection`, `markers/`, `route/`, `gpx`, `measure`, `placement`, `popup/`, `fit`, `z-anchors`. Each `default-exports` a small object whose public methods drop the redundant module-name affix (e.g. `selection.init`, `popup.get`, `route.save`); consumers always import via `import name from './module'`. Each module's `init(map)` wires its own state (via `map.on('load', ...)` for layer setup, plus event/data subscriptions). Cross-module communication goes through two seams: shared state modules (`selection`, `edits`) that the relevant subscribers read and observe, and bare `document` events for one-way request signals (`EnterPlacementModeEvent`, `RouteEditModeChangedEvent`, `MeasureModeExitedEvent`, `AlbumFilesChangedEvent`).
+The map is composed of small sibling modules under `src/client/map/` — `selection`, `markers/`, `route/`, `gpx`, `measure`, `placement`, `popup/`, `fit`, `z-anchors`. Each `default-exports` a small object whose public methods drop the redundant module-name affix (e.g. `selection.init`, `popup.get`, `route.save`); consumers always import via `import name from './module'`. Each module's `init(map)` wires its own state (via `map.on('load', ...)` for layer setup, plus signal effects).
+
+### State and commands
+
+State is held in `@lit-labs/signals`, organised into a few stores. Lit components opt into reactivity via the `SignalWatcher` mixin and read signals in `render()`; non-component modules use `effect()` from `@common/signals` for module-level reactions. Commands (one-shot actions) are exposed as plain functions through a single `@common/actions` module — components and map modules import only from `actions`, so the command surface stays in one place.
+
+- `@common/data` — `photos` and `filters` signals; `filteredPhotos` computed.
+- `@common/edits` — `pendingCoords`, `pendingTimeOffsets`, `saving` signals; `editCount` computed; function-form readers `getEffectiveCoords/Date/Location(photo)` wrap the underlying signals so any tracking context picks them up.
+- `@common/view-state` — `mapStyle`, `markerStyle`, `routeVisible` signals; each is seeded from the URL at module load and persisted back via an effect.
+- `@map/selection` — `selectedPhotoUuid` and `interactionMode` signals (see below).
 
 ### Selection
 
-`selection.ts` owns the focused-photo state machine: `mode` ∈ `idle | popup | placement` plus the selected `photoUuid`. Markers, popup, and placement subscribe and react — the popup module mounts/unmounts the MapLibre Popup based on mode, markers toggle visibility and apply highlight, placement shows/hides the panel and crosshair. Selection auto-clears when the selected photo leaves the filtered set, and restores the photo from the URL `id` param after photos load.
+`selection.ts` splits the focused state into two orthogonal signals:
 
-### Pending edits
+- `selectedPhotoUuid: Signal<string | null>` — which photo (if any) is currently selected. Persisted to the URL `id` param via an effect.
+- `interactionMode: Signal<'idle' | 'placement' | 'measure' | 'route-edit'>` — the exclusive map-input mode. Because all three exclusive modes live in one enum, they're mutually exclusive by construction; entering one automatically clears the others.
 
-`common/edits.ts` owns pending coordinate edits, pending time offsets (hour deltas), and the `isSaving` flag. Two channels: `data.subscribe` fires on filter changes, `edits.subscribe` fires on edit changes. Subscribers that care about effective photo positions (markers, popup, route) listen to both; selection only listens to filter changes. `getEffectiveCoords/Date/Location(photo)` are the read API — they apply pending edits over the stored photo data.
+`isPopupOpen()` derives from both: a popup is shown iff a photo is selected and `interactionMode !== 'placement'`. Markers, popup, and placement react via `effect()` on these signals — the popup module mounts/unmounts the MapLibre Popup, markers re-render with selection state, placement shows/hides its panel. Selection auto-clears when the selected photo leaves the filtered set; the URL-restore path runs once when photos first load.
 
 ### Layer ordering (z-anchors)
 
@@ -31,11 +41,12 @@ The map is composed of small sibling modules under `src/client/map/` — `select
 
 ## Startup
 
-1. `map.init()` — creates the MapLibre map with globe projection, then calls `selection.init`, `zAnchors.init`, `popup.init`, `measure.init`, `route.init`, `fit.init`, `gpx.init`, `markers.init`, `placement.init` and starts the globe background shader. Each module registers its own `map.on('load')` handler for layer setup.
-2. `initSave()` — wires up save/edit event listeners
-3. `loadPhotos()` — fetches items from `/api/items`, sorts by date
-4. `<filter-panel>` detects loaded photos via `updated()` lifecycle hook, restores filters/map style/marker style/tracks visibility from URL, validates cascading filter options, applies filters, and dispatches initial map style/marker style/GPX visibility events
-5. On map load: each module's load handler adds its own sources/layers using its z-anchor as `beforeId`. Popup reopens from URL; fit zooms to filtered photos unless a map view was restored from URL.
+View-state signals (`mapStyle`, `markerStyle`, `routeVisible`, `selectedPhotoUuid`) seed from the URL synchronously at module load, before any rendering, so subsequent reads always see the intended starting state.
+
+1. `map.init()` — creates the MapLibre map with globe projection (using the URL-restored `viewState.mapStyle`), then calls `selection.init`, `zAnchors.init`, `popup.init`, `measure.init`, `route.init`, `fit.init`, `gpx.init`, `markers.init`, `placement.init` and starts the globe background shader. Each module registers its own `map.on('load')` handler for layer setup plus any `effect()`s on the signals it cares about.
+2. `loadPhotos()` — fetches items from `/api/items`, sorts by date, and writes them into `data.photos`. The `filteredPhotos` computed re-derives, fanning out to every effect that reads it.
+3. `<filter-panel>` detects loaded photos via `updated()`, restores filter component state from URL, and writes the normalized values into `data.filters`. The signal change cascades through any consumer that reads filters.
+4. On map load: each module's load handler adds its own sources/layers using its z-anchor as `beforeId`. The popup remounts via the selection effect; fit zooms to filtered photos unless a map view was restored from URL.
 
 ## Filters
 

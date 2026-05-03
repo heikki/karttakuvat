@@ -24,8 +24,8 @@ import {
 let popup: Popup | null = null;
 let popupElement: PhotoPopup | null = null;
 let mountedUuid: string | null = null;
-// Set during forceRemount so the popup's 'close' handler doesn't treat
-// our intentional removal as an external teardown and clear the selection.
+// Set during forceRemount so the 'close' handler skips its
+// external-teardown selection clear.
 let suppressCloseClear = false;
 
 let map: MapGL | null = null;
@@ -99,10 +99,8 @@ function init(m: MapGL) {
 
   document.addEventListener('keydown', handleKeydown);
 
-  // Marker style swap changes the radius scheme. The popup effect is
-  // registered before markers' (popup is init'd before markers), so we defer
-  // to a microtask — markers' effect swaps the layer first, then our
-  // microtask runs reanchorPopup with the new radius.
+  // Defer so markers' effect swaps the layer first; getRadius() then
+  // returns the new style's radius.
   let lastMarkerStyle = viewState.markerStyle.get();
   effect(() => {
     const next = viewState.markerStyle.get();
@@ -111,8 +109,8 @@ function init(m: MapGL) {
     queueMicrotask(reanchorPopup);
   });
 
-  // Subscribe popup-edits to selection BEFORE applySelection so the date-edit
-  // reset fires first and the subsequent Lit re-sync reads the fresh value.
+  // Must precede applySelection's effect so the date-edit reset fires
+  // first and the popup's Lit re-sync sees the fresh value.
   popupEdits.initPopupEdits();
   effect(() => {
     edits.pendingCoords.get();
@@ -308,9 +306,8 @@ function get(): Popup | null {
   return popup;
 }
 
-// Force a full unmount/remount of the popup. Used by the projection
-// transition handler — the popup needs to re-anchor against the new
-// projection, and the same-uuid path otherwise just syncs in place.
+// Force a full unmount/remount; the same-uuid path otherwise just syncs
+// in place, leaving the popup anchored to the old projection.
 function forceRemount(): void {
   if (popup === null) return;
   suppressCloseClear = true;

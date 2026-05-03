@@ -66,8 +66,7 @@ function init(m: MapGL): void {
 function initPhotoRoute(m: MapGL): void {
   map = m;
 
-  // Display layer visibility is derived: shown when the route is visible
-  // and not being edited (edit mode owns rendering during that time).
+  // Edit mode owns rendering, so display layers hide while editing.
   effect(() => {
     if (map === null) return;
     const show =
@@ -75,9 +74,7 @@ function initPhotoRoute(m: MapGL): void {
     mapUtils.setLayersVisibility(map, ALL_ROUTE_LAYERS, show);
   });
 
-  // React to the visibility flip itself: when it turns on, run the
-  // album-aware load/build sequence. (Off case needs no extra work — the
-  // visibility effect above hides the layers.)
+  // On flip-on, run the album-aware load/build (off is handled above).
   let lastVisible = !isVisible();
   effect(() => {
     const v = isVisible();
@@ -86,7 +83,6 @@ function initPhotoRoute(m: MapGL): void {
     if (v) onRouteShown();
   });
 
-  // Rebuild route when filtered photos OR pending edits change.
   effect(() => {
     data.filteredPhotos.get();
     edits.pendingCoords.get();

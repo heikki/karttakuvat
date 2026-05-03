@@ -18,9 +18,6 @@ export function fitToPhotos(animate = false, selectFirst = false): void {
   fit.toPhotos(animate, selectFirst);
 }
 
-// Reset all view-state to defaults: clear selection (which exits any
-// active interaction mode), restore default map and marker styles, hide
-// the route, and refit the map to the current photos.
 export function resetMap(): void {
   selection.clear();
   viewState.mapStyle.set('satellite');

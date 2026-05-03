@@ -10,8 +10,7 @@ export type InteractionMode = 'idle' | 'placement' | 'measure' | 'route-edit';
 export const selectedPhotoUuid = signal<string | null>(photoFromUrl());
 export const interactionMode = signal<InteractionMode>('idle');
 
-// Persist selectedPhotoUuid to URL. Skip the first run so the seeded
-// initial value isn't written back (which would race with URL restoration).
+// Skip first run so the URL-seeded initial value doesn't race with restore.
 let firstUrlRun = true;
 effect(() => {
   const uuid = selectedPhotoUuid.get();
@@ -35,9 +34,7 @@ function getPhotoIndex(): number | null {
   return idx === -1 ? null : idx;
 }
 
-// True iff a photo is selected and the popup should be visible. Placement
-// hides the popup so the user can pick a location without it in the way;
-// measure and route-edit don't conflict with the popup.
+// Placement hides the popup; measure and route-edit don't conflict with it.
 function isPopupOpen(): boolean {
   return (
     selectedPhotoUuid.get() !== null && interactionMode.get() !== 'placement'
@@ -46,8 +43,7 @@ function isPopupOpen(): boolean {
 
 function selectPhoto(uuid: string): void {
   selectedPhotoUuid.set(uuid);
-  // Selecting a different photo cancels placement (placement is bound to
-  // the previously-selected photo and no longer makes sense).
+  // Placement targeted the previous selection.
   if (interactionMode.get() === 'placement') {
     interactionMode.set('idle');
   }
@@ -58,15 +54,12 @@ function clear(): void {
   interactionMode.set('idle');
 }
 
-// Close the popup without touching interactionMode. Used when the user
-// dismisses the popup (Esc, click empty map) during measure or route-edit
-// mode — those modes shouldn't be exited by a popup-close action.
+// Close the popup without touching interactionMode — measure and
+// route-edit shouldn't exit when the user dismisses the popup.
 function closePopup(): void {
   selectedPhotoUuid.set(null);
 }
 
-// Enter placement mode for the currently-selected photo. The popup must
-// already be open — the "set" button that calls this lives in the popup.
 function enterPlacement(): void {
   if (selectedPhotoUuid.get() === null) return;
   interactionMode.set('placement');
@@ -125,8 +118,8 @@ function init(): void {
         return;
       }
       if (filtered.some((p) => p.uuid === uuid)) {
-        restoredFromUrl = true;
         // Signal already seeded from URL — no .set() needed.
+        restoredFromUrl = true;
       }
       return;
     }
