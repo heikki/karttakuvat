@@ -176,7 +176,7 @@ function snapshotPointsByUuid(
  */
 export function syncPhotoPoints(
   route: RouteData,
-  photos: Photo[] = data.state.filteredPhotos
+  photos: Photo[] = data.filteredPhotos.get()
 ): boolean {
   const locMap = buildPhotoLocationMap(photos);
   const { points, segments } = route;
@@ -231,7 +231,7 @@ export function syncPhotoPoints(
  */
 export function reorderRoutePhotoPoints(
   route: RouteData,
-  photos: Photo[] = data.state.filteredPhotos
+  photos: Photo[] = data.filteredPhotos.get()
 ): boolean {
   const sortKeys = buildPhotoSortKeys(photos);
   const { points } = route;

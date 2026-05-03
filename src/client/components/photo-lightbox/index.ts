@@ -33,10 +33,10 @@ export class PhotoLightbox extends LitElement {
 
   show(index: number) {
     this.currentIndex = index;
-    const photo = data.state.filteredPhotos[index];
+    const photo = data.filteredPhotos.get()[index];
     if (photo === undefined) return;
     this.photo = photo;
-    this.totalCount = data.state.filteredPhotos.length;
+    this.totalCount = data.filteredPhotos.get().length;
     this.active = true;
   }
 
@@ -50,11 +50,11 @@ export class PhotoLightbox extends LitElement {
   }
 
   private _navigate(delta: number) {
-    const total = data.state.filteredPhotos.length;
+    const total = data.filteredPhotos.get().length;
     if (total === 0) return;
     const newIndex = (this.currentIndex + delta + total) % total;
     this.currentIndex = newIndex;
-    this.photo = data.state.filteredPhotos[newIndex] ?? null;
+    this.photo = data.filteredPhotos.get()[newIndex] ?? null;
     this.totalCount = total;
   }
 

@@ -1,5 +1,6 @@
 import * as data from '@common/data';
 import { photoFromUrl, photoToUrl } from '@common/filter-url';
+import { effect } from '@common/signals';
 import type { Photo } from '@common/types';
 
 type SelectionMode = 'idle' | 'popup' | 'placement';
@@ -32,12 +33,12 @@ function getPhotoUuid(): string | null {
 
 function getPhoto(): Photo | undefined {
   if (photoUuid === null) return undefined;
-  return data.state.filteredPhotos.find((p) => p.uuid === photoUuid);
+  return data.filteredPhotos.get().find((p) => p.uuid === photoUuid);
 }
 
 function getPhotoIndex(): number | null {
   if (photoUuid === null) return null;
-  const idx = data.state.filteredPhotos.findIndex((p) => p.uuid === photoUuid);
+  const idx = data.filteredPhotos.get().findIndex((p) => p.uuid === photoUuid);
   return idx === -1 ? null : idx;
 }
 
@@ -48,9 +49,9 @@ function openPopup(uuid: string): void {
 function next(): boolean {
   const idx = getPhotoIndex();
   if (idx === null) return false;
-  const total = data.state.filteredPhotos.length;
+  const total = data.filteredPhotos.get().length;
   if (total === 0) return false;
-  const target = data.state.filteredPhotos[(idx + 1) % total];
+  const target = data.filteredPhotos.get()[(idx + 1) % total];
   if (target === undefined) return false;
   openPopup(target.uuid);
   return true;
@@ -59,9 +60,9 @@ function next(): boolean {
 function prev(): boolean {
   const idx = getPhotoIndex();
   if (idx === null) return false;
-  const total = data.state.filteredPhotos.length;
+  const total = data.filteredPhotos.get().length;
   if (total === 0) return false;
-  const target = data.state.filteredPhotos[(idx - 1 + total) % total];
+  const target = data.filteredPhotos.get()[(idx - 1 + total) % total];
   if (target === undefined) return false;
   openPopup(target.uuid);
   return true;
@@ -79,7 +80,7 @@ function clear(): void {
 }
 
 function toggleOldestNewest(): void {
-  const photos = data.state.filteredPhotos;
+  const photos = data.filteredPhotos.get();
   if (photos.length === 0) return;
   let oldestIdx = 0;
   let newestIdx = 0;
@@ -113,21 +114,20 @@ function tryRestoreFromUrl(): void {
     restoredFromUrl = true;
     return;
   }
-  if (!data.state.filteredPhotos.some((p) => p.uuid === uuid)) return;
+  if (!data.filteredPhotos.get().some((p) => p.uuid === uuid)) return;
   restoredFromUrl = true;
   openPopup(uuid);
 }
 
 function init(): void {
-  data.subscribe(() => {
+  effect(() => {
+    const filtered = data.filteredPhotos.get();
     if (!restoredFromUrl) {
       tryRestoreFromUrl();
       return;
     }
     if (photoUuid === null) return;
-    const stillExists = data.state.filteredPhotos.some(
-      (p) => p.uuid === photoUuid
-    );
+    const stillExists = filtered.some((p) => p.uuid === photoUuid);
     if (stillExists) {
       // Photo still selected, but its data may have moved (pending edit, save).
       notify();

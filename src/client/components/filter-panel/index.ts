@@ -51,7 +51,6 @@ const panelStyles = css`
 
 @customElement('filter-panel')
 export class FilterPanel extends SignalWatcher(LitElement) {
-  private _unsubData?: () => void;
   private _unsubEdits?: () => void;
 
   @litState() private _year = 'all';
@@ -76,9 +75,6 @@ export class FilterPanel extends SignalWatcher(LitElement) {
   override connectedCallback() {
     super.connectedCallback();
     this._restoreFromUrl();
-    this._unsubData = data.subscribe(() => {
-      this.requestUpdate();
-    });
     this._unsubEdits = edits.subscribe(() => {
       this.requestUpdate();
     });
@@ -89,16 +85,14 @@ export class FilterPanel extends SignalWatcher(LitElement) {
   }
 
   override updated() {
-    if (!this._initialized && data.state.photos.length > 0) {
+    if (!this._initialized && data.photos.get().length > 0) {
       this._initialized = true;
       this._applyInitialFilters();
     }
   }
 
   override disconnectedCallback() {
-    this._unsubData?.();
     this._unsubEdits?.();
-    this._unsubData = undefined;
     this._unsubEdits = undefined;
     document.removeEventListener(
       MeasureModeExitedEvent.type,
@@ -131,23 +125,20 @@ export class FilterPanel extends SignalWatcher(LitElement) {
   }
 
   private _applyFilters() {
-    const result = cascade(data.state.photos, {
+    const result = cascade(data.photos.get(), {
       year: this._year,
       album: this._album,
       camera: this._camera
     });
     this._album = result.album;
     this._camera = result.camera;
-    data.applyFilters(
-      {
-        year: this._year,
-        gps: this._gps,
-        media: this._media,
-        album: this._album,
-        camera: this._camera
-      },
-      result.filtered
-    );
+    data.filters.set({
+      year: this._year,
+      gps: this._gps,
+      media: this._media,
+      album: this._album,
+      camera: this._camera
+    });
     filtersToUrl({
       year: this._year,
       album: this._album,
@@ -227,28 +218,20 @@ export class FilterPanel extends SignalWatcher(LitElement) {
     }
     this._measureActive = false;
     this._albumControls?.reset();
-    const result = cascade(data.state.photos, {
+    data.filters.set({
       year: this._year,
+      gps: this._gps,
+      media: this._media,
       album: this._album,
       camera: this._camera
     });
-    data.applyFilters(
-      {
-        year: this._year,
-        gps: this._gps,
-        media: this._media,
-        album: this._album,
-        camera: this._camera
-      },
-      result.filtered
-    );
     resetAllViewParams();
     flushViewState();
     document.dispatchEvent(new ResetMapEvent());
   }
 
   private static _renderStats() {
-    const filtered = data.state.filteredPhotos;
+    const filtered = data.filteredPhotos.get();
     if (filtered.length === 0) return 'No results';
     const pc = filtered.filter((p) => !isVideo(p)).length;
     const vc = filtered.filter((p) => isVideo(p)).length;
@@ -257,12 +240,11 @@ export class FilterPanel extends SignalWatcher(LitElement) {
   }
 
   override render() {
+    const allPhotos = data.photos.get();
     const years = [
-      ...new Set(
-        data.state.photos.map(getYear).filter((y): y is string => y !== null)
-      )
+      ...new Set(allPhotos.map(getYear).filter((y): y is string => y !== null))
     ].sort();
-    const { albumOptions, cameraOptions } = cascade(data.state.photos, {
+    const { albumOptions, cameraOptions } = cascade(allPhotos, {
       year: this._year,
       album: this._album,
       camera: this._camera

@@ -183,7 +183,7 @@ function updateEditSources(): void {
   const pointsSrc = map.getSource<GeoJSONSource>(EDIT_IDS.pointsSrc);
   if (pointsSrc !== undefined) {
     const photoMap = new Map<string, Photo>();
-    for (const p of data.state.filteredPhotos) photoMap.set(p.uuid, p);
+    for (const p of data.filteredPhotos.get()) photoMap.set(p.uuid, p);
     pointsSrc.setData({
       type: 'FeatureCollection',
       features: routeData.points.map((p, i) => ({
@@ -239,7 +239,7 @@ function scheduleAutoSave(): void {
   if (saveTimer !== null) clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     saveTimer = null;
-    const album = data.state.filters.album;
+    const album = data.filters.get().album;
     if (album !== 'all' && routeData !== null) {
       void route.save(album, routeData);
     }

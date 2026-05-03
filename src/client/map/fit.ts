@@ -18,16 +18,16 @@ function init(m: MapGL) {
   });
   if (mapViewFromUrl() === null) {
     m.on('load', () => {
-      if (data.state.filteredPhotos.length > 0) toPhotos();
+      if (data.filteredPhotos.get().length > 0) toPhotos();
     });
   }
 }
 
 function computePhotoBounds(): LngLatBounds {
   const bounds = new LngLatBounds();
-  data.state.filteredPhotos.forEach((p) =>
-    bounds.extend([p.lon ?? 0, p.lat ?? 0])
-  );
+  data.filteredPhotos
+    .get()
+    .forEach((p) => bounds.extend([p.lon ?? 0, p.lat ?? 0]));
   return bounds;
 }
 
@@ -57,7 +57,7 @@ function computeTopPadding(): number {
 }
 
 function toPhotos(animate = false, selectFirst = false) {
-  if (data.state.filteredPhotos.length === 0) return;
+  if (data.filteredPhotos.get().length === 0) return;
   const bounds = computePhotoBounds();
   const duration = animate ? 500 : 0;
 

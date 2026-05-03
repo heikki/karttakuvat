@@ -8,6 +8,7 @@ import {
   RouteEditModeChangedEvent,
   SetRouteVisibilityEvent
 } from '@common/events';
+import { effect } from '@common/signals';
 import type { Photo } from '@common/types';
 import { toUtcSortKey } from '@common/utils';
 
@@ -82,12 +83,15 @@ function initPhotoRoute(m: MapGL): void {
   const onChange = () => {
     if (visible) onPhotosChanged();
   };
-  data.subscribe(onChange);
+  effect(() => {
+    data.filteredPhotos.get();
+    onChange();
+  });
   edits.subscribe(onChange);
 }
 
 function onPhotosChanged(): void {
-  const album = data.state.filters.album;
+  const album = data.filters.get().album;
   if (album === currentAlbum) {
     updateRoute();
     return;
@@ -108,7 +112,7 @@ function onPhotosChanged(): void {
  * edits are pending.
  */
 function reconcileAndApply(album: string, route: RouteData): void {
-  const albumPhotos = data.state.photos.filter((p) => p.albums.includes(album));
+  const albumPhotos = data.photos.get().filter((p) => p.albums.includes(album));
   const changed = reconcileRouteWithAlbum(route, albumPhotos);
   routeData = route;
   applyRouteData(route);
@@ -120,7 +124,7 @@ function reconcileAndApply(album: string, route: RouteData): void {
 /** Load the saved route for an album (if any) and apply it. */
 async function loadAndApplyRoute(album: string): Promise<void> {
   const route = await loadSavedRoute(album);
-  if (data.state.filters.album !== album || !visible) return;
+  if (data.filters.get().album !== album || !visible) return;
   if (route === null) {
     updateRoute();
     return;
@@ -181,7 +185,7 @@ function setPhotoRouteVisible(show: boolean): void {
 
   if (!show) return;
 
-  const album = data.state.filters.album;
+  const album = data.filters.get().album;
   if (album !== currentAlbum) {
     currentAlbum = album;
     routeData = null;
@@ -268,7 +272,7 @@ function getSortedLocatedPhotos(): Array<{
     loc: { lat: number; lon: number };
     sortKey: string;
   }> = [];
-  for (const photo of data.state.filteredPhotos) {
+  for (const photo of data.filteredPhotos.get()) {
     const loc = edits.getEffectiveLocation(photo);
     if (loc === null) continue;
     if (photo.date === '') continue;
@@ -300,7 +304,7 @@ function refreshSavedRoute(route: RouteData): void {
   applyRouteData(route);
   if (!synced && !reordered) return;
   if (edits.getCount() > 0) return;
-  const album = data.state.filters.album;
+  const album = data.filters.get().album;
   if (album !== 'all') void save(album, route);
 }
 
@@ -315,7 +319,7 @@ function updateRoute(): void {
     return;
   }
 
-  const album = data.state.filters.album;
+  const album = data.filters.get().album;
   const route = album === 'all' ? null : buildDefault();
   if (route === null) {
     src.setData({ type: 'FeatureCollection', features: [] });

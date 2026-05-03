@@ -3,6 +3,7 @@ import type { GeoJSONSource, Map as MapGL } from 'maplibre-gl';
 
 import * as data from '@common/data';
 import { AlbumFilesChangedEvent } from '@common/events';
+import { effect } from '@common/signals';
 
 import zAnchors from './z-anchors';
 
@@ -36,10 +37,9 @@ let nextColorIndex = 0;
 function init(m: MapGL): void {
   map = m;
   m.on('load', addGpxLayers);
-  data.subscribe(() => {
-    void loadGpxForAlbum(
-      data.state.filters.album === 'all' ? null : data.state.filters.album
-    );
+  effect(() => {
+    const album = data.filters.get().album;
+    void loadGpxForAlbum(album === 'all' ? null : album);
   });
   document.addEventListener(AlbumFilesChangedEvent.type, reloadTracks);
 }
