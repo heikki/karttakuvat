@@ -1,10 +1,11 @@
+import type { StyleSpecification } from 'maplibre-gl';
+
 import { MML_API_KEY } from '@common/features';
-import type { MapStyles } from '@common/types';
 
 const mmlTile = (layer: string, ext: string) =>
   `https://avoin-karttakuva.maanmittauslaitos.fi/avoin/wmts/1.0.0/${layer}/default/WGS84_Pseudo-Mercator/{z}/{y}/{x}.${ext}?api-key=${MML_API_KEY}`;
 
-function styles(): MapStyles {
+function styles(): Record<string, StyleSpecification> {
   return {
     satellite: {
       version: 8,

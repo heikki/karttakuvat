@@ -17,19 +17,6 @@ export interface Photo {
   filename?: string;
 }
 
-interface MapStyle {
-  version: number;
-  sources: Record<string, unknown>;
-  layers: unknown[];
-}
-
-export interface MapStyles {
-  satellite: MapStyle;
-  topo: MapStyle;
-  mml_maastokartta: MapStyle;
-  mml_ortokuva: MapStyle;
-}
-
 export interface MarkerLayer {
   readonly id: string;
   install: (map: MapGL, photos: Photo[]) => void;

@@ -13,7 +13,6 @@ import {
   ResetMapEvent
 } from '@common/events';
 import { mapViewFromUrl, mapViewToUrl } from '@common/filter-url';
-import type { MapStyles } from '@common/types';
 
 import background from './background';
 import config from './config';
@@ -100,9 +99,7 @@ function init() {
   const zoom = savedView?.zoom;
   map = new MapGL({
     container: 'map',
-    style: applyGlobeProjection(
-      config.styles().satellite as StyleSpecification
-    ),
+    style: applyGlobeProjection(config.styles().satellite!),
     center,
     zoom,
     minZoom: 1,
@@ -235,7 +232,7 @@ function transformStyle(
 ): StyleSpecification {
   if (previousStyle === undefined) return nextStyle;
 
-  const allBasemaps = Object.values(config.styles()) as StyleSpecification[];
+  const allBasemaps = Object.values(config.styles());
   const bmLayers = new Set(
     allBasemaps.flatMap((s) => s.layers.map((l) => l.id))
   );
@@ -259,9 +256,7 @@ function transformStyle(
 }
 
 function changeMapStyle(styleKey: string) {
-  const next = config.styles()[styleKey as keyof MapStyles] as
-    | StyleSpecification
-    | undefined;
+  const next = config.styles()[styleKey];
   if (next === undefined) return;
 
   // Stop any ongoing animation to prevent MapLibre crash during style change
