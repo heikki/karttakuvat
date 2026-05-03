@@ -4,7 +4,7 @@ Karttakuvat displays geotagged photographs and videos on an interactive map. Met
 
 ## Architecture
 
-The app uses Lit web components (`LitElement`) for all UI panels:
+UI is built with Lit web components (`LitElement`):
 
 - `<filter-panel>` — filters, stats, and controls (top-right)
 - `<photo-popup>` — single-photo popup on the map
@@ -13,13 +13,21 @@ The app uses Lit web components (`LitElement`) for all UI panels:
 - `<placement-panel>` — location placement UI
 - `<album-files-modal>` — album file management dialog
 
+### Map modules
+
+The map is composed of small sibling modules under `src/client/map/` — `markers/`, `route/`, `gpx`, `measure`, `placement`, `popup`, `fit`, `z-anchors`, `pan`. Each exposes a single `initX(map)` entrypoint that wires its own state (via `map.on('load', ...)` for layer setup, plus event/data subscriptions). Module pairs that would otherwise need to call into each other communicate through custom `document` events instead — `MarkerClickedEvent`, `MarkersInstalledEvent`, `PlacementModeEvent`, `RouteEditModeEvent`, `MeasureModeExitedEvent` — keeping direct imports limited to one-way leaf relationships.
+
+### Layer ordering (z-anchors)
+
+`initZAnchors(map)` installs four empty placeholder layers — `z-gpx`, `z-route`, `z-markers`, `z-measure` — threaded together with `beforeId`. Every module's `addLayer` call passes its band's anchor as `beforeId`, so layers always stack in band order regardless of init order or basemap swap (the anchors are preserved across `setStyle` by `transformStyle`).
+
 ## Startup
 
-1. `initMap()` — creates MapLibre map with globe projection, adds controls, initializes popup/measure/fit/GPX subsystems, sets up globe background shader
+1. `initMap()` — creates the MapLibre map with globe projection, then calls `initZAnchors`, `initPopup`, `initMeasure`, `initRoute`, `initFit`, `initGpx`, `initMarkers`, `initPlacement` and starts the globe background shader. Each module registers its own `map.on('load')` handler for layer setup.
 2. `initSave()` — wires up save/edit event listeners
 3. `loadPhotos()` — fetches items from `/api/items`, sorts by date
 4. `<filter-panel>` detects loaded photos via `updated()` lifecycle hook, restores filters/map style/marker style/tracks visibility from URL, validates cascading filter options, applies filters, and dispatches initial map style/marker style/GPX visibility events
-5. On map load: adds GPX layers, photo layers, measure layers, sets up marker interactions, updates markers, reopens popup from URL, fits to all photos (skipped if map view restored from URL)
+5. On map load: each module's load handler adds its own sources/layers using its z-anchor as `beforeId`. Popup reopens from URL; fit zooms to filtered photos unless a map view was restored from URL.
 
 ## Filters
 
