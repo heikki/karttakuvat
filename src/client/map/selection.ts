@@ -1,4 +1,4 @@
-import { state, subscribe as subscribeData } from '@common/data';
+import * as data from '@common/data';
 import { photoFromUrl, photoToUrl } from '@common/filter-url';
 import type { Photo } from '@common/types';
 
@@ -32,12 +32,12 @@ function getPhotoUuid(): string | null {
 
 function getPhoto(): Photo | undefined {
   if (photoUuid === null) return undefined;
-  return state.filteredPhotos.find((p) => p.uuid === photoUuid);
+  return data.state.filteredPhotos.find((p) => p.uuid === photoUuid);
 }
 
 function getPhotoIndex(): number | null {
   if (photoUuid === null) return null;
-  const idx = state.filteredPhotos.findIndex((p) => p.uuid === photoUuid);
+  const idx = data.state.filteredPhotos.findIndex((p) => p.uuid === photoUuid);
   return idx === -1 ? null : idx;
 }
 
@@ -48,9 +48,9 @@ function openPopup(uuid: string): void {
 function next(): boolean {
   const idx = getPhotoIndex();
   if (idx === null) return false;
-  const total = state.filteredPhotos.length;
+  const total = data.state.filteredPhotos.length;
   if (total === 0) return false;
-  const target = state.filteredPhotos[(idx + 1) % total];
+  const target = data.state.filteredPhotos[(idx + 1) % total];
   if (target === undefined) return false;
   openPopup(target.uuid);
   return true;
@@ -59,9 +59,9 @@ function next(): boolean {
 function prev(): boolean {
   const idx = getPhotoIndex();
   if (idx === null) return false;
-  const total = state.filteredPhotos.length;
+  const total = data.state.filteredPhotos.length;
   if (total === 0) return false;
-  const target = state.filteredPhotos[(idx - 1 + total) % total];
+  const target = data.state.filteredPhotos[(idx - 1 + total) % total];
   if (target === undefined) return false;
   openPopup(target.uuid);
   return true;
@@ -79,7 +79,7 @@ function clear(): void {
 }
 
 function toggleOldestNewest(): void {
-  const photos = state.filteredPhotos;
+  const photos = data.state.filteredPhotos;
   if (photos.length === 0) return;
   let oldestIdx = 0;
   let newestIdx = 0;
@@ -113,19 +113,21 @@ function tryRestoreFromUrl(): void {
     restoredFromUrl = true;
     return;
   }
-  if (!state.filteredPhotos.some((p) => p.uuid === uuid)) return;
+  if (!data.state.filteredPhotos.some((p) => p.uuid === uuid)) return;
   restoredFromUrl = true;
   openPopup(uuid);
 }
 
 function init(): void {
-  subscribeData(() => {
+  data.subscribe(() => {
     if (!restoredFromUrl) {
       tryRestoreFromUrl();
       return;
     }
     if (photoUuid === null) return;
-    const stillExists = state.filteredPhotos.some((p) => p.uuid === photoUuid);
+    const stillExists = data.state.filteredPhotos.some(
+      (p) => p.uuid === photoUuid
+    );
     if (stillExists) {
       // Photo still selected, but its data may have moved (pending edit, save).
       notify();

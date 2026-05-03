@@ -1,7 +1,7 @@
 import type { Feature, FeatureCollection, LineString, Point } from 'geojson';
 import type { GeoJSONSource, Map as MapGL } from 'maplibre-gl';
 
-import { state, subscribe } from '@common/data';
+import * as data from '@common/data';
 import { AlbumFilesChangedEvent } from '@common/events';
 
 import zAnchors from './z-anchors';
@@ -36,9 +36,9 @@ let nextColorIndex = 0;
 function init(m: MapGL): void {
   map = m;
   m.on('load', addGpxLayers);
-  subscribe(() => {
+  data.subscribe(() => {
     void loadGpxForAlbum(
-      state.filters.album === 'all' ? null : state.filters.album
+      data.state.filters.album === 'all' ? null : data.state.filters.album
     );
   });
   document.addEventListener(AlbumFilesChangedEvent.type, reloadTracks);

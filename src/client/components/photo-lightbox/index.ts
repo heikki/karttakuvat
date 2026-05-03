@@ -1,7 +1,7 @@
 import { css, html, LitElement, nothing } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 
-import { state } from '@common/data';
+import * as data from '@common/data';
 import * as edits from '@common/edits';
 import { ShowLightboxEvent, ShowMetadataEvent } from '@common/events';
 import type { Photo } from '@common/types';
@@ -33,10 +33,10 @@ export class PhotoLightbox extends LitElement {
 
   show(index: number) {
     this.currentIndex = index;
-    const photo = state.filteredPhotos[index];
+    const photo = data.state.filteredPhotos[index];
     if (photo === undefined) return;
     this.photo = photo;
-    this.totalCount = state.filteredPhotos.length;
+    this.totalCount = data.state.filteredPhotos.length;
     this.active = true;
   }
 
@@ -50,11 +50,11 @@ export class PhotoLightbox extends LitElement {
   }
 
   private _navigate(delta: number) {
-    const total = state.filteredPhotos.length;
+    const total = data.state.filteredPhotos.length;
     if (total === 0) return;
     const newIndex = (this.currentIndex + delta + total) % total;
     this.currentIndex = newIndex;
-    this.photo = state.filteredPhotos[newIndex] ?? null;
+    this.photo = data.state.filteredPhotos[newIndex] ?? null;
     this.totalCount = total;
   }
 

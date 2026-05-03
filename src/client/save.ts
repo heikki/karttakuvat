@@ -1,4 +1,4 @@
-import { loadPhotos } from '@common/data';
+import * as data from '@common/data';
 import * as edits from '@common/edits';
 import { SaveEditsEvent } from '@common/events';
 
@@ -19,7 +19,7 @@ async function saveEdits() {
       const text = await response.text();
       throw new Error(text);
     }
-    await loadPhotos();
+    await data.loadPhotos();
     edits.clear();
   } catch (err) {
     console.error('Failed to save edits:', err);

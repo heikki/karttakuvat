@@ -1,7 +1,7 @@
 import { css, html, LitElement, nothing } from 'lit';
 import { customElement, state as litState } from 'lit/decorators.js';
 
-import { applyFilters, state, subscribe } from '@common/data';
+import * as data from '@common/data';
 import * as edits from '@common/edits';
 import {
   ChangeMapStyleEvent,
@@ -87,7 +87,7 @@ export class FilterPanel extends LitElement {
   override connectedCallback() {
     super.connectedCallback();
     this._restoreFromUrl();
-    this._unsubData = subscribe(() => {
+    this._unsubData = data.subscribe(() => {
       this.requestUpdate();
     });
     this._unsubEdits = edits.subscribe(() => {
@@ -100,7 +100,7 @@ export class FilterPanel extends LitElement {
   }
 
   override updated() {
-    if (!this._initialized && state.photos.length > 0) {
+    if (!this._initialized && data.state.photos.length > 0) {
       this._initialized = true;
       this._applyInitialFilters();
     }
@@ -144,14 +144,14 @@ export class FilterPanel extends LitElement {
   }
 
   private _applyFilters() {
-    const result = cascade(state.photos, {
+    const result = cascade(data.state.photos, {
       year: this._year,
       album: this._album,
       camera: this._camera
     });
     this._album = result.album;
     this._camera = result.camera;
-    applyFilters(
+    data.applyFilters(
       {
         year: this._year,
         gps: this._gps,
@@ -240,12 +240,12 @@ export class FilterPanel extends LitElement {
     }
     this._measureActive = false;
     this._albumControls?.reset();
-    const result = cascade(state.photos, {
+    const result = cascade(data.state.photos, {
       year: this._year,
       album: this._album,
       camera: this._camera
     });
-    applyFilters(
+    data.applyFilters(
       {
         year: this._year,
         gps: this._gps,
@@ -261,7 +261,7 @@ export class FilterPanel extends LitElement {
   }
 
   private static _renderStats() {
-    const filtered = state.filteredPhotos;
+    const filtered = data.state.filteredPhotos;
     if (filtered.length === 0) return 'No results';
     const pc = filtered.filter((p) => !isVideo(p)).length;
     const vc = filtered.filter((p) => isVideo(p)).length;
@@ -272,10 +272,10 @@ export class FilterPanel extends LitElement {
   override render() {
     const years = [
       ...new Set(
-        state.photos.map(getYear).filter((y): y is string => y !== null)
+        data.state.photos.map(getYear).filter((y): y is string => y !== null)
       )
     ].sort();
-    const { albumOptions, cameraOptions } = cascade(state.photos, {
+    const { albumOptions, cameraOptions } = cascade(data.state.photos, {
       year: this._year,
       album: this._album,
       camera: this._camera

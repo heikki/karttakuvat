@@ -1,7 +1,7 @@
 import type { FeatureCollection } from 'geojson';
 import type { GeoJSONSource, Map as MapGL } from 'maplibre-gl';
 
-import { state, subscribe } from '@common/data';
+import * as data from '@common/data';
 import * as edits from '@common/edits';
 import {
   ResetMapEvent,
@@ -82,12 +82,12 @@ function initPhotoRoute(m: MapGL): void {
   const onChange = () => {
     if (visible) onPhotosChanged();
   };
-  subscribe(onChange);
+  data.subscribe(onChange);
   edits.subscribe(onChange);
 }
 
 function onPhotosChanged(): void {
-  const album = state.filters.album;
+  const album = data.state.filters.album;
   if (album === currentAlbum) {
     updateRoute();
     return;
@@ -107,25 +107,25 @@ function onPhotosChanged(): void {
  * apply to the display source, and persist if structure changed and no
  * edits are pending.
  */
-function reconcileAndApply(album: string, data: RouteData): void {
-  const albumPhotos = state.photos.filter((p) => p.albums.includes(album));
-  const changed = reconcileRouteWithAlbum(data, albumPhotos);
-  routeData = data;
-  applyRouteData(data);
+function reconcileAndApply(album: string, route: RouteData): void {
+  const albumPhotos = data.state.photos.filter((p) => p.albums.includes(album));
+  const changed = reconcileRouteWithAlbum(route, albumPhotos);
+  routeData = route;
+  applyRouteData(route);
   if (changed && edits.getCount() === 0) {
-    void save(album, data);
+    void save(album, route);
   }
 }
 
 /** Load the saved route for an album (if any) and apply it. */
 async function loadAndApplyRoute(album: string): Promise<void> {
-  const data = await loadSavedRoute(album);
-  if (state.filters.album !== album || !visible) return;
-  if (data === null) {
+  const route = await loadSavedRoute(album);
+  if (data.state.filters.album !== album || !visible) return;
+  if (route === null) {
     updateRoute();
     return;
   }
-  reconcileAndApply(album, data);
+  reconcileAndApply(album, route);
 }
 
 function addPhotoRouteLayers(): void {
@@ -181,7 +181,7 @@ function setPhotoRouteVisible(show: boolean): void {
 
   if (!show) return;
 
-  const album = state.filters.album;
+  const album = data.state.filters.album;
   if (album !== currentAlbum) {
     currentAlbum = album;
     routeData = null;
@@ -203,12 +203,12 @@ function getData(): RouteData | null {
 }
 
 /** Set route data and refresh the display source. */
-function setData(data: RouteData | null): void {
-  routeData = data;
-  if (data === null) {
+function setData(route: RouteData | null): void {
+  routeData = route;
+  if (route === null) {
     updateRoute();
   } else {
-    applyRouteData(data);
+    applyRouteData(route);
   }
 }
 
@@ -250,11 +250,11 @@ async function loadSavedRoute(album: string): Promise<RouteData | null> {
 }
 
 /** Save route to server. */
-async function save(album: string, data: RouteData): Promise<void> {
+async function save(album: string, route: RouteData): Promise<void> {
   await fetch(`/api/albums/${encodeURIComponent(album)}/route`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data)
+    body: JSON.stringify(route)
   });
 }
 
@@ -268,7 +268,7 @@ function getSortedLocatedPhotos(): Array<{
     loc: { lat: number; lon: number };
     sortKey: string;
   }> = [];
-  for (const photo of state.filteredPhotos) {
+  for (const photo of data.state.filteredPhotos) {
     const loc = edits.getEffectiveLocation(photo);
     if (loc === null) continue;
     if (photo.date === '') continue;
@@ -285,23 +285,23 @@ function getSortedLocatedPhotos(): Array<{
 }
 
 /** Apply RouteData to the display source. */
-function applyRouteData(data: RouteData): void {
+function applyRouteData(route: RouteData): void {
   if (map === null) return;
   const src = map.getSource<GeoJSONSource>(ROUTE_SOURCE);
   if (src === undefined) return;
 
-  const features = buildRouteLineFeatures(data);
+  const features = buildRouteLineFeatures(route);
   src.setData({ type: 'FeatureCollection', features });
 }
 
-function refreshSavedRoute(data: RouteData): void {
-  const synced = syncPhotoPoints(data);
-  const reordered = reorderRoutePhotoPoints(data);
-  applyRouteData(data);
+function refreshSavedRoute(route: RouteData): void {
+  const synced = syncPhotoPoints(route);
+  const reordered = reorderRoutePhotoPoints(route);
+  applyRouteData(route);
   if (!synced && !reordered) return;
   if (edits.getCount() > 0) return;
-  const album = state.filters.album;
-  if (album !== 'all') void save(album, data);
+  const album = data.state.filters.album;
+  if (album !== 'all') void save(album, route);
 }
 
 function updateRoute(): void {
@@ -315,13 +315,13 @@ function updateRoute(): void {
     return;
   }
 
-  const album = state.filters.album;
-  const data = album === 'all' ? null : buildDefault();
-  if (data === null) {
+  const album = data.state.filters.album;
+  const route = album === 'all' ? null : buildDefault();
+  if (route === null) {
     src.setData({ type: 'FeatureCollection', features: [] });
     return;
   }
-  applyRouteData(data);
+  applyRouteData(route);
 }
 
 export default { init, getData, setData, buildDefault, save };

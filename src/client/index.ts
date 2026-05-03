@@ -1,4 +1,4 @@
-import { loadPhotos } from '@common/data';
+import * as data from '@common/data';
 
 import './components';
 
@@ -45,7 +45,7 @@ function init() {
   void (async () => {
     map.init();
     initSave();
-    await loadPhotos();
+    await data.loadPhotos();
   })();
 }
 

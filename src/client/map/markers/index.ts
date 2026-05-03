@@ -1,6 +1,6 @@
 import type { Map as MapGL, MapLayerMouseEvent } from 'maplibre-gl';
 
-import { state, subscribe } from '@common/data';
+import * as data from '@common/data';
 import * as edits from '@common/edits';
 import { ChangeMarkerStyleEvent } from '@common/events';
 import type { MarkerLayer } from '@common/types';
@@ -39,7 +39,7 @@ function init(m: MapGL): void {
   });
 
   selection.subscribe(refreshView);
-  subscribe(refreshView);
+  data.subscribe(refreshView);
   edits.subscribe(refreshView);
 }
 
@@ -51,7 +51,7 @@ function refreshView(): void {
   if (currentLayer === null) return;
   const mode = selection.getMode();
   currentLayer.setView({
-    photos: state.filteredPhotos,
+    photos: data.state.filteredPhotos,
     selectedPhoto: mode === 'popup' ? (selection.getPhoto() ?? null) : null,
     hidden: mode === 'placement'
   });
@@ -79,7 +79,7 @@ function bindInteractions(): void {
     const feature = e.features[0]!;
     const clickedIndex = feature.properties.index as number | undefined;
     if (clickedIndex === undefined) return;
-    const photo = state.filteredPhotos[clickedIndex];
+    const photo = data.state.filteredPhotos[clickedIndex];
     if (photo === undefined) return;
     selection.openPopup(photo.uuid);
   };

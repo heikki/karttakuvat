@@ -1,4 +1,4 @@
-import { state } from '@common/data';
+import * as data from '@common/data';
 import * as edits from '@common/edits';
 import type { Photo } from '@common/types';
 import { toUtcSortKey } from '@common/utils';
@@ -49,8 +49,8 @@ function getMovedPhotoLocation(
 }
 
 /** Remove point at index k, merging the surrounding segments. */
-function removePointAt(data: RouteData, k: number): void {
-  const { points, segments } = data;
+function removePointAt(route: RouteData, k: number): void {
+  const { points, segments } = route;
   if (k === points.length - 1) {
     points.splice(k, 1);
     segments.splice(k - 1, 1);
@@ -71,18 +71,18 @@ function removePointAt(data: RouteData, k: number): void {
  * waypoint was removed.
  */
 function removeAdjacentWaypoints(
-  data: RouteData,
+  route: RouteData,
   idx: number
 ): { idx: number; removed: boolean } {
-  const { points } = data;
+  const { points } = route;
   let cur = idx;
   let removed = false;
   if (cur + 1 < points.length && points[cur + 1]!.type === 'waypoint') {
-    removePointAt(data, cur + 1);
+    removePointAt(route, cur + 1);
     removed = true;
   }
   if (cur > 0 && points[cur - 1]!.type === 'waypoint') {
-    removePointAt(data, cur - 1);
+    removePointAt(route, cur - 1);
     cur -= 1;
     removed = true;
   }
@@ -90,8 +90,8 @@ function removeAdjacentWaypoints(
 }
 
 /** Insert a point at index k, building straight-line segments to neighbors. */
-function insertPointAt(data: RouteData, k: number, pt: RoutePoint): void {
-  const { points, segments } = data;
+function insertPointAt(route: RouteData, k: number, pt: RoutePoint): void {
+  const { points, segments } = route;
   if (points.length === 0) {
     points.push(pt);
     return;
@@ -118,11 +118,11 @@ function insertPointAt(data: RouteData, k: number, pt: RoutePoint): void {
 }
 
 function resetSegmentsAroundIndex(
-  data: RouteData,
+  route: RouteData,
   idx: number,
   pt: RoutePoint
 ): void {
-  const { points, segments } = data;
+  const { points, segments } = route;
   if (idx > 0 && idx - 1 < segments.length) {
     segments[idx - 1] = makeStraightSegment(points[idx - 1]!, pt);
   }
@@ -175,11 +175,11 @@ function snapshotPointsByUuid(
  * after it (likely stale). Returns true if any waypoint was removed.
  */
 export function syncPhotoPoints(
-  data: RouteData,
-  photos: Photo[] = state.filteredPhotos
+  route: RouteData,
+  photos: Photo[] = data.state.filteredPhotos
 ): boolean {
   const locMap = buildPhotoLocationMap(photos);
-  const { points, segments } = data;
+  const { points, segments } = route;
   let removed = false;
   let i = 0;
   while (i < points.length) {
@@ -216,7 +216,7 @@ export function syncPhotoPoints(
         };
       }
     }
-    const result = removeAdjacentWaypoints(data, i);
+    const result = removeAdjacentWaypoints(route, i);
     if (result.removed) removed = true;
     i = result.idx + 1;
   }
@@ -230,11 +230,11 @@ export function syncPhotoPoints(
  * Returns true if any reordering occurred.
  */
 export function reorderRoutePhotoPoints(
-  data: RouteData,
-  photos: Photo[] = state.filteredPhotos
+  route: RouteData,
+  photos: Photo[] = data.state.filteredPhotos
 ): boolean {
   const sortKeys = buildPhotoSortKeys(photos);
-  const { points } = data;
+  const { points } = route;
   const photoIndices = collectSortablePhotoIndices(points, sortKeys);
   if (photoIndices.length < 2) return false;
 
@@ -250,12 +250,12 @@ export function reorderRoutePhotoPoints(
     if (currentUuids[i] === sortedUuids[i]) continue;
     const newPt = { ...uuidToPoint.get(sortedUuids[i]!)! };
     points[idx] = newPt;
-    resetSegmentsAroundIndex(data, idx, newPt);
+    resetSegmentsAroundIndex(route, idx, newPt);
     movedIndices.push(idx);
   }
 
   for (let i = movedIndices.length - 1; i >= 0; i--) {
-    removeAdjacentWaypoints(data, movedIndices[i]!);
+    removeAdjacentWaypoints(route, movedIndices[i]!);
   }
 
   return true;
@@ -264,18 +264,18 @@ export function reorderRoutePhotoPoints(
 /** Drop photo points whose uuid is no longer eligible (missing from album, or
  *  lost their location/date). Merges surrounding segments into straight lines. */
 function dropOrphanPhotoPoints(
-  data: RouteData,
+  route: RouteData,
   eligibleUuids: Set<string>
 ): boolean {
   let changed = false;
-  for (let i = data.points.length - 1; i >= 0; i--) {
-    const pt = data.points[i]!;
+  for (let i = route.points.length - 1; i >= 0; i--) {
+    const pt = route.points[i]!;
     if (
       pt.type === 'photo' &&
       pt.uuid !== undefined &&
       !eligibleUuids.has(pt.uuid)
     ) {
-      removePointAt(data, i);
+      removePointAt(route, i);
       changed = true;
     }
   }
@@ -293,21 +293,21 @@ interface Anchor {
   sortKey: string;
 }
 
-function findMissingPhotos(data: RouteData, eligible: Photo[]): Photo[] {
+function findMissingPhotos(route: RouteData, eligible: Photo[]): Photo[] {
   const inRoute = new Set<string>();
-  for (const pt of data.points) {
+  for (const pt of route.points) {
     if (pt.type === 'photo' && pt.uuid !== undefined) inRoute.add(pt.uuid);
   }
   return eligible.filter((p) => !inRoute.has(p.uuid));
 }
 
 function buildAnchorList(
-  data: RouteData,
+  route: RouteData,
   sortKeyByUuid: Map<string, string>
 ): Anchor[] {
   const anchors: Anchor[] = [];
-  for (let i = 0; i < data.points.length; i++) {
-    const pt = data.points[i]!;
+  for (let i = 0; i < route.points.length; i++) {
+    const pt = route.points[i]!;
     if (pt.type === 'photo' && pt.uuid !== undefined) {
       const sk = sortKeyByUuid.get(pt.uuid);
       if (sk !== undefined) anchors.push({ index: i, sortKey: sk });
@@ -317,7 +317,7 @@ function buildAnchorList(
 }
 
 function planInsertions(
-  data: RouteData,
+  route: RouteData,
   missing: Photo[],
   anchors: Anchor[],
   sortKeyByUuid: Map<string, string>
@@ -326,7 +326,7 @@ function planInsertions(
     const sk = sortKeyByUuid.get(m.uuid)!;
     const loc = edits.getEffectiveLocation(m)!;
     const next = anchors.find((a) => a.sortKey >= sk);
-    const atIndex = next === undefined ? data.points.length : next.index;
+    const atIndex = next === undefined ? route.points.length : next.index;
     return {
       atIndex,
       pt: { type: 'photo', uuid: m.uuid, lon: loc.lon, lat: loc.lat },
@@ -344,19 +344,22 @@ function planInsertions(
 
 /** Insert photo points for eligible photos that aren't yet in the route,
  *  placed at chronologically correct positions with straight-line segments. */
-function insertMissingPhotoPoints(data: RouteData, eligible: Photo[]): boolean {
+function insertMissingPhotoPoints(
+  route: RouteData,
+  eligible: Photo[]
+): boolean {
   if (eligible.length === 0) return false;
-  const missing = findMissingPhotos(data, eligible);
+  const missing = findMissingPhotos(route, eligible);
   if (missing.length === 0) return false;
 
   const sortKeyByUuid = new Map<string, string>();
   for (const p of eligible) {
     sortKeyByUuid.set(p.uuid, toUtcSortKey(edits.getEffectiveDate(p), p.tz));
   }
-  const anchors = buildAnchorList(data, sortKeyByUuid);
-  const plans = planInsertions(data, missing, anchors, sortKeyByUuid);
+  const anchors = buildAnchorList(route, sortKeyByUuid);
+  const plans = planInsertions(route, missing, anchors, sortKeyByUuid);
   for (const plan of plans) {
-    insertPointAt(data, plan.atIndex, plan.pt);
+    insertPointAt(route, plan.atIndex, plan.pt);
   }
   return true;
 }
@@ -368,7 +371,7 @@ function insertMissingPhotoPoints(data: RouteData, eligible: Photo[]): boolean {
  * Returns true if the route's structure changed (and should be persisted).
  */
 export function reconcileRouteWithAlbum(
-  data: RouteData,
+  route: RouteData,
   albumPhotos: Photo[]
 ): boolean {
   const eligible = albumPhotos.filter(
@@ -377,9 +380,9 @@ export function reconcileRouteWithAlbum(
   const eligibleUuids = new Set(eligible.map((p) => p.uuid));
 
   let changed = false;
-  if (dropOrphanPhotoPoints(data, eligibleUuids)) changed = true;
-  if (syncPhotoPoints(data, eligible)) changed = true;
-  if (insertMissingPhotoPoints(data, eligible)) changed = true;
-  if (reorderRoutePhotoPoints(data, eligible)) changed = true;
+  if (dropOrphanPhotoPoints(route, eligibleUuids)) changed = true;
+  if (syncPhotoPoints(route, eligible)) changed = true;
+  if (insertMissingPhotoPoints(route, eligible)) changed = true;
+  if (reorderRoutePhotoPoints(route, eligible)) changed = true;
   return changed;
 }
