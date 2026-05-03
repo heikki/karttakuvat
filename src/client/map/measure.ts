@@ -7,7 +7,6 @@ import {
 } from '@common/events';
 
 import { computePathDistance, setLayersVisibility } from './map-utils';
-import { isClickOnMarker } from './markers';
 import { anchorId } from './z-anchors';
 
 // eslint-disable-next-line @typescript-eslint/init-declarations -- initialized in initMeasure() before any usage
@@ -167,8 +166,7 @@ function onMapClick(e: MapMouseEvent) {
     return;
   }
 
-  // Ignore clicks on photo markers
-  if (isClickOnMarker(e.point)) return;
+  if (e.defaultPrevented) return;
 
   coords.push([e.lngLat.lng, e.lngLat.lat]);
   updateSources();

@@ -18,7 +18,6 @@ import {
   type RouteData
 } from '.';
 import { setLayersVisibility } from '../map-utils';
-import { isClickOnMarker } from '../markers';
 import {
   ALL_EDIT_LAYERS,
   applySegmentMethod,
@@ -274,10 +273,6 @@ function firstClickableHit(
   return null;
 }
 
-function isClickOnPhotoMarker(point: MapMouseEvent['point']): boolean {
-  return isClickOnMarker(point);
-}
-
 function onMapClick(e: MapMouseEvent): void {
   if (map === null || routeData === null) return;
   if (suppressNextMapClick) {
@@ -296,7 +291,7 @@ function onMapClick(e: MapMouseEvent): void {
   }
 
   // 2. Click-through to photo markers
-  if (isClickOnPhotoMarker(e.point)) return;
+  if (e.defaultPrevented) return;
 
   // 3. Add new waypoint — on segment if hit, otherwise nearest segment
   removePopup();

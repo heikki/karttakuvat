@@ -1,44 +1,31 @@
 import { Popup } from 'maplibre-gl';
 import type { Map as MapGL } from 'maplibre-gl';
 
-import {
-  copyDate,
-  copyLocation,
-  getCopiedDate,
-  getCopiedLocation
-} from '@common/clipboard';
-import { state } from '@common/data';
+import { getCopiedDate, getCopiedLocation } from '@common/clipboard';
 import * as edits from '@common/edits';
 import {
   ChangeMarkerStyleEvent,
   PlacementModeEvent,
-  SaveEditsEvent,
   ShowLightboxEvent
 } from '@common/events';
-import { computeManualDateOffset } from '@common/photo-utils';
 import type { Photo } from '@common/types';
-import {
-  computeFullDatetimeOffsetHours,
-  getThumbUrl,
-  parseExifDate,
-  parseUserDatetime
-} from '@common/utils';
+import { getThumbUrl } from '@common/utils';
 import type { PhotoPopup, PopupActions } from '@components/photo-popup';
 
-import { getMarkerRadius } from './markers';
-import { createFlyToPopup, createPanToFitPopup } from './pan';
+import { getMarkerRadius } from '../markers';
+import { createFlyToPopup, createPanToFitPopup } from '../pan';
 import {
   initPopupZoom,
   installCanvasZoomOverride,
   removeCanvasZoomOverride,
   setupPopupEvents
-} from './popup-zoom';
-import * as selection from './selection';
+} from '../popup-zoom';
+import * as selection from '../selection';
+import * as popupEdits from './edits';
 
 let popup: Popup | null = null;
 let popupElement: PhotoPopup | null = null;
 let mountedUuid: string | null = null;
-let dateEditMode = false;
 
 let map: MapGL | null = null;
 let panToFitPopup: () => void = () => {
@@ -70,21 +57,9 @@ function reanchorPopup() {
   popup.setOffset(popupOffset());
 }
 
-function handleArrowNav(key: string): boolean {
-  const idx = selection.getPhotoIndex();
-  if (idx === null) return false;
-  const total = state.filteredPhotos.length;
-  if (total === 0) return false;
-  const newIdx = (idx + (key === 'ArrowLeft' ? -1 : 1) + total) % total;
-  const next = state.filteredPhotos[newIdx];
-  if (next === undefined) return false;
-  selection.openPopup(next.uuid);
-  return true;
-}
-
 function handleEscape() {
-  if (dateEditMode) {
-    toggleDateEdit();
+  if (popupEdits.getDateEditMode()) {
+    popupEdits.toggleDateEdit();
   } else if (selection.getMode() === 'popup') {
     selection.clear();
   }
@@ -97,7 +72,8 @@ function handleKeydown(e: KeyboardEvent) {
     return;
   }
   if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-    if (handleArrowNav(e.key)) e.preventDefault();
+    const moved = e.key === 'ArrowLeft' ? selection.prev() : selection.next();
+    if (moved) e.preventDefault();
     return;
   }
   if (e.key === ' ') {
@@ -110,31 +86,14 @@ function handleKeydown(e: KeyboardEvent) {
 }
 
 const popupActions: PopupActions = {
-  confirmLocation: () => {
-    confirmLocation();
-  },
-  copyLocation: () => {
-    copyLocationFromPopup();
-  },
-  pasteLocation: () => {
-    pasteLocation();
-  },
-  copyDate: () => {
-    copyDateFromPopup();
-  },
-  pasteDate: () => {
-    pasteDateToPhoto();
-  },
-  toggleDateEdit: () => {
-    toggleDateEdit();
-  },
-  adjustTime: (hours) => {
-    const uuid = selection.getPhotoUuid();
-    if (uuid !== null) adjustTime(uuid, hours);
-  },
-  applyManualDate: (value) => {
-    applyManualDate(value);
-  }
+  confirmLocation: popupEdits.confirmCurrentLocation,
+  copyLocation: popupEdits.copyCurrentLocation,
+  pasteLocation: popupEdits.pasteCurrentLocation,
+  copyDate: popupEdits.copyCurrentDate,
+  pasteDate: popupEdits.pasteCurrentDate,
+  toggleDateEdit: popupEdits.toggleDateEdit,
+  adjustTime: popupEdits.adjustCurrentTime,
+  applyManualDate: popupEdits.applyManualDateToCurrent
 };
 
 export function initPopup(m: MapGL) {
@@ -162,8 +121,12 @@ export function initPopup(m: MapGL) {
     queueMicrotask(reanchorPopup);
   });
 
+  // Subscribe popup-edits to selection BEFORE applySelection so the date-edit
+  // reset fires first and the subsequent Lit re-sync reads the fresh value.
+  popupEdits.initPopupEdits();
   selection.subscribe(applySelection);
   edits.subscribe(applySelection);
+  popupEdits.subscribe(applySelection);
 }
 
 function applySelection() {
@@ -198,12 +161,12 @@ function mountCurrent() {
   const { lon, lat } = edits.getEffectiveCoords(photo);
   const idx = selection.getPhotoIndex() ?? 0;
 
-  dateEditMode = false;
   mountedUuid = photo.uuid;
   popupElement = createPopupElement(photo, idx);
 
   popup = new Popup({
     closeButton: false,
+    closeOnClick: false,
     maxWidth: '320px',
     anchor: 'bottom',
     offset: popupOffset(),
@@ -228,7 +191,6 @@ function mountCurrent() {
 
   popup.on('close', () => {
     removeCanvasZoomOverride();
-    dateEditMode = false;
     popup = null;
     popupElement = null;
     mountedUuid = null;
@@ -263,7 +225,6 @@ function applyNavigation(photoUuid: string): void {
   const lng = loc?.lon ?? 0;
   const lat = loc?.lat ?? 0;
 
-  dateEditMode = false;
   mountedUuid = photo.uuid;
   syncPopupElement(photo, idx);
   popup.setLngLat([lng, lat]);
@@ -376,7 +337,7 @@ function createPopupElement(photo: Photo, index: number): PhotoPopup {
   const el = document.createElement('photo-popup') as PhotoPopup;
   el.photo = photo;
   el.index = index;
-  el.dateEditMode = dateEditMode;
+  el.dateEditMode = popupEdits.getDateEditMode();
   el.actions = popupActions;
   const paste = computePasteVisibility(photo);
   el.showPasteLocation = paste.showPasteLocation;
@@ -391,82 +352,9 @@ function syncPopupElement(photo?: Photo, index?: number) {
   const i = index ?? selection.getPhotoIndex() ?? 0;
   popupElement.photo = p;
   popupElement.index = i;
-  popupElement.dateEditMode = dateEditMode;
+  popupElement.dateEditMode = popupEdits.getDateEditMode();
   const paste = computePasteVisibility(p);
   popupElement.showPasteLocation = paste.showPasteLocation;
   popupElement.showPasteDate = paste.showPasteDate;
   popupElement.requestUpdate();
-}
-
-function adjustTime(uuid: string, hours: number) {
-  edits.addTimeOffset(uuid, hours);
-  syncPopupElement();
-}
-
-function confirmLocation() {
-  const photo = selection.getPhoto();
-  if (photo === undefined) return;
-  const loc = edits.getEffectiveLocation(photo);
-  if (loc === null) return;
-  edits.setCoord(photo.uuid, loc.lat, loc.lon);
-  document.dispatchEvent(new SaveEditsEvent());
-}
-
-function copyLocationFromPopup() {
-  const photo = selection.getPhoto();
-  if (photo === undefined) return;
-  const loc = edits.getEffectiveLocation(photo);
-  if (loc === null) return;
-  copyLocation(loc.lat, loc.lon);
-}
-
-function pasteLocation() {
-  const photo = selection.getPhoto();
-  const copied = getCopiedLocation();
-  if (photo === undefined || copied === null) return;
-  edits.setCoord(photo.uuid, copied.lat, copied.lon);
-}
-
-function copyDateFromPopup() {
-  const photo = selection.getPhoto();
-  if (photo === undefined) return;
-  const effectiveDate = edits.getEffectiveDate(photo);
-  if (effectiveDate === '') return;
-  copyDate(effectiveDate);
-}
-
-function pasteDateToPhoto() {
-  const photo = selection.getPhoto();
-  if (photo === undefined) return;
-  const copied = getCopiedDate();
-  if (copied === null) return;
-  const copiedDate = parseExifDate(copied);
-  if (copiedDate === null) return;
-  const offset = computeFullDatetimeOffsetHours(photo.date, copiedDate);
-  if (offset === null) return;
-  edits.setTimeOffset(photo.uuid, offset);
-  syncPopupElement();
-}
-
-function toggleDateEdit() {
-  dateEditMode = !dateEditMode;
-  syncPopupElement();
-}
-
-function applyManualDate(dateValue: string) {
-  const photo = selection.getPhoto();
-  if (photo === undefined) return;
-  if (dateValue.trim() === '') return;
-  const yearStr = photo.date.split(':')[0];
-  const fallbackYear =
-    yearStr !== undefined && yearStr !== ''
-      ? parseInt(yearStr, 10)
-      : new Date().getFullYear();
-  const parsed = parseUserDatetime(dateValue, fallbackYear);
-  if (parsed === null) return;
-  const offset = computeManualDateOffset(photo.date, parsed);
-  if (offset === null) return;
-  edits.setTimeOffset(photo.uuid, offset);
-  dateEditMode = false;
-  syncPopupElement();
 }

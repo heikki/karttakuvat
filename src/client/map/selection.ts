@@ -45,6 +45,28 @@ export function openPopup(uuid: string): void {
   setState('popup', uuid);
 }
 
+export function next(): boolean {
+  const idx = getPhotoIndex();
+  if (idx === null) return false;
+  const total = state.filteredPhotos.length;
+  if (total === 0) return false;
+  const target = state.filteredPhotos[(idx + 1) % total];
+  if (target === undefined) return false;
+  openPopup(target.uuid);
+  return true;
+}
+
+export function prev(): boolean {
+  const idx = getPhotoIndex();
+  if (idx === null) return false;
+  const total = state.filteredPhotos.length;
+  if (total === 0) return false;
+  const target = state.filteredPhotos[(idx - 1 + total) % total];
+  if (target === undefined) return false;
+  openPopup(target.uuid);
+  return true;
+}
+
 // Precondition: must be in popup mode with the same uuid.
 // (The "set" button is only reachable from an open popup.)
 export function enterPlacement(uuid: string): void {

@@ -1,4 +1,4 @@
-import type { Map as MapGL, MapLayerMouseEvent, Point } from 'maplibre-gl';
+import type { Map as MapGL, MapLayerMouseEvent } from 'maplibre-gl';
 
 import { state, subscribe } from '@common/data';
 import * as edits from '@common/edits';
@@ -45,12 +45,6 @@ export function initMarkers(m: MapGL): void {
   };
   subscribe(refresh);
   edits.subscribe(refresh);
-}
-
-export function isClickOnMarker(point: Point): boolean {
-  const id = currentLayer?.id;
-  if (id === undefined || map.getLayer(id) === undefined) return false;
-  return map.queryRenderedFeatures(point, { layers: [id] }).length > 0;
 }
 
 export function getMarkerRadius(zoom: number): number {

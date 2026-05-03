@@ -25,7 +25,7 @@ import {
 import { mapStyles } from './config';
 import { fitToPhotos, initFit } from './fit';
 import { initGpx } from './gpx';
-import { initMarkers, isClickOnMarker } from './markers';
+import { initMarkers } from './markers';
 import { initMeasure } from './measure';
 import { initPlacement } from './placement';
 import { initPopup } from './popup';
@@ -197,12 +197,9 @@ export function initMap() {
     }
   });
 
-  // Background click dismisses an open popup unless the click hits a marker.
-  // Independent of marker style, so registered once instead of via
-  // setupMarkerInteractions (which re-binds on marker style swap).
   map.on('click', (e) => {
     if (selection.getMode() === 'placement') return;
-    if (isClickOnMarker(e.point)) return;
+    if (e.defaultPrevented) return;
     if (selection.getMode() === 'popup') selection.clear();
   });
 
