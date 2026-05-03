@@ -2,11 +2,7 @@ import turfDistance from '@turf/distance';
 import { point } from '@turf/helpers';
 import type { GeoJSONSource, Map as MapGL, MapMouseEvent } from 'maplibre-gl';
 
-import {
-  MeasureModeExitedEvent,
-  ResetMapEvent,
-  ToggleMeasureModeEvent
-} from '@common/events';
+import { ResetMapEvent, ToggleMeasureModeEvent } from '@common/events';
 import { effect } from '@common/signals';
 
 import mapUtils from './map-utils';
@@ -208,7 +204,6 @@ function onExit() {
   removeOverlay();
   map.off('click', onMapClick);
   document.removeEventListener('keydown', onKeyDown);
-  document.dispatchEvent(new MeasureModeExitedEvent());
 }
 
 function toggle() {

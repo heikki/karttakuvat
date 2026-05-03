@@ -3,16 +3,14 @@ import type { GeoJSONSource, Map as MapGL } from 'maplibre-gl';
 
 import * as data from '@common/data';
 import * as edits from '@common/edits';
-import {
-  ResetMapEvent,
-  RouteEditModeChangedEvent,
-  SetRouteVisibilityEvent
-} from '@common/events';
+import { ResetMapEvent } from '@common/events';
 import { effect } from '@common/signals';
 import type { Photo } from '@common/types';
 import { toUtcSortKey } from '@common/utils';
+import { viewState } from '@common/view-state';
 
 import mapUtils from '../map-utils';
+import selection from '../selection';
 import zAnchors from '../z-anchors';
 import { exitRouteEdit, initRouteEdit } from './edit';
 import { buildRouteLineFeatures, createEditLayers } from './helpers';
@@ -49,9 +47,12 @@ const ALL_ROUTE_LAYERS = [OUTLINE_LAYER, LINE_LAYER];
 
 // Module state
 let map: MapGL | null = null;
-let visible = false;
 let routeData: RouteData | null = null;
 let currentAlbum = 'all';
+
+function isVisible(): boolean {
+  return viewState.routeVisible.get();
+}
 
 /** Initialise the route subsystem. Called once at map creation. */
 function init(m: MapGL): void {
@@ -63,31 +64,39 @@ function init(m: MapGL): void {
   });
   document.addEventListener(ResetMapEvent.type, () => {
     exitRouteEdit();
+    viewState.routeVisible.set(false);
   });
 }
 
 function initPhotoRoute(m: MapGL): void {
   map = m;
 
-  document.addEventListener(SetRouteVisibilityEvent.type, (e) => {
-    setPhotoRouteVisible(e.visible);
+  // Display layer visibility is derived: shown when the route is visible
+  // and not being edited (edit mode owns rendering during that time).
+  effect(() => {
+    if (map === null) return;
+    const show =
+      isVisible() && selection.interactionMode.get() !== 'route-edit';
+    mapUtils.setLayersVisibility(map, ALL_ROUTE_LAYERS, show);
   });
 
-  // Hide display layers while edit mode is active so edit owns rendering.
-  document.addEventListener(RouteEditModeChangedEvent.type, (e) => {
-    if (map === null) return;
-    mapUtils.setLayersVisibility(map, ALL_ROUTE_LAYERS, !e.active && visible);
+  // React to the visibility flip itself: when it turns on, run the
+  // album-aware load/build sequence. (Off case needs no extra work — the
+  // visibility effect above hides the layers.)
+  let lastVisible = !isVisible();
+  effect(() => {
+    const v = isVisible();
+    if (v === lastVisible) return;
+    lastVisible = v;
+    if (v) onRouteShown();
   });
 
   // Rebuild route when filtered photos OR pending edits change.
-  const onChange = () => {
-    if (visible) onPhotosChanged();
-  };
   effect(() => {
     data.filteredPhotos.get();
     edits.pendingCoords.get();
     edits.pendingTimeOffsets.get();
-    onChange();
+    if (isVisible()) onPhotosChanged();
   });
 }
 
@@ -125,7 +134,7 @@ function reconcileAndApply(album: string, route: RouteData): void {
 /** Load the saved route for an album (if any) and apply it. */
 async function loadAndApplyRoute(album: string): Promise<void> {
   const route = await loadSavedRoute(album);
-  if (data.filters.get().album !== album || !visible) return;
+  if (data.filters.get().album !== album || !isVisible()) return;
   if (route === null) {
     updateRoute();
     return;
@@ -141,6 +150,7 @@ function addPhotoRouteLayers(): void {
   map.addSource(ROUTE_SOURCE, { type: 'geojson', data: empty });
 
   const before = zAnchors.id('route');
+  const initialVisibility = isVisible() ? 'visible' : 'none';
 
   map.addLayer(
     {
@@ -149,7 +159,7 @@ function addPhotoRouteLayers(): void {
       source: ROUTE_SOURCE,
       paint: { 'line-color': 'rgba(0, 0, 0, 0.3)', 'line-width': 4 },
       layout: {
-        'visibility': visible ? 'visible' : 'none',
+        'visibility': initialVisibility,
         'line-cap': 'round',
         'line-join': 'round'
       }
@@ -167,7 +177,7 @@ function addPhotoRouteLayers(): void {
         'line-width': 2
       },
       layout: {
-        'visibility': visible ? 'visible' : 'none',
+        'visibility': initialVisibility,
         'line-cap': 'round',
         'line-join': 'round'
       }
@@ -175,17 +185,11 @@ function addPhotoRouteLayers(): void {
     before
   );
 
-  if (visible) updateRoute();
+  if (isVisible()) updateRoute();
 }
 
-function setPhotoRouteVisible(show: boolean): void {
-  visible = show;
+function onRouteShown(): void {
   if (map === null) return;
-
-  mapUtils.setLayersVisibility(map, ALL_ROUTE_LAYERS, show);
-
-  if (!show) return;
-
   const album = data.filters.get().album;
   if (album !== currentAlbum) {
     currentAlbum = album;

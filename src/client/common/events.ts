@@ -70,35 +70,10 @@ export class ToggleMeasureModeEvent extends Event {
   }
 }
 
-export class MeasureModeExitedEvent extends Event {
-  static readonly type = 'measure-mode-exited';
-  constructor() {
-    super(MeasureModeExitedEvent.type);
-  }
-}
-
-export class SetRouteVisibilityEvent extends Event {
-  static readonly type = 'set-route-visibility';
-  readonly visible: boolean;
-  constructor(visible: boolean) {
-    super(SetRouteVisibilityEvent.type);
-    this.visible = visible;
-  }
-}
-
 export class ToggleRouteEditEvent extends Event {
   static readonly type = 'toggle-route-edit';
   constructor() {
     super(ToggleRouteEditEvent.type);
-  }
-}
-
-export class RouteEditModeChangedEvent extends Event {
-  static readonly type = 'route-edit-mode-changed';
-  readonly active: boolean;
-  constructor(active: boolean) {
-    super(RouteEditModeChangedEvent.type);
-    this.active = active;
   }
 }
 
@@ -140,10 +115,7 @@ declare global {
     [ResetMapEvent.type]: ResetMapEvent;
     [OpenExternalMapEvent.type]: OpenExternalMapEvent;
     [ToggleMeasureModeEvent.type]: ToggleMeasureModeEvent;
-    [MeasureModeExitedEvent.type]: MeasureModeExitedEvent;
-    [SetRouteVisibilityEvent.type]: SetRouteVisibilityEvent;
     [ToggleRouteEditEvent.type]: ToggleRouteEditEvent;
-    [RouteEditModeChangedEvent.type]: RouteEditModeChangedEvent;
     [SaveEditsEvent.type]: SaveEditsEvent;
     [ShowAlbumFilesEvent.type]: ShowAlbumFilesEvent;
     [AlbumFilesChangedEvent.type]: AlbumFilesChangedEvent;

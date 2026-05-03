@@ -1,88 +1,37 @@
+import { SignalWatcher } from '@lit-labs/signals';
 import { html, LitElement, type PropertyValues } from 'lit';
-import { customElement, state as litState, property } from 'lit/decorators.js';
+import { customElement, property } from 'lit/decorators.js';
 
-import {
-  RouteEditModeChangedEvent,
-  SetRouteVisibilityEvent,
-  ShowAlbumFilesEvent,
-  ToggleRouteEditEvent
-} from '@common/events';
-import { routeFromUrl, routeToUrl } from '@common/filter-url';
+import { ShowAlbumFilesEvent, ToggleRouteEditEvent } from '@common/events';
+import { viewState } from '@common/view-state';
 
+import selection from '../../map/selection';
 import { styles } from './styles';
 
 @customElement('album-controls')
-export class AlbumControls extends LitElement {
+export class AlbumControls extends SignalWatcher(LitElement) {
   @property() album = 'all';
-  @litState() private _routeActive = false;
-  @litState() private _routeEditActive = false;
   private _albumInitialized = false;
 
   static override styles = styles;
 
-  override connectedCallback() {
-    super.connectedCallback();
-    this._routeActive = routeFromUrl();
-    document.addEventListener(
-      RouteEditModeChangedEvent.type,
-      this._onRouteEditModeChange
-    );
-  }
-
-  override disconnectedCallback() {
-    super.disconnectedCallback();
-    document.removeEventListener(
-      RouteEditModeChangedEvent.type,
-      this._onRouteEditModeChange
-    );
-  }
-
-  private readonly _onRouteEditModeChange = (e: RouteEditModeChangedEvent) => {
-    this._routeEditActive = e.active;
-  };
-
   override willUpdate(changed: PropertyValues) {
-    if (changed.has('album')) {
-      if (!this._albumInitialized) {
-        this._albumInitialized = true;
-        return;
-      }
-      if (this._routeActive) {
-        this._exitRouteEdit();
-        if (this.album === 'all') {
-          this._routeActive = false;
-          routeToUrl(false);
-          document.dispatchEvent(new SetRouteVisibilityEvent(false));
-        }
-      }
+    if (!changed.has('album')) return;
+    if (!this._albumInitialized) {
+      this._albumInitialized = true;
+      return;
     }
-  }
-
-  /** Reset route state (called by parent on full reset). */
-  reset(): void {
-    this._exitRouteEdit();
-    if (this._routeActive) {
-      this._routeActive = false;
-      document.dispatchEvent(new SetRouteVisibilityEvent(false));
+    if (!viewState.routeVisible.get()) return;
+    if (selection.interactionMode.get() === 'route-edit') {
+      selection.interactionMode.set('idle');
     }
-  }
-
-  /** Activate route display if URL indicated it should be on. */
-  applyInitialState(): void {
-    if (this._routeActive) {
-      document.dispatchEvent(new SetRouteVisibilityEvent(true));
-    }
-  }
-
-  private _exitRouteEdit(): void {
-    if (this._routeEditActive) {
-      this._routeEditActive = false;
-      document.dispatchEvent(new ToggleRouteEditEvent());
-    }
+    if (this.album === 'all') viewState.routeVisible.set(false);
   }
 
   override render() {
     const disabled = this.album === 'all';
+    const routeActive = viewState.routeVisible.get();
+    const editActive = selection.interactionMode.get() === 'route-edit';
     return html`
       <div class="view-buttons">
         <button
@@ -95,24 +44,21 @@ export class AlbumControls extends LitElement {
           Files
         </button>
         <button
-          class="view-btn ${this._routeActive ? 'active' : ''}"
+          class="view-btn ${routeActive ? 'active' : ''}"
           ?disabled=${disabled}
           @click=${() => {
-            if (this._routeActive) this._exitRouteEdit();
-            this._routeActive = !this._routeActive;
-            routeToUrl(this._routeActive);
-            document.dispatchEvent(
-              new SetRouteVisibilityEvent(this._routeActive)
-            );
+            if (routeActive && editActive) {
+              selection.interactionMode.set('idle');
+            }
+            viewState.routeVisible.set(!routeActive);
           }}
         >
           Route
         </button>
         <button
-          class="view-btn ${this._routeEditActive ? 'active' : ''}"
-          ?disabled=${disabled || !this._routeActive}
+          class="view-btn ${editActive ? 'active' : ''}"
+          ?disabled=${disabled || !routeActive}
           @click=${() => {
-            this._routeEditActive = !this._routeEditActive;
             document.dispatchEvent(new ToggleRouteEditEvent());
           }}
         >

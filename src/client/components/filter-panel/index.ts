@@ -7,7 +7,6 @@ import * as edits from '@common/edits';
 import {
   ChangeMarkerStyleEvent,
   FitToPhotosEvent,
-  MeasureModeExitedEvent,
   OpenExternalMapEvent,
   ResetMapEvent,
   SaveEditsEvent,
@@ -25,7 +24,7 @@ import {
 import { getYear, isVideo } from '@common/utils';
 import { viewState } from '@common/view-state';
 
-import type { AlbumControls } from './album-controls';
+import selection from '../../map/selection';
 
 import './album-controls';
 
@@ -58,7 +57,6 @@ export class FilterPanel extends SignalWatcher(LitElement) {
   @litState() private _media: string[] = [...DEFAULT_MEDIA];
   @litState() private _collapsed = false;
   @litState() private _markerStyle = 'classic';
-  @litState() private _measureActive = false;
 
   private _initialized = false;
   private _gpsClickTimer: ReturnType<typeof setTimeout> | null = null;
@@ -66,17 +64,9 @@ export class FilterPanel extends SignalWatcher(LitElement) {
 
   static override styles = [styles, panelStyles];
 
-  private get _albumControls(): AlbumControls | null {
-    return this.renderRoot.querySelector('album-controls');
-  }
-
   override connectedCallback() {
     super.connectedCallback();
     this._restoreFromUrl();
-    document.addEventListener(
-      MeasureModeExitedEvent.type,
-      this._onMeasureExited
-    );
   }
 
   override updated() {
@@ -85,18 +75,6 @@ export class FilterPanel extends SignalWatcher(LitElement) {
       this._applyInitialFilters();
     }
   }
-
-  override disconnectedCallback() {
-    document.removeEventListener(
-      MeasureModeExitedEvent.type,
-      this._onMeasureExited
-    );
-    super.disconnectedCallback();
-  }
-
-  private readonly _onMeasureExited = () => {
-    this._measureActive = false;
-  };
 
   private _restoreFromUrl() {
     const saved = filtersFromUrl();
@@ -114,7 +92,6 @@ export class FilterPanel extends SignalWatcher(LitElement) {
   private _applyInitialFilters() {
     this._applyFilters();
     document.dispatchEvent(new ChangeMarkerStyleEvent(this._markerStyle));
-    this._albumControls?.applyInitialState();
   }
 
   private _applyFilters() {
@@ -209,8 +186,6 @@ export class FilterPanel extends SignalWatcher(LitElement) {
       this._markerStyle = 'classic';
       document.dispatchEvent(new ChangeMarkerStyleEvent('classic'));
     }
-    this._measureActive = false;
-    this._albumControls?.reset();
     data.filters.set({
       year: this._year,
       gps: this._gps,
@@ -350,9 +325,11 @@ export class FilterPanel extends SignalWatcher(LitElement) {
                     Reset
                   </button>
                   <button
-                    class="view-btn ${this._measureActive ? 'active' : ''}"
+                    class="view-btn ${selection.interactionMode.get() ===
+                    'measure'
+                      ? 'active'
+                      : ''}"
                     @click=${() => {
-                      this._measureActive = !this._measureActive;
                       document.dispatchEvent(new ToggleMeasureModeEvent());
                     }}
                   >

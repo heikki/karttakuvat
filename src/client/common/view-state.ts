@@ -1,7 +1,12 @@
 import { signal } from '@lit-labs/signals';
 
 import { HAS_MML } from './features';
-import { mapStyleFromUrl, mapStyleToUrl } from './filter-url';
+import {
+  mapStyleFromUrl,
+  mapStyleToUrl,
+  routeFromUrl,
+  routeToUrl
+} from './filter-url';
 import { effect } from './signals';
 
 function resolveInitialMapStyle(): string {
@@ -12,9 +17,14 @@ function resolveInitialMapStyle(): string {
 }
 
 export const viewState = {
-  mapStyle: signal(resolveInitialMapStyle())
+  mapStyle: signal(resolveInitialMapStyle()),
+  routeVisible: signal(routeFromUrl())
 };
 
 effect(() => {
   mapStyleToUrl(viewState.mapStyle.get());
+});
+
+effect(() => {
+  routeToUrl(viewState.routeVisible.get());
 });
