@@ -15,7 +15,15 @@ UI is built with Lit web components (`LitElement`):
 
 ### Map modules
 
-The map is composed of small sibling modules under `src/client/map/` — `markers/`, `route/`, `gpx`, `measure`, `placement`, `popup`, `fit`, `z-anchors`, `pan`. Each exposes a single `initX(map)` entrypoint that wires its own state (via `map.on('load', ...)` for layer setup, plus event/data subscriptions). Module pairs that would otherwise need to call into each other communicate through custom `document` events instead — `MarkerClickedEvent`, `MarkersInstalledEvent`, `PlacementModeEvent`, `RouteEditModeEvent`, `MeasureModeExitedEvent` — keeping direct imports limited to one-way leaf relationships.
+The map is composed of small sibling modules under `src/client/map/` — `selection`, `markers/`, `route/`, `gpx`, `measure`, `placement`, `popup`, `fit`, `z-anchors`, `pan`. Each exposes a single `initX(map)` entrypoint that wires its own state (via `map.on('load', ...)` for layer setup, plus event/data subscriptions). Cross-module communication goes through two seams: shared state modules (`selection`, `edits`) that the relevant subscribers read and observe, and bare `document` events for one-way request signals (`PlacementModeEvent`, `RouteEditModeEvent`, `MeasureModeExitedEvent`).
+
+### Selection
+
+`selection.ts` owns the focused-photo state machine: `mode` ∈ `idle | popup | placement` plus the selected `photoUuid`. Markers, popup, and placement subscribe and react — the popup module mounts/unmounts the MapLibre Popup based on mode, markers toggle visibility and apply highlight, placement shows/hides the panel and crosshair. Selection auto-clears when the selected photo leaves the filtered set, and restores the photo from the URL `id` param after photos load.
+
+### Pending edits
+
+`common/edits.ts` owns pending coordinate edits, pending time offsets (hour deltas), and the `isSaving` flag. Two channels: `data.subscribe` fires on filter changes, `edits.subscribe` fires on edit changes. Subscribers that care about effective photo positions (markers, popup, route) listen to both; selection only listens to filter changes. `getEffectiveCoords/Date/Location(photo)` are the read API — they apply pending edits over the stored photo data.
 
 ### Layer ordering (z-anchors)
 
@@ -23,7 +31,7 @@ The map is composed of small sibling modules under `src/client/map/` — `marker
 
 ## Startup
 
-1. `initMap()` — creates the MapLibre map with globe projection, then calls `initZAnchors`, `initPopup`, `initMeasure`, `initRoute`, `initFit`, `initGpx`, `initMarkers`, `initPlacement` and starts the globe background shader. Each module registers its own `map.on('load')` handler for layer setup.
+1. `initMap()` — creates the MapLibre map with globe projection, then calls `initSelection`, `initZAnchors`, `initPopup`, `initMeasure`, `initRoute`, `initFit`, `initGpx`, `initMarkers`, `initPlacement` and starts the globe background shader. Each module registers its own `map.on('load')` handler for layer setup.
 2. `initSave()` — wires up save/edit event listeners
 3. `loadPhotos()` — fetches items from `/api/items`, sorts by date
 4. `<filter-panel>` detects loaded photos via `updated()` lifecycle hook, restores filters/map style/marker style/tracks visibility from URL, validates cascading filter options, applies filters, and dispatches initial map style/marker style/GPX visibility events

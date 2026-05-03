@@ -4,9 +4,9 @@ Geotagged photo map viewer with Apple Photos integration.
 
 ## Project Stats (as of 03.05.2026)
 
-- **TypeScript files**: 59
-- **Lines of code**: 12,900
-- **Total commits**: 460
+- **TypeScript files**: 61
+- **Lines of code**: 12,954
+- **Total commits**: 463
 - **Total tokens**: ~1,331M | **Total cost**: ~$817
 
 ## Updating This Diary
@@ -42,6 +42,9 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 - Autosave correctly defers while a photo location edit is pending (was persisting mid-edit coordinates)
 - Map subsystems unified to `initX(map)` shape; cross-module direct calls replaced with `document` events
 - Z-anchor placeholder layers preserve layer z-order across module init order and basemap swaps
+- Focused-photo state (popup vs placement vs idle) extracted to a `selection` module that subscribers read instead of reaching across each other
+- Pending edits extracted to a dedicated `edits` module with its own subscribe channel, separating filter from edit notifications
+- Arrow-key popup navigation no longer flashes the previous image at the new location
 
 ## 02.05.2026 — Photo Route Reconciliation & Edit Polish
 
