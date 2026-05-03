@@ -16,7 +16,6 @@ import {
   ALL_EDIT_LAYERS,
   applySegmentMethod,
   buildRouteLineFeatures,
-  createEditLayers,
   createSegmentPopup,
   EDIT_IDS,
   findNearestSegment,
@@ -95,7 +94,7 @@ export function initRouteEdit(m: MapGL): void {
   map = m;
   document.addEventListener(ToggleRouteEditEvent.type, () => {
     if (isActive()) {
-      exitEditMode();
+      exitRouteEdit();
     } else {
       enterEditMode();
     }
@@ -110,22 +109,13 @@ export function initRouteEdit(m: MapGL): void {
   });
 }
 
-export function addRouteEditLayers(): void {
-  if (map === null) return;
-  createEditLayers(map);
-}
-
-export function exitRouteEdit(): void {
-  exitEditMode();
-}
-
 // ---------- Lifecycle ----------
 
 function enterEditMode(): void {
   if (isActive() || map === null) return;
 
   // Build route data from saved route or default, sync photo positions.
-  // exitEditMode pushes routeData back into the display module; nothing
+  // exitRouteEdit pushes routeData back into the display module; nothing
   // reads route.getData() between enter and exit so we don't push it now.
   routeData = route.getData() ?? route.buildDefault();
   if (routeData === null) return;
@@ -151,7 +141,7 @@ function enterEditMode(): void {
   transition({ kind: 'idle' });
 }
 
-function exitEditMode(): void {
+export function exitRouteEdit(): void {
   if (!isActive() || map === null) return;
 
   // If a drag was in progress, tear down its mousemove/mouseup handlers.
@@ -500,7 +490,7 @@ function teardownDragListeners(): void {
 
 // ---------- Cursor & hover ----------
 
-const CURSOR_CLASSES = ['cursor-pointer', 'cursor-grab', 'cursor-grabbing'];
+const CURSOR_CLASSES = ['cursor-pointer', 'cursor-grabbing'];
 
 function setCursorClass(cls: string | null): void {
   if (map === null) return;
@@ -577,5 +567,5 @@ function onPointLeave(): void {
 }
 
 function onKeyDown(e: KeyboardEvent): void {
-  if (e.key === 'Escape') exitEditMode();
+  if (e.key === 'Escape') exitRouteEdit();
 }

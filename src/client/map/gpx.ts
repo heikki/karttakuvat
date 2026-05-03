@@ -3,7 +3,6 @@ import type { GeoJSONSource, Map as MapGL } from 'maplibre-gl';
 
 import { state, subscribe } from '@common/data';
 
-import mapUtils from './map-utils';
 import zAnchors from './z-anchors';
 
 // Sources and layers
@@ -17,7 +16,6 @@ const WAYPOINT_LABEL_LAYER = 'gpx-waypoint-labels';
 // Module state
 let map: MapGL | null = null;
 let currentAlbum: string | null = null;
-const hiddenFiles = new Set<string>();
 let trackFeatures: Array<Feature<LineString>> = [];
 let waypointFeatures: Array<Feature<Point>> = [];
 
@@ -145,16 +143,9 @@ async function loadGpxForAlbum(album: string | null): Promise<void> {
           name: string;
           visible: boolean;
         }>;
-        hiddenFiles.clear();
-        const gpxFiles: string[] = [];
-        for (const f of files) {
-          if (!f.name.toLowerCase().endsWith('.gpx')) continue;
-          if (f.visible) {
-            gpxFiles.push(f.name);
-          } else {
-            hiddenFiles.add(f.name);
-          }
-        }
+        const gpxFiles = files
+          .filter((f) => f.visible && f.name.toLowerCase().endsWith('.gpx'))
+          .map((f) => f.name);
         const color = TRACK_COLORS[nextColorIndex++ % TRACK_COLORS.length]!;
         await Promise.all(
           gpxFiles.map((name) => loadGpxFile(album, name, color))
@@ -179,59 +170,35 @@ async function loadGpxFile(
     if (!res.ok) return;
     const xml = await res.text();
     const doc = new DOMParser().parseFromString(xml, 'text/xml');
-    parseTracks(doc, filename, color);
+    parseTracks(doc, color);
     parseWaypoints(doc, color);
   } catch {
     // skip unparseable files
   }
 }
 
-function parseTracks(doc: Document, filename: string, color: string): void {
+function parseTracks(doc: Document, color: string): void {
   const tracks = Array.from(doc.querySelectorAll('trk'));
   for (const trk of tracks) {
-    const name =
-      trk.querySelector('name')?.textContent ?? filename.replace(/\.gpx$/i, '');
-    const { coords, elevations } = extractTrackPoints(trk);
+    const coords = extractTrackPoints(trk);
     if (coords.length < 2) continue;
-
-    const distance = mapUtils.computePathDistance(coords);
-    const { gain, loss } = computeElevation(elevations);
-
     trackFeatures.push({
       type: 'Feature',
       geometry: { type: 'LineString', coordinates: coords },
-      properties: { name, color, distance, elevGain: gain, elevLoss: loss }
+      properties: { color }
     });
   }
 }
 
-function extractTrackPoints(trk: Element): {
-  coords: Array<[number, number]>;
-  elevations: number[];
-} {
+function extractTrackPoints(trk: Element): Array<[number, number]> {
   const coords: Array<[number, number]> = [];
-  const elevations: number[] = [];
-  const points = Array.from(trk.querySelectorAll('trkpt'));
-
-  for (const pt of points) {
+  for (const pt of Array.from(trk.querySelectorAll('trkpt'))) {
     const lat = parseFloat(pt.getAttribute('lat') ?? '');
     const lon = parseFloat(pt.getAttribute('lon') ?? '');
     if (isNaN(lat) || isNaN(lon)) continue;
     coords.push([lon, lat]);
-    const eleText = pt.querySelector('ele')?.textContent ?? null;
-    if (eleText !== null) {
-      const v = parseFloat(eleText);
-      if (!isNaN(v)) elevations.push(v);
-    }
   }
-  return { coords, elevations };
-}
-
-function parseElevation(el: Element): number | null {
-  const text = el.querySelector('ele')?.textContent ?? null;
-  if (text === null) return null;
-  const v = parseFloat(text);
-  return isNaN(v) ? null : v;
+  return coords;
 }
 
 function parseWaypoints(doc: Document, color: string): void {
@@ -241,29 +208,12 @@ function parseWaypoints(doc: Document, color: string): void {
     const lon = parseFloat(wpt.getAttribute('lon') ?? '');
     if (isNaN(lat) || isNaN(lon)) continue;
     const name = wpt.querySelector('name')?.textContent ?? '';
-    const ele = parseElevation(wpt);
-    const props: Record<string, unknown> = { name, color };
-    if (ele !== null) props.ele = ele;
     waypointFeatures.push({
       type: 'Feature',
       geometry: { type: 'Point', coordinates: [lon, lat] },
-      properties: props
+      properties: { name, color }
     });
   }
-}
-
-function computeElevation(elevations: number[]): {
-  gain: number;
-  loss: number;
-} {
-  let gain = 0;
-  let loss = 0;
-  for (let i = 1; i < elevations.length; i++) {
-    const diff = elevations[i]! - elevations[i - 1]!;
-    if (diff > 0) gain += diff;
-    else loss -= diff;
-  }
-  return { gain, loss };
 }
 
 function updateSources(): void {
@@ -295,11 +245,4 @@ function reloadTracks(): void {
   void loadGpxForAlbum(album);
 }
 
-/** Update the set of hidden filenames and reload tracks. */
-function setHiddenFiles(hidden: Set<string>): void {
-  hiddenFiles.clear();
-  for (const f of hidden) hiddenFiles.add(f);
-  reloadTracks();
-}
-
-export default { init, reloadTracks, setHiddenFiles };
+export default { init, reloadTracks };

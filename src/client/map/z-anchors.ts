@@ -1,7 +1,7 @@
 import type { Map as MapGL } from 'maplibre-gl';
 
 const BANDS = ['gpx', 'route', 'markers', 'measure'] as const;
-export type ZBand = (typeof BANDS)[number];
+type ZBand = (typeof BANDS)[number];
 
 const SOURCE = 'z-empty';
 
@@ -26,4 +26,4 @@ function init(map: MapGL): void {
   });
 }
 
-export default { BANDS, id, init };
+export default { id, init };

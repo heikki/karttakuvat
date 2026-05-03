@@ -230,7 +230,7 @@ export function buildRouteLineFeatures(
 }
 
 /** Distance from a point to a polyline (in whatever coordinate space the inputs are). */
-export function distToPolyline(
+function distToPolyline(
   px: number,
   py: number,
   coords: Array<[number, number]>

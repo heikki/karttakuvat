@@ -13,8 +13,8 @@ import { toUtcSortKey } from '@common/utils';
 
 import mapUtils from '../map-utils';
 import zAnchors from '../z-anchors';
-import { addRouteEditLayers, exitRouteEdit, initRouteEdit } from './edit';
-import { buildRouteLineFeatures } from './helpers';
+import { exitRouteEdit, initRouteEdit } from './edit';
+import { buildRouteLineFeatures, createEditLayers } from './helpers';
 import {
   reconcileRouteWithAlbum,
   reorderRoutePhotoPoints,
@@ -58,7 +58,7 @@ function init(m: MapGL): void {
   initPhotoRoute(m);
   m.on('load', () => {
     addPhotoRouteLayers();
-    addRouteEditLayers();
+    createEditLayers(m);
   });
   document.addEventListener(ResetMapEvent.type, () => {
     exitRouteEdit();

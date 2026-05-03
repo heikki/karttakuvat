@@ -197,7 +197,9 @@ export class AlbumFilesModal extends LitElement {
       );
       const data = (await res.json()) as AlbumFile[];
       this._files = data.sort((a, b) => a.name.localeCompare(b.name));
-      this._syncHiddenFiles();
+      void import('../../map/gpx').then((gpx) => {
+        gpx.default.reloadTracks();
+      });
     } catch {
       this._files = [];
     }
@@ -219,21 +221,13 @@ export class AlbumFilesModal extends LitElement {
         this._files = this._files.map((f) =>
           f.name === file.name ? { ...f, visible: newVisible } : f
         );
-        this._syncHiddenFiles();
+        void import('../../map/gpx').then((gpx) => {
+          gpx.default.reloadTracks();
+        });
       }
     } catch (err) {
       console.error('Toggle visibility failed:', err);
     }
-  }
-
-  private _syncHiddenFiles() {
-    const hidden = new Set<string>();
-    for (const f of this._files) {
-      if (!f.visible) hidden.add(f.name);
-    }
-    void import('../../map/gpx').then((gpx) => {
-      gpx.default.setHiddenFiles(hidden);
-    });
   }
 
   private async _deleteFile(filename: string) {
@@ -244,10 +238,10 @@ export class AlbumFilesModal extends LitElement {
       );
       if (res.ok) {
         this._files = this._files.filter((f) => f.name !== filename);
-        this._syncHiddenFiles();
         if (filename.toLowerCase().endsWith('.gpx')) {
-          const gpx = await import('../../map/gpx');
-          gpx.default.reloadTracks();
+          void import('../../map/gpx').then((gpx) => {
+            gpx.default.reloadTracks();
+          });
         }
       }
     } catch (err) {

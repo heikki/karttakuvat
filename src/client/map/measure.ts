@@ -1,3 +1,5 @@
+import turfDistance from '@turf/distance';
+import { point } from '@turf/helpers';
 import type { GeoJSONSource, Map as MapGL, MapMouseEvent } from 'maplibre-gl';
 
 import {
@@ -20,10 +22,6 @@ const POINT_LAYER = 'measure-points-layer';
 const LINE_LAYER = 'measure-line-layer';
 
 let overlay: HTMLElement | null = null;
-
-function isActive(): boolean {
-  return isMeasureActive;
-}
 
 function init(m: MapGL) {
   map = m;
@@ -115,7 +113,13 @@ function updateSources() {
 }
 
 function computeDistance(): number {
-  return mapUtils.computePathDistance(coords);
+  let total = 0;
+  for (let i = 1; i < coords.length; i++) {
+    total += turfDistance(point(coords[i - 1]!), point(coords[i]!), {
+      units: 'kilometers'
+    });
+  }
+  return total;
 }
 
 function formatDistance(km: number): string {
@@ -218,4 +222,4 @@ function toggle() {
   }
 }
 
-export default { init, isActive, toggle };
+export default { init };

@@ -44,9 +44,6 @@ canvas.crosshair {
 canvas.cursor-pointer {
   cursor: pointer !important;
 }
-canvas.cursor-grab {
-  cursor: grab !important;
-}
 canvas.cursor-grabbing {
   cursor: grabbing !important;
 }
