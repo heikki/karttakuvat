@@ -35,7 +35,7 @@ let nextColorIndex = 0;
 
 function init(m: MapGL): void {
   map = m;
-  m.on('load', addGpxLayers);
+  addGpxLayers();
   effect(() => {
     const album = data.filters.get().album;
     void loadGpxForAlbum(album === 'all' ? null : album);

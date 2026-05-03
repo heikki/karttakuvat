@@ -24,11 +24,9 @@ let interactionCleanup: (() => void) | null = null;
 function init(m: MapGL): void {
   map = m;
 
-  map.on('load', () => {
-    install();
-    bindInteractions();
-    refreshView();
-  });
+  install();
+  bindInteractions();
+  refreshView();
 
   effect(() => {
     const style = viewState.markerStyle.get();
@@ -42,8 +40,6 @@ function init(m: MapGL): void {
   });
 
   effect(() => {
-    // Read every tracked signal upfront so dependencies register even when
-    // refreshView() bails out early (e.g. on first run before map 'load').
     data.filteredPhotos.get();
     edits.pendingCoords.get();
     selection.selectedPhotoUuid.get();

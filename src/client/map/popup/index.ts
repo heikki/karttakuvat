@@ -171,16 +171,6 @@ function mountCurrent() {
   setupPopupEvents(popup.getElement());
   installCanvasZoomOverride();
 
-  // If we mounted before the map's first 'load' (URL-restoration race),
-  // markers haven't installed yet → markers.getRadius returned 0 → offset is
-  // wrong. Registered here (after markers' load handler), so it fires
-  // second and corrects the offset.
-  if (!map.loaded()) {
-    void map.once('load', () => {
-      if (popup !== null) popup.setOffset(popupOffset());
-    });
-  }
-
   popup.on('close', () => {
     removeCanvasZoomOverride();
     popup = null;

@@ -25,7 +25,7 @@ function isActive(): boolean {
 
 function init(m: MapGL) {
   map = m;
-  m.on('load', addMeasureLayers);
+  addMeasureLayers();
 
   let wasActive = false;
   effect(() => {

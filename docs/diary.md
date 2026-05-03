@@ -5,9 +5,9 @@ Geotagged photo map viewer with Apple Photos integration.
 ## Project Stats (as of 04.05.2026)
 
 - **TypeScript files**: 64
-- **Lines of code**: 12,593
-- **Total commits**: 488
-- **Total tokens**: ~1,533M | **Total cost**: ~$941
+- **Lines of code**: 12,578
+- **Total commits**: 490
+- **Total tokens**: ~1,540M | **Total cost**: ~$947
 
 ## Updating This Diary
 
@@ -35,12 +35,13 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 
 ## 04.05.2026 — Events-to-signals refactor
 
-**Tokens**: 43M | **Cost**: $24
+**Tokens**: 50M | **Cost**: $30
 
 - State management overhauled to signals via `@lit-labs/signals`; commands route through a single `@common/actions` module; `events.ts` deleted
 - Placement, measure, and route-edit are now mutex by construction (one `interactionMode` enum)
 - Empty-map click during measure or route-edit no longer exits the active mode
 - `?markers=points` is now actually persisted to URL (helper had its default inverted)
+- Map module inits run from a single `map.once('load')` in `index.ts`; per-module load wrappers removed
 
 ## 03.05.2026 — Route Polish & Map Architecture
 

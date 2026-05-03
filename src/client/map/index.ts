@@ -131,15 +131,6 @@ function init() {
     console.warn('[MapGL] WebGL context restored');
   });
 
-  selection.init();
-  zAnchors.init(map);
-  popup.init(map);
-  measure.init(map);
-  route.init(map);
-  fit.init(map);
-  gpx.init(map);
-  markers.init(map);
-
   // Init globe background shader
   background.init(map.getContainer());
   background.start();
@@ -204,7 +195,21 @@ function init() {
     if (selection.isPopupOpen()) popup.forceRemount();
   });
 
-  placement.init(map);
+  // Module inits run after the style loads so addSource/addLayer calls land
+  // on a ready map. Order matters: zAnchors creates anchor layers used by
+  // others; markers installs the marker layer that popup.popupOffset() reads
+  // via markers.getRadius().
+  void map.once('load', () => {
+    selection.init();
+    zAnchors.init(map);
+    markers.init(map);
+    popup.init(map);
+    measure.init(map);
+    route.init(map);
+    fit.init(map);
+    gpx.init(map);
+    placement.init(map);
+  });
 
   effect(() => {
     const next = viewState.mapStyle.get();

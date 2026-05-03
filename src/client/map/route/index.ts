@@ -53,14 +53,12 @@ function isVisible(): boolean {
   return viewState.routeVisible.get();
 }
 
-/** Initialise the route subsystem. Called once at map creation. */
+/** Initialise the route subsystem. Called once after the map's load event. */
 function init(m: MapGL): void {
   initRouteEdit(m);
   initPhotoRoute(m);
-  m.on('load', () => {
-    addPhotoRouteLayers();
-    createEditLayers(m);
-  });
+  addPhotoRouteLayers();
+  createEditLayers(m);
 }
 
 function initPhotoRoute(m: MapGL): void {

@@ -12,10 +12,8 @@ let map: MapGL;
 
 function init(m: MapGL) {
   map = m;
-  if (mapViewFromUrl() === null) {
-    m.on('load', () => {
-      if (data.filteredPhotos.get().length > 0) toPhotos();
-    });
+  if (mapViewFromUrl() === null && data.filteredPhotos.get().length > 0) {
+    toPhotos();
   }
 }
 
