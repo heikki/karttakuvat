@@ -10,7 +10,7 @@ import type {
 import * as edits from '@common/edits';
 import type { MarkerLayer, Photo } from '@common/types';
 
-import { anchorId } from '../../z-anchors';
+import zAnchors from '../../z-anchors';
 import { BloomLayer } from './bloom';
 
 const hitAreaPaint: CircleLayerSpecification['paint'] = {
@@ -72,7 +72,7 @@ export class PointsLayer implements MarkerLayer {
 
   install(map: MapGL, photos: Photo[]) {
     this.map = map;
-    const before = anchorId('markers');
+    const before = zAnchors.id('markers');
 
     map.addLayer(this.bloom, before);
 

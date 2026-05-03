@@ -5,20 +5,20 @@ import { state } from '@common/data';
 import { FitToPhotosEvent } from '@common/events';
 import { mapViewFromUrl } from '@common/filter-url';
 
-import { getPopup } from './popup';
-import * as selection from './selection';
+import popup from './popup';
+import selection from './selection';
 
-// eslint-disable-next-line @typescript-eslint/init-declarations -- set in initFit
+// eslint-disable-next-line @typescript-eslint/init-declarations -- set in init
 let map: MapGL;
 
-export function initFit(m: MapGL) {
+function init(m: MapGL) {
   map = m;
   document.addEventListener(FitToPhotosEvent.type, (e) => {
-    fitToPhotos(e.animate, e.selectFirst);
+    toPhotos(e.animate, e.selectFirst);
   });
   if (mapViewFromUrl() === null) {
     m.on('load', () => {
-      if (state.filteredPhotos.length > 0) fitToPhotos();
+      if (state.filteredPhotos.length > 0) toPhotos();
     });
   }
 }
@@ -67,12 +67,12 @@ function triggerPostFitActions(animate: boolean, selectFirst: boolean) {
 
 function computeTopPadding(): number {
   if (map.getProjection().type !== 'globe') return 350;
-  const popupEl = getPopup()?.getElement();
+  const popupEl = popup.get()?.getElement();
   if (popupEl === undefined) return 50;
   return Math.max(50, popupEl.getBoundingClientRect().height + 60);
 }
 
-export function fitToPhotos(animate = false, selectFirst = false) {
+function toPhotos(animate = false, selectFirst = false) {
   if (state.filteredPhotos.length === 0) return;
   const bounds = computePhotoBounds();
   const duration = animate ? 500 : 0;
@@ -91,3 +91,5 @@ export function fitToPhotos(animate = false, selectFirst = false) {
   });
   triggerPostFitActions(animate, selectFirst);
 }
+
+export default { init, toPhotos };

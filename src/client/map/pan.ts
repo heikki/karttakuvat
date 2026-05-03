@@ -1,6 +1,6 @@
 import type { Map as MapGL } from 'maplibre-gl';
 
-import { getPopup } from './popup';
+import popup from './popup';
 
 const BASE_PADDING = 10;
 
@@ -26,13 +26,13 @@ function getPopupRect(map: MapGL): {
   mapRect: DOMRect;
   popupRect: DOMRect;
 } | null {
-  const popup = getPopup();
-  if (popup === null) return null;
+  const p = popup.get();
+  if (p === null) return null;
   const mapContainer = map.getContainer();
   if (mapContainer.clientWidth === 0 || mapContainer.clientHeight === 0) {
     return null;
   }
-  const popupEl = popup.getElement() as HTMLElement | undefined;
+  const popupEl = p.getElement() as HTMLElement | undefined;
   if (popupEl === undefined) return null;
   return {
     mapRect: mapContainer.getBoundingClientRect(),
@@ -86,7 +86,7 @@ function panBy(map: MapGL, panX: number, panY: number, duration: number) {
  * Pan the map to fit the popup after opening it on the current view.
  * Used for initial popup show (click on marker).
  */
-export function createPanToFitPopup(map: MapGL) {
+function createToFitPopup(map: MapGL) {
   return () => {
     afterPopupLayout(() => {
       const rects = getPopupRect(map);
@@ -105,7 +105,7 @@ export function createPanToFitPopup(map: MapGL) {
  * If it's completely off-screen, eases to center first.
  * Used for arrow-key navigation between photos.
  */
-export function createFlyToPopup(map: MapGL) {
+function createFlyToPopup(map: MapGL) {
   return (coords: [number, number]) => {
     afterPopupLayout(() => {
       const rects = getPopupRect(map);
@@ -147,3 +147,5 @@ export function createFlyToPopup(map: MapGL) {
     });
   };
 }
+
+export default { createToFitPopup, createFlyToPopup };

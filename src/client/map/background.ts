@@ -377,7 +377,7 @@ function render(now: number) {
   blitToScreen(w, h);
 }
 
-export function setMapIdle(idle: boolean) {
+function setIdle(idle: boolean) {
   const now = performance.now();
   if (!idle && mapIdle) {
     // Map interaction started — record pause start
@@ -391,11 +391,11 @@ export function setMapIdle(idle: boolean) {
   mapIdle = idle;
 }
 
-export function setGlobeRadius(radiusPixels: number, viewportMinDim: number) {
+function setRadius(radiusPixels: number, viewportMinDim: number) {
   currentGlobeRadius = radiusPixels / viewportMinDim;
 }
 
-export function startGlobeBackground() {
+function start() {
   if (canvas !== null) {
     canvas.style.display = 'block';
   }
@@ -408,7 +408,7 @@ export function startGlobeBackground() {
   animationId = requestAnimationFrame(render);
 }
 
-export function stopGlobeBackground() {
+function stop() {
   if (animationId !== null) {
     cancelAnimationFrame(animationId);
     animationId = null;
@@ -418,7 +418,7 @@ export function stopGlobeBackground() {
   }
 }
 
-export function initGlobeBackground(container: HTMLElement) {
+function init(container: HTMLElement) {
   if (!initGL(container)) {
     console.warn('Globe background: WebGL2 not available');
     return;
@@ -434,3 +434,5 @@ export function initGlobeBackground(container: HTMLElement) {
     canvas.style.display = 'none';
   }
 }
+
+export default { setIdle, setRadius, start, stop, init };

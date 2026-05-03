@@ -5,7 +5,7 @@ import * as edits from '@common/edits';
 import { ChangeMarkerStyleEvent } from '@common/events';
 import type { MarkerLayer } from '@common/types';
 
-import * as selection from '../selection';
+import selection from '../selection';
 import { ClassicLayer } from './classic';
 import { PointsLayer } from './points';
 
@@ -14,13 +14,13 @@ const markerStyles: Record<string, () => MarkerLayer> = {
   classic: () => new ClassicLayer()
 };
 
-// eslint-disable-next-line @typescript-eslint/init-declarations -- set in initMarkers before any other usage
+// eslint-disable-next-line @typescript-eslint/init-declarations -- set in init before any other usage
 let map: MapGL;
 let currentMarkerStyle = 'classic';
 let currentLayer: MarkerLayer | null = null;
 let interactionCleanup: (() => void) | null = null;
 
-export function initMarkers(m: MapGL): void {
+function init(m: MapGL): void {
   map = m;
 
   map.on('load', () => {
@@ -47,7 +47,7 @@ export function initMarkers(m: MapGL): void {
   edits.subscribe(refresh);
 }
 
-export function getMarkerRadius(zoom: number): number {
+function getRadius(zoom: number): number {
   return currentLayer?.markerRadius(zoom) ?? 0;
 }
 
@@ -106,3 +106,5 @@ function bindInteractions(): void {
     map.off('mouseleave', layerId, onMouseLeave);
   };
 }
+
+export default { init, getRadius };

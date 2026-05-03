@@ -13,7 +13,7 @@ import {
   parseUserDatetime
 } from '@common/utils';
 
-import * as selection from '../selection';
+import selection from '../selection';
 
 function computeManualDateOffset(
   originalDate: string,

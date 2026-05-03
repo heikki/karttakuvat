@@ -15,26 +15,20 @@ import {
 import { mapViewFromUrl, mapViewToUrl } from '@common/filter-url';
 import type { MapStyles } from '@common/types';
 
-import {
-  initGlobeBackground,
-  setGlobeRadius,
-  setMapIdle,
-  startGlobeBackground,
-  stopGlobeBackground
-} from './background';
-import { mapStyles } from './config';
-import { fitToPhotos, initFit } from './fit';
-import { initGpx } from './gpx';
-import { initMarkers } from './markers';
-import { initMeasure } from './measure';
-import { initPlacement } from './placement';
-import { initPopup } from './popup';
-import { initRoute } from './route';
-import * as selection from './selection';
-import { initZAnchors } from './z-anchors';
+import background from './background';
+import config from './config';
+import fit from './fit';
+import gpx from './gpx';
+import markers from './markers';
+import measure from './measure';
+import placement from './placement';
+import popup from './popup';
+import route from './route';
+import selection from './selection';
+import zAnchors from './z-anchors';
 
 // Global map variable (local to module)
-// eslint-disable-next-line @typescript-eslint/init-declarations -- map is initialized in initMap() which is called before any other usage
+// eslint-disable-next-line @typescript-eslint/init-declarations -- map is initialized in init() which is called before any other usage
 let map: MapGL;
 
 function showMapError(msg: string, onClick?: () => void) {
@@ -64,7 +58,7 @@ function showMapError(msg: string, onClick?: () => void) {
 function resetMap() {
   selection.clear();
   changeMapStyle('satellite');
-  fitToPhotos(true);
+  fit.toPhotos(true);
 }
 
 function applyGlobeProjection(style: StyleSpecification): StyleSpecification {
@@ -99,14 +93,16 @@ function openExternalMap(target: 'apple' | 'google') {
   }
 }
 
-export function initMap() {
+function init() {
   const savedView = mapViewFromUrl();
   const center: [number, number] | undefined =
     savedView === null ? undefined : [savedView.lon, savedView.lat];
   const zoom = savedView?.zoom;
   map = new MapGL({
     container: 'map',
-    style: applyGlobeProjection(mapStyles().satellite as StyleSpecification),
+    style: applyGlobeProjection(
+      config.styles().satellite as StyleSpecification
+    ),
     center,
     zoom,
     minZoom: 1,
@@ -143,18 +139,18 @@ export function initMap() {
     console.warn('[MapGL] WebGL context restored');
   });
 
-  selection.initSelection();
-  initZAnchors(map);
-  initPopup(map);
-  initMeasure(map);
-  initRoute(map);
-  initFit(map);
-  initGpx(map);
-  initMarkers(map);
+  selection.init();
+  zAnchors.init(map);
+  popup.init(map);
+  measure.init(map);
+  route.init(map);
+  fit.init(map);
+  gpx.init(map);
+  markers.init(map);
 
   // Init globe background shader
-  initGlobeBackground(map.getContainer());
-  startGlobeBackground();
+  background.init(map.getContainer());
+  background.start();
   map.on('render', () => {
     if (map.getProjection().type !== 'globe') return;
     const { lat, lng } = map.getCenter();
@@ -163,17 +159,17 @@ export function initMap() {
     const dx = px.x - centerPx.x;
     const dy = px.y - centerPx.y;
     const canvas = map.getCanvas();
-    setGlobeRadius(
+    background.setRadius(
       Math.sqrt(dx * dx + dy * dy),
       Math.min(canvas.clientWidth, canvas.clientHeight)
     );
   });
 
   map.on('movestart', () => {
-    setMapIdle(false);
+    background.setIdle(false);
   });
   map.on('idle', () => {
-    setMapIdle(true);
+    background.setIdle(true);
   });
 
   // Debug: track render loop health
@@ -205,9 +201,9 @@ export function initMap() {
 
   map.on('projectiontransition', () => {
     if (map.getProjection().type === 'globe') {
-      startGlobeBackground();
+      background.start();
     } else {
-      stopGlobeBackground();
+      background.stop();
     }
     const uuid = selection.getPhotoUuid();
     if (selection.getMode() !== 'popup' || uuid === null) return;
@@ -216,7 +212,7 @@ export function initMap() {
     selection.openPopup(uuid);
   });
 
-  initPlacement(map);
+  placement.init(map);
 
   document.addEventListener(ChangeMapStyleEvent.type, (e) => {
     changeMapStyle(e.style);
@@ -239,7 +235,7 @@ function transformStyle(
 ): StyleSpecification {
   if (previousStyle === undefined) return nextStyle;
 
-  const allBasemaps = Object.values(mapStyles()) as StyleSpecification[];
+  const allBasemaps = Object.values(config.styles()) as StyleSpecification[];
   const bmLayers = new Set(
     allBasemaps.flatMap((s) => s.layers.map((l) => l.id))
   );
@@ -263,7 +259,7 @@ function transformStyle(
 }
 
 function changeMapStyle(styleKey: string) {
-  const next = mapStyles()[styleKey as keyof MapStyles] as
+  const next = config.styles()[styleKey as keyof MapStyles] as
     | StyleSpecification
     | undefined;
   if (next === undefined) return;
@@ -273,3 +269,5 @@ function changeMapStyle(styleKey: string) {
 
   map.setStyle(applyGlobeProjection(next), { transformStyle });
 }
+
+export default { init };

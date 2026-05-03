@@ -3,8 +3,8 @@ import type { GeoJSONSource, Map as MapGL } from 'maplibre-gl';
 
 import { state, subscribe } from '@common/data';
 
-import { computePathDistance } from './map-utils';
-import { anchorId } from './z-anchors';
+import mapUtils from './map-utils';
+import zAnchors from './z-anchors';
 
 // Sources and layers
 const TRACK_SOURCE = 'gpx-tracks';
@@ -34,7 +34,7 @@ const TRACK_COLORS = [
 ];
 let nextColorIndex = 0;
 
-export function initGpx(m: MapGL): void {
+function init(m: MapGL): void {
   map = m;
   m.on('load', addGpxLayers);
   subscribe(() => {
@@ -46,7 +46,7 @@ export function initGpx(m: MapGL): void {
 
 function addGpxLayers(): void {
   if (map === null) return;
-  const before = anchorId('gpx');
+  const before = zAnchors.id('gpx');
 
   map.addSource(TRACK_SOURCE, {
     type: 'geojson',
@@ -194,7 +194,7 @@ function parseTracks(doc: Document, filename: string, color: string): void {
     const { coords, elevations } = extractTrackPoints(trk);
     if (coords.length < 2) continue;
 
-    const distance = computePathDistance(coords);
+    const distance = mapUtils.computePathDistance(coords);
     const { gain, loss } = computeElevation(elevations);
 
     trackFeatures.push({
@@ -289,15 +289,17 @@ function updateSources(): void {
 }
 
 /** Force-reload GPX tracks for the current album. */
-export function reloadGpxTracks(): void {
+function reloadTracks(): void {
   const album = currentAlbum;
   currentAlbum = null; // reset cache so loadGpxForAlbum re-fetches
   void loadGpxForAlbum(album);
 }
 
 /** Update the set of hidden filenames and reload tracks. */
-export function setHiddenFiles(hidden: Set<string>): void {
+function setHiddenFiles(hidden: Set<string>): void {
   hiddenFiles.clear();
   for (const f of hidden) hiddenFiles.add(f);
-  reloadGpxTracks();
+  reloadTracks();
 }
+
+export default { init, reloadTracks, setHiddenFiles };

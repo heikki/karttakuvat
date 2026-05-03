@@ -2,7 +2,7 @@ import { loadPhotos } from '@common/data';
 
 import './components';
 
-import { initMap } from './map';
+import map from './map';
 import { initSave } from './save';
 
 // --- Debug: catch uncaught errors and show on screen ---
@@ -43,7 +43,7 @@ document.addEventListener('gesturechange', prevent);
 // Init
 function init() {
   void (async () => {
-    initMap();
+    map.init();
     initSave();
     await loadPhotos();
   })();

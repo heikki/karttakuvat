@@ -11,8 +11,8 @@ import {
 import type { Photo } from '@common/types';
 import { toUtcSortKey } from '@common/utils';
 
-import { setLayersVisibility } from '../map-utils';
-import { anchorId } from '../z-anchors';
+import mapUtils from '../map-utils';
+import zAnchors from '../z-anchors';
 import { addRouteEditLayers, exitRouteEdit, initRouteEdit } from './edit';
 import { buildRouteLineFeatures } from './helpers';
 import {
@@ -53,7 +53,7 @@ let routeData: RouteData | null = null;
 let currentAlbum = 'all';
 
 /** Initialise the route subsystem. Called once at map creation. */
-export function initRoute(m: MapGL): void {
+function init(m: MapGL): void {
   initRouteEdit(m);
   initPhotoRoute(m);
   m.on('load', () => {
@@ -75,7 +75,7 @@ function initPhotoRoute(m: MapGL): void {
   // Hide display layers while edit mode is active so edit owns rendering.
   document.addEventListener(RouteEditModeEvent.type, (e) => {
     if (map === null) return;
-    setLayersVisibility(map, ALL_ROUTE_LAYERS, !e.active && visible);
+    mapUtils.setLayersVisibility(map, ALL_ROUTE_LAYERS, !e.active && visible);
   });
 
   // Rebuild route when filtered photos OR pending edits change.
@@ -113,7 +113,7 @@ function reconcileAndApply(album: string, data: RouteData): void {
   routeData = data;
   applyRouteData(data);
   if (changed && edits.getCount() === 0) {
-    void saveRoute(album, data);
+    void save(album, data);
   }
 }
 
@@ -135,7 +135,7 @@ function addPhotoRouteLayers(): void {
 
   map.addSource(ROUTE_SOURCE, { type: 'geojson', data: empty });
 
-  const before = anchorId('route');
+  const before = zAnchors.id('route');
 
   map.addLayer(
     {
@@ -177,7 +177,7 @@ function setPhotoRouteVisible(show: boolean): void {
   visible = show;
   if (map === null) return;
 
-  setLayersVisibility(map, ALL_ROUTE_LAYERS, show);
+  mapUtils.setLayersVisibility(map, ALL_ROUTE_LAYERS, show);
 
   if (!show) return;
 
@@ -198,12 +198,12 @@ function setPhotoRouteVisible(show: boolean): void {
 }
 
 /** Get the current route data (if any). */
-export function getRouteData(): RouteData | null {
+function getData(): RouteData | null {
   return routeData;
 }
 
 /** Set route data and refresh the display source. */
-export function setRouteData(data: RouteData | null): void {
+function setData(data: RouteData | null): void {
   routeData = data;
   if (data === null) {
     updateRoute();
@@ -213,7 +213,7 @@ export function setRouteData(data: RouteData | null): void {
 }
 
 /** Build the default straight-line route from current filtered photos. */
-export function buildDefaultRoute(): RouteData | null {
+function buildDefault(): RouteData | null {
   const located = getSortedLocatedPhotos();
   if (located.length < 2) return null;
 
@@ -250,7 +250,7 @@ async function loadSavedRoute(album: string): Promise<RouteData | null> {
 }
 
 /** Save route to server. */
-export async function saveRoute(album: string, data: RouteData): Promise<void> {
+async function save(album: string, data: RouteData): Promise<void> {
   await fetch(`/api/albums/${encodeURIComponent(album)}/route`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -301,7 +301,7 @@ function refreshSavedRoute(data: RouteData): void {
   if (!synced && !reordered) return;
   if (edits.getCount() > 0) return;
   const album = state.filters.album;
-  if (album !== 'all') void saveRoute(album, data);
+  if (album !== 'all') void save(album, data);
 }
 
 function updateRoute(): void {
@@ -316,10 +316,12 @@ function updateRoute(): void {
   }
 
   const album = state.filters.album;
-  const data = album === 'all' ? null : buildDefaultRoute();
+  const data = album === 'all' ? null : buildDefault();
   if (data === null) {
     src.setData({ type: 'FeatureCollection', features: [] });
     return;
   }
   applyRouteData(data);
 }
+
+export default { init, getData, setData, buildDefault, save };

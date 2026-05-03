@@ -22,30 +22,30 @@ function setState(newMode: SelectionMode, newUuid: string | null): void {
   notify();
 }
 
-export function getMode(): SelectionMode {
+function getMode(): SelectionMode {
   return mode;
 }
 
-export function getPhotoUuid(): string | null {
+function getPhotoUuid(): string | null {
   return photoUuid;
 }
 
-export function getPhoto(): Photo | undefined {
+function getPhoto(): Photo | undefined {
   if (photoUuid === null) return undefined;
   return state.filteredPhotos.find((p) => p.uuid === photoUuid);
 }
 
-export function getPhotoIndex(): number | null {
+function getPhotoIndex(): number | null {
   if (photoUuid === null) return null;
   const idx = state.filteredPhotos.findIndex((p) => p.uuid === photoUuid);
   return idx === -1 ? null : idx;
 }
 
-export function openPopup(uuid: string): void {
+function openPopup(uuid: string): void {
   setState('popup', uuid);
 }
 
-export function next(): boolean {
+function next(): boolean {
   const idx = getPhotoIndex();
   if (idx === null) return false;
   const total = state.filteredPhotos.length;
@@ -56,7 +56,7 @@ export function next(): boolean {
   return true;
 }
 
-export function prev(): boolean {
+function prev(): boolean {
   const idx = getPhotoIndex();
   if (idx === null) return false;
   const total = state.filteredPhotos.length;
@@ -69,16 +69,16 @@ export function prev(): boolean {
 
 // Precondition: must be in popup mode with the same uuid.
 // (The "set" button is only reachable from an open popup.)
-export function enterPlacement(uuid: string): void {
+function enterPlacement(uuid: string): void {
   if (mode !== 'popup' || photoUuid !== uuid) return;
   setState('placement', uuid);
 }
 
-export function clear(): void {
+function clear(): void {
   setState('idle', null);
 }
 
-export function subscribe(fn: Listener): () => void {
+function subscribe(fn: Listener): () => void {
   listeners.push(fn);
   return () => {
     const i = listeners.indexOf(fn);
@@ -100,7 +100,7 @@ function tryRestoreFromUrl(): void {
   openPopup(uuid);
 }
 
-export function initSelection(): void {
+function init(): void {
   subscribeData(() => {
     if (!restoredFromUrl) {
       tryRestoreFromUrl();
@@ -116,3 +116,17 @@ export function initSelection(): void {
     }
   });
 }
+
+export default {
+  getMode,
+  getPhotoUuid,
+  getPhoto,
+  getPhotoIndex,
+  openPopup,
+  next,
+  prev,
+  enterPlacement,
+  clear,
+  subscribe,
+  init
+};

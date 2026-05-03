@@ -3,7 +3,7 @@ import type { Map as MapGL } from 'maplibre-gl';
 import * as edits from '@common/edits';
 import type { PlacementPanel } from '@components/placement-panel';
 
-import * as selection from './selection';
+import selection from './selection';
 
 function getPanel(): PlacementPanel {
   return document.getElementById(
@@ -11,7 +11,7 @@ function getPanel(): PlacementPanel {
   ) as unknown as PlacementPanel;
 }
 
-export function initPlacement(map: MapGL): void {
+function init(map: MapGL): void {
   selection.subscribe(() => {
     const panel = getPanel();
     if (selection.getMode() === 'placement') {
@@ -44,3 +44,5 @@ export function initPlacement(map: MapGL): void {
     }
   });
 }
+
+export default { init };

@@ -12,9 +12,9 @@ import type { Photo } from '@common/types';
 import { getThumbUrl } from '@common/utils';
 import type { PhotoPopup, PopupActions } from '@components/photo-popup';
 
-import { getMarkerRadius } from '../markers';
-import { createFlyToPopup, createPanToFitPopup } from '../pan';
-import * as selection from '../selection';
+import markers from '../markers';
+import pan from '../pan';
+import selection from '../selection';
 import * as popupEdits from './edits';
 import {
   initPopupZoom,
@@ -29,15 +29,15 @@ let mountedUuid: string | null = null;
 
 let map: MapGL | null = null;
 let panToFitPopup: () => void = () => {
-  /* set in initPopup */
+  /* set in init */
 };
 let flyToPopup: (coords: [number, number]) => void = () => {
-  /* set in initPopup */
+  /* set in init */
 };
 
 function popupOffset(): [number, number] {
-  const zoom = map?.getZoom() ?? 10;
-  const radius = getMarkerRadius(zoom);
+  const z = map?.getZoom() ?? 10;
+  const radius = markers.getRadius(z);
   return [0, -(radius * 1.3 + 5)];
 }
 
@@ -96,10 +96,10 @@ const popupActions: PopupActions = {
   applyManualDate: popupEdits.applyManualDateToCurrent
 };
 
-export function initPopup(m: MapGL) {
+function init(m: MapGL) {
   map = m;
-  panToFitPopup = createPanToFitPopup(m);
-  flyToPopup = createFlyToPopup(m);
+  panToFitPopup = pan.createToFitPopup(m);
+  flyToPopup = pan.createFlyToPopup(m);
   initPopupZoom(m, getSelectedMarkerCoords);
   m.on('zoomend', reanchorPopup);
   m.on('render', updatePopupGlobeMask);
@@ -180,8 +180,8 @@ function mountCurrent() {
   installCanvasZoomOverride();
 
   // If we mounted before the map's first 'load' (URL-restoration race),
-  // markers haven't installed yet → getMarkerRadius returned 0 → offset is
-  // wrong. Registered here (after initMarkers' load handler), so it fires
+  // markers haven't installed yet → markers.getRadius returned 0 → offset is
+  // wrong. Registered here (after markers' load handler), so it fires
   // second and corrects the offset.
   if (!map.loaded()) {
     void map.once('load', () => {
@@ -310,7 +310,7 @@ function updatePopupGlobeMask() {
   el.style.maskRepeat = 'no-repeat';
 }
 
-export function getPopup(): Popup | null {
+function get(): Popup | null {
   return popup;
 }
 
@@ -358,3 +358,5 @@ function syncPopupElement(photo?: Photo, index?: number) {
   popupElement.showPasteDate = paste.showPasteDate;
   popupElement.requestUpdate();
 }
+
+export default { init, get };

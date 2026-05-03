@@ -4,7 +4,7 @@ import type { MapStyles } from '@common/types';
 const mmlTile = (layer: string, ext: string) =>
   `https://avoin-karttakuva.maanmittauslaitos.fi/avoin/wmts/1.0.0/${layer}/default/WGS84_Pseudo-Mercator/{z}/{y}/{x}.${ext}?api-key=${MML_API_KEY}`;
 
-export function mapStyles(): MapStyles {
+function styles(): MapStyles {
   return {
     satellite: {
       version: 8,
@@ -94,3 +94,5 @@ export function mapStyles(): MapStyles {
     }
   };
 }
+
+export default { styles };

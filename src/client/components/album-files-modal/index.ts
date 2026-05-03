@@ -231,8 +231,8 @@ export class AlbumFilesModal extends LitElement {
     for (const f of this._files) {
       if (!f.visible) hidden.add(f.name);
     }
-    void import('../../map/gpx').then(({ setHiddenFiles }) => {
-      setHiddenFiles(hidden);
+    void import('../../map/gpx').then((gpx) => {
+      gpx.default.setHiddenFiles(hidden);
     });
   }
 
@@ -246,8 +246,8 @@ export class AlbumFilesModal extends LitElement {
         this._files = this._files.filter((f) => f.name !== filename);
         this._syncHiddenFiles();
         if (filename.toLowerCase().endsWith('.gpx')) {
-          const { reloadGpxTracks } = await import('../../map/gpx');
-          reloadGpxTracks();
+          const gpx = await import('../../map/gpx');
+          gpx.default.reloadTracks();
         }
       }
     } catch (err) {

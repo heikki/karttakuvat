@@ -3,7 +3,7 @@ import { point } from '@turf/helpers';
 import type { Map as MapGL } from 'maplibre-gl';
 
 /** Set visibility on multiple layers at once. */
-export function setLayersVisibility(
+function setLayersVisibility(
   map: MapGL,
   layerIds: string[],
   visible: boolean
@@ -17,7 +17,7 @@ export function setLayersVisibility(
 }
 
 /** Total distance along a coordinate path in kilometers. */
-export function computePathDistance(coords: Array<[number, number]>): number {
+function computePathDistance(coords: Array<[number, number]>): number {
   let total = 0;
   for (let i = 1; i < coords.length; i++) {
     total += turfDistance(point(coords[i - 1]!), point(coords[i]!), {
@@ -26,3 +26,5 @@ export function computePathDistance(coords: Array<[number, number]>): number {
   }
   return total;
 }
+
+export default { setLayersVisibility, computePathDistance };

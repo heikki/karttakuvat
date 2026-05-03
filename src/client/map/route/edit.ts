@@ -10,14 +10,8 @@ import * as edits from '@common/edits';
 import { RouteEditModeEvent, ToggleRouteEditEvent } from '@common/events';
 import type { Photo } from '@common/types';
 
-import {
-  buildDefaultRoute,
-  getRouteData,
-  saveRoute,
-  setRouteData,
-  type RouteData
-} from '.';
-import { setLayersVisibility } from '../map-utils';
+import route, { type RouteData } from '.';
+import mapUtils from '../map-utils';
 import {
   ALL_EDIT_LAYERS,
   applySegmentMethod,
@@ -132,8 +126,8 @@ function enterEditMode(): void {
 
   // Build route data from saved route or default, sync photo positions.
   // exitEditMode pushes routeData back into the display module; nothing
-  // reads getRouteData() between enter and exit so we don't push it now.
-  routeData = getRouteData() ?? buildDefaultRoute();
+  // reads route.getData() between enter and exit so we don't push it now.
+  routeData = route.getData() ?? route.buildDefault();
   if (routeData === null) return;
   syncPhotoPoints(routeData);
 
@@ -168,7 +162,7 @@ function exitEditMode(): void {
   map.getCanvas().classList.remove('crosshair');
   removePopup();
   // Restore blue display layers with current edit data
-  if (routeData !== null) setRouteData(routeData);
+  if (routeData !== null) route.setData(routeData);
   document.dispatchEvent(new RouteEditModeEvent(false));
   setLayerVisibility(false);
 
@@ -185,7 +179,7 @@ function exitEditMode(): void {
 
 function setLayerVisibility(show: boolean): void {
   if (map === null) return;
-  setLayersVisibility(map, ALL_EDIT_LAYERS, show);
+  mapUtils.setLayersVisibility(map, ALL_EDIT_LAYERS, show);
 }
 
 // ---------- Source updates ----------
@@ -254,7 +248,7 @@ function scheduleAutoSave(): void {
     saveTimer = null;
     const album = state.filters.album;
     if (album !== 'all' && routeData !== null) {
-      void saveRoute(album, routeData);
+      void route.save(album, routeData);
     }
   }, 1000);
 }

@@ -4,7 +4,7 @@ import type { Map as MapGL } from 'maplibre-gl';
 import { HAS_ROUTING } from '@common/features';
 
 import type { RouteData, RoutePoint, RouteSegment } from '.';
-import { anchorId } from '../z-anchors';
+import zAnchors from '../z-anchors';
 
 /** Layer/source IDs for route edit mode. */
 export const EDIT_IDS = {
@@ -42,7 +42,7 @@ export function createEditLayers(m: MapGL): void {
     m.addSource(id, { type: 'geojson', data: empty });
   }
 
-  const before = anchorId('route');
+  const before = zAnchors.id('route');
   const lineLayout = {
     'visibility': 'none' as const,
     'line-cap': 'round' as const,

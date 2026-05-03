@@ -6,10 +6,10 @@ import {
   ToggleMeasureModeEvent
 } from '@common/events';
 
-import { computePathDistance, setLayersVisibility } from './map-utils';
-import { anchorId } from './z-anchors';
+import mapUtils from './map-utils';
+import zAnchors from './z-anchors';
 
-// eslint-disable-next-line @typescript-eslint/init-declarations -- initialized in initMeasure() before any usage
+// eslint-disable-next-line @typescript-eslint/init-declarations -- initialized in init() before any usage
 let map: MapGL;
 let isMeasureActive = false;
 const coords: Array<[number, number]> = [];
@@ -21,15 +21,15 @@ const LINE_LAYER = 'measure-line-layer';
 
 let overlay: HTMLElement | null = null;
 
-export function isMeasureMode(): boolean {
+function isActive(): boolean {
   return isMeasureActive;
 }
 
-export function initMeasure(m: MapGL) {
+function init(m: MapGL) {
   map = m;
   m.on('load', addMeasureLayers);
   document.addEventListener(ToggleMeasureModeEvent.type, () => {
-    toggleMeasureMode();
+    toggle();
   });
   document.addEventListener(ResetMapEvent.type, () => {
     exitMeasureMode();
@@ -37,7 +37,7 @@ export function initMeasure(m: MapGL) {
 }
 
 function addMeasureLayers() {
-  const before = anchorId('measure');
+  const before = zAnchors.id('measure');
 
   map.addSource(POINT_SOURCE, {
     type: 'geojson',
@@ -115,7 +115,7 @@ function updateSources() {
 }
 
 function computeDistance(): number {
-  return computePathDistance(coords);
+  return mapUtils.computePathDistance(coords);
 }
 
 function formatDistance(km: number): string {
@@ -151,7 +151,7 @@ function removeOverlay() {
 }
 
 function setLayerVisibility(visible: boolean) {
-  setLayersVisibility(map, [POINT_LAYER, LINE_LAYER], visible);
+  mapUtils.setLayersVisibility(map, [POINT_LAYER, LINE_LAYER], visible);
 }
 
 function onMapClick(e: MapMouseEvent) {
@@ -210,10 +210,12 @@ function exitMeasureMode() {
   document.dispatchEvent(new MeasureModeExitedEvent());
 }
 
-export function toggleMeasureMode() {
+function toggle() {
   if (isMeasureActive) {
     exitMeasureMode();
   } else {
     enterMeasureMode();
   }
 }
+
+export default { init, isActive, toggle };

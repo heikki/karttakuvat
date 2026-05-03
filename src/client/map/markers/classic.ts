@@ -9,7 +9,7 @@ import type {
 import * as edits from '@common/edits';
 import type { MarkerLayer, Photo } from '@common/types';
 
-import { anchorId } from '../z-anchors';
+import zAnchors from '../z-anchors';
 
 const gpsColor = [
   'match',
@@ -106,7 +106,7 @@ export class ClassicLayer implements MarkerLayer {
 
   install(map: MapGL, photos: Photo[]) {
     this.map = map;
-    const before = anchorId('markers');
+    const before = zAnchors.id('markers');
 
     map.addSource(SOURCE, {
       type: 'geojson',
