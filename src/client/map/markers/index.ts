@@ -39,9 +39,10 @@ function init(m: MapGL): void {
     refreshView();
   });
 
-  selection.subscribe(refreshView);
   effect(() => {
     edits.pendingCoords.get();
+    selection.selectedPhotoUuid.get();
+    selection.interactionMode.get();
     refreshView();
   });
 }
@@ -52,10 +53,12 @@ function getRadius(zoom: number): number {
 
 function refreshView(): void {
   if (currentLayer === null) return;
-  const mode = selection.getMode();
+  const mode = selection.interactionMode.get();
   currentLayer.setView({
     photos: data.filteredPhotos.get(),
-    selectedPhoto: mode === 'popup' ? (selection.getPhoto() ?? null) : null,
+    selectedPhoto: selection.isPopupOpen()
+      ? (selection.getPhoto() ?? null)
+      : null,
     hidden: mode === 'placement'
   });
 }
@@ -75,7 +78,7 @@ function bindInteractions(): void {
   const canvas = map.getCanvas();
 
   const onLayerClick = (e: MapLayerMouseEvent) => {
-    if (selection.getMode() === 'placement') return;
+    if (selection.interactionMode.get() === 'placement') return;
     e.preventDefault();
     e.originalEvent.stopPropagation();
     if (e.features === undefined || e.features.length === 0) return;
@@ -84,14 +87,18 @@ function bindInteractions(): void {
     if (clickedIndex === undefined) return;
     const photo = data.filteredPhotos.get()[clickedIndex];
     if (photo === undefined) return;
-    selection.openPopup(photo.uuid);
+    selection.selectPhoto(photo.uuid);
   };
 
   const onMouseEnter = () => {
-    if (selection.getMode() !== 'placement') canvas.style.cursor = 'pointer';
+    if (selection.interactionMode.get() !== 'placement') {
+      canvas.style.cursor = 'pointer';
+    }
   };
   const onMouseLeave = () => {
-    if (selection.getMode() !== 'placement') canvas.style.cursor = '';
+    if (selection.interactionMode.get() !== 'placement') {
+      canvas.style.cursor = '';
+    }
   };
 
   map.on('click', layerId, onLayerClick);

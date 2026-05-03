@@ -7,13 +7,14 @@ import {
   ResetMapEvent,
   ToggleMeasureModeEvent
 } from '@common/events';
+import { effect } from '@common/signals';
 
 import mapUtils from './map-utils';
+import selection from './selection';
 import zAnchors from './z-anchors';
 
 // eslint-disable-next-line @typescript-eslint/init-declarations -- initialized in init() before any usage
 let map: MapGL;
-let isMeasureActive = false;
 const coords: Array<[number, number]> = [];
 
 const POINT_SOURCE = 'measure-points';
@@ -23,19 +24,31 @@ const LINE_LAYER = 'measure-line-layer';
 
 let overlay: HTMLElement | null = null;
 
+function isActive(): boolean {
+  return selection.interactionMode.get() === 'measure';
+}
+
 function init(m: MapGL) {
   map = m;
   m.on('load', addMeasureLayers);
-  document.addEventListener(ToggleMeasureModeEvent.type, () => {
-    toggle();
-  });
+  document.addEventListener(ToggleMeasureModeEvent.type, toggle);
   document.addEventListener(ResetMapEvent.type, () => {
-    exitMeasureMode();
+    if (isActive()) selection.interactionMode.set('idle');
+  });
+
+  let wasActive = false;
+  effect(() => {
+    const active = isActive();
+    if (active === wasActive) return;
+    wasActive = active;
+    if (active) onEnter();
+    else onExit();
   });
 }
 
 function addMeasureLayers() {
   const before = zAnchors.id('measure');
+  const visibility = isActive() ? 'visible' : 'none';
 
   map.addSource(POINT_SOURCE, {
     type: 'geojson',
@@ -57,9 +70,7 @@ function addMeasureLayers() {
         'line-width': 2,
         'line-dasharray': [3, 2]
       },
-      layout: {
-        visibility: isMeasureActive ? 'visible' : 'none'
-      }
+      layout: { visibility }
     },
     before
   );
@@ -75,9 +86,7 @@ function addMeasureLayers() {
         'circle-stroke-width': 2,
         'circle-stroke-color': '#fff'
       },
-      layout: {
-        visibility: isMeasureActive ? 'visible' : 'none'
-      }
+      layout: { visibility }
     },
     before
   );
@@ -177,49 +186,33 @@ function onMapClick(e: MapMouseEvent) {
 }
 
 function onKeyDown(e: KeyboardEvent) {
-  if (e.key === 'Escape') {
-    exitMeasureMode();
-  }
+  if (e.key === 'Escape') selection.interactionMode.set('idle');
 }
 
-function enterMeasureMode() {
-  if (isMeasureActive) return;
-  isMeasureActive = true;
+function onEnter() {
   coords.length = 0;
-
   map.getCanvas().classList.add('crosshair');
   setLayerVisibility(true);
   updateSources();
-
   ensureOverlay();
   updateOverlay();
-
   map.on('click', onMapClick);
   document.addEventListener('keydown', onKeyDown);
 }
 
-function exitMeasureMode() {
-  if (!isMeasureActive) return;
-  isMeasureActive = false;
+function onExit() {
   coords.length = 0;
-
   map.getCanvas().classList.remove('crosshair');
   updateSources();
   setLayerVisibility(false);
   removeOverlay();
-
   map.off('click', onMapClick);
   document.removeEventListener('keydown', onKeyDown);
-
   document.dispatchEvent(new MeasureModeExitedEvent());
 }
 
 function toggle() {
-  if (isMeasureActive) {
-    exitMeasureMode();
-  } else {
-    enterMeasureMode();
-  }
+  selection.interactionMode.set(isActive() ? 'idle' : 'measure');
 }
 
 export default { init };

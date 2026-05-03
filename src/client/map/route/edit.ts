@@ -16,6 +16,7 @@ import type { Photo } from '@common/types';
 
 import route, { type RouteData } from '.';
 import mapUtils from '../map-utils';
+import selection from '../selection';
 import {
   ALL_EDIT_LAYERS,
   applySegmentMethod,
@@ -57,7 +58,7 @@ let saveTimer: ReturnType<typeof setTimeout> | null = null;
 let suppressNextMapClick = false;
 
 function isActive(): boolean {
-  return interaction !== null;
+  return selection.interactionMode.get() === 'route-edit';
 }
 
 /** Apply a state transition with the appropriate side effects. */
@@ -96,12 +97,15 @@ function cursorFor(s: InteractionState | null): string | null {
 
 export function initRouteEdit(m: MapGL): void {
   map = m;
-  document.addEventListener(ToggleRouteEditEvent.type, () => {
-    if (isActive()) {
-      exitRouteEdit();
-    } else {
-      enterEditMode();
-    }
+  document.addEventListener(ToggleRouteEditEvent.type, toggle);
+
+  let wasActive = false;
+  effect(() => {
+    const active = isActive();
+    if (active === wasActive) return;
+    wasActive = active;
+    if (active) onEnter();
+    else onExit();
   });
 
   // Sync photo point positions when pending edits change
@@ -115,12 +119,25 @@ export function initRouteEdit(m: MapGL): void {
   });
 }
 
+function toggle(): void {
+  if (isActive()) {
+    selection.interactionMode.set('idle');
+    return;
+  }
+  // Precondition: need route data buildable. Bail without flipping the
+  // signal if there isn't anything to edit.
+  if ((route.getData() ?? route.buildDefault()) === null) return;
+  selection.interactionMode.set('route-edit');
+}
+
+export function exitRouteEdit(): void {
+  if (isActive()) selection.interactionMode.set('idle');
+}
+
 // ---------- Lifecycle ----------
 
-function enterEditMode(): void {
-  if (isActive() || map === null) return;
-
-  // Build route data from saved route or default, sync photo positions.
+function onEnter(): void {
+  if (map === null) return;
   // exitRouteEdit pushes routeData back into the display module; nothing
   // reads route.getData() between enter and exit so we don't push it now.
   routeData = route.getData() ?? route.buildDefault();
@@ -147,8 +164,8 @@ function enterEditMode(): void {
   transition({ kind: 'idle' });
 }
 
-export function exitRouteEdit(): void {
-  if (!isActive() || map === null) return;
+function onExit(): void {
+  if (map === null) return;
 
   // If a drag was in progress, tear down its mousemove/mouseup handlers.
   if (interaction?.kind === 'dragging') teardownDragListeners();

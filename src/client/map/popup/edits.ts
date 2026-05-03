@@ -6,6 +6,7 @@ import {
 } from '@common/clipboard';
 import * as edits from '@common/edits';
 import { SaveEditsEvent } from '@common/events';
+import { effect } from '@common/signals';
 import {
   computeDateOffsetHours,
   computeFullDatetimeOffsetHours,
@@ -59,13 +60,13 @@ export function getDateEditMode(): boolean {
 let lastUuid: string | null = null;
 
 // Auto-reset date edit mode when the popup closes or moves to a different
-// photo. Must be called before popup/index.ts subscribes to selection so this
+// photo. Registered before popup/index.ts's applySelection effect so this
 // reset runs first and the Lit re-sync sees the fresh value.
 export function initPopupEdits(): void {
-  selection.subscribe(() => {
-    const uuid = selection.getPhotoUuid();
-    const mode = selection.getMode();
-    if (dateEditMode && (mode !== 'popup' || uuid !== lastUuid)) {
+  effect(() => {
+    const uuid = selection.selectedPhotoUuid.get();
+    const popupOpen = selection.isPopupOpen();
+    if (dateEditMode && (!popupOpen || uuid !== lastUuid)) {
       dateEditMode = false;
       notify();
     }
@@ -118,7 +119,7 @@ export function pasteCurrentDate(): void {
 }
 
 export function adjustCurrentTime(hours: number): void {
-  const uuid = selection.getPhotoUuid();
+  const uuid = selection.selectedPhotoUuid.get();
   if (uuid === null) return;
   edits.addTimeOffset(uuid, hours);
 }

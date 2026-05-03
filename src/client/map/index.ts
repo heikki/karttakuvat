@@ -193,9 +193,13 @@ function init() {
   });
 
   map.on('click', (e) => {
-    if (selection.getMode() === 'placement') return;
+    // Empty-map click only closes the popup when no interaction mode is
+    // active. During placement/measure/route-edit the click belongs to
+    // that mode (place a pin, add a point, edit the route) and should
+    // leave the popup alone.
+    if (selection.interactionMode.get() !== 'idle') return;
     if (e.defaultPrevented) return;
-    if (selection.getMode() === 'popup') selection.clear();
+    if (selection.isPopupOpen()) selection.closePopup();
   });
 
   map.on('projectiontransition', () => {
@@ -204,11 +208,7 @@ function init() {
     } else {
       background.stop();
     }
-    const uuid = selection.getPhotoUuid();
-    if (selection.getMode() !== 'popup' || uuid === null) return;
-    // Force a popup remount so it re-anchors with the new projection.
-    selection.clear();
-    selection.openPopup(uuid);
+    if (selection.isPopupOpen()) popup.forceRemount();
   });
 
   placement.init(map);

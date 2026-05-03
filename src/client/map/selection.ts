@@ -1,82 +1,97 @@
+import { signal } from '@lit-labs/signals';
+
 import * as data from '@common/data';
 import { photoFromUrl, photoToUrl } from '@common/filter-url';
 import { effect } from '@common/signals';
 import type { Photo } from '@common/types';
 
-type SelectionMode = 'idle' | 'popup' | 'placement';
+export type InteractionMode = 'idle' | 'placement' | 'measure' | 'route-edit';
 
-let mode: SelectionMode = 'idle';
-let photoUuid: string | null = null;
+export const selectedPhotoUuid = signal<string | null>(photoFromUrl());
+export const interactionMode = signal<InteractionMode>('idle');
 
-type Listener = () => void;
-const listeners: Listener[] = [];
-
-function notify(): void {
-  for (const fn of [...listeners]) fn();
-}
-
-function setState(newMode: SelectionMode, newUuid: string | null): void {
-  if (mode === newMode && photoUuid === newUuid) return;
-  mode = newMode;
-  photoUuid = newUuid;
-  photoToUrl(photoUuid);
-  notify();
-}
-
-function getMode(): SelectionMode {
-  return mode;
-}
-
-function getPhotoUuid(): string | null {
-  return photoUuid;
-}
+// Persist selectedPhotoUuid to URL. Skip the first run so the seeded
+// initial value isn't written back (which would race with URL restoration).
+let firstUrlRun = true;
+effect(() => {
+  const uuid = selectedPhotoUuid.get();
+  if (firstUrlRun) {
+    firstUrlRun = false;
+    return;
+  }
+  photoToUrl(uuid);
+});
 
 function getPhoto(): Photo | undefined {
-  if (photoUuid === null) return undefined;
-  return data.filteredPhotos.get().find((p) => p.uuid === photoUuid);
+  const uuid = selectedPhotoUuid.get();
+  if (uuid === null) return undefined;
+  return data.filteredPhotos.get().find((p) => p.uuid === uuid);
 }
 
 function getPhotoIndex(): number | null {
-  if (photoUuid === null) return null;
-  const idx = data.filteredPhotos.get().findIndex((p) => p.uuid === photoUuid);
+  const uuid = selectedPhotoUuid.get();
+  if (uuid === null) return null;
+  const idx = data.filteredPhotos.get().findIndex((p) => p.uuid === uuid);
   return idx === -1 ? null : idx;
 }
 
-function openPopup(uuid: string): void {
-  setState('popup', uuid);
+// True iff a photo is selected and the popup should be visible. Placement
+// hides the popup so the user can pick a location without it in the way;
+// measure and route-edit don't conflict with the popup.
+function isPopupOpen(): boolean {
+  return (
+    selectedPhotoUuid.get() !== null && interactionMode.get() !== 'placement'
+  );
+}
+
+function selectPhoto(uuid: string): void {
+  selectedPhotoUuid.set(uuid);
+  // Selecting a different photo cancels placement (placement is bound to
+  // the previously-selected photo and no longer makes sense).
+  if (interactionMode.get() === 'placement') {
+    interactionMode.set('idle');
+  }
+}
+
+function clear(): void {
+  selectedPhotoUuid.set(null);
+  interactionMode.set('idle');
+}
+
+// Close the popup without touching interactionMode. Used when the user
+// dismisses the popup (Esc, click empty map) during measure or route-edit
+// mode — those modes shouldn't be exited by a popup-close action.
+function closePopup(): void {
+  selectedPhotoUuid.set(null);
+}
+
+// Enter placement mode for the currently-selected photo. The popup must
+// already be open — the "set" button that calls this lives in the popup.
+function enterPlacement(): void {
+  if (selectedPhotoUuid.get() === null) return;
+  interactionMode.set('placement');
 }
 
 function next(): boolean {
   const idx = getPhotoIndex();
   if (idx === null) return false;
-  const total = data.filteredPhotos.get().length;
-  if (total === 0) return false;
-  const target = data.filteredPhotos.get()[(idx + 1) % total];
+  const photos = data.filteredPhotos.get();
+  if (photos.length === 0) return false;
+  const target = photos[(idx + 1) % photos.length];
   if (target === undefined) return false;
-  openPopup(target.uuid);
+  selectPhoto(target.uuid);
   return true;
 }
 
 function prev(): boolean {
   const idx = getPhotoIndex();
   if (idx === null) return false;
-  const total = data.filteredPhotos.get().length;
-  if (total === 0) return false;
-  const target = data.filteredPhotos.get()[(idx - 1 + total) % total];
+  const photos = data.filteredPhotos.get();
+  if (photos.length === 0) return false;
+  const target = photos[(idx - 1 + photos.length) % photos.length];
   if (target === undefined) return false;
-  openPopup(target.uuid);
+  selectPhoto(target.uuid);
   return true;
-}
-
-// Precondition: must be in popup mode with the same uuid.
-// (The "set" button is only reachable from an open popup.)
-function enterPlacement(uuid: string): void {
-  if (mode !== 'popup' || photoUuid !== uuid) return;
-  setState('placement', uuid);
-}
-
-function clear(): void {
-  setState('idle', null);
 }
 
 function toggleOldestNewest(): void {
@@ -88,66 +103,51 @@ function toggleOldestNewest(): void {
     if (photos[i]!.date < photos[oldestIdx]!.date) oldestIdx = i;
     if (photos[i]!.date > photos[newestIdx]!.date) newestIdx = i;
   }
-  if (photoUuid === photos[oldestIdx]!.uuid) {
-    openPopup(photos[newestIdx]!.uuid);
-  } else if (photoUuid === photos[newestIdx]!.uuid) {
-    openPopup(photos[oldestIdx]!.uuid);
-  } else if (photoUuid === null) {
-    openPopup(photos[oldestIdx]!.uuid);
+  const cur = selectedPhotoUuid.get();
+  if (cur === photos[oldestIdx]!.uuid) {
+    selectPhoto(photos[newestIdx]!.uuid);
+  } else if (cur === photos[newestIdx]!.uuid) {
+    selectPhoto(photos[oldestIdx]!.uuid);
+  } else if (cur === null) {
+    selectPhoto(photos[oldestIdx]!.uuid);
   }
-}
-
-function subscribe(fn: Listener): () => void {
-  listeners.push(fn);
-  return () => {
-    const i = listeners.indexOf(fn);
-    if (i > -1) listeners.splice(i, 1);
-  };
 }
 
 let restoredFromUrl = false;
-
-function tryRestoreFromUrl(): void {
-  if (restoredFromUrl) return;
-  const uuid = photoFromUrl();
-  if (uuid === null) {
-    restoredFromUrl = true;
-    return;
-  }
-  if (!data.filteredPhotos.get().some((p) => p.uuid === uuid)) return;
-  restoredFromUrl = true;
-  openPopup(uuid);
-}
 
 function init(): void {
   effect(() => {
     const filtered = data.filteredPhotos.get();
     if (!restoredFromUrl) {
-      tryRestoreFromUrl();
+      const uuid = photoFromUrl();
+      if (uuid === null) {
+        restoredFromUrl = true;
+        return;
+      }
+      if (filtered.some((p) => p.uuid === uuid)) {
+        restoredFromUrl = true;
+        // Signal already seeded from URL — no .set() needed.
+      }
       return;
     }
-    if (photoUuid === null) return;
-    const stillExists = filtered.some((p) => p.uuid === photoUuid);
-    if (stillExists) {
-      // Photo still selected, but its data may have moved (pending edit, save).
-      notify();
-    } else {
-      clear();
-    }
+    const cur = selectedPhotoUuid.get();
+    if (cur === null) return;
+    if (!filtered.some((p) => p.uuid === cur)) clear();
   });
 }
 
 export default {
-  getMode,
-  getPhotoUuid,
+  selectedPhotoUuid,
+  interactionMode,
   getPhoto,
   getPhotoIndex,
-  openPopup,
+  isPopupOpen,
+  selectPhoto,
+  clear,
+  closePopup,
+  enterPlacement,
   next,
   prev,
-  enterPlacement,
-  clear,
   toggleOldestNewest,
-  subscribe,
   init
 };

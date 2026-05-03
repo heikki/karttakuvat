@@ -27,6 +27,9 @@ import {
 let popup: Popup | null = null;
 let popupElement: PhotoPopup | null = null;
 let mountedUuid: string | null = null;
+// Set during forceRemount so the popup's 'close' handler doesn't treat
+// our intentional removal as an external teardown and clear the selection.
+let suppressCloseClear = false;
 
 let map: MapGL | null = null;
 
@@ -55,8 +58,8 @@ function reanchorPopup() {
 function handleEscape() {
   if (popupEdits.getDateEditMode()) {
     popupEdits.toggleDateEdit();
-  } else if (selection.getMode() === 'popup') {
-    selection.clear();
+  } else if (selection.isPopupOpen()) {
+    selection.closePopup();
   }
 }
 
@@ -102,8 +105,7 @@ function init(m: MapGL) {
   // Bare request signal from <photo-popup>'s "set" button: enter placement
   // mode for the currently-selected photo.
   document.addEventListener(EnterPlacementModeEvent.type, () => {
-    const uuid = selection.getPhotoUuid();
-    if (uuid !== null) selection.enterPlacement(uuid);
+    selection.enterPlacement();
   });
 
   // Marker style swap changes the radius scheme. This listener is registered
@@ -117,23 +119,23 @@ function init(m: MapGL) {
   // Subscribe popup-edits to selection BEFORE applySelection so the date-edit
   // reset fires first and the subsequent Lit re-sync reads the fresh value.
   popupEdits.initPopupEdits();
-  selection.subscribe(applySelection);
   effect(() => {
     edits.pendingCoords.get();
     edits.pendingTimeOffsets.get();
+    selection.selectedPhotoUuid.get();
+    selection.interactionMode.get();
     applySelection();
   });
   popupEdits.subscribe(applySelection);
 }
 
 function applySelection() {
-  const mode = selection.getMode();
-  const uuid = selection.getPhotoUuid();
-
-  if (mode !== 'popup' || uuid === null) {
+  if (!selection.isPopupOpen()) {
     if (popup !== null) popup.remove();
     return;
   }
+  const uuid = selection.selectedPhotoUuid.get();
+  if (uuid === null) return;
 
   if (mountedUuid === uuid && popup !== null) {
     // Same photo selected, just sync (e.g. pending edit moved its position).
@@ -191,9 +193,9 @@ function mountCurrent() {
     popup = null;
     popupElement = null;
     mountedUuid = null;
-    if (selection.getMode() === 'popup') {
+    if (!suppressCloseClear && selection.isPopupOpen()) {
       // Closed via MapLibre's own teardown (e.g. setStyle); keep state in sync.
-      selection.clear();
+      selection.closePopup();
     }
   });
 
@@ -311,6 +313,17 @@ function get(): Popup | null {
   return popup;
 }
 
+// Force a full unmount/remount of the popup. Used by the projection
+// transition handler — the popup needs to re-anchor against the new
+// projection, and the same-uuid path otherwise just syncs in place.
+function forceRemount(): void {
+  if (popup === null) return;
+  suppressCloseClear = true;
+  popup.remove();
+  suppressCloseClear = false;
+  applySelection();
+}
+
 function computePasteVisibility(photo: Photo): {
   showPasteLocation: boolean;
   showPasteDate: boolean;
@@ -356,4 +369,4 @@ function syncPopupElement(photo?: Photo, index?: number) {
   popupElement.requestUpdate();
 }
 
-export default { init, get };
+export default { init, get, forceRemount };

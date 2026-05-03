@@ -1,6 +1,7 @@
 import type { Map as MapGL } from 'maplibre-gl';
 
 import * as edits from '@common/edits';
+import { effect } from '@common/signals';
 import type { PlacementPanel } from '@components/placement-panel';
 
 import selection from './selection';
@@ -12,9 +13,9 @@ function getPanel(): PlacementPanel {
 }
 
 function init(map: MapGL): void {
-  selection.subscribe(() => {
+  effect(() => {
     const panel = getPanel();
-    if (selection.getMode() === 'placement') {
+    if (selection.interactionMode.get() === 'placement') {
       const photo = selection.getPhoto();
       if (photo === undefined) return;
       panel.photo = photo;
@@ -27,19 +28,20 @@ function init(map: MapGL): void {
   });
 
   map.on('click', (e) => {
-    if (selection.getMode() !== 'placement') return;
-    const uuid = selection.getPhotoUuid();
+    if (selection.interactionMode.get() !== 'placement') return;
+    const uuid = selection.selectedPhotoUuid.get();
     if (uuid === null) {
       selection.clear();
       return;
     }
     e.preventDefault();
     edits.setCoord(uuid, e.lngLat.lat, e.lngLat.lng);
-    selection.openPopup(uuid);
+    // Selecting the same uuid cancels placement (back to popup view).
+    selection.selectPhoto(uuid);
   });
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && selection.getMode() === 'placement') {
+    if (e.key === 'Escape' && selection.interactionMode.get() === 'placement') {
       selection.clear();
     }
   });
