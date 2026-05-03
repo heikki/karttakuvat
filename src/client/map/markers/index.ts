@@ -1,14 +1,10 @@
 import type { Map as MapGL, MapLayerMouseEvent, Point } from 'maplibre-gl';
 
 import { state, subscribe } from '@common/data';
-import {
-  ChangeMarkerStyleEvent,
-  MarkerClickedEvent,
-  MarkersInstalledEvent,
-  PlacementModeEvent
-} from '@common/events';
-import type { MarkerLayer, Photo } from '@common/types';
+import { ChangeMarkerStyleEvent } from '@common/events';
+import type { MarkerLayer } from '@common/types';
 
+import * as selection from '../selection';
 import { ClassicLayer } from './classic';
 import { PointsLayer } from './points';
 
@@ -22,7 +18,6 @@ let map: MapGL;
 let currentMarkerStyle = 'classic';
 let currentLayer: MarkerLayer | null = null;
 let interactionCleanup: (() => void) | null = null;
-let placementActive = false;
 
 export function initMarkers(m: MapGL): void {
   map = m;
@@ -30,6 +25,7 @@ export function initMarkers(m: MapGL): void {
   map.on('load', () => {
     install();
     bindInteractions();
+    applySelection();
   });
 
   document.addEventListener(ChangeMarkerStyleEvent.type, (e) => {
@@ -38,17 +34,10 @@ export function initMarkers(m: MapGL): void {
     if (currentLayer === null) return;
     install();
     bindInteractions();
-    if (placementActive) {
-      currentLayer.toggle(false);
-      return;
-    }
-    document.dispatchEvent(new MarkersInstalledEvent());
+    applySelection();
   });
 
-  document.addEventListener(PlacementModeEvent.type, (e) => {
-    placementActive = e.active;
-    currentLayer?.toggle(!e.active);
-  });
+  selection.subscribe(applySelection);
 
   subscribe(() => {
     currentLayer?.setMarkers(state.filteredPhotos);
@@ -61,12 +50,19 @@ export function isClickOnMarker(point: Point): boolean {
   return map.queryRenderedFeatures(point, { layers: [id] }).length > 0;
 }
 
-export function highlightPhoto(photo: Photo | null): void {
-  currentLayer?.highlight(photo);
-}
-
 export function getMarkerRadius(zoom: number): number {
   return currentLayer?.markerRadius(zoom) ?? 0;
+}
+
+function applySelection(): void {
+  if (currentLayer === null) return;
+  const mode = selection.getMode();
+  currentLayer.toggle(mode !== 'placement');
+  if (mode === 'popup') {
+    currentLayer.highlight(selection.getPhoto() ?? null);
+  } else {
+    currentLayer.highlight(null);
+  }
 }
 
 function install(): void {
@@ -84,21 +80,23 @@ function bindInteractions(): void {
   const canvas = map.getCanvas();
 
   const onLayerClick = (e: MapLayerMouseEvent) => {
-    if (placementActive) return;
+    if (selection.getMode() === 'placement') return;
     e.preventDefault();
     e.originalEvent.stopPropagation();
     if (e.features === undefined || e.features.length === 0) return;
     const feature = e.features[0]!;
     const clickedIndex = feature.properties.index as number | undefined;
     if (clickedIndex === undefined) return;
-    document.dispatchEvent(new MarkerClickedEvent(clickedIndex));
+    const photo = state.filteredPhotos[clickedIndex];
+    if (photo === undefined) return;
+    selection.openPopup(photo.uuid);
   };
 
   const onMouseEnter = () => {
-    if (!placementActive) canvas.style.cursor = 'pointer';
+    if (selection.getMode() !== 'placement') canvas.style.cursor = 'pointer';
   };
   const onMouseLeave = () => {
-    if (!placementActive) canvas.style.cursor = '';
+    if (selection.getMode() !== 'placement') canvas.style.cursor = '';
   };
 
   map.on('click', layerId, onLayerClick);

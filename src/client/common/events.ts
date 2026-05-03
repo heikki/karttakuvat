@@ -9,30 +9,12 @@ export class ShowLightboxEvent extends Event {
   }
 }
 
+// Bare request signal: dispatched by <photo-popup>'s "set" button.
+// Carries no payload — the selection module knows the current photo.
 export class PlacementModeEvent extends Event {
   static readonly type = 'placement-mode';
-  readonly active: boolean;
-  readonly photoIndex?: number;
-  constructor(active: boolean, photoIndex?: number) {
-    super(PlacementModeEvent.type, opts);
-    this.active = active;
-    this.photoIndex = photoIndex;
-  }
-}
-
-export class MarkerClickedEvent extends Event {
-  static readonly type = 'marker-clicked';
-  readonly index: number;
-  constructor(index: number) {
-    super(MarkerClickedEvent.type);
-    this.index = index;
-  }
-}
-
-export class MarkersInstalledEvent extends Event {
-  static readonly type = 'markers-installed';
   constructor() {
-    super(MarkersInstalledEvent.type);
+    super(PlacementModeEvent.type, opts);
   }
 }
 
@@ -171,7 +153,5 @@ declare global {
     [MeasureModeExitedEvent.type]: MeasureModeExitedEvent;
     [RouteEditModeEvent.type]: RouteEditModeEvent;
     [ShowAlbumFilesEvent.type]: ShowAlbumFilesEvent;
-    [MarkerClickedEvent.type]: MarkerClickedEvent;
-    [MarkersInstalledEvent.type]: MarkersInstalledEvent;
   }
 }

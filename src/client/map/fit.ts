@@ -5,7 +5,8 @@ import { state } from '@common/data';
 import { FitToPhotosEvent } from '@common/events';
 import { mapViewFromUrl } from '@common/filter-url';
 
-import { getPhotoUuid, getPopup, showPopup } from './popup';
+import { getPopup } from './popup';
+import * as selection from './selection';
 
 // eslint-disable-next-line @typescript-eslint/init-declarations -- set in initFit
 let map: MapGL;
@@ -33,13 +34,13 @@ function showOldestOrNewestPopup() {
     (max, p, i) => (p.date > photos[max]!.date ? i : max),
     0
   );
-  const selectedUuid = getPhotoUuid();
+  const selectedUuid = selection.getPhotoUuid();
   if (selectedUuid === photos[oldestIdx]!.uuid) {
-    showPopup(newestIdx);
+    selection.openPopup(photos[newestIdx]!.uuid);
   } else if (selectedUuid === photos[newestIdx]!.uuid) {
-    showPopup(oldestIdx);
+    selection.openPopup(photos[oldestIdx]!.uuid);
   } else if (selectedUuid === null) {
-    showPopup(oldestIdx);
+    selection.openPopup(photos[oldestIdx]!.uuid);
   }
 }
 

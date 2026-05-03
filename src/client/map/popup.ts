@@ -10,17 +10,14 @@ import {
   getCopiedLocation,
   getEffectiveCoords,
   setPendingTimeEdit,
-  state,
-  subscribe
+  state
 } from '@common/data';
 import {
-  MarkerClickedEvent,
-  MarkersInstalledEvent,
-  ResetMapEvent,
+  ChangeMarkerStyleEvent,
+  PlacementModeEvent,
   SaveEditsEvent,
   ShowLightboxEvent
 } from '@common/events';
-import { photoFromUrl, photoToUrl } from '@common/filter-url';
 import {
   computeManualDateOffset,
   getEffectiveDate,
@@ -29,12 +26,13 @@ import {
 import type { Photo } from '@common/types';
 import {
   computeFullDatetimeOffsetHours,
+  getThumbUrl,
   parseExifDate,
   parseUserDatetime
 } from '@common/utils';
 import type { PhotoPopup, PopupActions } from '@components/photo-popup';
 
-import { getMarkerRadius, highlightPhoto } from './markers';
+import { getMarkerRadius } from './markers';
 import { createFlyToPopup, createPanToFitPopup } from './pan';
 import {
   initPopupZoom,
@@ -42,12 +40,11 @@ import {
   removeCanvasZoomOverride,
   setupPopupEvents
 } from './popup-zoom';
+import * as selection from './selection';
 
-// State
 let popup: Popup | null = null;
 let popupElement: PhotoPopup | null = null;
-let popupPhotoIndex: number | null = null;
-let photoUuid: string | null = null;
+let mountedUuid: string | null = null;
 let dateEditMode = false;
 
 let map: MapGL | null = null;
@@ -65,7 +62,7 @@ function popupOffset(): [number, number] {
 }
 
 function getSelectedMarkerCoords(): [number, number] | null {
-  const photo = getPhoto();
+  const photo = selection.getPhoto();
   if (photo === undefined) return null;
   const { lon, lat } = getEffectiveCoords(photo);
   return [lon, lat];
@@ -80,20 +77,23 @@ function reanchorPopup() {
   popup.setOffset(popupOffset());
 }
 
-function handleArrowNav(key: string) {
-  if (popupPhotoIndex === null) return false;
+function handleArrowNav(key: string): boolean {
+  const idx = selection.getPhotoIndex();
+  if (idx === null) return false;
   const total = state.filteredPhotos.length;
-  const newIdx =
-    (popupPhotoIndex + (key === 'ArrowLeft' ? -1 : 1) + total) % total;
-  navigateToPhoto(newIdx);
+  if (total === 0) return false;
+  const newIdx = (idx + (key === 'ArrowLeft' ? -1 : 1) + total) % total;
+  const next = state.filteredPhotos[newIdx];
+  if (next === undefined) return false;
+  selection.openPopup(next.uuid);
   return true;
 }
 
 function handleEscape() {
   if (dateEditMode) {
     toggleDateEdit();
-  } else if (popup !== null) {
-    popup.remove();
+  } else if (selection.getMode() === 'popup') {
+    selection.clear();
   }
 }
 
@@ -108,9 +108,10 @@ function handleKeydown(e: KeyboardEvent) {
     return;
   }
   if (e.key === ' ') {
-    if (popupPhotoIndex !== null) {
+    const idx = selection.getPhotoIndex();
+    if (idx !== null) {
       e.preventDefault();
-      document.dispatchEvent(new ShowLightboxEvent(popupPhotoIndex));
+      document.dispatchEvent(new ShowLightboxEvent(idx));
     }
   }
 }
@@ -135,7 +136,7 @@ const popupActions: PopupActions = {
     toggleDateEdit();
   },
   adjustTime: (hours) => {
-    const uuid = getPhotoUuid();
+    const uuid = selection.getPhotoUuid();
     if (uuid !== null) adjustTime(uuid, hours);
   },
   applyManualDate: (value) => {
@@ -150,27 +151,152 @@ export function initPopup(m: MapGL) {
   initPopupZoom(m, getSelectedMarkerCoords);
   m.on('zoomend', reanchorPopup);
   m.on('render', updatePopupGlobeMask);
-  m.on('load', reopenPopupFromUrl);
 
   document.addEventListener('keydown', handleKeydown);
-  document.addEventListener(ResetMapEvent.type, () => {
-    popup?.remove();
+
+  // Bare request signal from <photo-popup>'s "set" button: enter placement
+  // mode for the currently-selected photo.
+  document.addEventListener(PlacementModeEvent.type, () => {
+    const uuid = selection.getPhotoUuid();
+    if (uuid !== null) selection.enterPlacement(uuid);
   });
-  document.addEventListener(MarkerClickedEvent.type, (e) => {
-    showPopup(e.index);
+
+  // Marker style swap changes the radius scheme. This listener is registered
+  // before markers' (popup is init'd before markers), so we defer to a
+  // microtask — markers' synchronous listener swaps the layer, then our
+  // microtask runs reanchorPopup with the new radius.
+  document.addEventListener(ChangeMarkerStyleEvent.type, () => {
+    queueMicrotask(reanchorPopup);
   });
-  document.addEventListener(MarkersInstalledEvent.type, reanchorByUuid);
-  subscribe(reanchorByUuid);
+
+  selection.subscribe(applySelection);
 }
 
-function reanchorByUuid() {
-  if (popup === null || photoUuid === null) return;
-  const newIndex = state.filteredPhotos.findIndex((p) => p.uuid === photoUuid);
-  if (newIndex === -1) {
-    popup.remove();
+function applySelection() {
+  const mode = selection.getMode();
+  const uuid = selection.getPhotoUuid();
+
+  if (mode !== 'popup' || uuid === null) {
+    if (popup !== null) popup.remove();
     return;
   }
-  showPopup(newIndex);
+
+  if (mountedUuid === uuid && popup !== null) {
+    // Same photo selected, just sync (e.g. pending edit moved its position).
+    syncPopupPositionAndContent();
+    return;
+  }
+
+  if (mountedUuid !== null && popup !== null) {
+    // Different photo — navigate (smooth fly) instead of full recreate.
+    void navigateToCurrent();
+    return;
+  }
+
+  mountCurrent();
+}
+
+function mountCurrent() {
+  if (map === null) return;
+  const photo = selection.getPhoto();
+  if (photo === undefined) return;
+
+  const { lon, lat } = getEffectiveCoords(photo);
+  const idx = selection.getPhotoIndex() ?? 0;
+
+  dateEditMode = false;
+  mountedUuid = photo.uuid;
+  popupElement = createPopupElement(photo, idx);
+
+  popup = new Popup({
+    closeButton: false,
+    maxWidth: '320px',
+    anchor: 'bottom',
+    offset: popupOffset(),
+    subpixelPositioning: true
+  })
+    .setLngLat([lon, lat])
+    .setDOMContent(popupElement)
+    .addTo(map);
+
+  setupPopupEvents(popup.getElement());
+  installCanvasZoomOverride();
+
+  // If we mounted before the map's first 'load' (URL-restoration race),
+  // markers haven't installed yet → getMarkerRadius returned 0 → offset is
+  // wrong. Registered here (after initMarkers' load handler), so it fires
+  // second and corrects the offset.
+  if (!map.loaded()) {
+    void map.once('load', () => {
+      if (popup !== null) popup.setOffset(popupOffset());
+    });
+  }
+
+  popup.on('close', () => {
+    removeCanvasZoomOverride();
+    dateEditMode = false;
+    popup = null;
+    popupElement = null;
+    mountedUuid = null;
+    if (selection.getMode() === 'popup') {
+      // Closed via MapLibre's own teardown (e.g. setStyle); keep state in sync.
+      selection.clear();
+    }
+  });
+
+  panToFitPopup([lon, lat]);
+}
+
+let navSeq = 0;
+
+async function preloadThumb(url: string): Promise<void> {
+  const img = new Image();
+  img.src = url;
+  try {
+    await img.decode();
+  } catch {
+    /* fall through; nav proceeds with whatever the browser shows */
+  }
+}
+
+function applyNavigation(photoUuid: string): void {
+  if (popup === null) return;
+  const photo = selection.getPhoto();
+  if (photo?.uuid !== photoUuid) return;
+
+  const idx = selection.getPhotoIndex() ?? 0;
+  const loc = getEffectiveLocation(photo);
+  const lng = loc?.lon ?? 0;
+  const lat = loc?.lat ?? 0;
+
+  dateEditMode = false;
+  mountedUuid = photo.uuid;
+  syncPopupElement(photo, idx);
+  popup.setLngLat([lng, lat]);
+  flyToPopup([lng, lat]);
+}
+
+async function navigateToCurrent(): Promise<void> {
+  const seq = ++navSeq;
+  const photo = selection.getPhoto();
+  if (photo === undefined) return;
+
+  // Preload the new thumb (no DOM swap yet) so that when we replace the img
+  // and move the popup, the browser paints both in the same frame — no
+  // intermediate jitter from a half-loaded image resizing the popup.
+  await preloadThumb(getThumbUrl(photo));
+  if (seq !== navSeq) return;
+  applyNavigation(photo.uuid);
+}
+
+function syncPopupPositionAndContent() {
+  if (popup === null) return;
+  const photo = selection.getPhoto();
+  if (photo === undefined) return;
+  const idx = selection.getPhotoIndex() ?? 0;
+  const { lon, lat } = getEffectiveCoords(photo);
+  syncPopupElement(photo, idx);
+  popup.setLngLat([lon, lat]);
 }
 
 function updatePopupGlobeMask() {
@@ -233,25 +359,6 @@ export function getPopup(): Popup | null {
   return popup;
 }
 
-export function getPhotoUuid(): string | null {
-  return photoUuid;
-}
-
-export function reopenPopupFromUrl() {
-  const uuid = photoFromUrl();
-  if (uuid === null) return;
-  const index = state.filteredPhotos.findIndex((p) => p.uuid === uuid);
-  if (index === -1) return;
-  showPopup(index);
-}
-
-function getPhoto(): Photo | undefined {
-  if (popupPhotoIndex !== null) {
-    return state.filteredPhotos[popupPhotoIndex];
-  }
-  return undefined;
-}
-
 function computePasteVisibility(photo: Photo): {
   showPasteLocation: boolean;
   showPasteDate: boolean;
@@ -283,65 +390,18 @@ function createPopupElement(photo: Photo, index: number): PhotoPopup {
   return el;
 }
 
-function syncPopupElement() {
-  if (popupElement === null || popupPhotoIndex === null) return;
-  const photo = state.filteredPhotos[popupPhotoIndex];
-  if (photo === undefined) return;
-  popupElement.photo = photo;
-  popupElement.index = popupPhotoIndex;
+function syncPopupElement(photo?: Photo, index?: number) {
+  if (popupElement === null) return;
+  const p = photo ?? selection.getPhoto();
+  if (p === undefined) return;
+  const i = index ?? selection.getPhotoIndex() ?? 0;
+  popupElement.photo = p;
+  popupElement.index = i;
   popupElement.dateEditMode = dateEditMode;
-  const paste = computePasteVisibility(photo);
+  const paste = computePasteVisibility(p);
   popupElement.showPasteLocation = paste.showPasteLocation;
   popupElement.showPasteDate = paste.showPasteDate;
   popupElement.requestUpdate();
-}
-
-export function showPopup(index: number) {
-  if (popup !== null) {
-    popup.remove();
-  }
-
-  if (map === null) return;
-
-  const photo = state.filteredPhotos[index];
-  if (photo === undefined) return;
-
-  const { lon, lat } = getEffectiveCoords(photo);
-
-  dateEditMode = false;
-  popupPhotoIndex = index;
-  photoUuid = photo.uuid;
-  highlightPhoto(photo);
-  photoToUrl(photo.uuid);
-
-  popupElement = createPopupElement(photo, index);
-
-  popup = new Popup({
-    closeButton: false,
-    maxWidth: '320px',
-    anchor: 'bottom',
-    offset: popupOffset(),
-    subpixelPositioning: true
-  })
-    .setLngLat([lon, lat])
-    .setDOMContent(popupElement)
-    .addTo(map);
-
-  setupPopupEvents(popup.getElement());
-  installCanvasZoomOverride();
-
-  popup.on('close', () => {
-    removeCanvasZoomOverride();
-    dateEditMode = false;
-    highlightPhoto(null);
-    popup = null;
-    popupPhotoIndex = null;
-    photoUuid = null;
-    popupElement = null;
-    photoToUrl(null);
-  });
-
-  panToFitPopup([lon, lat]);
 }
 
 function adjustTime(uuid: string, hours: number) {
@@ -350,7 +410,7 @@ function adjustTime(uuid: string, hours: number) {
 }
 
 function confirmLocation() {
-  const photo = getPhoto();
+  const photo = selection.getPhoto();
   if (photo === undefined) return;
   const loc = getEffectiveLocation(photo);
   if (loc === null) return;
@@ -359,7 +419,7 @@ function confirmLocation() {
 }
 
 function copyLocationFromPopup() {
-  const photo = getPhoto();
+  const photo = selection.getPhoto();
   if (photo === undefined) return;
   const loc = getEffectiveLocation(photo);
   if (loc === null) return;
@@ -367,17 +427,14 @@ function copyLocationFromPopup() {
 }
 
 function pasteLocation() {
-  if (popupPhotoIndex === null) return;
-  const photo = state.filteredPhotos[popupPhotoIndex];
+  const photo = selection.getPhoto();
   const copied = getCopiedLocation();
   if (photo === undefined || copied === null) return;
-
   addPendingEdit(photo.uuid, copied.lat, copied.lon);
-  showPopup(popupPhotoIndex);
 }
 
 function copyDateFromPopup() {
-  const photo = getPhoto();
+  const photo = selection.getPhoto();
   if (photo === undefined) return;
   const effectiveDate = getEffectiveDate(photo);
   if (effectiveDate === '') return;
@@ -385,7 +442,7 @@ function copyDateFromPopup() {
 }
 
 function pasteDateToPhoto() {
-  const photo = getPhoto();
+  const photo = selection.getPhoto();
   if (photo === undefined) return;
   const copied = getCopiedDate();
   if (copied === null) return;
@@ -403,7 +460,7 @@ function toggleDateEdit() {
 }
 
 function applyManualDate(dateValue: string) {
-  const photo = getPhoto();
+  const photo = selection.getPhoto();
   if (photo === undefined) return;
   if (dateValue.trim() === '') return;
   const yearStr = photo.date.split(':')[0];
@@ -418,23 +475,4 @@ function applyManualDate(dateValue: string) {
   setPendingTimeEdit(photo.uuid, offset);
   dateEditMode = false;
   syncPopupElement();
-}
-
-function navigateToPhoto(newIndex: number) {
-  const photo = state.filteredPhotos[newIndex];
-  if (photo === undefined || popup === null) return;
-
-  dateEditMode = false;
-  popupPhotoIndex = newIndex;
-  photoUuid = photo.uuid;
-  highlightPhoto(photo);
-  photoToUrl(photo.uuid);
-
-  syncPopupElement();
-
-  const loc = getEffectiveLocation(photo);
-  const lng = loc?.lon ?? 0;
-  const lat = loc?.lat ?? 0;
-  popup.setLngLat([lng, lat]);
-  flyToPopup([lng, lat]);
 }

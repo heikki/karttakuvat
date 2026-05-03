@@ -6,7 +6,6 @@ import {
 } from 'maplibre-gl';
 import type { StyleSpecification } from 'maplibre-gl';
 
-import { state } from '@common/data';
 import {
   ChangeMapStyleEvent,
   OpenExternalMapEvent,
@@ -28,9 +27,10 @@ import { fitToPhotos, initFit } from './fit';
 import { initGpx } from './gpx';
 import { initMarkers, isClickOnMarker } from './markers';
 import { initMeasure } from './measure';
-import { initPlacement, isInPlacementMode } from './placement';
-import { getPhotoUuid, getPopup, initPopup, showPopup } from './popup';
+import { initPlacement } from './placement';
+import { initPopup } from './popup';
 import { initRoute } from './route';
+import * as selection from './selection';
 import { initZAnchors } from './z-anchors';
 
 // Global map variable (local to module)
@@ -62,6 +62,7 @@ function showMapError(msg: string, onClick?: () => void) {
 }
 
 function resetMap() {
+  selection.clear();
   changeMapStyle('satellite');
   fitToPhotos(true);
 }
@@ -77,11 +78,7 @@ function applyGlobeProjection(style: StyleSpecification): StyleSpecification {
 function openExternalMap(target: 'apple' | 'google') {
   const c = map.getCenter();
   const z = Math.round(map.getZoom());
-  const uuid = getPhotoUuid();
-  const photo =
-    uuid === null
-      ? undefined
-      : state.filteredPhotos.find((p) => p.uuid === uuid);
+  const photo = selection.getPhoto();
   const loc =
     photo === undefined
       ? undefined
@@ -146,6 +143,7 @@ export function initMap() {
     console.warn('[MapGL] WebGL context restored');
   });
 
+  selection.initSelection();
   initZAnchors(map);
   initPopup(map);
   initMeasure(map);
@@ -203,9 +201,9 @@ export function initMap() {
   // Independent of marker style, so registered once instead of via
   // setupMarkerInteractions (which re-binds on marker style swap).
   map.on('click', (e) => {
-    if (isInPlacementMode()) return;
+    if (selection.getMode() === 'placement') return;
     if (isClickOnMarker(e.point)) return;
-    getPopup()?.remove();
+    if (selection.getMode() === 'popup') selection.clear();
   });
 
   map.on('projectiontransition', () => {
@@ -214,13 +212,11 @@ export function initMap() {
     } else {
       stopGlobeBackground();
     }
-    const popup = getPopup();
-    if (popup === null) return;
-    const uuid = getPhotoUuid();
-    if (uuid === null) return;
-    const index = state.filteredPhotos.findIndex((p) => p.uuid === uuid);
-    if (index === -1) return;
-    showPopup(index);
+    const uuid = selection.getPhotoUuid();
+    if (selection.getMode() !== 'popup' || uuid === null) return;
+    // Force a popup remount so it re-anchors with the new projection.
+    selection.clear();
+    selection.openPopup(uuid);
   });
 
   initPlacement(map);
