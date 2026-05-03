@@ -7,7 +7,10 @@ import type {
 
 import { state } from '@common/data';
 import * as edits from '@common/edits';
-import { RouteEditModeEvent, ToggleRouteEditEvent } from '@common/events';
+import {
+  RouteEditModeChangedEvent,
+  ToggleRouteEditEvent
+} from '@common/events';
 import type { Photo } from '@common/types';
 
 import route, { type RouteData } from '.';
@@ -123,7 +126,7 @@ function enterEditMode(): void {
 
   suppressNextMapClick = false;
   map.getCanvas().classList.add('crosshair');
-  document.dispatchEvent(new RouteEditModeEvent(true));
+  document.dispatchEvent(new RouteEditModeChangedEvent(true));
   setLayerVisibility(true);
   raiseEditPoints();
   updateEditSources();
@@ -153,7 +156,7 @@ export function exitRouteEdit(): void {
   removePopup();
   // Restore blue display layers with current edit data
   if (routeData !== null) route.setData(routeData);
-  document.dispatchEvent(new RouteEditModeEvent(false));
+  document.dispatchEvent(new RouteEditModeChangedEvent(false));
   setLayerVisibility(false);
 
   map.off('click', onMapClick);

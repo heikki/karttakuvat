@@ -3,7 +3,7 @@ import { customElement, property } from 'lit/decorators.js';
 
 import * as edits from '@common/edits';
 import {
-  PlacementModeEvent,
+  EnterPlacementModeEvent,
   ShowLightboxEvent,
   ShowMetadataEvent
 } from '@common/events';
@@ -174,7 +174,7 @@ export class PhotoPopup extends LitElement {
   private _onPlacement(e: Event) {
     e.preventDefault();
     if (this.photo !== null) {
-      this.dispatchEvent(new PlacementModeEvent());
+      this.dispatchEvent(new EnterPlacementModeEvent());
     }
   }
 

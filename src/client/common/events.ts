@@ -9,15 +9,6 @@ export class ShowLightboxEvent extends Event {
   }
 }
 
-// Bare request signal: dispatched by <photo-popup>'s "set" button.
-// Carries no payload — the selection module knows the current photo.
-export class PlacementModeEvent extends Event {
-  static readonly type = 'placement-mode';
-  constructor() {
-    super(PlacementModeEvent.type, opts);
-  }
-}
-
 export class ShowMetadataEvent extends Event {
   static readonly type = 'show-metadata';
   readonly uuid: string;
@@ -27,7 +18,14 @@ export class ShowMetadataEvent extends Event {
   }
 }
 
-/* ── Map command events (filter-panel → map) ── */
+// Bare request signal: dispatched by <photo-popup>'s "set" button.
+// Carries no payload — the selection module knows the current photo.
+export class EnterPlacementModeEvent extends Event {
+  static readonly type = 'enter-placement-mode';
+  constructor() {
+    super(EnterPlacementModeEvent.type, opts);
+  }
+}
 
 export class ChangeMapStyleEvent extends Event {
   static readonly type = 'change-map-style';
@@ -65,20 +63,6 @@ export class ResetMapEvent extends Event {
   }
 }
 
-export class ToggleMeasureModeEvent extends Event {
-  static readonly type = 'toggle-measure-mode';
-  constructor() {
-    super(ToggleMeasureModeEvent.type);
-  }
-}
-
-export class SaveEditsEvent extends Event {
-  static readonly type = 'save-edits';
-  constructor() {
-    super(SaveEditsEvent.type);
-  }
-}
-
 export class OpenExternalMapEvent extends Event {
   static readonly type = 'open-external-map';
   readonly provider: 'apple' | 'google';
@@ -88,11 +72,25 @@ export class OpenExternalMapEvent extends Event {
   }
 }
 
-export class RouteVisibilityEvent extends Event {
-  static readonly type = 'route-visibility';
+export class ToggleMeasureModeEvent extends Event {
+  static readonly type = 'toggle-measure-mode';
+  constructor() {
+    super(ToggleMeasureModeEvent.type);
+  }
+}
+
+export class MeasureModeExitedEvent extends Event {
+  static readonly type = 'measure-mode-exited';
+  constructor() {
+    super(MeasureModeExitedEvent.type);
+  }
+}
+
+export class SetRouteVisibilityEvent extends Event {
+  static readonly type = 'set-route-visibility';
   readonly visible: boolean;
   constructor(visible: boolean) {
-    super(RouteVisibilityEvent.type);
+    super(SetRouteVisibilityEvent.type);
     this.visible = visible;
   }
 }
@@ -104,21 +102,19 @@ export class ToggleRouteEditEvent extends Event {
   }
 }
 
-/* ── Map status events (map → filter-panel) ── */
-
-export class MeasureModeExitedEvent extends Event {
-  static readonly type = 'measure-mode-exited';
-  constructor() {
-    super(MeasureModeExitedEvent.type);
+export class RouteEditModeChangedEvent extends Event {
+  static readonly type = 'route-edit-mode-changed';
+  readonly active: boolean;
+  constructor(active: boolean) {
+    super(RouteEditModeChangedEvent.type);
+    this.active = active;
   }
 }
 
-export class RouteEditModeEvent extends Event {
-  static readonly type = 'route-edit-mode';
-  readonly active: boolean;
-  constructor(active: boolean) {
-    super(RouteEditModeEvent.type);
-    this.active = active;
+export class SaveEditsEvent extends Event {
+  static readonly type = 'save-edits';
+  constructor() {
+    super(SaveEditsEvent.type);
   }
 }
 
@@ -141,24 +137,24 @@ export class AlbumFilesChangedEvent extends Event {
 declare global {
   interface HTMLElementEventMap {
     [ShowLightboxEvent.type]: ShowLightboxEvent;
-    [PlacementModeEvent.type]: PlacementModeEvent;
     [ShowMetadataEvent.type]: ShowMetadataEvent;
+    [EnterPlacementModeEvent.type]: EnterPlacementModeEvent;
   }
   interface DocumentEventMap {
     [ShowLightboxEvent.type]: ShowLightboxEvent;
-    [PlacementModeEvent.type]: PlacementModeEvent;
     [ShowMetadataEvent.type]: ShowMetadataEvent;
+    [EnterPlacementModeEvent.type]: EnterPlacementModeEvent;
     [ChangeMapStyleEvent.type]: ChangeMapStyleEvent;
     [ChangeMarkerStyleEvent.type]: ChangeMarkerStyleEvent;
     [FitToPhotosEvent.type]: FitToPhotosEvent;
     [ResetMapEvent.type]: ResetMapEvent;
-    [ToggleMeasureModeEvent.type]: ToggleMeasureModeEvent;
     [OpenExternalMapEvent.type]: OpenExternalMapEvent;
-    [SaveEditsEvent.type]: SaveEditsEvent;
-    [RouteVisibilityEvent.type]: RouteVisibilityEvent;
-    [ToggleRouteEditEvent.type]: ToggleRouteEditEvent;
+    [ToggleMeasureModeEvent.type]: ToggleMeasureModeEvent;
     [MeasureModeExitedEvent.type]: MeasureModeExitedEvent;
-    [RouteEditModeEvent.type]: RouteEditModeEvent;
+    [SetRouteVisibilityEvent.type]: SetRouteVisibilityEvent;
+    [ToggleRouteEditEvent.type]: ToggleRouteEditEvent;
+    [RouteEditModeChangedEvent.type]: RouteEditModeChangedEvent;
+    [SaveEditsEvent.type]: SaveEditsEvent;
     [ShowAlbumFilesEvent.type]: ShowAlbumFilesEvent;
     [AlbumFilesChangedEvent.type]: AlbumFilesChangedEvent;
   }

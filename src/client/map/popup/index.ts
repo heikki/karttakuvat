@@ -5,7 +5,7 @@ import { getCopiedDate, getCopiedLocation } from '@common/clipboard';
 import * as edits from '@common/edits';
 import {
   ChangeMarkerStyleEvent,
-  PlacementModeEvent,
+  EnterPlacementModeEvent,
   ShowLightboxEvent
 } from '@common/events';
 import type { Photo } from '@common/types';
@@ -108,7 +108,7 @@ function init(m: MapGL) {
 
   // Bare request signal from <photo-popup>'s "set" button: enter placement
   // mode for the currently-selected photo.
-  document.addEventListener(PlacementModeEvent.type, () => {
+  document.addEventListener(EnterPlacementModeEvent.type, () => {
     const uuid = selection.getPhotoUuid();
     if (uuid !== null) selection.enterPlacement(uuid);
   });

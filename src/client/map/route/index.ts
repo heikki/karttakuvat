@@ -5,8 +5,8 @@ import { state, subscribe } from '@common/data';
 import * as edits from '@common/edits';
 import {
   ResetMapEvent,
-  RouteEditModeEvent,
-  RouteVisibilityEvent
+  RouteEditModeChangedEvent,
+  SetRouteVisibilityEvent
 } from '@common/events';
 import type { Photo } from '@common/types';
 import { toUtcSortKey } from '@common/utils';
@@ -68,12 +68,12 @@ function init(m: MapGL): void {
 function initPhotoRoute(m: MapGL): void {
   map = m;
 
-  document.addEventListener(RouteVisibilityEvent.type, (e) => {
+  document.addEventListener(SetRouteVisibilityEvent.type, (e) => {
     setPhotoRouteVisible(e.visible);
   });
 
   // Hide display layers while edit mode is active so edit owns rendering.
-  document.addEventListener(RouteEditModeEvent.type, (e) => {
+  document.addEventListener(RouteEditModeChangedEvent.type, (e) => {
     if (map === null) return;
     mapUtils.setLayersVisibility(map, ALL_ROUTE_LAYERS, !e.active && visible);
   });
