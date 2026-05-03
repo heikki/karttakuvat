@@ -30,6 +30,7 @@ import type { AlbumControls } from './album-controls';
 
 import './album-controls';
 
+import { cascade } from './cascade';
 import {
   DEFAULT_GPS,
   DEFAULT_MEDIA,
@@ -136,51 +137,20 @@ export class FilterPanel extends LitElement {
   }
 
   private _applyInitialFilters() {
-    const albumOpts = this._getAlbumOptions();
-    if (this._album !== 'all' && !albumOpts.includes(this._album)) {
-      this._album = 'all';
-    }
-    const cameraOpts = this._getCameraOptions();
-    if (this._camera !== 'all' && !cameraOpts.includes(this._camera)) {
-      this._camera = 'all';
-    }
     this._applyFilters();
     document.dispatchEvent(new ChangeMapStyleEvent(this._mapStyle));
     document.dispatchEvent(new ChangeMarkerStyleEvent(this._markerStyle));
     this._albumControls?.applyInitialState();
   }
 
-  private _getYearPhotos() {
-    return this._year === 'all'
-      ? state.photos
-      : state.photos.filter((p) => getYear(p) === this._year);
-  }
-
-  private _getAlbumOptions() {
-    return [...new Set(this._getYearPhotos().flatMap((p) => p.albums))].sort();
-  }
-
-  private _getAlbumPhotos() {
-    const yearPhotos = this._getYearPhotos();
-    return this._album === 'all'
-      ? yearPhotos
-      : yearPhotos.filter((p) => p.albums.includes(this._album));
-  }
-
-  private _getCameraOptions() {
-    return [
-      ...new Set(this._getAlbumPhotos().map((p) => p.camera ?? '(unknown)'))
-    ].sort();
-  }
-
-  private _getCameraPhotos() {
-    const albumPhotos = this._getAlbumPhotos();
-    return this._camera === 'all'
-      ? albumPhotos
-      : albumPhotos.filter((p) => (p.camera ?? '(unknown)') === this._camera);
-  }
-
   private _applyFilters() {
+    const result = cascade(state.photos, {
+      year: this._year,
+      album: this._album,
+      camera: this._camera
+    });
+    this._album = result.album;
+    this._camera = result.camera;
     applyFilters(
       {
         year: this._year,
@@ -189,7 +159,7 @@ export class FilterPanel extends LitElement {
         album: this._album,
         camera: this._camera
       },
-      this._getCameraPhotos()
+      result.filtered
     );
     filtersToUrl({
       year: this._year,
@@ -202,23 +172,11 @@ export class FilterPanel extends LitElement {
 
   private readonly _onYearChange = (e: Event) => {
     this._year = (e.target as HTMLSelectElement).value;
-    const albumOpts = this._getAlbumOptions();
-    if (this._album !== 'all' && !albumOpts.includes(this._album)) {
-      this._album = 'all';
-    }
-    const cameraOpts = this._getCameraOptions();
-    if (this._camera !== 'all' && !cameraOpts.includes(this._camera)) {
-      this._camera = 'all';
-    }
     this._applyFilters();
   };
 
   private readonly _onAlbumChange = (e: Event) => {
     this._album = (e.target as HTMLSelectElement).value;
-    const cameraOpts = this._getCameraOptions();
-    if (this._camera !== 'all' && !cameraOpts.includes(this._camera)) {
-      this._camera = 'all';
-    }
     this._applyFilters();
   };
 
@@ -282,6 +240,11 @@ export class FilterPanel extends LitElement {
     }
     this._measureActive = false;
     this._albumControls?.reset();
+    const result = cascade(state.photos, {
+      year: this._year,
+      album: this._album,
+      camera: this._camera
+    });
     applyFilters(
       {
         year: this._year,
@@ -290,7 +253,7 @@ export class FilterPanel extends LitElement {
         album: this._album,
         camera: this._camera
       },
-      this._getCameraPhotos()
+      result.filtered
     );
     resetAllViewParams();
     flushViewState();
@@ -312,6 +275,11 @@ export class FilterPanel extends LitElement {
         state.photos.map(getYear).filter((y): y is string => y !== null)
       )
     ].sort();
+    const { albumOptions, cameraOptions } = cascade(state.photos, {
+      year: this._year,
+      album: this._album,
+      camera: this._camera
+    });
     const editCount = edits.getCount();
     return html`
       <div class="wrapper">
@@ -331,13 +299,13 @@ export class FilterPanel extends LitElement {
                 ${renderSelect('Year', years, this._year, this._onYearChange)}
                 ${renderSelect(
                   'Album',
-                  this._getAlbumOptions(),
+                  albumOptions,
                   this._album,
                   this._onAlbumChange
                 )}
                 ${renderSelect(
                   'Camera',
-                  this._getCameraOptions(),
+                  cameraOptions,
                   this._camera,
                   this._onCameraChange
                 )}
