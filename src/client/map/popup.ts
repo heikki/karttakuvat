@@ -5,9 +5,9 @@ import {
   copyDate,
   copyLocation,
   getCopiedDate,
-  getCopiedLocation,
-  state
-} from '@common/data';
+  getCopiedLocation
+} from '@common/clipboard';
+import { state } from '@common/data';
 import * as edits from '@common/edits';
 import {
   ChangeMarkerStyleEvent,
