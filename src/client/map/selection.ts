@@ -2,26 +2,16 @@ import { state, subscribe as subscribeData } from '@common/data';
 import { photoFromUrl, photoToUrl } from '@common/filter-url';
 import type { Photo } from '@common/types';
 
-export type SelectionMode = 'idle' | 'popup' | 'placement';
-
-export interface SelectionState {
-  readonly mode: SelectionMode;
-  readonly photoUuid: string | null;
-}
+type SelectionMode = 'idle' | 'popup' | 'placement';
 
 let mode: SelectionMode = 'idle';
 let photoUuid: string | null = null;
 
-type Listener = (s: SelectionState) => void;
+type Listener = () => void;
 const listeners: Listener[] = [];
 
-function snapshot(): SelectionState {
-  return { mode, photoUuid };
-}
-
 function notify(): void {
-  const s = snapshot();
-  for (const fn of [...listeners]) fn(s);
+  for (const fn of [...listeners]) fn();
 }
 
 function setState(newMode: SelectionMode, newUuid: string | null): void {

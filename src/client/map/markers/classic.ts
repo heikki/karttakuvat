@@ -6,7 +6,7 @@ import type {
   Map as MapGL
 } from 'maplibre-gl';
 
-import { getEffectiveCoords } from '@common/data';
+import * as edits from '@common/edits';
 import type { MarkerLayer, Photo } from '@common/types';
 
 import { anchorId } from '../z-anchors';
@@ -281,7 +281,7 @@ function buildGeoJSON(photos: Photo[]): FeatureCollection<Point> {
   return {
     type: 'FeatureCollection',
     features: photos.map((photo, index) => {
-      const { lon, lat } = getEffectiveCoords(photo);
+      const { lon, lat } = edits.getEffectiveCoords(photo);
       return {
         type: 'Feature',
         geometry: { type: 'Point', coordinates: [lon, lat] },

@@ -63,8 +63,8 @@ function calculatePanOffset(
   return { panX, panY };
 }
 
-/** Wait for popup layout to settle, then call fn with rects. */
-function afterPopupLayout(map: MapGL, fn: () => void) {
+/** Wait for popup layout to settle, then call fn. */
+function afterPopupLayout(fn: () => void) {
   // Double rAF ensures the browser has painted the popup at its final position
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
@@ -87,8 +87,8 @@ function panBy(map: MapGL, panX: number, panY: number, duration: number) {
  * Used for initial popup show (click on marker).
  */
 export function createPanToFitPopup(map: MapGL) {
-  return (_coords: [number, number]) => {
-    afterPopupLayout(map, () => {
+  return () => {
+    afterPopupLayout(() => {
       const rects = getPopupRect(map);
       if (rects === null) return;
       map.stop();
@@ -107,7 +107,7 @@ export function createPanToFitPopup(map: MapGL) {
  */
 export function createFlyToPopup(map: MapGL) {
   return (coords: [number, number]) => {
-    afterPopupLayout(map, () => {
+    afterPopupLayout(() => {
       const rects = getPopupRect(map);
       if (rects === null) return;
       const { panX, panY } = calculatePanOffset(rects.mapRect, rects.popupRect);
@@ -132,7 +132,7 @@ export function createFlyToPopup(map: MapGL) {
         }
         const onMoveEnd = () => {
           map.off('moveend', onMoveEnd);
-          afterPopupLayout(map, () => {
+          afterPopupLayout(() => {
             const r = getPopupRect(map);
             if (r === null) return;
             const adj = calculatePanOffset(r.mapRect, r.popupRect);

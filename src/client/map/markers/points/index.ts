@@ -7,7 +7,7 @@ import type {
   Map as MapGL
 } from 'maplibre-gl';
 
-import { getEffectiveCoords } from '@common/data';
+import * as edits from '@common/edits';
 import type { MarkerLayer, Photo } from '@common/types';
 
 import { anchorId } from '../../z-anchors';
@@ -168,7 +168,7 @@ export class PointsLayer implements MarkerLayer {
     const positions: Array<{ lng: number; lat: number; uuid: string }> = [];
     for (let i = 0; i < photos.length; i++) {
       const photo = photos[i]!;
-      const { lon, lat } = getEffectiveCoords(photo);
+      const { lon, lat } = edits.getEffectiveCoords(photo);
       features.push({
         type: 'Feature',
         geometry: { type: 'Point', coordinates: [lon, lat] },

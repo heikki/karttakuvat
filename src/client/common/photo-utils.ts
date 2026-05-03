@@ -1,29 +1,7 @@
-import { applyHourOffset, getEffectiveCoords, state } from '@common/data';
-import type { Photo } from '@common/types';
 import {
   computeDateOffsetHours,
   computeFullDatetimeOffsetHours
 } from '@common/utils';
-
-export function getEffectiveDate(photo: Photo): string {
-  const offset = state.pendingTimeEdits.get(photo.uuid) ?? 0;
-  if (offset === 0) return photo.date;
-  return applyHourOffset(photo.date, offset);
-}
-
-export function getEffectiveLocation(
-  photo: Photo
-): { lat: number; lon: number } | null {
-  const coords = getEffectiveCoords(photo);
-  if (
-    photo.lat === null &&
-    photo.lon === null &&
-    !state.pendingEdits.has(photo.uuid)
-  ) {
-    return null;
-  }
-  return coords;
-}
 
 export function computeManualDateOffset(
   originalDate: string,

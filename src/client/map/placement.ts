@@ -1,6 +1,6 @@
 import type { Map as MapGL } from 'maplibre-gl';
 
-import { addPendingEdit } from '@common/data';
+import * as edits from '@common/edits';
 import type { PlacementPanel } from '@components/placement-panel';
 
 import * as selection from './selection';
@@ -34,7 +34,7 @@ export function initPlacement(map: MapGL): void {
       return;
     }
     e.preventDefault();
-    addPendingEdit(uuid, e.lngLat.lat, e.lngLat.lng);
+    edits.setCoord(uuid, e.lngLat.lat, e.lngLat.lng);
     selection.openPopup(uuid);
   });
 

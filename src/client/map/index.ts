@@ -6,13 +6,13 @@ import {
 } from 'maplibre-gl';
 import type { StyleSpecification } from 'maplibre-gl';
 
+import * as edits from '@common/edits';
 import {
   ChangeMapStyleEvent,
   OpenExternalMapEvent,
   ResetMapEvent
 } from '@common/events';
 import { mapViewFromUrl, mapViewToUrl } from '@common/filter-url';
-import { getEffectiveLocation } from '@common/photo-utils';
 import type { MapStyles } from '@common/types';
 
 import {
@@ -82,7 +82,7 @@ function openExternalMap(target: 'apple' | 'google') {
   const loc =
     photo === undefined
       ? undefined
-      : (getEffectiveLocation(photo) ?? undefined);
+      : (edits.getEffectiveLocation(photo) ?? undefined);
 
   if (target === 'apple') {
     const url =

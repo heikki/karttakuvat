@@ -1,6 +1,7 @@
 import type { Map as MapGL, MapLayerMouseEvent, Point } from 'maplibre-gl';
 
 import { state, subscribe } from '@common/data';
+import * as edits from '@common/edits';
 import { ChangeMarkerStyleEvent } from '@common/events';
 import type { MarkerLayer } from '@common/types';
 
@@ -39,9 +40,11 @@ export function initMarkers(m: MapGL): void {
 
   selection.subscribe(applySelection);
 
-  subscribe(() => {
+  const refresh = () => {
     currentLayer?.setMarkers(state.filteredPhotos);
-  });
+  };
+  subscribe(refresh);
+  edits.subscribe(refresh);
 }
 
 export function isClickOnMarker(point: Point): boolean {

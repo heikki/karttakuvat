@@ -1,6 +1,7 @@
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
 
-import { state, subscribe, subscribeEdits } from '@common/data';
+import { state, subscribe } from '@common/data';
+import * as edits from '@common/edits';
 import type { Photo } from '@common/types';
 
 export class StoreController implements ReactiveController {
@@ -17,7 +18,7 @@ export class StoreController implements ReactiveController {
     this.unsubscribe = subscribe(() => {
       this.host.requestUpdate();
     });
-    this.unsubscribeEdits = subscribeEdits(() => {
+    this.unsubscribeEdits = edits.subscribe(() => {
       this.host.requestUpdate();
     });
   }
@@ -37,10 +38,10 @@ export class StoreController implements ReactiveController {
     return state.filteredPhotos;
   }
   get editCount(): number {
-    return state.pendingEdits.size + state.pendingTimeEdits.size;
+    return edits.getCount();
   }
   get isSaving(): boolean {
-    return state.isSaving;
+    return edits.getIsSaving();
   }
   /* eslint-enable @typescript-eslint/class-methods-use-this */
 }

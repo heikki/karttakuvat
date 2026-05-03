@@ -2,12 +2,12 @@ import type { FeatureCollection } from 'geojson';
 import type { GeoJSONSource, Map as MapGL } from 'maplibre-gl';
 
 import { state, subscribe } from '@common/data';
+import * as edits from '@common/edits';
 import {
   ResetMapEvent,
   RouteEditModeEvent,
   RouteVisibilityEvent
 } from '@common/events';
-import { getEffectiveDate, getEffectiveLocation } from '@common/photo-utils';
 import type { Photo } from '@common/types';
 import { toUtcSortKey } from '@common/utils';
 
@@ -78,10 +78,12 @@ function initPhotoRoute(m: MapGL): void {
     setLayersVisibility(map, ALL_ROUTE_LAYERS, !e.active && visible);
   });
 
-  // Rebuild route when filtered photos change
-  subscribe(() => {
+  // Rebuild route when filtered photos OR pending edits change.
+  const onChange = () => {
     if (visible) onPhotosChanged();
-  });
+  };
+  subscribe(onChange);
+  edits.subscribe(onChange);
 }
 
 function onPhotosChanged(): void {
@@ -110,11 +112,7 @@ function reconcileAndApply(album: string, data: RouteData): void {
   const changed = reconcileRouteWithAlbum(data, albumPhotos);
   routeData = data;
   applyRouteData(data);
-  if (
-    changed &&
-    state.pendingEdits.size === 0 &&
-    state.pendingTimeEdits.size === 0
-  ) {
+  if (changed && edits.getCount() === 0) {
     void saveRoute(album, data);
   }
 }
@@ -271,13 +269,13 @@ function getSortedLocatedPhotos(): Array<{
     sortKey: string;
   }> = [];
   for (const photo of state.filteredPhotos) {
-    const loc = getEffectiveLocation(photo);
+    const loc = edits.getEffectiveLocation(photo);
     if (loc === null) continue;
     if (photo.date === '') continue;
     located.push({
       photo,
       loc,
-      sortKey: toUtcSortKey(getEffectiveDate(photo), photo.tz)
+      sortKey: toUtcSortKey(edits.getEffectiveDate(photo), photo.tz)
     });
   }
   located.sort((a, b) =>
@@ -301,7 +299,7 @@ function refreshSavedRoute(data: RouteData): void {
   const reordered = reorderRoutePhotoPoints(data);
   applyRouteData(data);
   if (!synced && !reordered) return;
-  if (state.pendingEdits.size > 0 || state.pendingTimeEdits.size > 0) return;
+  if (edits.getCount() > 0) return;
   const album = state.filters.album;
   if (album !== 'all') void saveRoute(album, data);
 }

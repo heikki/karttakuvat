@@ -2,27 +2,20 @@ import { Popup } from 'maplibre-gl';
 import type { Map as MapGL } from 'maplibre-gl';
 
 import {
-  addPendingEdit,
-  addPendingTimeEdit,
   copyDate,
   copyLocation,
   getCopiedDate,
   getCopiedLocation,
-  getEffectiveCoords,
-  setPendingTimeEdit,
   state
 } from '@common/data';
+import * as edits from '@common/edits';
 import {
   ChangeMarkerStyleEvent,
   PlacementModeEvent,
   SaveEditsEvent,
   ShowLightboxEvent
 } from '@common/events';
-import {
-  computeManualDateOffset,
-  getEffectiveDate,
-  getEffectiveLocation
-} from '@common/photo-utils';
+import { computeManualDateOffset } from '@common/photo-utils';
 import type { Photo } from '@common/types';
 import {
   computeFullDatetimeOffsetHours,
@@ -48,7 +41,7 @@ let mountedUuid: string | null = null;
 let dateEditMode = false;
 
 let map: MapGL | null = null;
-let panToFitPopup: (coords: [number, number]) => void = () => {
+let panToFitPopup: () => void = () => {
   /* set in initPopup */
 };
 let flyToPopup: (coords: [number, number]) => void = () => {
@@ -64,7 +57,7 @@ function popupOffset(): [number, number] {
 function getSelectedMarkerCoords(): [number, number] | null {
   const photo = selection.getPhoto();
   if (photo === undefined) return null;
-  const { lon, lat } = getEffectiveCoords(photo);
+  const { lon, lat } = edits.getEffectiveCoords(photo);
   return [lon, lat];
 }
 
@@ -170,6 +163,7 @@ export function initPopup(m: MapGL) {
   });
 
   selection.subscribe(applySelection);
+  edits.subscribe(applySelection);
 }
 
 function applySelection() {
@@ -201,7 +195,7 @@ function mountCurrent() {
   const photo = selection.getPhoto();
   if (photo === undefined) return;
 
-  const { lon, lat } = getEffectiveCoords(photo);
+  const { lon, lat } = edits.getEffectiveCoords(photo);
   const idx = selection.getPhotoIndex() ?? 0;
 
   dateEditMode = false;
@@ -244,7 +238,7 @@ function mountCurrent() {
     }
   });
 
-  panToFitPopup([lon, lat]);
+  panToFitPopup();
 }
 
 let navSeq = 0;
@@ -265,7 +259,7 @@ function applyNavigation(photoUuid: string): void {
   if (photo?.uuid !== photoUuid) return;
 
   const idx = selection.getPhotoIndex() ?? 0;
-  const loc = getEffectiveLocation(photo);
+  const loc = edits.getEffectiveLocation(photo);
   const lng = loc?.lon ?? 0;
   const lat = loc?.lat ?? 0;
 
@@ -294,7 +288,7 @@ function syncPopupPositionAndContent() {
   const photo = selection.getPhoto();
   if (photo === undefined) return;
   const idx = selection.getPhotoIndex() ?? 0;
-  const { lon, lat } = getEffectiveCoords(photo);
+  const { lon, lat } = edits.getEffectiveCoords(photo);
   syncPopupElement(photo, idx);
   popup.setLngLat([lon, lat]);
 }
@@ -366,13 +360,13 @@ function computePasteVisibility(photo: Photo): {
   let showPasteLocation = false;
   const copiedLoc = getCopiedLocation();
   if (copiedLoc !== null) {
-    const loc = getEffectiveLocation(photo);
+    const loc = edits.getEffectiveLocation(photo);
     showPasteLocation = copiedLoc.lat !== loc?.lat || copiedLoc.lon !== loc.lon;
   }
   let showPasteDate = false;
   const copiedDate = getCopiedDate();
   if (copiedDate !== null) {
-    const effectiveDate = getEffectiveDate(photo);
+    const effectiveDate = edits.getEffectiveDate(photo);
     showPasteDate = effectiveDate !== '' && effectiveDate !== copiedDate;
   }
   return { showPasteLocation, showPasteDate };
@@ -405,23 +399,23 @@ function syncPopupElement(photo?: Photo, index?: number) {
 }
 
 function adjustTime(uuid: string, hours: number) {
-  addPendingTimeEdit(uuid, hours);
+  edits.addTimeOffset(uuid, hours);
   syncPopupElement();
 }
 
 function confirmLocation() {
   const photo = selection.getPhoto();
   if (photo === undefined) return;
-  const loc = getEffectiveLocation(photo);
+  const loc = edits.getEffectiveLocation(photo);
   if (loc === null) return;
-  addPendingEdit(photo.uuid, loc.lat, loc.lon);
+  edits.setCoord(photo.uuid, loc.lat, loc.lon);
   document.dispatchEvent(new SaveEditsEvent());
 }
 
 function copyLocationFromPopup() {
   const photo = selection.getPhoto();
   if (photo === undefined) return;
-  const loc = getEffectiveLocation(photo);
+  const loc = edits.getEffectiveLocation(photo);
   if (loc === null) return;
   copyLocation(loc.lat, loc.lon);
 }
@@ -430,13 +424,13 @@ function pasteLocation() {
   const photo = selection.getPhoto();
   const copied = getCopiedLocation();
   if (photo === undefined || copied === null) return;
-  addPendingEdit(photo.uuid, copied.lat, copied.lon);
+  edits.setCoord(photo.uuid, copied.lat, copied.lon);
 }
 
 function copyDateFromPopup() {
   const photo = selection.getPhoto();
   if (photo === undefined) return;
-  const effectiveDate = getEffectiveDate(photo);
+  const effectiveDate = edits.getEffectiveDate(photo);
   if (effectiveDate === '') return;
   copyDate(effectiveDate);
 }
@@ -450,7 +444,7 @@ function pasteDateToPhoto() {
   if (copiedDate === null) return;
   const offset = computeFullDatetimeOffsetHours(photo.date, copiedDate);
   if (offset === null) return;
-  setPendingTimeEdit(photo.uuid, offset);
+  edits.setTimeOffset(photo.uuid, offset);
   syncPopupElement();
 }
 
@@ -472,7 +466,7 @@ function applyManualDate(dateValue: string) {
   if (parsed === null) return;
   const offset = computeManualDateOffset(photo.date, parsed);
   if (offset === null) return;
-  setPendingTimeEdit(photo.uuid, offset);
+  edits.setTimeOffset(photo.uuid, offset);
   dateEditMode = false;
   syncPopupElement();
 }

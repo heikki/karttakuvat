@@ -1,7 +1,8 @@
 import { css, html, LitElement, nothing } from 'lit';
 import { customElement, state as litState } from 'lit/decorators.js';
 
-import { applyFilters, clearPendingEdits } from '@common/data';
+import { applyFilters } from '@common/data';
+import * as edits from '@common/edits';
 import {
   ChangeMapStyleEvent,
   ChangeMarkerStyleEvent,
@@ -457,7 +458,7 @@ export class FilterPanel extends LitElement {
                         <button
                           class="secondary"
                           @click=${() => {
-                            clearPendingEdits();
+                            edits.clear();
                           }}
                         >
                           Discard

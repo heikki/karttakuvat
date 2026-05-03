@@ -1,16 +1,13 @@
 import { css, html, LitElement, nothing } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 
+import * as edits from '@common/edits';
 import {
   PlacementModeEvent,
   ShowLightboxEvent,
   ShowMetadataEvent
 } from '@common/events';
-import {
-  editableDateStr,
-  getEffectiveDate,
-  getEffectiveLocation
-} from '@common/photo-utils';
+import { editableDateStr } from '@common/photo-utils';
 import type { Photo } from '@common/types';
 import { formatCoords, formatDate, getThumbUrl, isVideo } from '@common/utils';
 
@@ -207,7 +204,7 @@ export class PhotoPopup extends LitElement {
 
   private _renderDateLine() {
     const photo = this.photo!;
-    const effectiveDate = getEffectiveDate(photo);
+    const effectiveDate = edits.getEffectiveDate(photo);
     const dateText = formatDate(effectiveDate, photo.tz);
 
     if (this.dateEditMode) {
@@ -321,7 +318,7 @@ export class PhotoPopup extends LitElement {
 
   private _renderLocationLine() {
     const photo = this.photo!;
-    const loc = getEffectiveLocation(photo);
+    const loc = edits.getEffectiveLocation(photo);
 
     return html`
       ${formatCoords(loc)}

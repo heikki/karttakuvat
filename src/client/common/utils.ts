@@ -94,14 +94,6 @@ export function formatCoords(
   return 'No location';
 }
 
-export function formatLocation(photo: Photo): string {
-  return formatCoords(
-    photo.lat !== null && photo.lon !== null
-      ? { lat: photo.lat, lon: photo.lon }
-      : null
-  );
-}
-
 export function getThumbUrl(photo: Photo): string {
   if (photo.thumb === '') {
     return photo.filename ?? '';

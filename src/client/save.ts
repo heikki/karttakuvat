@@ -1,31 +1,26 @@
-import {
-  clearPendingEdits,
-  getPendingEdits,
-  getPendingTimeEdits,
-  loadPhotos,
-  setSaving
-} from '@common/data';
+import { loadPhotos } from '@common/data';
+import * as edits from '@common/edits';
 import { SaveEditsEvent } from '@common/events';
 
 async function saveEdits() {
-  const edits = getPendingEdits();
-  const timeEdits = getPendingTimeEdits();
-  if (edits.length === 0 && timeEdits.length === 0) return;
+  const coordEdits = edits.getCoordEdits();
+  const timeEdits = edits.getTimeEdits();
+  if (coordEdits.length === 0 && timeEdits.length === 0) return;
 
-  setSaving(true);
+  edits.setSaving(true);
 
   try {
     const response = await fetch('/api/save-edits', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ edits, timeEdits })
+      body: JSON.stringify({ edits: coordEdits, timeEdits })
     });
     if (!response.ok) {
       const text = await response.text();
       throw new Error(text);
     }
     await loadPhotos();
-    clearPendingEdits();
+    edits.clear();
   } catch (err) {
     console.error('Failed to save edits:', err);
     // eslint-disable-next-line no-alert -- user needs feedback on save failure
@@ -33,7 +28,7 @@ async function saveEdits() {
       `Failed to save edits: ${err instanceof Error ? err.message : String(err)}`
     );
   } finally {
-    setSaving(false);
+    edits.setSaving(false);
   }
 }
 

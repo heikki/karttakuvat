@@ -5,7 +5,8 @@ import type {
   MapMouseEvent
 } from 'maplibre-gl';
 
-import { state, subscribe } from '@common/data';
+import { state } from '@common/data';
+import * as edits from '@common/edits';
 import { RouteEditModeEvent, ToggleRouteEditEvent } from '@common/events';
 import type { Photo } from '@common/types';
 
@@ -108,7 +109,7 @@ export function initRouteEdit(m: MapGL): void {
   });
 
   // Sync photo point positions when pending edits change
-  subscribe(() => {
+  edits.subscribe(() => {
     if (isActive() && routeData !== null) {
       syncPhotoPoints(routeData);
       updateEditSources();

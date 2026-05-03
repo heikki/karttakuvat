@@ -1,5 +1,5 @@
 import { state } from '@common/data';
-import { getEffectiveDate, getEffectiveLocation } from '@common/photo-utils';
+import * as edits from '@common/edits';
 import type { Photo } from '@common/types';
 import { toUtcSortKey } from '@common/utils';
 
@@ -20,7 +20,7 @@ function buildPhotoLocationMap(
 ): Map<string, { lon: number; lat: number }> {
   const m = new Map<string, { lon: number; lat: number }>();
   for (const photo of photos) {
-    const loc = getEffectiveLocation(photo);
+    const loc = edits.getEffectiveLocation(photo);
     if (loc !== null) m.set(photo.uuid, loc);
   }
   return m;
@@ -30,7 +30,7 @@ function buildPhotoSortKeys(photos: Photo[]): Map<string, string> {
   const m = new Map<string, string>();
   for (const photo of photos) {
     if (photo.date !== '') {
-      m.set(photo.uuid, toUtcSortKey(getEffectiveDate(photo), photo.tz));
+      m.set(photo.uuid, toUtcSortKey(edits.getEffectiveDate(photo), photo.tz));
     }
   }
   return m;
@@ -324,7 +324,7 @@ function planInsertions(
 ): InsertPlan[] {
   const plans: InsertPlan[] = missing.map((m) => {
     const sk = sortKeyByUuid.get(m.uuid)!;
-    const loc = getEffectiveLocation(m)!;
+    const loc = edits.getEffectiveLocation(m)!;
     const next = anchors.find((a) => a.sortKey >= sk);
     const atIndex = next === undefined ? data.points.length : next.index;
     return {
@@ -351,7 +351,7 @@ function insertMissingPhotoPoints(data: RouteData, eligible: Photo[]): boolean {
 
   const sortKeyByUuid = new Map<string, string>();
   for (const p of eligible) {
-    sortKeyByUuid.set(p.uuid, toUtcSortKey(getEffectiveDate(p), p.tz));
+    sortKeyByUuid.set(p.uuid, toUtcSortKey(edits.getEffectiveDate(p), p.tz));
   }
   const anchors = buildAnchorList(data, sortKeyByUuid);
   const plans = planInsertions(data, missing, anchors, sortKeyByUuid);
@@ -372,7 +372,7 @@ export function reconcileRouteWithAlbum(
   albumPhotos: Photo[]
 ): boolean {
   const eligible = albumPhotos.filter(
-    (p) => getEffectiveLocation(p) !== null && p.date !== ''
+    (p) => edits.getEffectiveLocation(p) !== null && p.date !== ''
   );
   const eligibleUuids = new Set(eligible.map((p) => p.uuid));
 

@@ -2,8 +2,8 @@ import { css, html, LitElement, nothing } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 
 import { state } from '@common/data';
+import * as edits from '@common/edits';
 import { ShowLightboxEvent, ShowMetadataEvent } from '@common/events';
-import { getEffectiveDate, getEffectiveLocation } from '@common/photo-utils';
 import type { Photo } from '@common/types';
 import {
   formatCoords,
@@ -315,8 +315,8 @@ export class PhotoLightbox extends LitElement {
   override render() {
     if (this.photo === null) return nothing;
     const photo = this.photo;
-    const effectiveDate = getEffectiveDate(photo);
-    const loc = getEffectiveLocation(photo);
+    const effectiveDate = edits.getEffectiveDate(photo);
+    const loc = edits.getEffectiveLocation(photo);
 
     return html`
       <div class="image-wrap" @click=${stopPropagation}>

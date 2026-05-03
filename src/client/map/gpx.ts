@@ -131,7 +131,7 @@ function addGpxLayers(): void {
   );
 }
 
-export async function loadGpxForAlbum(album: string | null): Promise<void> {
+async function loadGpxForAlbum(album: string | null): Promise<void> {
   if (album === currentAlbum) return;
   currentAlbum = album;
   trackFeatures = [];

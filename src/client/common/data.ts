@@ -1,5 +1,5 @@
 import type { Photo } from './types';
-import { exifDatePattern, getYear, sortByDate } from './utils';
+import { getYear, sortByDate } from './utils';
 
 export const state = {
   photos: [] as Photo[],
@@ -10,10 +10,7 @@ export const state = {
     media: ['photo', 'video'] as string[],
     album: 'all',
     camera: 'all'
-  },
-  pendingEdits: new Map<string, { lat: number; lon: number }>(),
-  pendingTimeEdits: new Map<string, number>(),
-  isSaving: false
+  }
 };
 
 type Listener = (filtered: Photo[]) => void;
@@ -52,62 +49,6 @@ export async function loadPhotos() {
   }
 }
 
-// Edit listeners (separate from filter listeners)
-type EditListener = (count: number) => void;
-const editListeners: EditListener[] = [];
-
-export function subscribeEdits(fn: EditListener) {
-  editListeners.push(fn);
-  return () => {
-    const index = editListeners.indexOf(fn);
-    if (index > -1) editListeners.splice(index, 1);
-  };
-}
-
-function notifyEdits() {
-  const count = state.pendingEdits.size + state.pendingTimeEdits.size;
-  editListeners.forEach((fn) => {
-    fn(count);
-  });
-}
-
-export function setSaving(isSaving: boolean) {
-  state.isSaving = isSaving;
-  notifyEdits();
-}
-
-export function addPendingEdit(uuid: string, lat: number, lon: number) {
-  state.pendingEdits.set(uuid, { lat, lon });
-  notifyEdits();
-  // Re-notify filter listeners so map updates marker positions
-  notify();
-}
-
-export function clearPendingEdits() {
-  state.pendingEdits.clear();
-  state.pendingTimeEdits.clear();
-  notifyEdits();
-  notify();
-}
-
-export function getEffectiveCoords(photo: Photo): { lat: number; lon: number } {
-  const pending = state.pendingEdits.get(photo.uuid);
-  if (pending !== undefined) return pending;
-  return { lat: photo.lat ?? 0, lon: photo.lon ?? 0 };
-}
-
-export function getPendingEdits(): Array<{
-  uuid: string;
-  lat: number;
-  lon: number;
-}> {
-  return Array.from(state.pendingEdits.entries()).map(([uuid, coords]) => ({
-    uuid,
-    ...coords
-  }));
-}
-
-// Copied location for paste
 let copiedLocation: { lat: number; lon: number } | null = null;
 
 export function copyLocation(lat: number, lon: number) {
@@ -118,7 +59,6 @@ export function getCopiedLocation(): { lat: number; lon: number } | null {
   return copiedLocation;
 }
 
-// Copied date for paste (day part only, e.g. "2008:07:09")
 let copiedDate: string | null = null;
 
 export function copyDate(datePart: string) {
@@ -127,51 +67,6 @@ export function copyDate(datePart: string) {
 
 export function getCopiedDate(): string | null {
   return copiedDate;
-}
-
-export function addPendingTimeEdit(uuid: string, hours: number) {
-  const current = state.pendingTimeEdits.get(uuid) ?? 0;
-  const total = current + hours;
-  if (total === 0) {
-    state.pendingTimeEdits.delete(uuid);
-  } else {
-    state.pendingTimeEdits.set(uuid, total);
-  }
-  notifyEdits();
-}
-
-export function getPendingTimeEdits(): Array<{ uuid: string; hours: number }> {
-  return Array.from(state.pendingTimeEdits.entries()).map(([uuid, hours]) => ({
-    uuid,
-    hours
-  }));
-}
-
-export function setPendingTimeEdit(uuid: string, totalHours: number) {
-  if (totalHours === 0) {
-    state.pendingTimeEdits.delete(uuid);
-  } else {
-    state.pendingTimeEdits.set(uuid, totalHours);
-  }
-  notifyEdits();
-}
-
-export function applyHourOffset(dateStr: string, hours: number): string {
-  if (dateStr === '' || hours === 0) return dateStr;
-  const match = exifDatePattern.exec(dateStr);
-  if (match?.groups === undefined) return dateStr;
-  const { yr, mo, dy, hr, mi, sc } = match.groups;
-  const d = new Date(
-    parseInt(yr!, 10),
-    parseInt(mo!, 10) - 1,
-    parseInt(dy!, 10),
-    parseInt(hr!, 10),
-    parseInt(mi!, 10),
-    parseInt(sc!, 10)
-  );
-  d.setTime(d.getTime() + Math.round(hours * 3600000));
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}:${pad(d.getMonth() + 1)}:${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
 function matchesGps(p: Photo, gps: string[]): boolean {
