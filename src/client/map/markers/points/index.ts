@@ -70,7 +70,7 @@ export class PointsLayer implements MarkerLayer {
   private readonly bloom = new BloomLayer();
   private map: MapGL | null = null;
 
-  install(map: MapGL, photos: Photo[]) {
+  install(map: MapGL) {
     this.map = map;
     const before = zAnchors.id('markers');
 
@@ -114,8 +114,6 @@ export class PointsLayer implements MarkerLayer {
       },
       before
     );
-
-    this.setMarkers(photos);
   }
 
   uninstall() {
@@ -132,38 +130,18 @@ export class PointsLayer implements MarkerLayer {
     this.map = null;
   }
 
-  toggle(visible: boolean) {
+  setView(view: {
+    photos: Photo[];
+    selectedPhoto: Photo | null;
+    hidden: boolean;
+  }) {
     if (this.map === null) return;
-    const v = visible ? 'visible' : 'none';
-    for (const id of LAYERS) {
-      if (this.map.getLayer(id) !== undefined) {
-        this.map.setLayoutProperty(id, 'visibility', v);
-      }
-    }
-    if (this.map.getLayer(this.bloom.id) !== undefined) {
-      this.map.setLayoutProperty(this.bloom.id, 'visibility', v);
-    }
+    this.applyPhotos(this.map, view.photos);
+    this.applyVisibility(this.map, view.hidden);
+    this.applySelection(this.map, view.selectedPhoto);
   }
 
-  highlight(photo: Photo | null) {
-    if (this.map === null) return;
-    const filter: FilterSpecification =
-      photo === null
-        ? ['==', ['get', 'uuid'], '']
-        : ['==', ['get', 'uuid'], photo.uuid];
-    if (this.map.getLayer('points-selected') !== undefined) {
-      this.map.setFilter('points-selected', filter);
-    }
-    if (photo === null) {
-      this.bloom.setTime('', null);
-    } else {
-      this.bloom.setTime(photo.date, photo.tz ?? null);
-    }
-  }
-
-  setMarkers(photos: Photo[]) {
-    if (this.map === null) return;
-
+  private applyPhotos(map: MapGL, photos: Photo[]) {
     const features: FeatureCollection<Point>['features'] = [];
     const positions: Array<{ lng: number; lat: number; uuid: string }> = [];
     for (let i = 0; i < photos.length; i++) {
@@ -182,11 +160,38 @@ export class PointsLayer implements MarkerLayer {
       positions.push({ lng: lon, lat, uuid: photo.uuid });
     }
 
-    const source = this.map.getSource<GeoJSONSource>(SOURCE);
+    const source = map.getSource<GeoJSONSource>(SOURCE);
     if (source !== undefined) {
       source.setData({ type: 'FeatureCollection', features });
     }
     this.bloom.updateData(positions);
+  }
+
+  private applyVisibility(map: MapGL, hidden: boolean) {
+    const v = hidden ? 'none' : 'visible';
+    for (const id of LAYERS) {
+      if (map.getLayer(id) !== undefined) {
+        map.setLayoutProperty(id, 'visibility', v);
+      }
+    }
+    if (map.getLayer(this.bloom.id) !== undefined) {
+      map.setLayoutProperty(this.bloom.id, 'visibility', v);
+    }
+  }
+
+  private applySelection(map: MapGL, photo: Photo | null) {
+    const filter: FilterSpecification =
+      photo === null
+        ? ['==', ['get', 'uuid'], '']
+        : ['==', ['get', 'uuid'], photo.uuid];
+    if (map.getLayer('points-selected') !== undefined) {
+      map.setFilter('points-selected', filter);
+    }
+    if (photo === null) {
+      this.bloom.setTime('', null);
+    } else {
+      this.bloom.setTime(photo.date, photo.tz ?? null);
+    }
   }
 
   markerRadius = pointsMarkerRadius;

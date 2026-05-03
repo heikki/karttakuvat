@@ -78,6 +78,24 @@ function clear(): void {
   setState('idle', null);
 }
 
+function toggleOldestNewest(): void {
+  const photos = state.filteredPhotos;
+  if (photos.length === 0) return;
+  let oldestIdx = 0;
+  let newestIdx = 0;
+  for (let i = 1; i < photos.length; i++) {
+    if (photos[i]!.date < photos[oldestIdx]!.date) oldestIdx = i;
+    if (photos[i]!.date > photos[newestIdx]!.date) newestIdx = i;
+  }
+  if (photoUuid === photos[oldestIdx]!.uuid) {
+    openPopup(photos[newestIdx]!.uuid);
+  } else if (photoUuid === photos[newestIdx]!.uuid) {
+    openPopup(photos[oldestIdx]!.uuid);
+  } else if (photoUuid === null) {
+    openPopup(photos[oldestIdx]!.uuid);
+  }
+}
+
 function subscribe(fn: Listener): () => void {
   listeners.push(fn);
   return () => {
@@ -127,6 +145,7 @@ export default {
   prev,
   enterPlacement,
   clear,
+  toggleOldestNewest,
   subscribe,
   init
 };

@@ -5,9 +5,9 @@ Geotagged photo map viewer with Apple Photos integration.
 ## Project Stats (as of 03.05.2026)
 
 - **TypeScript files**: 62
-- **Lines of code**: 12,883
-- **Total commits**: 475
-- **Total tokens**: ~1,469M | **Total cost**: ~$904
+- **Lines of code**: 12,864
+- **Total commits**: 477
+- **Total tokens**: ~1,490M | **Total cost**: ~$917
 
 ## Updating This Diary
 
@@ -35,7 +35,7 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 
 ## 03.05.2026 — Route Polish & Map Architecture
 
-**Tokens**: 178M | **Cost**: $115
+**Tokens**: 199M | **Cost**: $128
 
 - Route edit: dragging a point no longer gets stuck if the mouse is released outside the map container
 - Toggling the photo route off/on is now instant — saved data is cached across the toggle instead of refetched
@@ -51,6 +51,9 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 - Redundant `StoreController` reactive bridge in filter panel removed
 - Album-files modal → gpx decoupled via `AlbumFilesChangedEvent` (was reaching into `map/gpx` through dynamic imports)
 - Dead-code sweep: drop unused `MapStyle`/`MapStyles` interfaces, hidden-files Set in gpx, `@types/three` and `@types/maplibre-gl` devDeps, orphan `cursor-grab` CSS
+- Pan helpers folded into `popup/` — closes the popup↔pan import cycle
+- Fit's oldest/newest auto-select moved to `selection`
+- Marker adapters: single `setView` replaces `toggle` + `highlight` + `setMarkers`
 
 ## 02.05.2026 — Photo Route Reconciliation & Edit Polish
 

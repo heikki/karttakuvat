@@ -15,7 +15,7 @@ UI is built with Lit web components (`LitElement`):
 
 ### Map modules
 
-The map is composed of small sibling modules under `src/client/map/` — `selection`, `markers/`, `route/`, `gpx`, `measure`, `placement`, `popup/`, `fit`, `z-anchors`, `pan`. Each `default-exports` a small object whose public methods drop the redundant module-name affix (e.g. `selection.init`, `popup.get`, `route.save`); consumers always import via `import name from './module'`. Each module's `init(map)` wires its own state (via `map.on('load', ...)` for layer setup, plus event/data subscriptions). Cross-module communication goes through two seams: shared state modules (`selection`, `edits`) that the relevant subscribers read and observe, and bare `document` events for one-way request signals (`EnterPlacementModeEvent`, `RouteEditModeChangedEvent`, `MeasureModeExitedEvent`, `AlbumFilesChangedEvent`).
+The map is composed of small sibling modules under `src/client/map/` — `selection`, `markers/`, `route/`, `gpx`, `measure`, `placement`, `popup/`, `fit`, `z-anchors`. Each `default-exports` a small object whose public methods drop the redundant module-name affix (e.g. `selection.init`, `popup.get`, `route.save`); consumers always import via `import name from './module'`. Each module's `init(map)` wires its own state (via `map.on('load', ...)` for layer setup, plus event/data subscriptions). Cross-module communication goes through two seams: shared state modules (`selection`, `edits`) that the relevant subscribers read and observe, and bare `document` events for one-way request signals (`EnterPlacementModeEvent`, `RouteEditModeChangedEvent`, `MeasureModeExitedEvent`, `AlbumFilesChangedEvent`).
 
 ### Selection
 

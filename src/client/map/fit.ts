@@ -23,27 +23,6 @@ function init(m: MapGL) {
   }
 }
 
-function showOldestOrNewestPopup() {
-  const photos = state.filteredPhotos;
-  if (photos.length === 0) return;
-  const oldestIdx = photos.reduce(
-    (min, p, i) => (p.date < photos[min]!.date ? i : min),
-    0
-  );
-  const newestIdx = photos.reduce(
-    (max, p, i) => (p.date > photos[max]!.date ? i : max),
-    0
-  );
-  const selectedUuid = selection.getPhotoUuid();
-  if (selectedUuid === photos[oldestIdx]!.uuid) {
-    selection.openPopup(photos[newestIdx]!.uuid);
-  } else if (selectedUuid === photos[newestIdx]!.uuid) {
-    selection.openPopup(photos[oldestIdx]!.uuid);
-  } else if (selectedUuid === null) {
-    selection.openPopup(photos[oldestIdx]!.uuid);
-  }
-}
-
 function computePhotoBounds(): LngLatBounds {
   const bounds = new LngLatBounds();
   state.filteredPhotos.forEach((p) => bounds.extend([p.lon ?? 0, p.lat ?? 0]));
@@ -58,10 +37,13 @@ function isSinglePointBounds(bounds: LngLatBounds): boolean {
 }
 
 function triggerPostFitActions(animate: boolean, selectFirst: boolean) {
-  if (animate && selectFirst) {
-    void map.once('moveend', showOldestOrNewestPopup);
-  } else if (selectFirst) {
-    showOldestOrNewestPopup();
+  if (!selectFirst) return;
+  if (animate) {
+    void map.once('moveend', () => {
+      selection.toggleOldestNewest();
+    });
+  } else {
+    selection.toggleOldestNewest();
   }
 }
 

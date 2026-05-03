@@ -26,7 +26,7 @@ function init(m: MapGL): void {
   map.on('load', () => {
     install();
     bindInteractions();
-    applySelection();
+    refreshView();
   });
 
   document.addEventListener(ChangeMarkerStyleEvent.type, (e) => {
@@ -35,37 +35,32 @@ function init(m: MapGL): void {
     if (currentLayer === null) return;
     install();
     bindInteractions();
-    applySelection();
+    refreshView();
   });
 
-  selection.subscribe(applySelection);
-
-  const refresh = () => {
-    currentLayer?.setMarkers(state.filteredPhotos);
-  };
-  subscribe(refresh);
-  edits.subscribe(refresh);
+  selection.subscribe(refreshView);
+  subscribe(refreshView);
+  edits.subscribe(refreshView);
 }
 
 function getRadius(zoom: number): number {
   return currentLayer?.markerRadius(zoom) ?? 0;
 }
 
-function applySelection(): void {
+function refreshView(): void {
   if (currentLayer === null) return;
   const mode = selection.getMode();
-  currentLayer.toggle(mode !== 'placement');
-  if (mode === 'popup') {
-    currentLayer.highlight(selection.getPhoto() ?? null);
-  } else {
-    currentLayer.highlight(null);
-  }
+  currentLayer.setView({
+    photos: state.filteredPhotos,
+    selectedPhoto: mode === 'popup' ? (selection.getPhoto() ?? null) : null,
+    hidden: mode === 'placement'
+  });
 }
 
 function install(): void {
   currentLayer?.uninstall();
   currentLayer = markerStyles[currentMarkerStyle]!();
-  currentLayer.install(map, state.filteredPhotos);
+  currentLayer.install(map);
 }
 
 function bindInteractions(): void {

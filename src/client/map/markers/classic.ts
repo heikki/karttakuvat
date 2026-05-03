@@ -104,7 +104,7 @@ export class ClassicLayer implements MarkerLayer {
   readonly id = 'classic-hit-area';
   private map: MapGL | null = null;
 
-  install(map: MapGL, photos: Photo[]) {
+  install(map: MapGL) {
     this.map = map;
     const before = zAnchors.id('markers');
 
@@ -208,8 +208,6 @@ export class ClassicLayer implements MarkerLayer {
       },
       before
     );
-
-    this.setMarkers(photos);
   }
 
   uninstall() {
@@ -223,34 +221,32 @@ export class ClassicLayer implements MarkerLayer {
     this.map = null;
   }
 
-  toggle(visible: boolean) {
+  setView(view: {
+    photos: Photo[];
+    selectedPhoto: Photo | null;
+    hidden: boolean;
+  }) {
     if (this.map === null) return;
-    const v = visible ? 'visible' : 'none';
+
+    const source = this.map.getSource<GeoJSONSource>(SOURCE);
+    if (source !== undefined) source.setData(buildGeoJSON(view.photos));
+
+    const v = view.hidden ? 'none' : 'visible';
     for (const id of LAYERS) {
       if (this.map.getLayer(id) !== undefined) {
         this.map.setLayoutProperty(id, 'visibility', v);
       }
     }
-  }
 
-  highlight(photo: Photo | null) {
-    if (this.map === null) return;
     const filter: FilterSpecification =
-      photo === null
+      view.selectedPhoto === null
         ? ['==', ['get', 'uuid'], '']
-        : ['==', ['get', 'uuid'], photo.uuid];
+        : ['==', ['get', 'uuid'], view.selectedPhoto.uuid];
     for (const id of ['classic-selected-highlight', 'classic-selected']) {
       if (this.map.getLayer(id) !== undefined) {
         this.map.setFilter(id, filter);
       }
     }
-  }
-
-  setMarkers(photos: Photo[]) {
-    if (this.map === null) return;
-    const geojson = buildGeoJSON(photos);
-    const source = this.map.getSource<GeoJSONSource>(SOURCE);
-    if (source !== undefined) source.setData(geojson);
   }
 
   markerRadius = classicMarkerRadius;

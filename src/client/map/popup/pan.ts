@@ -1,6 +1,4 @@
-import type { Map as MapGL } from 'maplibre-gl';
-
-import popup from './popup';
+import type { Map as MapGL, Popup } from 'maplibre-gl';
 
 const BASE_PADDING = 10;
 
@@ -14,7 +12,6 @@ function getPadding(mapRect: DOMRect) {
   const panel = document.getElementById('filter-panel');
   if (panel !== null) {
     const panelRect = panel.getBoundingClientRect();
-    // Only add right padding if the panel overlaps the map area
     if (panelRect.left < mapRect.right && panelRect.right > mapRect.left) {
       padding.right = mapRect.right - panelRect.left + BASE_PADDING;
     }
@@ -22,17 +19,15 @@ function getPadding(mapRect: DOMRect) {
   return padding;
 }
 
-function getPopupRect(map: MapGL): {
-  mapRect: DOMRect;
-  popupRect: DOMRect;
-} | null {
-  const p = popup.get();
-  if (p === null) return null;
+function getPopupRect(
+  map: MapGL,
+  popup: Popup
+): { mapRect: DOMRect; popupRect: DOMRect } | null {
   const mapContainer = map.getContainer();
   if (mapContainer.clientWidth === 0 || mapContainer.clientHeight === 0) {
     return null;
   }
-  const popupEl = p.getElement() as HTMLElement | undefined;
+  const popupEl = popup.getElement() as HTMLElement | undefined;
   if (popupEl === undefined) return null;
   return {
     mapRect: mapContainer.getBoundingClientRect(),
@@ -86,16 +81,14 @@ function panBy(map: MapGL, panX: number, panY: number, duration: number) {
  * Pan the map to fit the popup after opening it on the current view.
  * Used for initial popup show (click on marker).
  */
-function createToFitPopup(map: MapGL) {
-  return () => {
-    afterPopupLayout(() => {
-      const rects = getPopupRect(map);
-      if (rects === null) return;
-      map.stop();
-      const { panX, panY } = calculatePanOffset(rects.mapRect, rects.popupRect);
-      panBy(map, panX, panY, 300);
-    });
-  };
+export function panToFitPopup(map: MapGL, popup: Popup): void {
+  afterPopupLayout(() => {
+    const rects = getPopupRect(map, popup);
+    if (rects === null) return;
+    map.stop();
+    const { panX, panY } = calculatePanOffset(rects.mapRect, rects.popupRect);
+    panBy(map, panX, panY, 300);
+  });
 }
 
 /**
@@ -105,47 +98,43 @@ function createToFitPopup(map: MapGL) {
  * If it's completely off-screen, eases to center first.
  * Used for arrow-key navigation between photos.
  */
-function createFlyToPopup(map: MapGL) {
-  return (coords: [number, number]) => {
-    afterPopupLayout(() => {
-      const rects = getPopupRect(map);
-      if (rects === null) return;
-      const { panX, panY } = calculatePanOffset(rects.mapRect, rects.popupRect);
+export function flyToPopupTo(
+  map: MapGL,
+  popup: Popup,
+  coords: [number, number]
+): void {
+  afterPopupLayout(() => {
+    const rects = getPopupRect(map, popup);
+    if (rects === null) return;
+    const { panX, panY } = calculatePanOffset(rects.mapRect, rects.popupRect);
 
-      // Popup already fits — no movement needed
-      if (panX === 0 && panY === 0) return;
+    if (panX === 0 && panY === 0) return;
 
-      // Check if the popup is completely off-screen
-      const offScreen =
-        rects.popupRect.bottom < rects.mapRect.top ||
-        rects.popupRect.top > rects.mapRect.bottom ||
-        rects.popupRect.right < rects.mapRect.left ||
-        rects.popupRect.left > rects.mapRect.right;
+    const offScreen =
+      rects.popupRect.bottom < rects.mapRect.top ||
+      rects.popupRect.top > rects.mapRect.bottom ||
+      rects.popupRect.right < rects.mapRect.left ||
+      rects.popupRect.left > rects.mapRect.right;
 
-      if (offScreen) {
-        // Ease to center, then fine-tune
-        try {
-          map.stop();
-          map.easeTo({ center: coords, duration: 300 });
-        } catch {
-          return;
-        }
-        const onMoveEnd = () => {
-          map.off('moveend', onMoveEnd);
-          afterPopupLayout(() => {
-            const r = getPopupRect(map);
-            if (r === null) return;
-            const adj = calculatePanOffset(r.mapRect, r.popupRect);
-            panBy(map, adj.panX, adj.panY, 200);
-          });
-        };
-        map.on('moveend', onMoveEnd);
-      } else {
-        // Partially off-screen — minimal pan
-        panBy(map, panX, panY, 300);
+    if (offScreen) {
+      try {
+        map.stop();
+        map.easeTo({ center: coords, duration: 300 });
+      } catch {
+        return;
       }
-    });
-  };
+      const onMoveEnd = () => {
+        map.off('moveend', onMoveEnd);
+        afterPopupLayout(() => {
+          const r = getPopupRect(map, popup);
+          if (r === null) return;
+          const adj = calculatePanOffset(r.mapRect, r.popupRect);
+          panBy(map, adj.panX, adj.panY, 200);
+        });
+      };
+      map.on('moveend', onMoveEnd);
+    } else {
+      panBy(map, panX, panY, 300);
+    }
+  });
 }
-
-export default { createToFitPopup, createFlyToPopup };

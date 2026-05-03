@@ -13,9 +13,9 @@ import { getThumbUrl } from '@common/utils';
 import type { PhotoPopup, PopupActions } from '@components/photo-popup';
 
 import markers from '../markers';
-import pan from '../pan';
 import selection from '../selection';
 import * as popupEdits from './edits';
+import { flyToPopupTo, panToFitPopup } from './pan';
 import {
   initPopupZoom,
   installCanvasZoomOverride,
@@ -28,12 +28,6 @@ let popupElement: PhotoPopup | null = null;
 let mountedUuid: string | null = null;
 
 let map: MapGL | null = null;
-let panToFitPopup: () => void = () => {
-  /* set in init */
-};
-let flyToPopup: (coords: [number, number]) => void = () => {
-  /* set in init */
-};
 
 function popupOffset(): [number, number] {
   const z = map?.getZoom() ?? 10;
@@ -98,8 +92,6 @@ const popupActions: PopupActions = {
 
 function init(m: MapGL) {
   map = m;
-  panToFitPopup = pan.createToFitPopup(m);
-  flyToPopup = pan.createFlyToPopup(m);
   initPopupZoom(m, getSelectedMarkerCoords);
   m.on('zoomend', reanchorPopup);
   m.on('render', updatePopupGlobeMask);
@@ -200,7 +192,7 @@ function mountCurrent() {
     }
   });
 
-  panToFitPopup();
+  panToFitPopup(map, popup);
 }
 
 let navSeq = 0;
@@ -216,7 +208,7 @@ async function preloadThumb(url: string): Promise<void> {
 }
 
 function applyNavigation(photoUuid: string): void {
-  if (popup === null) return;
+  if (popup === null || map === null) return;
   const photo = selection.getPhoto();
   if (photo?.uuid !== photoUuid) return;
 
@@ -228,7 +220,7 @@ function applyNavigation(photoUuid: string): void {
   mountedUuid = photo.uuid;
   syncPopupElement(photo, idx);
   popup.setLngLat([lng, lat]);
-  flyToPopup([lng, lat]);
+  flyToPopupTo(map, popup, [lng, lat]);
 }
 
 async function navigateToCurrent(): Promise<void> {

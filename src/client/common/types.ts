@@ -19,10 +19,12 @@ export interface Photo {
 
 export interface MarkerLayer {
   readonly id: string;
-  install: (map: MapGL, photos: Photo[]) => void;
+  install: (map: MapGL) => void;
   uninstall: () => void;
-  toggle: (visible: boolean) => void;
-  highlight: (photo: Photo | null) => void;
-  setMarkers: (photos: Photo[]) => void;
+  setView: (view: {
+    photos: Photo[];
+    selectedPhoto: Photo | null;
+    hidden: boolean;
+  }) => void;
   markerRadius: (zoom: number) => number;
 }
