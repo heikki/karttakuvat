@@ -15,7 +15,7 @@ UI is built with Lit web components (`LitElement`):
 
 ### Map modules
 
-The map is composed of small sibling modules under `src/client/map/` — `selection`, `markers/`, `route/`, `gpx`, `measure`, `placement`, `popup`, `fit`, `z-anchors`, `pan`. Each exposes a single `initX(map)` entrypoint that wires its own state (via `map.on('load', ...)` for layer setup, plus event/data subscriptions). Cross-module communication goes through two seams: shared state modules (`selection`, `edits`) that the relevant subscribers read and observe, and bare `document` events for one-way request signals (`PlacementModeEvent`, `RouteEditModeEvent`, `MeasureModeExitedEvent`).
+The map is composed of small sibling modules under `src/client/map/` — `selection`, `markers/`, `route/`, `gpx`, `measure`, `placement`, `popup/`, `fit`, `z-anchors`, `pan`. Each exposes a single `initX(map)` entrypoint that wires its own state (via `map.on('load', ...)` for layer setup, plus event/data subscriptions). Cross-module communication goes through two seams: shared state modules (`selection`, `edits`) that the relevant subscribers read and observe, and bare `document` events for one-way request signals (`PlacementModeEvent`, `RouteEditModeEvent`, `MeasureModeExitedEvent`).
 
 ### Selection
 

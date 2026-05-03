@@ -4,10 +4,10 @@ Geotagged photo map viewer with Apple Photos integration.
 
 ## Project Stats (as of 03.05.2026)
 
-- **TypeScript files**: 61
-- **Lines of code**: 12,954
-- **Total commits**: 463
-- **Total tokens**: ~1,331M | **Total cost**: ~$817
+- **TypeScript files**: 63
+- **Lines of code**: 12,950
+- **Total commits**: 468
+- **Total tokens**: ~1,390M | **Total cost**: ~$858
 
 ## Updating This Diary
 
@@ -35,7 +35,7 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 
 ## 03.05.2026 — Route Polish & Map Architecture
 
-**Tokens**: 40M | **Cost**: $28
+**Tokens**: 99M | **Cost**: $69
 
 - Route edit: dragging a point no longer gets stuck if the mouse is released outside the map container
 - Toggling the photo route off/on is now instant — saved data is cached across the toggle instead of refetched
@@ -45,6 +45,10 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 - Focused-photo state (popup vs placement vs idle) extracted to a `selection` module that subscribers read instead of reaching across each other
 - Pending edits extracted to a dedicated `edits` module with its own subscribe channel, separating filter from edit notifications
 - Arrow-key popup navigation no longer flashes the previous image at the new location
+- Popup module split into `popup/`, with edit operations extracted to `popup/edits.ts`
+- Filter-panel cascading filter logic extracted to a pure `cascade.ts` module
+- Clipboard buffer extracted from `data` into a dedicated `common/clipboard.ts`
+- Redundant `StoreController` reactive bridge in filter panel removed
 
 ## 02.05.2026 — Photo Route Reconciliation & Edit Polish
 
