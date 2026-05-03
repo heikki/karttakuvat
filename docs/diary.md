@@ -4,10 +4,10 @@ Geotagged photo map viewer with Apple Photos integration.
 
 ## Project Stats (as of 03.05.2026)
 
-- **TypeScript files**: 63
-- **Lines of code**: 12,950
-- **Total commits**: 468
-- **Total tokens**: ~1,390M | **Total cost**: ~$858
+- **TypeScript files**: 62
+- **Lines of code**: 12,883
+- **Total commits**: 475
+- **Total tokens**: ~1,469M | **Total cost**: ~$904
 
 ## Updating This Diary
 
@@ -35,12 +35,12 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 
 ## 03.05.2026 — Route Polish & Map Architecture
 
-**Tokens**: 99M | **Cost**: $69
+**Tokens**: 178M | **Cost**: $115
 
 - Route edit: dragging a point no longer gets stuck if the mouse is released outside the map container
 - Toggling the photo route off/on is now instant — saved data is cached across the toggle instead of refetched
 - Autosave correctly defers while a photo location edit is pending (was persisting mid-edit coordinates)
-- Map subsystems unified to `initX(map)` shape; cross-module direct calls replaced with `document` events
+- Map subsystems converted to default-export modules with simplified method names (`selection.init`, `popup.get`, `route.save`); cross-module signals via `document` events
 - Z-anchor placeholder layers preserve layer z-order across module init order and basemap swaps
 - Focused-photo state (popup vs placement vs idle) extracted to a `selection` module that subscribers read instead of reaching across each other
 - Pending edits extracted to a dedicated `edits` module with its own subscribe channel, separating filter from edit notifications
@@ -49,6 +49,8 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 - Filter-panel cascading filter logic extracted to a pure `cascade.ts` module
 - Clipboard buffer extracted from `data` into a dedicated `common/clipboard.ts`
 - Redundant `StoreController` reactive bridge in filter panel removed
+- Album-files modal → gpx decoupled via `AlbumFilesChangedEvent` (was reaching into `map/gpx` through dynamic imports)
+- Dead-code sweep: drop unused `MapStyle`/`MapStyles` interfaces, hidden-files Set in gpx, `@types/three` and `@types/maplibre-gl` devDeps, orphan `cursor-grab` CSS
 
 ## 02.05.2026 — Photo Route Reconciliation & Edit Polish
 

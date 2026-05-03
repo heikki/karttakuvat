@@ -15,7 +15,7 @@ UI is built with Lit web components (`LitElement`):
 
 ### Map modules
 
-The map is composed of small sibling modules under `src/client/map/` — `selection`, `markers/`, `route/`, `gpx`, `measure`, `placement`, `popup/`, `fit`, `z-anchors`, `pan`. Each exposes a single `initX(map)` entrypoint that wires its own state (via `map.on('load', ...)` for layer setup, plus event/data subscriptions). Cross-module communication goes through two seams: shared state modules (`selection`, `edits`) that the relevant subscribers read and observe, and bare `document` events for one-way request signals (`PlacementModeEvent`, `RouteEditModeEvent`, `MeasureModeExitedEvent`).
+The map is composed of small sibling modules under `src/client/map/` — `selection`, `markers/`, `route/`, `gpx`, `measure`, `placement`, `popup/`, `fit`, `z-anchors`, `pan`. Each `default-exports` a small object whose public methods drop the redundant module-name affix (e.g. `selection.init`, `popup.get`, `route.save`); consumers always import via `import name from './module'`. Each module's `init(map)` wires its own state (via `map.on('load', ...)` for layer setup, plus event/data subscriptions). Cross-module communication goes through two seams: shared state modules (`selection`, `edits`) that the relevant subscribers read and observe, and bare `document` events for one-way request signals (`PlacementModeEvent`, `RouteEditModeEvent`, `MeasureModeExitedEvent`, `AlbumFilesChangedEvent`).
 
 ### Selection
 
@@ -27,11 +27,11 @@ The map is composed of small sibling modules under `src/client/map/` — `select
 
 ### Layer ordering (z-anchors)
 
-`initZAnchors(map)` installs four empty placeholder layers — `z-gpx`, `z-route`, `z-markers`, `z-measure` — threaded together with `beforeId`. Every module's `addLayer` call passes its band's anchor as `beforeId`, so layers always stack in band order regardless of init order or basemap swap (the anchors are preserved across `setStyle` by `transformStyle`).
+`zAnchors.init(map)` installs four empty placeholder layers — `z-gpx`, `z-route`, `z-markers`, `z-measure` — threaded together with `beforeId`. Every module's `addLayer` call passes its band's anchor (`zAnchors.id('gpx')` etc.) as `beforeId`, so layers always stack in band order regardless of init order or basemap swap (the anchors are preserved across `setStyle` by `transformStyle`).
 
 ## Startup
 
-1. `initMap()` — creates the MapLibre map with globe projection, then calls `initSelection`, `initZAnchors`, `initPopup`, `initMeasure`, `initRoute`, `initFit`, `initGpx`, `initMarkers`, `initPlacement` and starts the globe background shader. Each module registers its own `map.on('load')` handler for layer setup.
+1. `map.init()` — creates the MapLibre map with globe projection, then calls `selection.init`, `zAnchors.init`, `popup.init`, `measure.init`, `route.init`, `fit.init`, `gpx.init`, `markers.init`, `placement.init` and starts the globe background shader. Each module registers its own `map.on('load')` handler for layer setup.
 2. `initSave()` — wires up save/edit event listeners
 3. `loadPhotos()` — fetches items from `/api/items`, sorts by date
 4. `<filter-panel>` detects loaded photos via `updated()` lifecycle hook, restores filters/map style/marker style/tracks visibility from URL, validates cascading filter options, applies filters, and dispatches initial map style/marker style/GPX visibility events
