@@ -1,10 +1,10 @@
+import { SignalWatcher } from '@lit-labs/signals';
 import { css, html, LitElement, nothing } from 'lit';
 import { customElement, state as litState } from 'lit/decorators.js';
 
 import * as data from '@common/data';
 import * as edits from '@common/edits';
 import {
-  ChangeMapStyleEvent,
   ChangeMarkerStyleEvent,
   FitToPhotosEvent,
   MeasureModeExitedEvent,
@@ -18,13 +18,12 @@ import {
   filtersFromUrl,
   filtersToUrl,
   flushViewState,
-  mapStyleFromUrl,
-  mapStyleToUrl,
   markerStyleFromUrl,
   markerStyleToUrl,
   resetAllViewParams
 } from '@common/filter-url';
 import { getYear, isVideo } from '@common/utils';
+import { viewState } from '@common/view-state';
 
 import type { AlbumControls } from './album-controls';
 
@@ -40,15 +39,6 @@ import {
 } from './helpers';
 import { styles } from './styles';
 
-function resolveSavedMapStyle(saved: string | null): string | null {
-  if (saved === null) return null;
-  if (!HAS_MML && saved.startsWith('mml_')) {
-    mapStyleToUrl('satellite');
-    return 'satellite';
-  }
-  return saved;
-}
-
 const panelStyles = css`
   :host {
     position: absolute;
@@ -60,7 +50,7 @@ const panelStyles = css`
 `;
 
 @customElement('filter-panel')
-export class FilterPanel extends LitElement {
+export class FilterPanel extends SignalWatcher(LitElement) {
   private _unsubData?: () => void;
   private _unsubEdits?: () => void;
 
@@ -70,7 +60,6 @@ export class FilterPanel extends LitElement {
   @litState() private _gps: string[] = [...DEFAULT_GPS];
   @litState() private _media: string[] = [...DEFAULT_MEDIA];
   @litState() private _collapsed = false;
-  @litState() private _mapStyle = 'satellite';
   @litState() private _markerStyle = 'classic';
   @litState() private _measureActive = false;
 
@@ -131,14 +120,12 @@ export class FilterPanel extends LitElement {
       if (saved.gps !== undefined) this._gps = saved.gps;
       if (saved.media !== undefined) this._media = saved.media;
     }
-    this._mapStyle = resolveSavedMapStyle(mapStyleFromUrl()) ?? this._mapStyle;
     const markerStyle = markerStyleFromUrl();
     if (markerStyle !== null) this._markerStyle = markerStyle;
   }
 
   private _applyInitialFilters() {
     this._applyFilters();
-    document.dispatchEvent(new ChangeMapStyleEvent(this._mapStyle));
     document.dispatchEvent(new ChangeMarkerStyleEvent(this._markerStyle));
     this._albumControls?.applyInitialState();
   }
@@ -233,7 +220,7 @@ export class FilterPanel extends LitElement {
     this._camera = 'all';
     this._gps = [...DEFAULT_GPS];
     this._media = [...DEFAULT_MEDIA];
-    this._mapStyle = 'satellite';
+    viewState.mapStyle.set('satellite');
     if (this._markerStyle !== 'classic') {
       this._markerStyle = 'classic';
       document.dispatchEvent(new ChangeMarkerStyleEvent('classic'));
@@ -351,11 +338,9 @@ export class FilterPanel extends LitElement {
                         ]
                       : [])
                   ],
-                  this._mapStyle,
+                  viewState.mapStyle.get(),
                   (s) => {
-                    this._mapStyle = s;
-                    mapStyleToUrl(s);
-                    document.dispatchEvent(new ChangeMapStyleEvent(s));
+                    viewState.mapStyle.set(s);
                   }
                 )}
                 <label>Markers</label>

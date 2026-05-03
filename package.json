@@ -29,6 +29,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@lit-labs/signals": "^0.2.0",
     "@turf/distance": "^7.3.4",
     "@turf/helpers": "^7.3.4",
     "electrobun": "1.16.0",

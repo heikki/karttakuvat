@@ -27,15 +27,6 @@ export class EnterPlacementModeEvent extends Event {
   }
 }
 
-export class ChangeMapStyleEvent extends Event {
-  static readonly type = 'change-map-style';
-  readonly style: string;
-  constructor(style: string) {
-    super(ChangeMapStyleEvent.type);
-    this.style = style;
-  }
-}
-
 export class ChangeMarkerStyleEvent extends Event {
   static readonly type = 'change-marker-style';
   readonly style: string;
@@ -144,7 +135,6 @@ declare global {
     [ShowLightboxEvent.type]: ShowLightboxEvent;
     [ShowMetadataEvent.type]: ShowMetadataEvent;
     [EnterPlacementModeEvent.type]: EnterPlacementModeEvent;
-    [ChangeMapStyleEvent.type]: ChangeMapStyleEvent;
     [ChangeMarkerStyleEvent.type]: ChangeMarkerStyleEvent;
     [FitToPhotosEvent.type]: FitToPhotosEvent;
     [ResetMapEvent.type]: ResetMapEvent;

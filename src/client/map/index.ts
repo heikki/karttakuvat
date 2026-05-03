@@ -7,12 +7,10 @@ import {
 import type { StyleSpecification } from 'maplibre-gl';
 
 import * as edits from '@common/edits';
-import {
-  ChangeMapStyleEvent,
-  OpenExternalMapEvent,
-  ResetMapEvent
-} from '@common/events';
+import { OpenExternalMapEvent, ResetMapEvent } from '@common/events';
 import { mapViewFromUrl, mapViewToUrl } from '@common/filter-url';
+import { effect } from '@common/signals';
+import { viewState } from '@common/view-state';
 
 import background from './background';
 import config from './config';
@@ -56,7 +54,7 @@ function showMapError(msg: string, onClick?: () => void) {
 
 function resetMap() {
   selection.clear();
-  changeMapStyle('satellite');
+  viewState.mapStyle.set('satellite');
   fit.toPhotos(true);
 }
 
@@ -97,9 +95,13 @@ function init() {
   const center: [number, number] | undefined =
     savedView === null ? undefined : [savedView.lon, savedView.lat];
   const zoom = savedView?.zoom;
+  const initialStyleKey = viewState.mapStyle.get();
+  const initialStyle =
+    config.styles()[initialStyleKey] ?? config.styles().satellite!;
+  let lastAppliedStyleKey: string = initialStyleKey;
   map = new MapGL({
     container: 'map',
-    style: applyGlobeProjection(config.styles().satellite!),
+    style: applyGlobeProjection(initialStyle),
     center,
     zoom,
     minZoom: 1,
@@ -211,8 +213,11 @@ function init() {
 
   placement.init(map);
 
-  document.addEventListener(ChangeMapStyleEvent.type, (e) => {
-    changeMapStyle(e.style);
+  effect(() => {
+    const next = viewState.mapStyle.get();
+    if (next === lastAppliedStyleKey) return;
+    lastAppliedStyleKey = next;
+    changeMapStyle(next);
   });
   document.addEventListener(ResetMapEvent.type, () => {
     resetMap();
