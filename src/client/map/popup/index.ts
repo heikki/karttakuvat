@@ -14,14 +14,14 @@ import type { PhotoPopup, PopupActions } from '@components/photo-popup';
 
 import { getMarkerRadius } from '../markers';
 import { createFlyToPopup, createPanToFitPopup } from '../pan';
+import * as selection from '../selection';
+import * as popupEdits from './edits';
 import {
   initPopupZoom,
   installCanvasZoomOverride,
   removeCanvasZoomOverride,
   setupPopupEvents
-} from '../popup-zoom';
-import * as selection from '../selection';
-import * as popupEdits from './edits';
+} from './zoom';
 
 let popup: Popup | null = null;
 let popupElement: PhotoPopup | null = null;
