@@ -3,7 +3,6 @@ import * as data from '@common/data';
 import './components';
 
 import map from './map';
-import { initSave } from './save';
 
 // --- Debug: catch uncaught errors and show on screen ---
 const debugLog: string[] = [];
@@ -44,7 +43,6 @@ document.addEventListener('gesturechange', prevent);
 function init() {
   void (async () => {
     map.init();
-    initSave();
     await data.loadPhotos();
   })();
 }

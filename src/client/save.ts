@@ -1,8 +1,7 @@
 import * as data from '@common/data';
 import * as edits from '@common/edits';
-import { SaveEditsEvent } from '@common/events';
 
-async function saveEdits() {
+export async function saveEdits(): Promise<void> {
   const coordEdits = edits.getCoordEdits();
   const timeEdits = edits.getTimeEdits();
   if (coordEdits.length === 0 && timeEdits.length === 0) return;
@@ -30,10 +29,4 @@ async function saveEdits() {
   } finally {
     edits.saving.set(false);
   }
-}
-
-export function initSave() {
-  document.addEventListener(SaveEditsEvent.type, () => {
-    void saveEdits();
-  });
 }

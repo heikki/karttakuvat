@@ -4,6 +4,8 @@ import { HAS_MML } from './features';
 import {
   mapStyleFromUrl,
   mapStyleToUrl,
+  markerStyleFromUrl,
+  markerStyleToUrl,
   routeFromUrl,
   routeToUrl
 } from './filter-url';
@@ -18,11 +20,16 @@ function resolveInitialMapStyle(): string {
 
 export const viewState = {
   mapStyle: signal(resolveInitialMapStyle()),
+  markerStyle: signal(markerStyleFromUrl() ?? 'classic'),
   routeVisible: signal(routeFromUrl())
 };
 
 effect(() => {
   mapStyleToUrl(viewState.mapStyle.get());
+});
+
+effect(() => {
+  markerStyleToUrl(viewState.markerStyle.get());
 });
 
 effect(() => {

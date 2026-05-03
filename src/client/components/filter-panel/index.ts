@@ -1,30 +1,20 @@
 import { SignalWatcher } from '@lit-labs/signals';
+import selection from '@map/selection';
 import { css, html, LitElement, nothing } from 'lit';
 import { customElement, state as litState } from 'lit/decorators.js';
 
+import * as actions from '@common/actions';
 import * as data from '@common/data';
 import * as edits from '@common/edits';
-import {
-  ChangeMarkerStyleEvent,
-  FitToPhotosEvent,
-  OpenExternalMapEvent,
-  ResetMapEvent,
-  SaveEditsEvent,
-  ToggleMeasureModeEvent
-} from '@common/events';
 import { HAS_MML } from '@common/features';
 import {
   filtersFromUrl,
   filtersToUrl,
   flushViewState,
-  markerStyleFromUrl,
-  markerStyleToUrl,
   resetAllViewParams
 } from '@common/filter-url';
 import { getYear, isVideo } from '@common/utils';
 import { viewState } from '@common/view-state';
-
-import selection from '../../map/selection';
 
 import './album-controls';
 
@@ -56,7 +46,6 @@ export class FilterPanel extends SignalWatcher(LitElement) {
   @litState() private _gps: string[] = [...DEFAULT_GPS];
   @litState() private _media: string[] = [...DEFAULT_MEDIA];
   @litState() private _collapsed = false;
-  @litState() private _markerStyle = 'classic';
 
   private _initialized = false;
   private _gpsClickTimer: ReturnType<typeof setTimeout> | null = null;
@@ -72,26 +61,18 @@ export class FilterPanel extends SignalWatcher(LitElement) {
   override updated() {
     if (!this._initialized && data.photos.get().length > 0) {
       this._initialized = true;
-      this._applyInitialFilters();
+      this._applyFilters();
     }
   }
 
   private _restoreFromUrl() {
     const saved = filtersFromUrl();
-    if (saved !== null) {
-      if (saved.year !== undefined) this._year = saved.year;
-      if (saved.album !== undefined) this._album = saved.album;
-      if (saved.camera !== undefined) this._camera = saved.camera;
-      if (saved.gps !== undefined) this._gps = saved.gps;
-      if (saved.media !== undefined) this._media = saved.media;
-    }
-    const markerStyle = markerStyleFromUrl();
-    if (markerStyle !== null) this._markerStyle = markerStyle;
-  }
-
-  private _applyInitialFilters() {
-    this._applyFilters();
-    document.dispatchEvent(new ChangeMarkerStyleEvent(this._markerStyle));
+    if (saved === null) return;
+    if (saved.year !== undefined) this._year = saved.year;
+    if (saved.album !== undefined) this._album = saved.album;
+    if (saved.camera !== undefined) this._camera = saved.camera;
+    if (saved.gps !== undefined) this._gps = saved.gps;
+    if (saved.media !== undefined) this._media = saved.media;
   }
 
   private _applyFilters() {
@@ -181,11 +162,6 @@ export class FilterPanel extends SignalWatcher(LitElement) {
     this._camera = 'all';
     this._gps = [...DEFAULT_GPS];
     this._media = [...DEFAULT_MEDIA];
-    viewState.mapStyle.set('satellite');
-    if (this._markerStyle !== 'classic') {
-      this._markerStyle = 'classic';
-      document.dispatchEvent(new ChangeMarkerStyleEvent('classic'));
-    }
     data.filters.set({
       year: this._year,
       gps: this._gps,
@@ -195,7 +171,7 @@ export class FilterPanel extends SignalWatcher(LitElement) {
     });
     resetAllViewParams();
     flushViewState();
-    document.dispatchEvent(new ResetMapEvent());
+    actions.resetMap();
   }
 
   private static _renderStats() {
@@ -300,18 +276,16 @@ export class FilterPanel extends SignalWatcher(LitElement) {
                     { style: 'classic', label: 'Classic' },
                     { style: 'points', label: 'Points' }
                   ],
-                  this._markerStyle,
+                  viewState.markerStyle.get(),
                   (s) => {
-                    this._markerStyle = s;
-                    markerStyleToUrl(s);
-                    document.dispatchEvent(new ChangeMarkerStyleEvent(s));
+                    viewState.markerStyle.set(s);
                   }
                 )}
                 <div class="view-buttons">
                   <button
                     class="view-btn"
                     @click=${() => {
-                      document.dispatchEvent(new FitToPhotosEvent(true, true));
+                      actions.fitToPhotos(true, true);
                     }}
                   >
                     Fit
@@ -330,7 +304,7 @@ export class FilterPanel extends SignalWatcher(LitElement) {
                       ? 'active'
                       : ''}"
                     @click=${() => {
-                      document.dispatchEvent(new ToggleMeasureModeEvent());
+                      actions.toggleMeasure();
                     }}
                   >
                     Measure
@@ -341,7 +315,7 @@ export class FilterPanel extends SignalWatcher(LitElement) {
                   <button
                     class="view-btn"
                     @click=${() => {
-                      document.dispatchEvent(new OpenExternalMapEvent('apple'));
+                      actions.openExternalMap('apple');
                     }}
                   >
                     Apple Maps
@@ -349,9 +323,7 @@ export class FilterPanel extends SignalWatcher(LitElement) {
                   <button
                     class="view-btn"
                     @click=${() => {
-                      document.dispatchEvent(
-                        new OpenExternalMapEvent('google')
-                      );
+                      actions.openExternalMap('google');
                     }}
                   >
                     Google Maps
@@ -364,7 +336,7 @@ export class FilterPanel extends SignalWatcher(LitElement) {
                         <button
                           ?disabled=${isSaving}
                           @click=${() => {
-                            document.dispatchEvent(new SaveEditsEvent());
+                            actions.saveEdits();
                           }}
                         >
                           ${isSaving ? 'Saving...' : 'Save to Photos'}

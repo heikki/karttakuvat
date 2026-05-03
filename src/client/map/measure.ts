@@ -2,7 +2,6 @@ import turfDistance from '@turf/distance';
 import { point } from '@turf/helpers';
 import type { GeoJSONSource, Map as MapGL, MapMouseEvent } from 'maplibre-gl';
 
-import { ResetMapEvent, ToggleMeasureModeEvent } from '@common/events';
 import { effect } from '@common/signals';
 
 import mapUtils from './map-utils';
@@ -27,10 +26,6 @@ function isActive(): boolean {
 function init(m: MapGL) {
   map = m;
   m.on('load', addMeasureLayers);
-  document.addEventListener(ToggleMeasureModeEvent.type, toggle);
-  document.addEventListener(ResetMapEvent.type, () => {
-    if (isActive()) selection.interactionMode.set('idle');
-  });
 
   let wasActive = false;
   effect(() => {
@@ -210,4 +205,4 @@ function toggle() {
   selection.interactionMode.set(isActive() ? 'idle' : 'measure');
 }
 
-export default { init };
+export default { init, toggle };

@@ -10,7 +10,8 @@
     "baseUrl": ".",
     "paths": {
       "@common/*": ["src/client/common/*"],
-      "@components/*": ["src/client/components/*"]
+      "@components/*": ["src/client/components/*"],
+      "@map/*": ["src/client/map/*"]
     }
   },
   "exclude": ["node_modules"]

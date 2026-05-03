@@ -2,7 +2,6 @@ import { LngLatBounds } from 'maplibre-gl';
 import type { Map as MapGL } from 'maplibre-gl';
 
 import * as data from '@common/data';
-import { FitToPhotosEvent } from '@common/events';
 import { mapViewFromUrl } from '@common/filter-url';
 
 import popup from './popup';
@@ -13,9 +12,6 @@ let map: MapGL;
 
 function init(m: MapGL) {
   map = m;
-  document.addEventListener(FitToPhotosEvent.type, (e) => {
-    toPhotos(e.animate, e.selectFirst);
-  });
   if (mapViewFromUrl() === null) {
     m.on('load', () => {
       if (data.filteredPhotos.get().length > 0) toPhotos();

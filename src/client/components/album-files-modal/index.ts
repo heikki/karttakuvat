@@ -1,7 +1,11 @@
 import { css, html, LitElement, nothing } from 'lit';
 import { customElement, state as litState, property } from 'lit/decorators.js';
 
-import { AlbumFilesChangedEvent, ShowAlbumFilesEvent } from '@common/events';
+import { reloadAlbumGpx } from '@common/actions';
+
+export function showAlbumFiles(album: string): void {
+  document.querySelector<AlbumFilesModal>('album-files-modal')?.show(album);
+}
 
 interface AlbumFile {
   name: string;
@@ -151,24 +155,19 @@ export class AlbumFilesModal extends LitElement {
     super.connectedCallback();
     this.addEventListener('click', this._onHostClick);
     document.addEventListener('keydown', this._onKeydown, true);
-    document.addEventListener(ShowAlbumFilesEvent.type, this._onShowAlbumFiles);
   }
 
   override disconnectedCallback() {
     super.disconnectedCallback();
     this.removeEventListener('click', this._onHostClick);
     document.removeEventListener('keydown', this._onKeydown, true);
-    document.removeEventListener(
-      ShowAlbumFilesEvent.type,
-      this._onShowAlbumFiles
-    );
   }
 
-  private readonly _onShowAlbumFiles = (e: ShowAlbumFilesEvent) => {
-    this._album = e.album;
+  show(album: string) {
+    this._album = album;
     this.active = true;
     void this._fetchFiles();
-  };
+  }
 
   private readonly _onHostClick = (e: Event) => {
     if (e.target === this) this._close();
@@ -197,7 +196,7 @@ export class AlbumFilesModal extends LitElement {
       );
       const data = (await res.json()) as AlbumFile[];
       this._files = data.sort((a, b) => a.name.localeCompare(b.name));
-      document.dispatchEvent(new AlbumFilesChangedEvent());
+      reloadAlbumGpx();
     } catch {
       this._files = [];
     }
@@ -219,7 +218,7 @@ export class AlbumFilesModal extends LitElement {
         this._files = this._files.map((f) =>
           f.name === file.name ? { ...f, visible: newVisible } : f
         );
-        document.dispatchEvent(new AlbumFilesChangedEvent());
+        reloadAlbumGpx();
       }
     } catch (err) {
       console.error('Toggle visibility failed:', err);
@@ -234,7 +233,7 @@ export class AlbumFilesModal extends LitElement {
       );
       if (res.ok) {
         this._files = this._files.filter((f) => f.name !== filename);
-        document.dispatchEvent(new AlbumFilesChangedEvent());
+        reloadAlbumGpx();
       }
     } catch (err) {
       console.error('Delete failed:', err);

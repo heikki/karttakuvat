@@ -1,11 +1,11 @@
 import { SignalWatcher } from '@lit-labs/signals';
+import selection from '@map/selection';
 import { html, LitElement, type PropertyValues } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 
-import { ShowAlbumFilesEvent, ToggleRouteEditEvent } from '@common/events';
+import * as actions from '@common/actions';
 import { viewState } from '@common/view-state';
 
-import selection from '../../map/selection';
 import { styles } from './styles';
 
 @customElement('album-controls')
@@ -38,7 +38,7 @@ export class AlbumControls extends SignalWatcher(LitElement) {
           class="view-btn"
           ?disabled=${disabled}
           @click=${() => {
-            document.dispatchEvent(new ShowAlbumFilesEvent(this.album));
+            actions.showAlbumFiles(this.album);
           }}
         >
           Files
@@ -59,7 +59,7 @@ export class AlbumControls extends SignalWatcher(LitElement) {
           class="view-btn ${editActive ? 'active' : ''}"
           ?disabled=${disabled || !routeActive}
           @click=${() => {
-            document.dispatchEvent(new ToggleRouteEditEvent());
+            actions.toggleRouteEdit();
           }}
         >
           Edit

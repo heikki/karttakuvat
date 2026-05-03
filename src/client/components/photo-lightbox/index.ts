@@ -2,9 +2,9 @@ import { SignalWatcher } from '@lit-labs/signals';
 import { css, html, LitElement, nothing } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 
+import * as actions from '@common/actions';
 import * as data from '@common/data';
 import * as edits from '@common/edits';
-import { ShowLightboxEvent, ShowMetadataEvent } from '@common/events';
 import type { Photo } from '@common/types';
 import {
   formatCoords,
@@ -16,6 +16,10 @@ import {
 
 function stopPropagation(e: Event) {
   e.stopPropagation();
+}
+
+export function showLightbox(index: number): void {
+  document.querySelector<PhotoLightbox>('photo-lightbox')?.show(index);
 }
 
 @customElement('photo-lightbox')
@@ -240,7 +244,6 @@ export class PhotoLightbox extends SignalWatcher(LitElement) {
   override connectedCallback() {
     super.connectedCallback();
     document.addEventListener('keydown', this._onKeydown);
-    document.addEventListener(ShowLightboxEvent.type, this._onShowLightbox);
     this.addEventListener('wheel', this._onWheel, { passive: false });
     this.addEventListener('gesturestart', this._onGestureStart);
     this.addEventListener('gesturechange', this._onGestureChange);
@@ -250,7 +253,6 @@ export class PhotoLightbox extends SignalWatcher(LitElement) {
   override disconnectedCallback() {
     super.disconnectedCallback();
     document.removeEventListener('keydown', this._onKeydown);
-    document.removeEventListener(ShowLightboxEvent.type, this._onShowLightbox);
     this.removeEventListener('wheel', this._onWheel);
     this.removeEventListener('gesturestart', this._onGestureStart);
     this.removeEventListener('gesturechange', this._onGestureChange);
@@ -260,10 +262,6 @@ export class PhotoLightbox extends SignalWatcher(LitElement) {
   override updated(changed: Map<string, unknown>) {
     if (changed.has('photo')) this._resetTransform();
   }
-
-  private readonly _onShowLightbox = (e: ShowLightboxEvent) => {
-    this.show(e.index);
-  };
 
   private readonly _onKeydown = (e: KeyboardEvent) => {
     if (!this.active) return;
@@ -308,9 +306,7 @@ export class PhotoLightbox extends SignalWatcher(LitElement) {
 
   private _onInfoClick(e: Event) {
     e.stopPropagation();
-    if (this.photo !== null) {
-      this.dispatchEvent(new ShowMetadataEvent(this.photo.uuid));
-    }
+    if (this.photo !== null) actions.showMetadata(this.photo.uuid);
   }
 
   override render() {

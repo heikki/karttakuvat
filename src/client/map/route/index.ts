@@ -3,7 +3,6 @@ import type { GeoJSONSource, Map as MapGL } from 'maplibre-gl';
 
 import * as data from '@common/data';
 import * as edits from '@common/edits';
-import { ResetMapEvent } from '@common/events';
 import { effect } from '@common/signals';
 import type { Photo } from '@common/types';
 import { toUtcSortKey } from '@common/utils';
@@ -12,7 +11,7 @@ import { viewState } from '@common/view-state';
 import mapUtils from '../map-utils';
 import selection from '../selection';
 import zAnchors from '../z-anchors';
-import { exitRouteEdit, initRouteEdit } from './edit';
+import { initRouteEdit } from './edit';
 import { buildRouteLineFeatures, createEditLayers } from './helpers';
 import {
   reconcileRouteWithAlbum,
@@ -61,10 +60,6 @@ function init(m: MapGL): void {
   m.on('load', () => {
     addPhotoRouteLayers();
     createEditLayers(m);
-  });
-  document.addEventListener(ResetMapEvent.type, () => {
-    exitRouteEdit();
-    viewState.routeVisible.set(false);
   });
 }
 

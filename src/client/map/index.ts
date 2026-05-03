@@ -7,7 +7,6 @@ import {
 import type { StyleSpecification } from 'maplibre-gl';
 
 import * as edits from '@common/edits';
-import { OpenExternalMapEvent, ResetMapEvent } from '@common/events';
 import { mapViewFromUrl, mapViewToUrl } from '@common/filter-url';
 import { effect } from '@common/signals';
 import { viewState } from '@common/view-state';
@@ -52,12 +51,6 @@ function showMapError(msg: string, onClick?: () => void) {
   };
 }
 
-function resetMap() {
-  selection.clear();
-  viewState.mapStyle.set('satellite');
-  fit.toPhotos(true);
-}
-
 function applyGlobeProjection(style: StyleSpecification): StyleSpecification {
   return {
     ...style,
@@ -66,7 +59,7 @@ function applyGlobeProjection(style: StyleSpecification): StyleSpecification {
   };
 }
 
-function openExternalMap(target: 'apple' | 'google') {
+function openExternal(target: 'apple' | 'google') {
   const c = map.getCenter();
   const z = Math.round(map.getZoom());
   const photo = selection.getPhoto();
@@ -219,12 +212,6 @@ function init() {
     lastAppliedStyleKey = next;
     changeMapStyle(next);
   });
-  document.addEventListener(ResetMapEvent.type, () => {
-    resetMap();
-  });
-  document.addEventListener(OpenExternalMapEvent.type, (e) => {
-    openExternalMap(e.provider);
-  });
 }
 
 // Carry app-owned sources and layers across a basemap swap. App-owned =
@@ -270,4 +257,4 @@ function changeMapStyle(styleKey: string) {
   map.setStyle(applyGlobeProjection(next), { transformStyle });
 }
 
-export default { init };
+export default { init, openExternal };

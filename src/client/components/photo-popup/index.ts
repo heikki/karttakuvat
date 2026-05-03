@@ -2,12 +2,8 @@ import { SignalWatcher } from '@lit-labs/signals';
 import { css, html, LitElement, nothing } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 
+import * as actions from '@common/actions';
 import * as edits from '@common/edits';
-import {
-  EnterPlacementModeEvent,
-  ShowLightboxEvent,
-  ShowMetadataEvent
-} from '@common/events';
 import type { Photo } from '@common/types';
 import {
   editableDateStr,
@@ -162,21 +158,17 @@ export class PhotoPopup extends SignalWatcher(LitElement) {
   `;
 
   private _onImgClick() {
-    this.dispatchEvent(new ShowLightboxEvent(this.index));
+    actions.showLightbox(this.index);
   }
 
   private _onInfoClick(e: Event) {
     e.stopPropagation();
-    if (this.photo !== null) {
-      this.dispatchEvent(new ShowMetadataEvent(this.photo.uuid));
-    }
+    if (this.photo !== null) actions.showMetadata(this.photo.uuid);
   }
 
   private _onPlacement(e: Event) {
     e.preventDefault();
-    if (this.photo !== null) {
-      this.dispatchEvent(new EnterPlacementModeEvent());
-    }
+    if (this.photo !== null) actions.enterPlacement();
   }
 
   private _applyManualDate() {

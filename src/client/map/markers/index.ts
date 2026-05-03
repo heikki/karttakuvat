@@ -2,9 +2,9 @@ import type { Map as MapGL, MapLayerMouseEvent } from 'maplibre-gl';
 
 import * as data from '@common/data';
 import * as edits from '@common/edits';
-import { ChangeMarkerStyleEvent } from '@common/events';
 import { effect } from '@common/signals';
 import type { MarkerLayer } from '@common/types';
+import { viewState } from '@common/view-state';
 
 import selection from '../selection';
 import { ClassicLayer } from './classic';
@@ -30,9 +30,11 @@ function init(m: MapGL): void {
     refreshView();
   });
 
-  document.addEventListener(ChangeMarkerStyleEvent.type, (e) => {
-    if (!(e.style in markerStyles)) return;
-    currentMarkerStyle = e.style;
+  effect(() => {
+    const style = viewState.markerStyle.get();
+    if (!(style in markerStyles)) return;
+    if (style === currentMarkerStyle) return;
+    currentMarkerStyle = style;
     if (currentLayer === null) return;
     install();
     bindInteractions();

@@ -1,16 +1,13 @@
 import { Popup } from 'maplibre-gl';
 import type { Map as MapGL } from 'maplibre-gl';
 
+import * as actions from '@common/actions';
 import { getCopiedDate, getCopiedLocation } from '@common/clipboard';
 import * as edits from '@common/edits';
-import {
-  ChangeMarkerStyleEvent,
-  EnterPlacementModeEvent,
-  ShowLightboxEvent
-} from '@common/events';
 import { effect } from '@common/signals';
 import type { Photo } from '@common/types';
 import { getThumbUrl } from '@common/utils';
+import { viewState } from '@common/view-state';
 import type { PhotoPopup, PopupActions } from '@components/photo-popup';
 
 import markers from '../markers';
@@ -78,7 +75,7 @@ function handleKeydown(e: KeyboardEvent) {
     const idx = selection.getPhotoIndex();
     if (idx !== null) {
       e.preventDefault();
-      document.dispatchEvent(new ShowLightboxEvent(idx));
+      actions.showLightbox(idx);
     }
   }
 }
@@ -102,17 +99,15 @@ function init(m: MapGL) {
 
   document.addEventListener('keydown', handleKeydown);
 
-  // Bare request signal from <photo-popup>'s "set" button: enter placement
-  // mode for the currently-selected photo.
-  document.addEventListener(EnterPlacementModeEvent.type, () => {
-    selection.enterPlacement();
-  });
-
-  // Marker style swap changes the radius scheme. This listener is registered
-  // before markers' (popup is init'd before markers), so we defer to a
-  // microtask — markers' synchronous listener swaps the layer, then our
+  // Marker style swap changes the radius scheme. The popup effect is
+  // registered before markers' (popup is init'd before markers), so we defer
+  // to a microtask — markers' effect swaps the layer first, then our
   // microtask runs reanchorPopup with the new radius.
-  document.addEventListener(ChangeMarkerStyleEvent.type, () => {
+  let lastMarkerStyle = viewState.markerStyle.get();
+  effect(() => {
+    const next = viewState.markerStyle.get();
+    if (next === lastMarkerStyle) return;
+    lastMarkerStyle = next;
     queueMicrotask(reanchorPopup);
   });
 

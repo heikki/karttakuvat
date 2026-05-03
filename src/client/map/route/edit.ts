@@ -7,7 +7,6 @@ import type {
 
 import * as data from '@common/data';
 import * as edits from '@common/edits';
-import { ToggleRouteEditEvent } from '@common/events';
 import { effect } from '@common/signals';
 import type { Photo } from '@common/types';
 
@@ -94,7 +93,6 @@ function cursorFor(s: InteractionState | null): string | null {
 
 export function initRouteEdit(m: MapGL): void {
   map = m;
-  document.addEventListener(ToggleRouteEditEvent.type, toggle);
 
   let wasActive = false;
   effect(() => {
@@ -116,7 +114,7 @@ export function initRouteEdit(m: MapGL): void {
   });
 }
 
-function toggle(): void {
+export function toggleRouteEdit(): void {
   if (isActive()) {
     selection.interactionMode.set('idle');
     return;

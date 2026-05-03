@@ -1,3 +1,4 @@
+import * as actions from '@common/actions';
 import {
   copyDate,
   copyLocation,
@@ -5,7 +6,6 @@ import {
   getCopiedLocation
 } from '@common/clipboard';
 import * as edits from '@common/edits';
-import { SaveEditsEvent } from '@common/events';
 import { effect } from '@common/signals';
 import {
   computeDateOffsetHours,
@@ -80,7 +80,7 @@ export function confirmCurrentLocation(): void {
   const loc = edits.getEffectiveLocation(photo);
   if (loc === null) return;
   edits.setCoord(photo.uuid, loc.lat, loc.lon);
-  document.dispatchEvent(new SaveEditsEvent());
+  actions.saveEdits();
 }
 
 export function copyCurrentLocation(): void {
