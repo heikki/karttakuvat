@@ -7,9 +7,14 @@ import {
   ShowLightboxEvent,
   ShowMetadataEvent
 } from '@common/events';
-import { editableDateStr } from '@common/photo-utils';
 import type { Photo } from '@common/types';
-import { formatCoords, formatDate, getThumbUrl, isVideo } from '@common/utils';
+import {
+  editableDateStr,
+  formatCoords,
+  formatDate,
+  getThumbUrl,
+  isVideo
+} from '@common/utils';
 
 export interface PopupActions {
   copyLocation: () => void;

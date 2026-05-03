@@ -72,6 +72,20 @@ export function formatDate(dateStr: string, tz?: string | null): string {
   return base;
 }
 
+export function editableDateStr(exifDate: string): string {
+  if (exifDate === '') return '';
+  const [datePart, timePart] = exifDate.split(' ');
+  if (datePart === undefined) return '';
+  const parts = datePart.split(':');
+  if (parts.length < 3) return '';
+  const d = `${parseInt(parts[2]!, 10)}.${parseInt(parts[1]!, 10)}.${parts[0]!}`;
+  if (timePart === undefined) return d;
+  const [h, m, s] = timePart.split(':');
+  if (h === undefined || m === undefined) return d;
+  if (s === undefined) return `${d} ${h}:${m}`;
+  return `${d} ${h}:${m}:${s}`;
+}
+
 export function isVideo(item: Photo): boolean {
   return item.type === 'video';
 }

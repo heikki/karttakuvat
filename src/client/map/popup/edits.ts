@@ -6,14 +6,34 @@ import {
 } from '@common/clipboard';
 import * as edits from '@common/edits';
 import { SaveEditsEvent } from '@common/events';
-import { computeManualDateOffset } from '@common/photo-utils';
 import {
+  computeDateOffsetHours,
   computeFullDatetimeOffsetHours,
   parseExifDate,
   parseUserDatetime
 } from '@common/utils';
 
 import * as selection from '../selection';
+
+function computeManualDateOffset(
+  originalDate: string,
+  parsed: { day: string; time: string | null }
+): number | null {
+  if (parsed.time === null) {
+    return computeDateOffsetHours(originalDate, parsed.day);
+  }
+  const timeParts = parsed.time.split(':').map(Number);
+  const dayParts = parsed.day.split(':');
+  const target = new Date(
+    parseInt(dayParts[0]!, 10),
+    parseInt(dayParts[1]!, 10) - 1,
+    parseInt(dayParts[2]!, 10),
+    timeParts[0] ?? 0,
+    timeParts[1] ?? 0,
+    timeParts[2] ?? 0
+  );
+  return computeFullDatetimeOffsetHours(originalDate, target);
+}
 
 let dateEditMode = false;
 
