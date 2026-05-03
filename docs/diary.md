@@ -4,10 +4,10 @@ Geotagged photo map viewer with Apple Photos integration.
 
 ## Project Stats (as of 03.05.2026)
 
-- **TypeScript files**: 57
-- **Lines of code**: 12,821
-- **Total commits**: 454
-- **Total tokens**: ~1,304M | **Total cost**: ~$798
+- **TypeScript files**: 59
+- **Lines of code**: 12,900
+- **Total commits**: 460
+- **Total tokens**: ~1,331M | **Total cost**: ~$817
 
 ## Updating This Diary
 
@@ -33,13 +33,15 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 - State the user-visible change only; skip mechanism and backstory unless that _is_ the change.
 - Describe final outcomes, not reverted intermediate attempts.
 
-## 03.05.2026 — Route Module Polish
+## 03.05.2026 — Route Polish & Map Architecture
 
-**Tokens**: 13M | **Cost**: $9
+**Tokens**: 40M | **Cost**: $28
 
 - Route edit: dragging a point no longer gets stuck if the mouse is released outside the map container
 - Toggling the photo route off/on is now instant — saved data is cached across the toggle instead of refetched
 - Autosave correctly defers while a photo location edit is pending (was persisting mid-edit coordinates)
+- Map subsystems unified to `initX(map)` shape; cross-module direct calls replaced with `document` events
+- Z-anchor placeholder layers preserve layer z-order across module init order and basemap swaps
 
 ## 02.05.2026 — Photo Route Reconciliation & Edit Polish
 
