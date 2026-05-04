@@ -68,7 +68,7 @@ export default {
 
     views: {
       app: {
-        entrypoint: 'src/client/index.ts',
+        entrypoint: 'src/client/components/index.ts',
         plugins: [pathAliasPlugin],
         define: {
           'process.env.PUBLIC_MML_API_KEY': JSON.stringify(
