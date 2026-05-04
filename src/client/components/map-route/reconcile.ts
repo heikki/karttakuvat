@@ -3,7 +3,7 @@ import * as edits from '@common/edits';
 import type { Photo } from '@common/types';
 import { toUtcSortKey } from '@common/utils';
 
-import type { RouteData, RoutePoint, RouteSegment } from '.';
+import type { RouteData, RoutePoint, RouteSegment } from './types';
 
 function makeStraightSegment(from: RoutePoint, to: RoutePoint): RouteSegment {
   return {

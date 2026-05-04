@@ -4,13 +4,13 @@ import type {
   ExpressionSpecification,
   FilterSpecification,
   GeoJSONSource,
+  LayerSpecification,
   Map as MapGL
 } from 'maplibre-gl';
 
 import * as edits from '@common/edits';
 import type { MarkerLayer, Photo } from '@common/types';
 
-import zAnchors from '../../z-anchors';
 import { BloomLayer } from './bloom';
 
 const hitAreaPaint: CircleLayerSpecification['paint'] = {
@@ -62,71 +62,62 @@ const sortKey = [
   ['get', 'index']
 ] as ExpressionSpecification;
 
-const SOURCE = 'points-source';
-const LAYERS = ['points-markers', 'points-dot', 'points-selected'] as const;
+const LAYERS: LayerSpecification[] = [
+  {
+    id: 'points-markers',
+    type: 'circle',
+    source: 'points-source',
+    layout: { 'circle-sort-key': sortKey },
+    paint: hitAreaPaint
+  },
+  {
+    id: 'points-dot',
+    type: 'circle',
+    source: 'points-source',
+    layout: { 'circle-sort-key': sortKey },
+    paint: dotPaint
+  },
+  {
+    id: 'points-selected',
+    type: 'circle',
+    source: 'points-source',
+    paint: hitAreaPaint,
+    filter: ['==', ['get', 'uuid'], '']
+  }
+];
+
+const LAYER_IDS = LAYERS.map((l) => l.id);
 
 export class PointsLayer implements MarkerLayer {
   readonly id = 'points-markers';
   private readonly bloom = new BloomLayer();
   private map: MapGL | null = null;
 
-  install(map: MapGL) {
+  install(map: MapGL, before: string) {
     this.map = map;
-    const before = zAnchors.id('markers');
-
     map.addLayer(this.bloom, before);
-
-    map.addSource(SOURCE, {
+    map.addSource('points-source', {
       type: 'geojson',
       data: { type: 'FeatureCollection', features: [] },
       maxzoom: 22
     });
-
-    map.addLayer(
-      {
-        id: 'points-markers',
-        type: 'circle',
-        source: SOURCE,
-        layout: { 'circle-sort-key': sortKey },
-        paint: hitAreaPaint
-      },
-      before
-    );
-
-    map.addLayer(
-      {
-        id: 'points-dot',
-        type: 'circle',
-        source: SOURCE,
-        layout: { 'circle-sort-key': sortKey },
-        paint: dotPaint
-      },
-      before
-    );
-
-    map.addLayer(
-      {
-        id: 'points-selected',
-        type: 'circle',
-        source: SOURCE,
-        paint: hitAreaPaint,
-        filter: ['==', ['get', 'uuid'], '']
-      },
-      before
-    );
+    for (const spec of LAYERS) map.addLayer(spec, before);
   }
 
   uninstall() {
     if (this.map === null) return;
-    for (let i = LAYERS.length - 1; i >= 0; i--) {
-      if (this.map.getLayer(LAYERS[i]!) !== undefined) {
-        this.map.removeLayer(LAYERS[i]!);
+    for (let i = LAYER_IDS.length - 1; i >= 0; i--) {
+      const id = LAYER_IDS[i]!;
+      if (this.map.getLayer(id) !== undefined) {
+        this.map.removeLayer(id);
       }
     }
     if (this.map.getLayer(this.bloom.id) !== undefined) {
       this.map.removeLayer(this.bloom.id);
     }
-    if (this.map.getSource(SOURCE) !== undefined) this.map.removeSource(SOURCE);
+    if (this.map.getSource('points-source') !== undefined) {
+      this.map.removeSource('points-source');
+    }
     this.map = null;
   }
 
@@ -160,7 +151,7 @@ export class PointsLayer implements MarkerLayer {
       positions.push({ lng: lon, lat, uuid: photo.uuid });
     }
 
-    const source = map.getSource<GeoJSONSource>(SOURCE);
+    const source = map.getSource<GeoJSONSource>('points-source');
     if (source !== undefined) {
       source.setData({ type: 'FeatureCollection', features });
     }
@@ -169,7 +160,7 @@ export class PointsLayer implements MarkerLayer {
 
   private applyVisibility(map: MapGL, hidden: boolean) {
     const v = hidden ? 'none' : 'visible';
-    for (const id of LAYERS) {
+    for (const id of LAYER_IDS) {
       if (map.getLayer(id) !== undefined) {
         map.setLayoutProperty(id, 'visibility', v);
       }

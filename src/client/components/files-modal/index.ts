@@ -4,7 +4,7 @@ import { customElement, state as litState, property } from 'lit/decorators.js';
 import { reloadAlbumGpx } from '@common/actions';
 
 export function showAlbumFiles(album: string): void {
-  document.querySelector<AlbumFilesModal>('album-files-modal')?.show(album);
+  document.querySelector<FilesModal>('files-modal')?.show(album);
 }
 
 interface AlbumFile {
@@ -12,8 +12,8 @@ interface AlbumFile {
   visible: boolean;
 }
 
-@customElement('album-files-modal')
-export class AlbumFilesModal extends LitElement {
+@customElement('files-modal')
+export class FilesModal extends LitElement {
   @property({ type: Boolean, reflect: true }) active = false;
   @litState() private _files: AlbumFile[] = [];
   @litState() private _loading = false;

@@ -6,6 +6,7 @@
       "name": "karttakuvat",
       "dependencies": {
         "@lit-labs/signals": "^0.2.0",
+        "@lit/context": "^1.1.6",
         "@turf/distance": "^7.3.4",
         "@turf/helpers": "^7.3.4",
         "electrobun": "1.16.0",
@@ -89,6 +90,8 @@
     "@lit-labs/signals": ["@lit-labs/signals@0.2.0", "", { "dependencies": { "lit": "^2.0.0 || ^3.0.0", "signal-polyfill": "^0.2.2" } }, "sha512-68plyIbciumbwKaiilhLNyhz4Vg6/+nJwDufG2xxWA9r/fUw58jxLHCAlKs+q1CE5Lmh3cZ3ShyYKnOCebEpVA=="],
 
     "@lit-labs/ssr-dom-shim": ["@lit-labs/ssr-dom-shim@1.5.1", "", {}, "sha512-Aou5UdlSpr5whQe8AA/bZG0jMj96CoJIWbGfZ91qieWu5AWUMKw8VR/pAkQkJYvBNhmCcWnZlyyk5oze8JIqYA=="],
+
+    "@lit/context": ["@lit/context@1.1.6", "", { "dependencies": { "@lit/reactive-element": "^1.6.2 || ^2.1.0" } }, "sha512-M26qDE6UkQbZA2mQ3RjJ3Gzd8TxP+/0obMgE5HfkfLhEEyYE3Bui4A5XHiGPjy0MUGAyxB3QgVuw2ciS0kHn6A=="],
 
     "@lit/reactive-element": ["@lit/reactive-element@2.1.2", "", { "dependencies": { "@lit-labs/ssr-dom-shim": "^1.5.0" } }, "sha512-pbCDiVMnne1lYUIaYNN5wrwQXDtHaYtg7YEFPeW+hws6U47WeFvISGUWekPGKWOP1ygrs0ef0o1VJMk1exos5A=="],
 

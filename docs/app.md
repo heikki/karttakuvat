@@ -11,20 +11,31 @@ UI is built with Lit web components (`LitElement`):
 - `<photo-lightbox>` — full-screen photo viewer
 - `<metadata-modal>` — detailed photo metadata overlay
 - `<placement-panel>` — location placement UI
-- `<album-files-modal>` — album file management dialog
+- `<files-modal>` — album file management dialog
 
 ### Map modules
 
-The map is composed of small sibling modules under `src/client/map/` — `selection`, `markers/`, `route/`, `gpx`, `measure`, `placement`, `popup/`, `fit`, `z-anchors`. Each `default-exports` a small object whose public methods drop the redundant module-name affix (e.g. `selection.init`, `popup.get`, `route.save`); consumers always import via `import name from './module'`. Each module's `init(map)` wires its own state — adds sources/layers, registers signal effects, binds map handlers. All inits run from a single `map.once('load')` in `index.ts` so every `addSource`/`addLayer` call lands on a ready map.
+The map is composed of `<map-*>` Lit elements, each owning its own directory under `src/client/components/`. Single-file features (`<map-fit>`, `<map-placement>`, `<map-measure>`, `<map-gpx>`) hold all their state and lifecycle in `index.ts`. Multi-file features (`<map-popup>`, `<map-route>`, `<map-markers>`) keep helpers in sibling files alongside the element class. Map-view-internal infrastructure (globe shader, basemap config) lives in `components/map-view/` alongside the orchestrator; cross-cutting state (`data`, `edits`, `selection`, `view-state`) lives in `common/`.
+
+#### MapApi — the public seam
+
+`components/map-view/api.ts` defines the `MapApi` interface — a narrow surface listing exactly the cross-feature operations: `map`, `fitToPhotos`, `reloadGpx`, `forceRemountPopup`, `popupElement`, `markerRadius`, `openExternal`. `<map-view>` `implements MapApi`, with each method a one-line forwarder that does a `renderRoot.querySelector` to the relevant feature element and calls into it. Map-view is the only place that knows about its shadow children.
+
+Two consumer paths use the same surface:
+
+- **In-tree consumers (sibling map features)** — `<map-popup>`, `<map-fit>`, etc. — consume `MapApi` via `mapContext`. The provider on `<map-view>` is initialised with `this` as its initial value, so any feature mounting inside the shadow gets a typed handle the moment `@consume` runs. A feature accesses the map as `this.api.map` and calls siblings as `this.api.markerRadius(z)` or `this.api.popupElement()`. `document.querySelector` lookups don't appear inside features.
+- **Out-of-tree callers** — `actions.ts`, panel components that are siblings of `<map-view>` under `<app-root>` rather than descendants. `mapContext` doesn't flow sideways to them, so they reach the same methods via `document.querySelector('map-view')?.fitToPhotos(...)`. The host element lives in light DOM, so the lookup always resolves; the forwarder then does the shadow-internal lookup.
+
+Adding a cross-feature operation is a deliberate two-step: declare it in `MapApi`, implement the forwarder. The contract can't widen accidentally.
 
 ### State and commands
 
-State is held in `@lit-labs/signals`, organised into a few stores. Lit components opt into reactivity via the `SignalWatcher` mixin and read signals in `render()`; non-component modules use `effect()` from `@common/signals` for module-level reactions. Commands (one-shot actions) are exposed as plain functions through a single `@common/actions` module — components and map modules import only from `actions`, so the command surface stays in one place.
+State is held in `@lit-labs/signals`, organised into a few stores. Lit components opt into reactivity via the `SignalWatcher` mixin and read signals in `render()`; non-component modules use `effect()` from `@common/signals` for module-level reactions. Commands (one-shot actions) are exposed as plain functions through a single `@common/actions` module — components import from `actions` for app-level commands, so the command surface stays in one place. `actions.ts` reaches the map by calling methods on `<map-view>` (which `implements MapApi`); see the MapApi section above. Cross-cutting reads — `selection.getPhoto()`, `data.filteredPhotos.get()`, `edits.getEffectiveLocation(photo)` — go directly to their store modules.
 
 - `@common/data` — `photos` and `filters` signals; `filteredPhotos` computed.
 - `@common/edits` — `pendingCoords`, `pendingTimeOffsets`, `saving` signals; `editCount` computed; function-form readers `getEffectiveCoords/Date/Location(photo)` wrap the underlying signals so any tracking context picks them up.
 - `@common/view-state` — `mapStyle`, `markerStyle`, `routeVisible` signals; each is seeded from the URL at module load and persisted back via an effect.
-- `@map/selection` — `selectedPhotoUuid` and `interactionMode` signals (see below).
+- `@common/selection` — `selectedPhotoUuid` and `interactionMode` signals (see below).
 
 ### Selection
 
@@ -35,18 +46,22 @@ State is held in `@lit-labs/signals`, organised into a few stores. Lit component
 
 `isPopupOpen()` derives from both: a popup is shown iff a photo is selected and `interactionMode !== 'placement'`. Markers, popup, and placement react via `effect()` on these signals — the popup module mounts/unmounts the MapLibre Popup, markers re-render with selection state, placement shows/hides its panel. Selection auto-clears when the selected photo leaves the filtered set; the URL-restore path runs once when photos first load.
 
-### Layer ordering (z-anchors)
+### Layer ordering (DOM-order z)
 
-`zAnchors.init(map)` installs four empty placeholder layers — `z-gpx`, `z-route`, `z-markers`, `z-measure` — threaded together with `beforeId`. Every module's `addLayer` call passes its band's anchor (`zAnchors.id('gpx')` etc.) as `beforeId`, so layers always stack in band order regardless of init order or basemap swap (the anchors are preserved across `setStyle` by `transformStyle`).
+Cross-feature layer order is the order of `<map-*>` elements in `<map-view>`'s feature template — bottom to top: `<map-gpx>`, `<map-route>`, `<map-markers>`, `<map-measure>`. Each feature's `firstUpdated` calls `addLayer(...)` with no `before` argument, so the layer lands on top of whatever's already in the stack at that moment. Lit fires `firstUpdated` in document order, so template order = init order = z-order. Within a feature, the order of `addLayer` calls determines internal stacking. Layer order survives basemap swaps via `transformStyle`, which carries app-owned layers across `setStyle`.
+
+`<map-markers>` is the one feature that swaps its layer set at runtime (classic ↔ points). It owns one extra invisible symbol layer — `markers-anchor` — added in `markers.init()` before either style is installed. Both `ClassicLayer.install` and `PointsLayer.install` take that anchor's id as their `before` argument; the anchor itself is never removed, so markers keeps its z-position across swaps even though its implementation layers come and go.
 
 ## Startup
 
 View-state signals (`mapStyle`, `markerStyle`, `routeVisible`, `selectedPhotoUuid`) seed from the URL synchronously at module load, before any rendering, so subsequent reads always see the intended starting state.
 
-1. `map.init()` — creates the MapLibre map with globe projection (using the URL-restored `viewState.mapStyle`), starts the globe background shader, and registers a single `map.once('load')` handler that runs every module init in sequence.
-2. `loadPhotos()` — fetches items from `/api/items`, sorts by date, and writes them into `data.photos`. The `filteredPhotos` computed re-derives, fanning out to every effect that reads it.
-3. `<filter-panel>` detects loaded photos via `updated()`, restores filter component state from URL, and writes the normalized values into `data.filters`. The signal change cascades through any consumer that reads filters.
-4. On map load: module inits fire in order — `selection`, `zAnchors`, `markers`, `popup`, `measure`, `route`, `fit`, `gpx`, `placement`. zAnchors must come first (its anchor layers are referenced as `beforeId` by every other module's `addLayer`); markers comes before popup so the popup's mount sees the marker layer via `markers.getRadius()`. Each module adds its own sources/layers and wires its `effect()`s. Fit zooms to filtered photos unless a map view was restored from URL.
+1. `<app-root>` mounts as the body's only child. Its `connectedCallback` installs window-level error handlers (`window.__debugLog`), gesture-prevention listeners, and kicks off `data.loadPhotos()`.
+2. `<app-root>` renders `<map-view>` plus the panel components.
+3. `<map-view>`'s `firstUpdated` constructs the MapGL instance into a `#container` div inside its shadow root, attaches map-level listeners (background shader, error handlers, projection transitions, debug keyboard, style-change effect), and registers a single `map.once('load')` handler.
+4. `loadPhotos()` resolves in parallel — fetches `/api/items`, sorts by date, writes into `data.photos`. The `filteredPhotos` computed re-derives, fanning out to every effect that reads it.
+5. `<filter-panel>` detects loaded photos via `updated()`, restores filter component state from URL, and writes the normalized values into `data.filters`. The signal change cascades.
+6. On map load: `<map-view>` flips an internal `@state _map`, which triggers a re-render that mounts the feature children: `<map-gpx>`, `<map-route>`, `<map-markers>`, `<map-measure>`, `<map-popup>`, `<map-fit>`, `<map-placement>`. Each feature `@consume`s `mapContext` (the `MapView` instance, typed as `MapApi`) and reads `this.api.map` from its `firstUpdated`, where it adds layers, registers map listeners, and wires `effect()`s — for multi-file features like `<map-popup>` the element delegates to internal helpers; for single-file features the work happens inline in the class. Template order = z-order for layer features. Fit zooms to filtered photos unless a map view was restored from URL.
 
 ## Filters
 
@@ -92,30 +107,10 @@ The map uses globe projection by default. A globe control (bottom-right) lets th
 
 ### Marker Styles
 
-Two switchable marker styles, selectable via buttons in the filter panel. The active marker style is persisted in URL params.
+Two switchable styles, persisted via the `markers` URL param. Sources: `components/map-markers/classic.ts` and `components/map-markers/points/`.
 
-**Classic** (default): Color-coded circles by GPS type. Five layers:
-
-- **Hit area** (`classic-hit-area`): Transparent circles used as the click target. Zoom-dependent radius (6–16px). This is the layer used for marker interaction detection.
-- **Outlines** (`classic-outlines`): White rings behind all fills. Zoom-dependent radius (4–12px). Pitch-aligned to map.
-- **Markers** (`classic-markers`): Color-coded fills by GPS type. No stroke. Zoom-dependent radius (3–10px). Sorted by latitude (northern behind southern) then index.
-  - Blue (`#3b82f6`): exif
-  - Amber (`#f59e0b`): inferred
-  - Green (`#22c55e`): user
-  - Gray (`#9ca3af`): none
-- **Selected highlight** (`classic-selected-highlight`): Semi-transparent dark fill with white stroke, larger radius (6–16px). Filtered by UUID. Creates a highlight ring behind the selected marker.
-- **Selected** (`classic-selected`): Colored dot with white outline on top of highlight. Same radius as markers. Filtered by UUID.
-
-**Points**: Minimalist white dots with WebGL bloom glow effect.
-
-- **Markers** (`points-markers`): Transparent hit-area circles with zoom-dependent radius (6–30px). Pitch-aligned to map.
-- **Dots** (`points-dot`): Small white circles with blur, zoom-dependent radius (1–7px). Pitch-aligned to map.
-- **Selected** (`points-selected`): Same hit-area paint, filtered by UUID.
-- **Bloom** (`points-bloom`): Custom WebGL layer that renders glowing point sprites with multi-pass Gaussian blur, composited additively. Includes night shadow rendering in globe mode.
-
-### Night Layer
-
-Day/night shadow overlay rendered as a custom WebGL layer (part of the Points bloom layer). Uses subsolar point calculation to determine sun position. Visible only in globe projection.
+- **Classic** (default): color-coded circles by GPS type — blue (exif), amber (inferred), green (user), gray (none). Larger transparent hit area for easier clicking; selected marker gets a darker highlight ring with white stroke.
+- **Points**: white glow dots, rendered via a custom WebGL layer with multi-pass Gaussian blur composited additively. Larger hit area for clicking. Includes a day/night shadow overlay in globe projection (subsolar point calculation).
 
 ### Globe Background
 
@@ -224,24 +219,9 @@ Full-screen overlay showing detailed photo metadata from Photos.app (via direct 
 
 ## GPX Track Overlay
 
-Displays GPX track data on the map when an album is selected.
+When an album is selected, the app fetches its file list from `/api/albums/{album}/files` and loads any visible `.gpx` files. Tracks render as a colored line with a black shadow underneath; waypoints render as colored circles with text labels. Each album gets a color from a rotating palette of 8.
 
-- On album filter change, fetches file list from `/api/albums/{album}/files`
-- Loads visible `.gpx` files from `data/albums/{album}/{filename}`
-- Parses GPX tracks (`<trk>`) and waypoints (`<wpt>`), including elevation data
-- Computes total track distance (via `@turf/distance`) and elevation gain/loss
-- Each album gets a color from a rotating palette of 8 colors
-
-### GPX Layers (4 layers)
-
-- **Track outline** (`gpx-track-outline`): Black shadow line (width 6, opacity 0.4)
-- **Track line** (`gpx-track-line`): Colored line (width 3, opacity 0.85), rounded caps and joins
-- **Waypoint circles** (`gpx-waypoint-circles`): White circles with colored stroke (radius 5)
-- **Waypoint labels** (`gpx-waypoint-labels`): White text with dark halo, offset below circle
-
-### Track Visibility
-
-GPX track visibility is controlled per-file via the album files modal. Hidden files are excluded from track rendering on the map. Visibility state is persisted in the `album_files` table in `app.db`.
+Per-file visibility is controlled in the album files modal and persisted to `album_files` in `app.db`; hidden files are excluded from rendering. Implementation: `components/map-gpx/index.ts`.
 
 ## Photo Route
 
@@ -249,13 +229,7 @@ Displays a route connecting filtered album photos in chronological order. Only a
 
 ### Route Display
 
-When toggled on via the "Route" button in the filter panel, a route line connects all filtered photos sorted by UTC time. Three map layers:
-
-- **Route outline** (`photo-route-outline`): Black line (width 4, opacity 0.3)
-- **Route line** (`photo-route-line`): Blue line (#60a5fa, width 2)
-- **Route highlight** (`photo-route-highlight`): White line (width 2, hidden by default)
-
-If a saved route exists for the album (with custom waypoints or routing methods), it is loaded from the server. Otherwise, a default straight-line route is built from the filtered photos.
+When toggled on via the "Route" button in the filter panel, a blue line connects all filtered photos sorted by UTC time. If a saved route exists for the album (with custom waypoints or routing methods), it is loaded from the server. Otherwise, a default straight-line route is built from the filtered photos.
 
 ### Route Reconciliation
 
@@ -265,32 +239,18 @@ Reconciliation runs at load time only — not on every photo edit while the rout
 
 ### Route Editing
 
-Activated via the "Edit" button (appears when route is visible). Enters an interactive editing mode with crosshair cursor and six map layers for points, lines, and hit targets.
+Activated via the "Edit" button (appears when route is visible). Crosshair cursor; the route renders with extra hit/hover layers for interaction.
 
 **Operations:**
 
-- **Add waypoint**: Click on a route segment to insert a waypoint at that position
-- **Remove waypoint**: Click on an existing waypoint to delete it (photo points cannot be removed)
-- **Drag point**: Mousedown + drag any point to move it; adjacent segments update in real-time
-- **Change routing method**: Right-click a segment to open a popup with method options
+- **Add waypoint**: click a route segment to insert a waypoint at that position.
+- **Remove waypoint**: click an existing waypoint to delete it. Photo points can't be removed.
+- **Drag point**: mousedown + drag any point; adjacent segments update in real-time.
+- **Change routing method**: right-click a segment to open a popup with method options.
 
-**Routing methods** (per segment):
+**Routing methods** per segment: straight (default), driving (ORS driving-car), hiking (ORS foot-hiking), none (hidden segment). Driving/hiking entries hide when `PUBLIC_ORS_API_KEY` isn't set; on routing failure the segment downgrades to straight; waypoints can't be inserted on "none" segments.
 
-- **Straight**: Direct line between points (default)
-- **Driving**: OpenRouteService driving-car profile (hidden when `PUBLIC_ORS_API_KEY` is not set)
-- **Hiking**: ORS foot-hiking profile (hidden when `PUBLIC_ORS_API_KEY` is not set)
-- **None**: Hides the segment (no line drawn)
-
-Routed segments (driving/hiking) are automatically re-routed via ORS when waypoints are added or dragged. On routing failure (no ORS key, request error, etc.), the segment's method downgrades to straight. Waypoints cannot be inserted on "none" segments.
-
-**Point types** (visual distinction in edit mode):
-
-- **Photo points**: Larger circles (3–10px), color-coded by GPS type
-- **Waypoints**: Smaller circles (1.5–5px), same color coding
-
-**Persistence**: Routes are auto-saved to the server (1s debounce) via PUT `/api/albums/{album}/route`. Route visibility is persisted in URL params.
-
-**Exit**: Press Escape or click the "Edit" button again. Switching to "all albums" also exits edit mode.
+Routes auto-save (1s debounce) via PUT `/api/albums/{album}/route`. Visibility persists via the `route` URL param. Exit edit with Escape, the "Edit" button again, or by switching to "all albums".
 
 ### Route API
 
@@ -313,20 +273,13 @@ Interactive distance measurement tool for measuring distances on the map.
 
 ## Filter Panel
 
-Fixed top-right (220px wide). Collapsible — clicking the header toggles the panel body. Implemented as `<filter-panel>` Lit web component. Shows:
+Top-right, 220px wide, collapsible (click the header to toggle). Implemented as `<filter-panel>`. Contents: item count, the filters described above, view-tool buttons (Fit, Reset, Measure, conditional Route/Edit/Files), Apple Maps / Google Maps deep links, and the pending-edits section.
 
-- Title "Karttakuvat" (clickable header to collapse/expand)
-- Item count (photos and/or videos)
-- Filter section: Year, Album, Camera dropdowns; Media and Location toggle buttons; Map style buttons; Marker style buttons (Classic/Points)
-- "Fit" button — fits map to filtered photos; keeps current selection unless oldest or newest is open (toggles between them); selects oldest if nothing is open
-- "Reset" button — closes popup, exits measure mode, resets all filters/map style/marker style to defaults, clears and immediately persists all URL params, fits to all photos
-- "Measure" button — toggles distance measurement mode (highlighted blue when active)
-- "Route" button (conditional) — toggles photo route display (only shown when a specific album is selected)
-- "Edit" button (conditional) — enters route editing mode (only shown when route is visible)
-- "Files" button (conditional) — opens album files management modal (only shown when an album is selected)
-- "Apple Maps" button — opens Apple Maps at the current map center or selected photo location (satellite view)
-- "Google Maps" button — opens Google Maps at the current map center or selected photo location
-- Pending edits section (hidden when no edits): count + Save/Discard buttons
+Notable behaviours:
+
+- **Reset** is broad — closes any popup, exits measure mode, resets filters / map style / marker style to defaults, clears and immediately persists all URL params, fits to all photos.
+- **Fit** keeps current selection unless oldest or newest is open (toggles between them) or nothing is open (selects oldest).
+- **Route**, **Edit**, **Files** are conditional — see `components/filter-panel/index.ts` for the visibility rules.
 
 ## URL State
 

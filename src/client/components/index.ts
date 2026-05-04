@@ -1,5 +1,14 @@
-import './album-files-modal';
+import './files-modal';
+import './app-root';
 import './filter-panel';
+import './map-fit';
+import './map-gpx';
+import './map-markers';
+import './map-measure';
+import './map-placement';
+import './map-popup';
+import './map-route';
+import './map-view';
 import './metadata-modal';
 import './photo-lightbox';
 import './photo-popup';

@@ -19,7 +19,7 @@ export interface Photo {
 
 export interface MarkerLayer {
   readonly id: string;
-  install: (map: MapGL) => void;
+  install: (map: MapGL, beforeId: string) => void;
   uninstall: () => void;
   setView: (view: {
     photos: Photo[];

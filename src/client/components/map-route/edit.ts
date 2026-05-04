@@ -7,18 +7,17 @@ import type {
 
 import * as data from '@common/data';
 import * as edits from '@common/edits';
+import selection from '@common/selection';
 import { effect } from '@common/signals';
 import type { Photo } from '@common/types';
+import { setLayersVisibility } from '@components/map-view/api';
 
-import route, { type RouteData } from '.';
-import mapUtils from '../map-utils';
-import selection from '../selection';
+import type { MapRoute } from '.';
 import {
   ALL_EDIT_LAYERS,
   applySegmentMethod,
   buildRouteLineFeatures,
   createSegmentPopup,
-  EDIT_IDS,
   findNearestSegment,
   insertWaypointInRoute,
   removeWaypointFromRoute,
@@ -26,6 +25,7 @@ import {
   updateAdjacentSegments
 } from './helpers';
 import { syncPhotoPoints } from './reconcile';
+import type { RouteData } from './types';
 
 // ---------- State machine ----------
 
@@ -43,6 +43,7 @@ type InteractionState =
   | { kind: 'dragging'; pointIdx: number };
 
 let map: MapGL | null = null;
+let host: MapRoute | null = null;
 let interaction: InteractionState | null = null;
 let routeData: RouteData | null = null;
 let popupEl: HTMLElement | null = null;
@@ -91,8 +92,9 @@ function cursorFor(s: InteractionState | null): string | null {
 
 // ---------- Public API ----------
 
-export function initRouteEdit(m: MapGL): void {
+export function initRouteEdit(m: MapGL, h: MapRoute): void {
   map = m;
+  host = h;
 
   let wasActive = false;
   effect(() => {
@@ -121,7 +123,7 @@ export function toggleRouteEdit(): void {
   }
   // Precondition: need route data buildable. Bail without flipping the
   // signal if there isn't anything to edit.
-  if ((route.getData() ?? route.buildDefault()) === null) return;
+  if ((host?.getData() ?? host?.buildDefault() ?? null) === null) return;
   selection.interactionMode.set('route-edit');
 }
 
@@ -133,9 +135,9 @@ export function exitRouteEdit(): void {
 
 function onEnter(): void {
   if (map === null) return;
-  // exitRouteEdit pushes routeData back into the display module; nothing
-  // reads route.getData() between enter and exit so we don't push it now.
-  routeData = route.getData() ?? route.buildDefault();
+  // exitRouteEdit pushes routeData back into the host element; nothing
+  // reads host.getData() between enter and exit so we don't push it now.
+  routeData = host?.getData() ?? host?.buildDefault() ?? null;
   if (routeData === null) return;
   syncPhotoPoints(routeData);
 
@@ -147,12 +149,12 @@ function onEnter(): void {
 
   map.on('click', onMapClick);
   map.on('contextmenu', onRightClick);
-  map.on('mousedown', EDIT_IDS.points, onPointMouseDown);
-  map.on('mousedown', EDIT_IDS.hit, onSegmentMouseDown);
-  map.on('mouseleave', EDIT_IDS.hit, onSegmentLeave);
-  map.on('mousemove', EDIT_IDS.hit, onSegmentMove);
-  map.on('mouseenter', EDIT_IDS.points, onPointEnter);
-  map.on('mouseleave', EDIT_IDS.points, onPointLeave);
+  map.on('mousedown', 'route-edit-points-layer', onPointMouseDown);
+  map.on('mousedown', 'route-edit-hit-layer', onSegmentMouseDown);
+  map.on('mouseleave', 'route-edit-hit-layer', onSegmentLeave);
+  map.on('mousemove', 'route-edit-hit-layer', onSegmentMove);
+  map.on('mouseenter', 'route-edit-points-layer', onPointEnter);
+  map.on('mouseleave', 'route-edit-points-layer', onPointLeave);
   document.addEventListener('keydown', onKeyDown);
 
   transition({ kind: 'idle' });
@@ -169,23 +171,23 @@ function onExit(): void {
   map.getCanvas().classList.remove('crosshair');
   removePopup();
   // Restore blue display layers with current edit data
-  if (routeData !== null) route.setData(routeData);
+  if (routeData !== null) host?.setData(routeData);
   setLayerVisibility(false);
 
   map.off('click', onMapClick);
   map.off('contextmenu', onRightClick);
-  map.off('mousedown', EDIT_IDS.points, onPointMouseDown);
-  map.off('mousedown', EDIT_IDS.hit, onSegmentMouseDown);
-  map.off('mouseleave', EDIT_IDS.hit, onSegmentLeave);
-  map.off('mousemove', EDIT_IDS.hit, onSegmentMove);
-  map.off('mouseenter', EDIT_IDS.points, onPointEnter);
-  map.off('mouseleave', EDIT_IDS.points, onPointLeave);
+  map.off('mousedown', 'route-edit-points-layer', onPointMouseDown);
+  map.off('mousedown', 'route-edit-hit-layer', onSegmentMouseDown);
+  map.off('mouseleave', 'route-edit-hit-layer', onSegmentLeave);
+  map.off('mousemove', 'route-edit-hit-layer', onSegmentMove);
+  map.off('mouseenter', 'route-edit-points-layer', onPointEnter);
+  map.off('mouseleave', 'route-edit-points-layer', onPointLeave);
   document.removeEventListener('keydown', onKeyDown);
 }
 
 function setLayerVisibility(show: boolean): void {
   if (map === null) return;
-  mapUtils.setLayersVisibility(map, ALL_EDIT_LAYERS, show);
+  setLayersVisibility(map, ALL_EDIT_LAYERS, show);
 }
 
 // ---------- Source updates ----------
@@ -193,7 +195,7 @@ function setLayerVisibility(show: boolean): void {
 function updateEditSources(): void {
   if (map === null || routeData === null) return;
 
-  const pointsSrc = map.getSource<GeoJSONSource>(EDIT_IDS.pointsSrc);
+  const pointsSrc = map.getSource<GeoJSONSource>('route-edit-points');
   if (pointsSrc !== undefined) {
     const photoMap = new Map<string, Photo>();
     for (const p of data.filteredPhotos.get()) photoMap.set(p.uuid, p);
@@ -214,7 +216,7 @@ function updateEditSources(): void {
     });
   }
 
-  const hitSrc = map.getSource<GeoJSONSource>(EDIT_IDS.hitSrc);
+  const hitSrc = map.getSource<GeoJSONSource>('route-edit-hit');
   if (hitSrc !== undefined) {
     hitSrc.setData({
       type: 'FeatureCollection',
@@ -232,17 +234,17 @@ function updateEditSources(): void {
 /** Bring edit-mode points on top of marker/photo layers added after our edit layers. */
 function raiseEditPoints(): void {
   if (map === null) return;
-  if (map.getLayer(EDIT_IDS.pointsOutline) !== undefined) {
-    map.moveLayer(EDIT_IDS.pointsOutline);
+  if (map.getLayer('route-edit-points-outline') !== undefined) {
+    map.moveLayer('route-edit-points-outline');
   }
-  if (map.getLayer(EDIT_IDS.points) !== undefined) {
-    map.moveLayer(EDIT_IDS.points);
+  if (map.getLayer('route-edit-points-layer') !== undefined) {
+    map.moveLayer('route-edit-points-layer');
   }
 }
 
 function updateLineSrc(): void {
   if (map === null || routeData === null) return;
-  const src = map.getSource<GeoJSONSource>(EDIT_IDS.lineSrc);
+  const src = map.getSource<GeoJSONSource>('route-edit-line');
   if (src === undefined) return;
   const features = buildRouteLineFeatures(routeData);
   src.setData({ type: 'FeatureCollection', features });
@@ -254,7 +256,7 @@ function scheduleAutoSave(): void {
     saveTimer = null;
     const album = data.filters.get().album;
     if (album !== 'all' && routeData !== null) {
-      void route.save(album, routeData);
+      void host?.save(album, routeData);
     }
   }, 1000);
 }
@@ -282,7 +284,7 @@ function onMapClick(e: MapMouseEvent): void {
 
   // 1. Check if clicking on a route edit point
   const pointFeatures = map.queryRenderedFeatures(e.point, {
-    layers: [EDIT_IDS.points]
+    layers: ['route-edit-points-layer']
   });
   if (pointFeatures.length > 0) {
     const idx = pointFeatures[0]!.properties.index as number;
@@ -296,7 +298,7 @@ function onMapClick(e: MapMouseEvent): void {
   // 3. Add new waypoint — on segment if hit, otherwise nearest segment
   removePopup();
   const hitFeatures = map.queryRenderedFeatures(e.point, {
-    layers: [EDIT_IDS.hit]
+    layers: ['route-edit-hit-layer']
   });
   const hitSegIdx = firstClickableHit(hitFeatures);
   if (hitSegIdx === null) {
@@ -310,7 +312,7 @@ function onRightClick(e: MapMouseEvent): void {
   if (map === null || routeData === null) return;
   e.preventDefault();
   const hitFeatures = map.queryRenderedFeatures(e.point, {
-    layers: [EDIT_IDS.hit]
+    layers: ['route-edit-hit-layer']
   });
   if (hitFeatures.length > 0) {
     const segIdx = hitFeatures[0]!.properties.segIndex as number;
@@ -427,7 +429,7 @@ function onSegmentMouseDown(e: MapLayerMouseEvent): void {
   }
   // Don't start segment drag if also on a point
   const pointFeatures = map.queryRenderedFeatures(e.point, {
-    layers: [EDIT_IDS.points]
+    layers: ['route-edit-points-layer']
   });
   if (pointFeatures.length > 0) return;
 
@@ -517,7 +519,7 @@ function setCursorClass(cls: string | null): void {
 
 function setHoverSource(geojson: object): void {
   if (map === null) return;
-  const src = map.getSource<GeoJSONSource>(EDIT_IDS.hoverSrc);
+  const src = map.getSource<GeoJSONSource>('route-edit-hover');
   src?.setData(geojson as GeoJSON.GeoJSON);
 }
 

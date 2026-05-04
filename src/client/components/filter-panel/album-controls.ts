@@ -1,9 +1,9 @@
 import { SignalWatcher } from '@lit-labs/signals';
-import selection from '@map/selection';
 import { html, LitElement, type PropertyValues } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 
 import * as actions from '@common/actions';
+import selection from '@common/selection';
 import { viewState } from '@common/view-state';
 
 import { styles } from './styles';

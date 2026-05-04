@@ -2,12 +2,12 @@
 
 Geotagged photo map viewer with Apple Photos integration.
 
-## Project Stats (as of 04.05.2026)
+## Project Stats (as of 05.05.2026)
 
-- **TypeScript files**: 64
-- **Lines of code**: 12,578
-- **Total commits**: 490
-- **Total tokens**: ~1,540M | **Total cost**: ~$947
+- **TypeScript files**: 62
+- **Lines of code**: 12,706
+- **Total commits**: 523
+- **Total tokens**: ~1,845M | **Total cost**: ~$1,120
 
 ## Updating This Diary
 
@@ -33,15 +33,31 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 - State the user-visible change only; skip mechanism and backstory unless that _is_ the change.
 - Describe final outcomes, not reverted intermediate attempts.
 
-## 04.05.2026 — Events-to-signals refactor
+## 05.05.2026 — Module consolidation
 
-**Tokens**: 50M | **Cost**: $30
+**Tokens**: 95M | **Cost**: $53
+
+- Map layer specs are now plain data; per-feature `_LAYER`/`_SOURCE`/`EDIT_IDS` consts removed
+- Init-style modules folded into the elements that owned them
+- Renamed `<album-files-modal>` → `<files-modal>`
+- Sibling helpers inlined into hosts (debug-log, gestures, cascade, popup edits, clipboard, map-utils)
+- map-view's `api`/`map-context`/`feature-element` trio collapsed into `api.ts`
+
+## 04.05.2026 — All-lit-elements architecture
+
+**Tokens**: 259M | **Cost**: $151
 
 - State management overhauled to signals via `@lit-labs/signals`; commands route through a single `@common/actions` module; `events.ts` deleted
 - Placement, measure, and route-edit are now mutex by construction (one `interactionMode` enum)
 - Empty-map click during measure or route-edit no longer exits the active mode
 - `?markers=points` is now actually persisted to URL (helper had its default inverted)
 - Map module inits run from a single `map.once('load')` in `index.ts`; per-module load wrappers removed
+- All map subsystems converted to `<map-*>` Lit elements; new `<app-root>` and `<map-view>` shells
+- Feature elements consume `MapApi` via `mapContext` (`@lit/context`); map-view forwards narrowed methods to siblings
+- `<map-view>` uses shadow DOM with embedded maplibre styles; z-anchor placeholder layers dropped
+- `src/client/map/` folded into per-feature directories under `components/`; `@map/*` path alias dropped
+- Markers now refresh on filter change (was a stale-view bug)
+- `MapFeatureElement` base class consolidates `mapContext` consume + light-DOM render root
 
 ## 03.05.2026 — Route Polish & Map Architecture
 

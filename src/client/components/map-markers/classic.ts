@@ -3,13 +3,12 @@ import type {
   ExpressionSpecification,
   FilterSpecification,
   GeoJSONSource,
+  LayerSpecification,
   Map as MapGL
 } from 'maplibre-gl';
 
 import * as edits from '@common/edits';
 import type { MarkerLayer, Photo } from '@common/types';
-
-import zAnchors from '../z-anchors';
 
 const gpsColor = [
   'match',
@@ -91,133 +90,113 @@ const sortKey = [
   ['get', 'index']
 ] as ExpressionSpecification;
 
-const SOURCE = 'classic-source';
-const LAYERS = [
-  'classic-hit-area',
-  'classic-outlines',
-  'classic-markers',
-  'classic-selected-highlight',
-  'classic-selected'
-] as const;
+const LAYERS: LayerSpecification[] = [
+  // Transparent hit area — larger than visible markers for easier clicking.
+  {
+    id: 'classic-hit-area',
+    type: 'circle',
+    source: 'classic-source',
+    layout: { 'circle-sort-key': sortKey },
+    paint: {
+      'circle-color': 'transparent',
+      'circle-radius': hitAreaRadius,
+      'circle-opacity': 0,
+      'circle-pitch-alignment': 'map'
+    }
+  },
+  // Outline layer — white rings behind all fills.
+  {
+    id: 'classic-outlines',
+    type: 'circle',
+    source: 'classic-source',
+    layout: { 'circle-sort-key': sortKey },
+    paint: {
+      'circle-color': '#fff',
+      'circle-radius': outlineRadius,
+      'circle-pitch-alignment': 'map'
+    }
+  },
+  // Fill layer on top — colored dots, no stroke.
+  {
+    id: 'classic-markers',
+    type: 'circle',
+    source: 'classic-source',
+    layout: { 'circle-sort-key': sortKey },
+    paint: {
+      'circle-color': gpsColor,
+      'circle-radius': radius,
+      'circle-pitch-alignment': 'map'
+    }
+  },
+  // Selected marker — semi-transparent fill with white stroke.
+  {
+    id: 'classic-selected-highlight',
+    type: 'circle',
+    source: 'classic-source',
+    paint: {
+      'circle-color': 'rgba(0, 0, 0, 0.5)',
+      'circle-radius': selectedRadius,
+      'circle-stroke-width': selectedStroke,
+      'circle-stroke-color': '#fff',
+      'circle-pitch-alignment': 'map'
+    },
+    filter: ['==', ['get', 'uuid'], '']
+  },
+  // Selected marker — colored dot with white outline on top of highlight.
+  {
+    id: 'classic-selected',
+    type: 'circle',
+    source: 'classic-source',
+    paint: {
+      'circle-color': gpsColor,
+      'circle-radius': radius,
+      'circle-stroke-width': [
+        'interpolate',
+        ['linear'],
+        ['zoom'],
+        2,
+        1,
+        8,
+        1.5,
+        14,
+        2
+      ] as ExpressionSpecification,
+      'circle-stroke-color': '#fff',
+      'circle-pitch-alignment': 'map'
+    },
+    filter: ['==', ['get', 'uuid'], '']
+  }
+];
+
+const LAYER_IDS = LAYERS.map((l) => l.id);
 
 export class ClassicLayer implements MarkerLayer {
   readonly id = 'classic-hit-area';
   private map: MapGL | null = null;
 
-  install(map: MapGL) {
+  install(map: MapGL, before: string) {
     this.map = map;
-    const before = zAnchors.id('markers');
 
-    map.addSource(SOURCE, {
+    map.addSource('classic-source', {
       type: 'geojson',
       data: { type: 'FeatureCollection', features: [] },
       maxzoom: 22
     });
 
-    // Transparent hit area — larger than visible markers for easier clicking
-    map.addLayer(
-      {
-        id: 'classic-hit-area',
-        type: 'circle',
-        source: SOURCE,
-        layout: { 'circle-sort-key': sortKey },
-        paint: {
-          'circle-color': 'transparent',
-          'circle-radius': hitAreaRadius,
-          'circle-opacity': 0,
-          'circle-pitch-alignment': 'map'
-        }
-      },
-      before
-    );
-
-    // Outline layer — white rings behind all fills
-    map.addLayer(
-      {
-        id: 'classic-outlines',
-        type: 'circle',
-        source: SOURCE,
-        layout: { 'circle-sort-key': sortKey },
-        paint: {
-          'circle-color': '#fff',
-          'circle-radius': outlineRadius,
-          'circle-pitch-alignment': 'map'
-        }
-      },
-      before
-    );
-
-    // Fill layer on top — colored dots, no stroke
-    map.addLayer(
-      {
-        id: 'classic-markers',
-        type: 'circle',
-        source: SOURCE,
-        layout: { 'circle-sort-key': sortKey },
-        paint: {
-          'circle-color': gpsColor,
-          'circle-radius': radius,
-          'circle-pitch-alignment': 'map'
-        }
-      },
-      before
-    );
-
-    // Selected marker — semi-transparent fill with white stroke
-    map.addLayer(
-      {
-        id: 'classic-selected-highlight',
-        type: 'circle',
-        source: SOURCE,
-        paint: {
-          'circle-color': 'rgba(0, 0, 0, 0.5)',
-          'circle-radius': selectedRadius,
-          'circle-stroke-width': selectedStroke,
-          'circle-stroke-color': '#fff',
-          'circle-pitch-alignment': 'map'
-        },
-        filter: ['==', ['get', 'uuid'], '']
-      },
-      before
-    );
-
-    // Selected marker — colored dot with white outline on top of highlight
-    map.addLayer(
-      {
-        id: 'classic-selected',
-        type: 'circle',
-        source: SOURCE,
-        paint: {
-          'circle-color': gpsColor,
-          'circle-radius': radius,
-          'circle-stroke-width': [
-            'interpolate',
-            ['linear'],
-            ['zoom'],
-            2,
-            1,
-            8,
-            1.5,
-            14,
-            2
-          ] as ExpressionSpecification,
-          'circle-stroke-color': '#fff',
-          'circle-pitch-alignment': 'map'
-        },
-        filter: ['==', ['get', 'uuid'], '']
-      },
-      before
-    );
+    for (const spec of LAYERS) map.addLayer(spec, before);
   }
 
   uninstall() {
     if (this.map === null) return;
-    for (let i = LAYERS.length - 1; i >= 0; i--) {
-      if (this.map.getLayer(LAYERS[i]!) !== undefined) {
-        this.map.removeLayer(LAYERS[i]!);
+    for (let i = LAYER_IDS.length - 1; i >= 0; i--) {
+      const id = LAYER_IDS[i]!;
+      if (this.map.getLayer(id) !== undefined) {
+        this.map.removeLayer(id);
       }
     }
-    if (this.map.getSource(SOURCE) !== undefined) this.map.removeSource(SOURCE);
+    if (this.map.getSource('classic-source') !== undefined) {
+      this.map.removeSource('classic-source');
+    }
     this.map = null;
   }
 
@@ -228,11 +207,11 @@ export class ClassicLayer implements MarkerLayer {
   }) {
     if (this.map === null) return;
 
-    const source = this.map.getSource<GeoJSONSource>(SOURCE);
+    const source = this.map.getSource<GeoJSONSource>('classic-source');
     if (source !== undefined) source.setData(buildGeoJSON(view.photos));
 
     const v = view.hidden ? 'none' : 'visible';
-    for (const id of LAYERS) {
+    for (const id of LAYER_IDS) {
       if (this.map.getLayer(id) !== undefined) {
         this.map.setLayoutProperty(id, 'visibility', v);
       }

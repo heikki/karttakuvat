@@ -107,27 +107,24 @@ function toggleOldestNewest(): void {
 }
 
 let restoredFromUrl = false;
-
-function init(): void {
-  effect(() => {
-    const filtered = data.filteredPhotos.get();
-    if (!restoredFromUrl) {
-      const uuid = photoFromUrl();
-      if (uuid === null) {
-        restoredFromUrl = true;
-        return;
-      }
-      if (filtered.some((p) => p.uuid === uuid)) {
-        // Signal already seeded from URL — no .set() needed.
-        restoredFromUrl = true;
-      }
+effect(() => {
+  const filtered = data.filteredPhotos.get();
+  if (!restoredFromUrl) {
+    const uuid = photoFromUrl();
+    if (uuid === null) {
+      restoredFromUrl = true;
       return;
     }
-    const cur = selectedPhotoUuid.get();
-    if (cur === null) return;
-    if (!filtered.some((p) => p.uuid === cur)) clear();
-  });
-}
+    if (filtered.some((p) => p.uuid === uuid)) {
+      // Signal already seeded from URL — no .set() needed.
+      restoredFromUrl = true;
+    }
+    return;
+  }
+  const cur = selectedPhotoUuid.get();
+  if (cur === null) return;
+  if (!filtered.some((p) => p.uuid === cur)) clear();
+});
 
 export default {
   selectedPhotoUuid,
@@ -141,6 +138,5 @@ export default {
   enterPlacement,
   next,
   prev,
-  toggleOldestNewest,
-  init
+  toggleOldestNewest
 };

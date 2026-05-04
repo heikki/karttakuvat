@@ -40,12 +40,6 @@ const pathAliasPlugin = {
         )
       )
     }));
-
-    build.onResolve({ filter: /^@map\// }, (args: { path: string }) => ({
-      path: resolveWithExtensions(
-        resolve(baseDir, 'src/client/map', args.path.replace('@map/', ''))
-      )
-    }));
   }
 };
 

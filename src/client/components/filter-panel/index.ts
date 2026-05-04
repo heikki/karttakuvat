@@ -1,5 +1,4 @@
 import { SignalWatcher } from '@lit-labs/signals';
-import selection from '@map/selection';
 import { css, html, LitElement, nothing } from 'lit';
 import { customElement, state as litState } from 'lit/decorators.js';
 
@@ -13,13 +12,14 @@ import {
   flushViewState,
   resetAllViewParams
 } from '@common/filter-url';
+import selection from '@common/selection';
 import { getYear, isVideo } from '@common/utils';
 import { viewState } from '@common/view-state';
 
 import './album-controls';
 
-import { cascade } from './cascade';
 import {
+  cascade,
   DEFAULT_GPS,
   DEFAULT_MEDIA,
   renderFilterBtns,

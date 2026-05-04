@@ -8,45 +8,6 @@ body {
     -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background: #191a22;
 }
-#map {
-  height: calc(100vh - 28px);
-  width: 100%;
-  position: relative;
-}
-#map:focus,
-.maplibregl-canvas:focus {
-  outline: none;
-}
-#globe-bg {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 0;
-}
-.maplibregl-canvas {
-  background: transparent;
-}
-
-.maplibregl-popup-content {
-  padding: 0 !important;
-  border-radius: 12px !important;
-  overflow: hidden;
-  box-shadow:
-    0 4px 24px rgba(0, 0, 0, 0.5),
-    0 0 0 1px rgba(255, 255, 255, 0.12);
-}
-
-canvas.crosshair {
-  cursor: crosshair !important;
-}
-canvas.cursor-pointer {
-  cursor: pointer !important;
-}
-canvas.cursor-grabbing {
-  cursor: grabbing !important;
-}
 
 /* Measure distance overlay */
 .measure-overlay {
