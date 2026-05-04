@@ -37,49 +37,33 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 
 **Tokens**: 95M | **Cost**: $53
 
-- Map layer specs are now plain data; per-feature `_LAYER`/`_SOURCE`/`EDIT_IDS` consts removed
-- Init-style modules folded into the elements that owned them
-- Renamed `<album-files-modal>` → `<files-modal>`
-- Sibling helpers inlined into hosts (debug-log, gestures, cascade, popup edits, clipboard, map-utils)
-- map-view's `api`/`map-context`/`feature-element` trio collapsed into `api.ts`
+- Internal: layer specs reduced to plain data; per-feature `_LAYER`/`_SOURCE`/`EDIT_IDS` consts removed
+- Internal: helpers re-inlined into their hosts (debug-log, gestures, cascade, popup edits, clipboard, map-utils)
+- Internal: map-view's api/context/feature-element trio collapsed into `api.ts`
+- Internal: init-only modules folded into the elements that owned them; `<album-files-modal>` → `<files-modal>`
 
-## 04.05.2026 — All-lit-elements architecture
+## 04.05.2026 — Lit elements & actions module
 
 **Tokens**: 259M | **Cost**: $151
 
-- State management overhauled to signals via `@lit-labs/signals`; commands route through a single `@common/actions` module; `events.ts` deleted
-- Placement, measure, and route-edit are now mutex by construction (one `interactionMode` enum)
 - Empty-map click during measure or route-edit no longer exits the active mode
-- `?markers=points` is now actually persisted to URL (helper had its default inverted)
-- Map module inits run from a single `map.once('load')` in `index.ts`; per-module load wrappers removed
-- All map subsystems converted to `<map-*>` Lit elements; new `<app-root>` and `<map-view>` shells
-- Feature elements consume `MapApi` via `mapContext` (`@lit/context`); map-view forwards narrowed methods to siblings
-- `<map-view>` uses shadow DOM with embedded maplibre styles; z-anchor placeholder layers dropped
-- `src/client/map/` folded into per-feature directories under `components/`; `@map/*` path alias dropped
-- Markers now refresh on filter change (was a stale-view bug)
-- `MapFeatureElement` base class consolidates `mapContext` consume + light-DOM render root
+- `?markers=points` now actually persists in the URL
+- Markers refresh on filter change (was a stale-view bug)
+- Internal: map subsystems converted to `<map-*>` Lit elements with `<app-root>`/`<map-view>` shells
+- Internal: commands route through a single `@common/actions` module; `events.ts` deleted
+- Internal: map module inits run from a single `map.once('load')` in `index.ts`
 
-## 03.05.2026 — Route Polish & Map Architecture
+## 03.05.2026 — Route polish & signals foundation
 
 **Tokens**: 199M | **Cost**: $128
 
-- Route edit: dragging a point no longer gets stuck if the mouse is released outside the map container
-- Toggling the photo route off/on is now instant — saved data is cached across the toggle instead of refetched
-- Autosave correctly defers while a photo location edit is pending (was persisting mid-edit coordinates)
-- Map subsystems converted to default-export modules with simplified method names (`selection.init`, `popup.get`, `route.save`); cross-module signals via `document` events
-- Z-anchor placeholder layers preserve layer z-order across module init order and basemap swaps
-- Focused-photo state (popup vs placement vs idle) extracted to a `selection` module that subscribers read instead of reaching across each other
-- Pending edits extracted to a dedicated `edits` module with its own subscribe channel, separating filter from edit notifications
+- Route edit: dragging a point no longer gets stuck if the mouse is released off-map
+- Photo route toggle is instant — data cached across off/on instead of refetched
+- Autosave defers during a pending photo location edit (was persisting mid-edit coords)
 - Arrow-key popup navigation no longer flashes the previous image at the new location
-- Popup module split into `popup/`, with edit operations extracted to `popup/edits.ts`
-- Filter-panel cascading filter logic extracted to a pure `cascade.ts` module
-- Clipboard buffer extracted from `data` into a dedicated `common/clipboard.ts`
-- Redundant `StoreController` reactive bridge in filter panel removed
-- Album-files modal → gpx decoupled via `AlbumFilesChangedEvent` (was reaching into `map/gpx` through dynamic imports)
-- Dead-code sweep: drop unused `MapStyle`/`MapStyles` interfaces, hidden-files Set in gpx, `@types/three` and `@types/maplibre-gl` devDeps, orphan `cursor-grab` CSS
-- Pan helpers folded into `popup/` — closes the popup↔pan import cycle
-- Fit's oldest/newest auto-select moved to `selection`
-- Marker adapters: single `setView` replaces `toggle` + `highlight` + `setMarkers`
+- Internal: state moved to signals via `@lit-labs/signals` (data, filters, edits, selection, mapStyle)
+- Internal: map subsystems split out (popup, edits, selection, cascade, clipboard, markers)
+- Internal: dead-code sweep — `MapStyle`/`MapStyles` types, orphan CSS, unused devDeps
 
 ## 02.05.2026 — Photo Route Reconciliation & Edit Polish
 
