@@ -1,4 +1,4 @@
-import { getSetting } from './app-db';
+import { getSetting } from './state';
 
 // Map client profile names to OpenRouteService profile names
 const ORS_PROFILES: Record<string, string> = {
@@ -8,11 +8,11 @@ const ORS_PROFILES: Record<string, string> = {
   cycling: 'cycling-regular'
 };
 
-function getApiKey(): string | null {
+function getApiKey(dataDir: string): string | null {
   return (
     process.env.PUBLIC_ORS_API_KEY ??
     process.env.ORS_API_KEY ??
-    getSetting('ors_api_key')
+    getSetting(dataDir, 'ors_api_key')
   );
 }
 
@@ -44,8 +44,11 @@ async function fetchRoute(
   return Response.json({ geometry: feature.geometry });
 }
 
-export async function handleRouteProxy(req: Request): Promise<Response> {
-  const apiKey = getApiKey();
+export async function handleRouteProxy(
+  req: Request,
+  dataDir: string
+): Promise<Response> {
+  const apiKey = getApiKey(dataDir);
   if (apiKey === null || apiKey === '') {
     return new Response(
       'ORS_API_KEY not configured. Set env var or db setting "ors_api_key".',

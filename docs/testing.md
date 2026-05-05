@@ -27,9 +27,9 @@ Seed: `src/client/common/interaction-mode.test.ts`.
 
 ### Tier 2 — server with fixtures (`bun:test`)
 
-In-process server modules backed by ephemeral SQLite. `app-db.ts` opens a DB under a tempdir per test; `photos-db.ts` will eventually point at a committed fixture sqlite. API-route tests boot `Bun.serve({ port: 0 })` with injected fakes for anything macOS-specific.
+In-process server modules backed by tempdir state. `item-store.ts` opens against a tempdir snapshot with an injected `PhotosWriter` and `buildFreshItems`; `state.ts` and `album-files.ts` round-trip through tempdir JSON; `photos-db.ts` will eventually point at a committed fixture sqlite. API-route tests boot `Bun.serve({ port: 0 })` with injected fakes for anything macOS-specific.
 
-Seed: `src/server/app-db.test.ts`.
+Seed: `src/server/item-store.test.ts`.
 
 ### Tier 3 — Lit components (`bun:test` + happy-dom)
 

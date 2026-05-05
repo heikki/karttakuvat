@@ -1,35 +1,14 @@
-import {
-  deleteAlbumFile,
-  getAlbumFiles,
-  getAllItems,
-  setFileVisible,
-  setSetting,
-  updateItemDate,
-  updateItemLocation
-} from './app-db';
-import {
-  applyHourOffset,
-  systemTzOffsetHours,
-  tzOffsetHours,
-  tzOffsetToSeconds
-} from './date-utils';
+import { deleteAlbumFile, getAlbumFiles, setFileVisible } from './album-files';
 import type { ImageCache } from './image-cache';
-import type { ItemEntry } from './items';
+import type { ItemStore, LocationEdit, TimeEdit } from './item-store';
 import {
   openPhotosDb,
   queryAssetIndex,
   queryMetadata,
   type AssetRecord
 } from './photos-db';
-import {
-  quitPhotosApp,
-  setDateTime,
-  setLocation,
-  setTimezone,
-  tzNameFromCoords,
-  tzOffsetFromCoords
-} from './photos-edit';
 import { handleRouteProxy } from './route-proxy';
+import { setSetting } from './state';
 import { defaultLibraryPath, serveVideo } from './video-stream';
 
 function serverError(context: string, err: unknown): Response {
@@ -37,26 +16,10 @@ function serverError(context: string, err: unknown): Response {
   return new Response('Internal server error', { status: 500 });
 }
 
-interface LocationEdit {
-  uuid: string;
-  lat: number;
-  lon: number;
-}
-
-interface TimeEdit {
-  uuid: string;
-  hours: number;
-}
-
 interface SetLocationsBody {
   edits: LocationEdit[];
   timeEdits?: TimeEdit[];
 }
-
-type ItemRecord = Pick<
-  ItemEntry,
-  'uuid' | 'date' | 'tz' | 'lat' | 'lon' | 'gps' | 'gps_accuracy'
->;
 
 const scriptLogBuffer: string[] = [];
 
@@ -73,122 +36,21 @@ function logEditResult(label: string, uuid: string, error?: string): void {
 }
 
 export function flushLogBuffer(): string[] {
-  const lines = scriptLogBuffer.splice(0);
-  return lines;
-}
-
-function applyLocationEdits(
-  items: ItemRecord[],
-  edits: LocationEdit[],
-  tzResults: Map<string, string | null>
-) {
-  for (const edit of edits) {
-    const item = items.find((i) => i.uuid === edit.uuid);
-    if (item !== undefined) {
-      item.lat = edit.lat;
-      item.lon = edit.lon;
-      item.gps = 'user';
-      item.gps_accuracy = 1;
-      const newTz = tzResults.get(edit.uuid);
-      if (newTz !== undefined && newTz !== item.tz) {
-        const oldOffset = tzOffsetHours(item.tz);
-        const newOffset = tzOffsetHours(newTz);
-        item.date = applyHourOffset(item.date, newOffset - oldOffset);
-        item.tz = newTz;
-      }
-    }
-  }
-}
-
-function applyTimeEdits(items: ItemRecord[], edits: TimeEdit[]) {
-  for (const edit of edits) {
-    const item = items.find((i) => i.uuid === edit.uuid);
-    if (item !== undefined) {
-      item.date = applyHourOffset(item.date, edit.hours);
-    }
-  }
-}
-
-// eslint-disable-next-line complexity -- sequential edits with tz lookup
-function processLocationEdits(
-  edits: LocationEdit[],
-  itemsByUuid: Map<string, ItemRecord>
-): Map<string, string | null> {
-  const tzResults = new Map<string, string | null>();
-  if (edits.length === 0) return tzResults;
-
-  for (const edit of edits) {
-    const item = itemsByUuid.get(edit.uuid);
-    try {
-      setLocation(edit.uuid, edit.lat, edit.lon);
-
-      const dateStr = item?.date ?? '';
-      const oldTz = item?.tz ?? null;
-      const tzName = tzNameFromCoords(edit.lat, edit.lon);
-      const newTz = tzOffsetFromCoords(edit.lat, edit.lon, dateStr);
-
-      if (tzName !== null && newTz !== null && newTz !== oldTz) {
-        const offsetSec = tzOffsetToSeconds(newTz);
-        setTimezone(edit.uuid, tzName, offsetSec);
-      }
-
-      tzResults.set(edit.uuid, newTz);
-      logEditResult('📍', edit.uuid);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      logEditResult('📍', edit.uuid, msg);
-    }
-  }
-
-  return tzResults;
-}
-
-function processTimeEdits(
-  edits: TimeEdit[],
-  itemsByUuid: Map<string, ItemRecord>
-): void {
-  for (const edit of edits) {
-    const item = itemsByUuid.get(edit.uuid);
-    if (item === undefined) continue;
-
-    // target is the desired local time in the photo's timezone
-    const target = applyHourOffset(item.date, edit.hours);
-
-    // AppleScript creates dates in the system's local timezone, but Photos
-    // stores them as UTC by subtracting the system offset. To end up with the
-    // right UTC value in Photos, adjust by (systemTz - photoTz) so Photos
-    // displays the correct local time when it adds back the photo's tz offset.
-    const photoTzHours = tzOffsetHours(item.tz);
-    const sysTzHours = systemTzOffsetHours(target);
-    const scriptTarget = applyHourOffset(target, sysTzHours - photoTzHours);
-
-    const [datePart, timePart] = scriptTarget.split(' ');
-    if (datePart === undefined || timePart === undefined) continue;
-
-    try {
-      setDateTime(edit.uuid, datePart.replaceAll(':', '-'), timePart);
-      logEditResult('⏰', edit.uuid);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      logEditResult('⏰', edit.uuid, msg);
-    }
-  }
+  return scriptLogBuffer.splice(0);
 }
 
 interface ApiHandlerOptions {
+  itemStore: ItemStore;
   imageCache?: ImageCache;
   libraryPath?: string;
 }
 
 /**
  * Create API route handler parameterized by data directory.
- * The dataDir should contain app.db, full/, thumb/, albums/.
+ * The dataDir should contain `items.json`, `state.json`, `cache/`, `albums/`.
  */
-export function createApiHandler(
-  dataDir: string,
-  options: ApiHandlerOptions = {}
-) {
-  const { imageCache } = options;
+export function createApiHandler(dataDir: string, options: ApiHandlerOptions) {
+  const { itemStore, imageCache } = options;
   const libraryPath = options.libraryPath ?? defaultLibraryPath();
   let photosDb: ReturnType<typeof openPhotosDb> | null = null;
   let assetIndex: Map<string, AssetRecord> | null = null;
@@ -255,7 +117,7 @@ export function createApiHandler(
         const lower = f.toLowerCase();
         return lower.endsWith('.gpx') || lower.endsWith('.md');
       });
-      const dbInfo = getAlbumFiles(album);
+      const dbInfo = getAlbumFiles(dataDir, album);
       const result = files.map((f) => ({
         name: f,
         visible: dbInfo.get(f)?.visible ?? true
@@ -274,7 +136,7 @@ export function createApiHandler(
       const { unlink } = await import('node:fs/promises');
       const filePath = `${dataDir}/albums/${album}/${filename}`;
       await unlink(filePath);
-      deleteAlbumFile(album, filename);
+      deleteAlbumFile(dataDir, album, filename);
       return Response.json({ ok: true });
     } catch (err) {
       return serverError('handleDeleteAlbumFile', err);
@@ -290,7 +152,7 @@ export function createApiHandler(
       .json()
       .then((body: unknown) => {
         const { visible } = body as { visible: boolean };
-        setFileVisible(album, filename, visible);
+        setFileVisible(dataDir, album, filename, visible);
         return Response.json({ ok: true });
       })
       .catch((err: unknown) => serverError('handleSetFileVisibility', err));
@@ -308,7 +170,6 @@ export function createApiHandler(
     }
   }
 
-  // eslint-disable-next-line complexity -- sequential edit pipeline
   async function handleSaveEdits(req: Request): Promise<Response> {
     try {
       const body = (await req.json()) as SetLocationsBody;
@@ -319,44 +180,12 @@ export function createApiHandler(
         return new Response('No edits provided', { status: 400 });
       }
 
-      // Build in-memory lookup from DB for tz computation during edits
-      const allItems = getAllItems();
-      const itemsByUuid = new Map<string, ItemRecord>(
-        allItems.map((i) => [i.uuid, i])
-      );
-
-      const tzResults = processLocationEdits(locationEdits, itemsByUuid);
-      processTimeEdits(timeEdits, itemsByUuid);
-
-      if (locationEdits.length > 0 || timeEdits.length > 0) {
-        quitPhotosApp();
+      const results = itemStore.applyEdits({ locationEdits, timeEdits });
+      for (const r of results.locationResults) {
+        logEditResult('📍', r.uuid, r.ok ? undefined : r.error);
       }
-
-      // Apply edits to in-memory items, then persist to DB
-      const editedItems = [...itemsByUuid.values()];
-      applyLocationEdits(editedItems, locationEdits, tzResults);
-      applyTimeEdits(editedItems, timeEdits);
-
-      // Persist each edited item to DB
-      for (const edit of locationEdits) {
-        const item = itemsByUuid.get(edit.uuid);
-        if (item !== undefined) {
-          updateItemLocation({
-            uuid: item.uuid,
-            lat: item.lat!,
-            lon: item.lon!,
-            gps: item.gps ?? 'user',
-            gpsAccuracy: item.gps_accuracy ?? 1,
-            tz: item.tz,
-            date: item.date
-          });
-        }
-      }
-      for (const edit of timeEdits) {
-        const item = itemsByUuid.get(edit.uuid);
-        if (item !== undefined) {
-          updateItemDate(item.uuid, item.date);
-        }
+      for (const r of results.timeResults) {
+        logEditResult('⏰', r.uuid, r.ok ? undefined : r.error);
       }
 
       return Response.json({ ok: true });
@@ -431,14 +260,14 @@ export function createApiHandler(
     pathname: string
   ): Promise<Response | null> | Response | null {
     if (pathname === '/api/items' && req.method === 'GET') {
-      return Response.json(getAllItems());
+      return Response.json(itemStore.getAll());
     }
 
     if (pathname === '/api/view-state' && req.method === 'PUT') {
       return req
         .json()
         .then((body: unknown) => {
-          setSetting('view', JSON.stringify(body));
+          setSetting(dataDir, 'view', JSON.stringify(body));
           return new Response(null, { status: 204 });
         })
         .catch(() => new Response('Bad request', { status: 400 }));
@@ -449,7 +278,7 @@ export function createApiHandler(
     }
 
     if (pathname === '/api/route' && req.method === 'POST') {
-      return handleRouteProxy(req);
+      return handleRouteProxy(req, dataDir);
     }
 
     const routeMatch = /^\/api\/albums\/(?<album>[^/]+)\/route$/.exec(pathname);

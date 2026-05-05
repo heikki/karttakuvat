@@ -210,6 +210,8 @@ When location or time edits exist:
 
 Pending edits are reflected immediately on the map (markers move to new positions) and in popups (dates show adjusted values).
 
+After all edits in a save batch land, `itemStore.applyEdits` calls `quitPhotosApp()`. This is intentional: it prevents the user from opening Photos.app and accidentally undoing the edits via a recent-changes view. Don't drop the call — the writes are durable in Photos.sqlite, but the user-facing safety property only holds while Photos.app is closed.
+
 ## Lightbox
 
 Full-screen overlay for browsing all filtered photos sequentially. Activated by clicking image in popup or pressing Space when popup is open.
@@ -233,7 +235,7 @@ Full-screen overlay showing detailed photo metadata from Photos.app (via direct 
 
 When an album is selected, the app fetches its file list from `/api/albums/{album}/files` and loads any visible `.gpx` files. Tracks render as a colored line with a black shadow underneath; waypoints render as colored circles with text labels. Each album gets a color from a rotating palette of 8.
 
-Per-file visibility is controlled in the album files modal and persisted to `album_files` in `app.db`; hidden files are excluded from rendering. Implementation: `components/map-gpx/index.ts`.
+Per-file visibility is controlled in the album files modal and persisted to `_files.json` sidecars in each album directory; hidden files are excluded from rendering. Implementation: `components/map-gpx/index.ts`.
 
 ## Photo Route
 
@@ -313,19 +315,23 @@ Each album can have associated GPX tracks and markdown notes, managed via the al
 - **Open**: "Files" button appears in the filter panel when an album is selected
 - **Upload**: drag-and-drop or file picker for `.gpx` and `.md` files, uploaded via POST `/api/albums/{album}/upload`
 - **Storage**: files stored on disk in `data/albums/{album_name}/`
-- **Visibility**: each file has a toggle to show/hide it; state persisted in `album_files` table in `app.db`
+- **Visibility**: each file has a toggle to show/hide it; state persisted in `data/albums/{album}/_files.json`
 - **Deletion**: files can be deleted via the modal, removing both the disk file and DB record
 - **GPX integration**: hidden files are excluded from track rendering on the map
 
 ## Data Storage
 
-Photo metadata is stored in the `items` table in `app.db` (SQLite), populated by the sync script from the Apple Photos database. The API serves items via GET `/api/items`. The `settings` table stores app state (window position, view state). The `album_files` table tracks per-file visibility for album assets.
+Photo metadata lives in memory inside `ItemStore` (`src/server/item-store.ts`), built from `Photos.sqlite` + `geo-tz` at startup. The list is persisted as a snapshot at `data/items.json` so cold starts can serve `GET /api/items` immediately, and the post-startup rebuild then refreshes. Edits update the in-memory list and rewrite the snapshot in the same call.
+
+The rebuild compares `JSON.stringify` of fresh vs. snapshot items and resolves `rebuildComplete` with `true` only when they differ. This change-detection step is load-bearing: it lets the desktop launcher skip the webview reload in the common case (no new photos / no external edits) and only pay the reload cost when there's something new to show. A future "this comparison looks unnecessary" cleanup would re-introduce a flicker on every cold start — leave it.
+
+The `settings` and `album_files` SQLite tables are gone. Settings (`view`, `window`, `ors_api_key`) live in `data/state.json` (`src/server/state.ts`). Per-album file visibility lives in `data/albums/{album}/_files.json` sidecars next to `_route.json` (`src/server/album-files.ts`).
 
 ### View State Persistence
 
 Map position, filters, map style, and marker style are persisted between sessions:
 
-- **Desktop app**: saved to the `settings` table (key `view`) via PUT `/api/view-state`, restored on startup by building the URL with saved query params
+- **Desktop app**: saved under the `view` key in `data/state.json` via PUT `/api/view-state`, restored on startup by building the URL with saved query params
 - **Web version**: saved to `localStorage`, restored synchronously at module load before components initialize
 - Both use debounced 1-second save on state changes
 
@@ -335,7 +341,7 @@ The app is packaged as a native macOS desktop app using Electrobun (Bun + system
 
 ### Architecture
 
-A single `Bun.serve({ port: 0 })` instance serves both bundled view files and API routes on the same origin. The webview loads from `http://127.0.0.1:PORT`. Images are converted on demand via the native bridge (`libkarttakuvat.dylib`). In dev builds, scripts run from the project `scripts/` directory using system Bun; in installed builds, bundled `.js` scripts run via the bundled Bun binary.
+A single `Bun.serve({ port: 0 })` instance serves both bundled view files and API routes on the same origin. The webview loads from `http://127.0.0.1:PORT`. Images are converted on demand via the native bridge (`libkarttakuvat.dylib`). The launcher and the dev server share `createRequestHandler` (`src/server/request-handler.ts`) for static-file resolution, vendor-file mapping, and the per-response hook; they differ only in their static roots and what the hook does (logging in dev, FDA-detection in the desktop app).
 
 ### Application Menu
 
@@ -343,13 +349,13 @@ A single `Bun.serve({ port: 0 })` instance serves both bundled view files and AP
 - **Photos**: Sync Photos, Clear Cache
 - **Window**: Minimize, Close
 
-### Script Runner
+### Sync
 
-Menu actions trigger scripts (`sync.ts`) via `Bun.spawn()`. Progress is shown in the window title (with ANSI escape code stripping and carriage return handling for live updates). Only one script runs at a time. On completion, a success/error dialog shows the last few output lines, and the webview reloads.
+The "Sync Photos" menu action calls `itemStore.rebuild()` directly — no subprocess. Title shows "Syncing…" while running, dialog at end reports whether items changed. Only one sync runs at a time.
 
 ### Auto-Sync on Startup
 
-On launch, the app automatically runs a quiet sync (`sync.ts`) in the background. Progress is shown in the window title. On success, the webview reloads silently. On failure, the error is logged but no dialog is shown.
+The webview is loaded immediately with whatever the snapshot in `data/items.json` contains. `itemStore.rebuildComplete` resolves once the post-startup rebuild finishes; if it produced different items, the webview is reloaded to pick them up. If the snapshot already matched fresh data, no reload happens — cold starts are flicker-free in the common case. Errors during rebuild (e.g. missing Full Disk Access) are logged; the webview keeps serving snapshot data.
 
 ### iCloud Drive Backup
 
@@ -367,7 +373,7 @@ Videos in the lightbox are streamed directly from `Photos Library.photoslibrary/
 
 ### Window State Persistence
 
-Window position and size are saved to the `settings` table in `app.db` (key `window`) on move/resize (debounced 500ms) and restored on launch.
+Window position and size are saved under the `window` key in `data/state.json` on move/resize (debounced 500ms) and restored on launch.
 
 ### External Link Handling
 
@@ -379,7 +385,7 @@ If the `/api/metadata/:uuid` endpoint returns a 500 error indicating Photos.sqli
 
 ### Data Directory
 
-Dev builds use `data/` in the project root. Installed builds use `~/Library/Application Support/Karttakuvat/` (overridable via `KARTTAKUVAT_DATA_DIR` env var). Contains `app.db`, `cache/` (image cache), and `albums/` (GPX/markdown files).
+Dev builds use `data/` in the project root. Installed builds use `~/Library/Application Support/Karttakuvat/` (overridable via `KARTTAKUVAT_DATA_DIR` env var). Contains `items.json` (snapshot), `state.json` (settings), `cache/` (image cache), and `albums/` (GPX/markdown files plus `_route.json` and `_files.json` sidecars).
 
 ## Keyboard Shortcuts
 

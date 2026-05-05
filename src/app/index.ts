@@ -4,10 +4,12 @@ import { dirname, join, resolve } from 'node:path';
 const { BrowserView, BrowserWindow, ApplicationMenu, Utils } =
   await import('electrobun/bun');
 
-const { openAppDb, getSetting, setSetting } = await import('../server/app-db');
 const { createApiHandler, flushLogBuffer } =
   await import('../server/api-routes');
 const { createImageCache } = await import('../server/image-cache');
+const { openItemStore } = await import('../server/item-store');
+const { createRequestHandler } = await import('../server/request-handler');
+const { getSetting, setSetting } = await import('../server/state');
 
 // Detect dev build from version.json
 const resourcesDir = resolve(dirname(process.argv0), '..', 'Resources');
@@ -56,19 +58,16 @@ const dataDir = findDataDir();
 console.log(`[main] Data directory: ${dataDir}`);
 
 mkdirSync(dataDir, { recursive: true });
-openAppDb(dataDir);
 const imageCache = createImageCache({ cacheDir: join(dataDir, 'cache') });
-const { routeApiRequest } = createApiHandler(dataDir, { imageCache });
+const itemStore = openItemStore({ dataDir, imageCache });
+const { routeApiRequest } = createApiHandler(dataDir, {
+  itemStore,
+  imageCache
+});
 
 // Locate bundled view files
 const appDir = join(resourcesDir, 'app');
 const viewsDir = join(appDir, 'views', 'app');
-
-// Script directory: dev builds use project src/server/, installed builds use bundled scripts
-const scriptsDir =
-  projectRoot === null
-    ? join(appDir, 'scripts')
-    : join(projectRoot, 'src', 'server');
 
 // App menu
 ApplicationMenu.setApplicationMenu([
@@ -140,51 +139,26 @@ async function checkFullDiskAccess(response: Response, pathname: string) {
   }
 }
 
-function serveStaticFile(decodedPath: string): Response | null {
-  if (decodedPath === '/' || decodedPath === '/index.html') {
-    return new Response(Bun.file(join(viewsDir, 'index.html')));
-  }
-
-  const viewFile = Bun.file(join(viewsDir, decodedPath));
-  if (viewFile.size > 0) return new Response(viewFile);
-
-  const dataFile = Bun.file(join(dataDir, decodedPath));
-  if (dataFile.size > 0) return new Response(dataFile);
-
-  return null;
-}
-
-// Start local server that serves both API and view files
-const server = Bun.serve({
-  port: 0,
-  async fetch(req) {
-    const url = new URL(req.url);
-
-    // API routes
-    const apiResponse = routeApiRequest(req, url.pathname);
-    if (apiResponse !== null) {
-      const response = await apiResponse;
-      if (response !== null) {
-        for (const line of flushLogBuffer()) {
-          console.log(line);
-        }
-        await checkFullDiskAccess(response, url.pathname);
-        return response;
+const fetch = createRequestHandler({
+  routeApi: routeApiRequest,
+  staticRoots: [viewsDir, dataDir],
+  onResponse: async (req, res, pathname) => {
+    if (pathname.startsWith('/api/')) {
+      for (const line of flushLogBuffer()) {
+        console.log(line);
       }
+      await checkFullDiskAccess(res, pathname);
     }
-
-    // Serve bundled view files, then static data files
-    const decodedPath = decodeURIComponent(url.pathname);
-    return (
-      serveStaticFile(decodedPath) ?? new Response('Not Found', { status: 404 })
-    );
   }
 });
+
+// Start local server that serves both API and view files
+const server = Bun.serve({ port: 0, fetch });
 
 const baseUrl = `http://127.0.0.1:${server.port}`;
 console.log(`[main] Server running on ${baseUrl}`);
 
-// Window state persistence (stored in app.db settings table)
+// Window state persistence (data/state.json)
 const defaultFrame = { x: 100, y: 100, width: 1200, height: 800 };
 
 function loadWindowState(): {
@@ -194,7 +168,7 @@ function loadWindowState(): {
   height: number;
 } {
   try {
-    const raw = getSetting('window');
+    const raw = getSetting(dataDir, 'window');
     if (raw === null) return defaultFrame;
     return JSON.parse(raw) as {
       x: number;
@@ -213,7 +187,7 @@ function saveWindowState(frame: {
   width: number;
   height: number;
 }) {
-  setSetting('window', JSON.stringify(frame));
+  setSetting(dataDir, 'window', JSON.stringify(frame));
 }
 
 // RPC type definition for Electrobun communication
@@ -240,7 +214,7 @@ const savedFrame = loadWindowState();
 
 function buildViewUrl(): string {
   try {
-    const raw = getSetting('view');
+    const raw = getSetting(dataDir, 'view');
     if (raw === null) return baseUrl;
     const obj = JSON.parse(raw) as Record<string, string>;
     const qs = new URLSearchParams(obj).toString();
@@ -300,175 +274,41 @@ win.webview.on('new-window-open', (event: unknown) => {
   openInSystem(extractUrl(event as ElectrobunEvent));
 });
 
-// Run a script from the server directory, show progress in window title
-let runningScript: { proc: ReturnType<typeof Bun.spawn>; name: string } | null =
-  null;
-
-// eslint-disable-next-line no-control-regex -- stripping ANSI escape codes
-const ansiPattern = /\x1b\[[0-9;]*[A-Za-z]/g;
-
-/** Stream stdout from a child process, updating window title with progress. */
-async function streamStdout(
-  stdout: ReadableStream<Uint8Array>,
-  name: string,
-  outputLines: string[]
-) {
-  const reader = stdout.getReader();
-  const decoder = new TextDecoder();
-  let partial = '';
-  let done = false;
-
-  while (!done) {
-    // eslint-disable-next-line no-await-in-loop -- sequential stream reads
-    const result = await reader.read();
-    done = result.done;
-    if (done) break;
-    const text = partial + decoder.decode(result.value, { stream: true });
-    const parts = text.split(/[\r\n]/);
-    partial = parts.pop() ?? '';
-    for (const line of parts) {
-      const trimmed = line.replace(ansiPattern, '').trim();
-      if (trimmed !== '') {
-        outputLines.push(trimmed);
-        console.log(`[${name}] ${trimmed}`);
-        win.setTitle(`Karttakuvat — ${trimmed}`);
-      }
-    }
-  }
-  if (partial.trim() !== '') {
-    outputLines.push(partial.trim());
-  }
-}
-
-function resolveScriptPath(scriptFile: string): string | null {
-  const ext = projectRoot === null ? '.js' : '.ts';
-  const scriptPath = join(scriptsDir, scriptFile.replace(/\.ts$/, ext));
-  if (existsSync(scriptPath)) return scriptPath;
-  return null;
-}
-
-async function runScript(
-  name: string,
-  scriptFile: string,
-  args: string[] = []
-) {
-  if (runningScript !== null) {
+// In-process Photos sync (manual "Sync Photos" menu action)
+let syncing = false;
+async function syncPhotos() {
+  if (syncing) {
     void Utils.showMessageBox({
       type: 'warning',
-      title: 'Script Running',
-      message: `"${runningScript.name}" is still running. Please wait for it to finish.`,
+      title: 'Sync Running',
+      message: 'A sync is already in progress. Please wait.',
       buttons: ['OK']
     });
     return;
   }
-
-  const scriptPath = resolveScriptPath(scriptFile);
-  if (scriptPath === null) {
-    void Utils.showMessageBox({
-      type: 'error',
-      title: 'Script Not Found',
-      message: `Could not find ${scriptFile}`,
-      buttons: ['OK']
-    });
-    return;
-  }
-
-  // Installed builds pass --data-dir so scripts know where to write
-  const extraArgs = projectRoot === null ? [`--data-dir=${dataDir}`] : [];
-
-  console.log(
-    `[main] Running ${name}: bun ${scriptFile} ${[...args, ...extraArgs].join(' ')}`
-  );
-  win.setTitle(`Karttakuvat — ${name}...`);
-
-  // Dev: use system bun (needs node_modules). Installed: use bundled bun.
-  const bunPath =
-    projectRoot === null
-      ? resolve(dirname(process.argv0), 'bun')
-      : (Bun.which('bun') ?? 'bun');
-  const proc = Bun.spawn([bunPath, scriptPath, ...args, ...extraArgs], {
-    cwd: projectRoot ?? dataDir,
-    stdout: 'pipe',
-    stderr: 'pipe'
-  });
-
-  runningScript = { proc, name };
-
-  const outputLines: string[] = [];
-  void streamStdout(
-    proc.stdout as ReadableStream<Uint8Array>,
-    name,
-    outputLines
-  );
-
-  // Capture stderr
-  const stderrText = await new Response(proc.stderr).text();
-  if (stderrText.trim() !== '') {
-    console.log(`[${name} stderr] ${stderrText.trim()}`);
-    outputLines.push(stderrText.trim());
-  }
-
-  const exitCode = await proc.exited;
-  runningScript = null; // eslint-disable-line require-atomic-updates -- intentional sequential reset
-  win.setTitle('Karttakuvat');
-
-  const lastLines = outputLines.slice(-8).join('\n');
-  if (exitCode === 0) {
-    win.webview.loadURL(buildViewUrl());
+  syncing = true;
+  win.setTitle('Karttakuvat — Syncing…');
+  try {
+    const changed = await itemStore.rebuild();
+    if (changed) win.webview.loadURL(buildViewUrl());
     void Utils.showMessageBox({
       type: 'info',
-      title: `${name} Complete`,
-      message: `${name} finished successfully.`,
-      detail: lastLines,
+      title: 'Sync Complete',
+      message: changed
+        ? 'Sync complete — items updated.'
+        : 'Sync complete — no changes.',
       buttons: ['OK']
     });
-  } else {
+  } catch (err) {
     void Utils.showMessageBox({
       type: 'error',
-      title: `${name} Failed`,
-      message: `${name} exited with code ${exitCode}.`,
-      detail: lastLines,
+      title: 'Sync Failed',
+      message: err instanceof Error ? err.message : String(err),
       buttons: ['OK']
     });
-  }
-}
-
-/** Run sync quietly — no success/error dialogs, just reload webview on completion. */
-async function runSyncQuiet() {
-  const scriptPath = resolveScriptPath('sync.ts');
-  if (scriptPath === null) return;
-
-  if (runningScript !== null) return;
-
-  const extraArgs = projectRoot === null ? [`--data-dir=${dataDir}`] : [];
-  const bunPath =
-    projectRoot === null
-      ? resolve(dirname(process.argv0), 'bun')
-      : (Bun.which('bun') ?? 'bun');
-
-  console.log('[main] Running quiet sync');
-  const proc = Bun.spawn([bunPath, scriptPath, ...extraArgs], {
-    cwd: projectRoot ?? dataDir,
-    stdout: 'pipe',
-    stderr: 'pipe'
-  });
-
-  runningScript = { proc, name: 'Sync' };
-
-  const outputLines: string[] = [];
-  void streamStdout(
-    proc.stdout as ReadableStream<Uint8Array>,
-    'Sync',
-    outputLines
-  );
-
-  await new Response(proc.stderr).text();
-  const exitCode = await proc.exited;
-  runningScript = null; // eslint-disable-line require-atomic-updates -- intentional sequential reset
-  win.setTitle('Karttakuvat');
-
-  if (exitCode !== 0) {
-    console.log(`[main] Quiet sync failed with exit code ${exitCode}`);
+  } finally {
+    syncing = false; // eslint-disable-line require-atomic-updates -- intentional sequential reset
+    win.setTitle('Karttakuvat');
   }
 }
 
@@ -502,7 +342,7 @@ ApplicationMenu.on('application-menu-clicked', (event: unknown) => {
       process.exit(0);
       break;
     case 'resync':
-      void runScript('Sync Photos', 'sync.ts');
+      void syncPhotos();
       break;
     case 'clear-cache':
       clearCache();
@@ -521,9 +361,23 @@ if (!isDev) {
   });
 }
 
-// Auto-sync on startup, then show app
-void (async () => {
-  await runSyncQuiet();
-  win.webview.loadURL(buildViewUrl());
-  console.log('[main] Initialization complete');
-})();
+// Load the webview immediately with snapshot data, then reload only if the
+// post-startup rebuild detected actual changes. The change-detection skips
+// the reload when the snapshot already matched fresh data — keeps cold starts
+// flicker-free in the common case.
+win.webview.loadURL(buildViewUrl());
+itemStore.rebuildComplete
+  .then((changed) => {
+    if (changed) win.webview.loadURL(buildViewUrl());
+    console.log(
+      changed
+        ? '[main] Rebuild complete — items changed, webview reloaded'
+        : '[main] Rebuild complete — no changes'
+    );
+  })
+  .catch((err: unknown) => {
+    console.log(
+      '[main] Initial rebuild failed:',
+      err instanceof Error ? err.message : String(err)
+    );
+  });

@@ -86,7 +86,6 @@ export default {
       'src/client/styles.css': 'views/app/styles.css',
       'node_modules/maplibre-gl/dist/maplibre-gl.css':
         'views/app/maplibre-gl.css',
-      'build/scripts/sync.js': 'scripts/sync.js',
       'resources/native/libkarttakuvat.dylib': 'libkarttakuvat.dylib'
     },
 
