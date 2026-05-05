@@ -60,7 +60,7 @@ A single edge watcher inside the module dispatches `onExit` then `onEnter`; the 
 
 ### Layer ordering (DOM-order z)
 
-Cross-feature layer order is the order of `<map-*>` elements in `<map-view>`'s feature template — bottom to top: `<map-gpx>`, `<map-route>`, `<map-markers>`, `<map-measure>`. Each feature's `firstUpdated` calls `addLayer(...)` with no `before` argument, so the layer lands on top of whatever's already in the stack at that moment. Lit fires `firstUpdated` in document order, so template order = init order = z-order. Within a feature, the order of `addLayer` calls determines internal stacking. Layer order survives basemap swaps via `transformStyle`, which carries app-owned layers across `setStyle`.
+Cross-feature layer order is the order of `<map-*>` elements in `<map-view>`'s feature template, bottom to top. Each feature's `firstUpdated` calls `addLayer(...)` with no `before` argument, so the layer lands on top of whatever's already in the stack at that moment. Lit fires `firstUpdated` in document order, so template order = init order = z-order. Within a feature, the order of `addLayer` calls determines internal stacking. Layer order survives basemap swaps via `transformStyle`, which carries app-owned layers across `setStyle`.
 
 `<map-markers>` is the one feature that swaps its layer set at runtime (classic ↔ points). It owns one extra invisible symbol layer — `markers-anchor` — added in `markers.init()` before either style is installed. Both `ClassicLayer.install` and `PointsLayer.install` take that anchor's id as their `before` argument; the anchor itself is never removed, so markers keeps its z-position across swaps even though its implementation layers come and go.
 
@@ -70,10 +70,10 @@ View-state signals (`mapStyle`, `markerStyle`, `routeVisible`, `selectedPhotoUui
 
 1. `<app-root>` mounts as the body's only child. Its `connectedCallback` installs window-level error handlers (`window.__debugLog`), gesture-prevention listeners, and kicks off `data.loadPhotos()`.
 2. `<app-root>` renders `<map-view>` plus the panel components.
-3. `<map-view>`'s `firstUpdated` constructs the MapGL instance into a `#container` div inside its shadow root, attaches map-level listeners (background shader, error handlers, projection transitions, debug keyboard, style-change effect), and registers a single `map.once('load')` handler.
+3. `<map-view>`'s `firstUpdated` calls `setupMap(container, this)` to build the MapGL instance and wire all map-level concerns, then registers a single `map.once('load')` handler.
 4. `loadPhotos()` resolves in parallel — fetches `/api/items`, sorts by date, writes into `data.photos`. The `filteredPhotos` computed re-derives, fanning out to every effect that reads it.
-5. `<filter-panel>` detects loaded photos via `updated()`, restores filter component state from URL, and writes the normalized values into `data.filters`. The signal change cascades.
-6. On map load: `<map-view>` flips an internal `@state _map`, which triggers a re-render that mounts the feature children: `<map-gpx>`, `<map-route>`, `<map-markers>`, `<map-measure>`, `<map-popup>`, `<map-fit>`, `<map-placement>`. Each feature `@consume`s `mapContext` (the `MapView` instance, typed as `MapApi`) and reads `this.api.map` from its `firstUpdated`, where it adds layers, registers map listeners, and wires `effect()`s — for multi-file features like `<map-popup>` the element delegates to internal helpers; for single-file features the work happens inline in the class. Template order = z-order for layer features. Fit zooms to filtered photos unless a map view was restored from URL.
+5. `data.ts`'s photos-load effect re-runs the URL-restored filter cascade against the loaded photos so any album/camera that no longer exists falls back to `'all'`. Filter signal updates cascade to readers.
+6. On map load: `<map-view>` flips an internal `@state _map`, which triggers a re-render that mounts the `<map-*>` feature children. Each feature `@consume`s `mapContext` and reads `this.api.map` from its `firstUpdated`, where it adds layers, registers map listeners, and wires `effect()`s. Template order = z-order for layer features. Fit zooms to filtered photos unless a map view was restored from URL.
 
 ## Filters
 
