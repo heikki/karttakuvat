@@ -5,4 +5,6 @@
  */
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
 
-GlobalRegistrator.register();
+// happy-dom defaults to `about:blank`, where `history.replaceState` no-ops.
+// Seeding a real URL lets URL-bound signals and mapView codec round-trip.
+GlobalRegistrator.register({ url: 'http://localhost/' });
