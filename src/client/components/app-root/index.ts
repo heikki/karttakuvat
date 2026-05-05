@@ -20,6 +20,14 @@ export class AppRoot extends LitElement {
   override connectedCallback() {
     super.connectedCallback();
 
+    // Electrobun: WKWebView's document doesn't take keyboard focus on
+    // first load, so document-level keydown handlers (e.g. arrow-key
+    // navigation in <map-popup>) sit silent until the user clicks.
+    // Mark the body programmatically focusable and grab focus so
+    // keyboard works immediately when ?id=... pre-selects a photo.
+    document.body.tabIndex = -1;
+    document.body.focus();
+
     // window.__debugLog is read by map-view/setup.ts (Shift+D handler) so
     // Safari Inspector can surface errors that happened before devtools
     // was open. Keep the global names stable.
