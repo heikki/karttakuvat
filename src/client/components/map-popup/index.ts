@@ -12,7 +12,7 @@ import { MapFeatureElement } from '@components/map-view/api';
 import type { PhotoPopup } from '@components/photo-popup';
 
 import * as gestures from './gestures';
-import { applyGlobeMask } from './globe-mask';
+import * as globeMask from './globe-mask';
 import { flyToPopupTo, panToFitPopup } from './pan';
 
 // Decode the new thumb before we swap it onto the popup, so the
@@ -41,16 +41,10 @@ export class MapPopup extends MapFeatureElement {
   // external-teardown selection clear.
   private suppressCloseClear = false;
   private navSeq = 0;
-  // Cache key for the last-applied globe-mask state — skip the four
-  // style writes per render when nothing observable changed.
-  private lastMaskKey = '';
 
   override firstUpdated() {
     this.api.map.on('zoomend', () => {
       this.reanchorPopup();
-    });
-    this.api.map.on('render', () => {
-      this.updatePopupGlobeMask();
     });
 
     document.addEventListener('keydown', (e) => {
@@ -172,11 +166,11 @@ export class MapPopup extends MapFeatureElement {
       .addTo(this.api.map);
 
     gestures.attach(this.api.map, popup);
+    globeMask.attach(this.api.map, popup);
     this.mounted = { popup, el, uuid: photo.uuid };
 
     popup.on('close', () => {
       this.mounted = null;
-      this.lastMaskKey = '';
       if (!this.suppressCloseClear && selection.isPopupOpen()) {
         // Closed via MapLibre's own teardown (e.g. setStyle); keep state in sync.
         selection.closePopup();
@@ -218,18 +212,6 @@ export class MapPopup extends MapFeatureElement {
     const { el } = this.mounted;
     el.photo = photo;
     el.index = index;
-  }
-
-  // Bound to the map's `render` event so the mask follows projection
-  // transitions (which fire `render` continuously between start/end).
-  // Cheap on idle frames thanks to the cache key in applyGlobeMask.
-  private updatePopupGlobeMask(): void {
-    if (this.mounted === null) return;
-    this.lastMaskKey = applyGlobeMask(
-      this.api.map,
-      this.mounted.popup,
-      this.lastMaskKey
-    );
   }
 }
 

@@ -1,17 +1,24 @@
 import type { Map as MapGL, Popup } from 'maplibre-gl';
 
 /**
- * Compute the radial-gradient mask that hides the popup behind the
- * globe in globe projection. Skips the four style writes when the
- * inputs are unchanged via `lastKey`. Returns the new key — the caller
- * tracks it across calls so we don't reapply identical styles every
- * render frame.
+ * While the popup is open in globe projection, hide the part of it
+ * that's visually behind the globe with a radial-gradient mask. The
+ * mask is recomputed every render frame (projection transitions fire
+ * `render` continuously) and skipped via a cache key when nothing
+ * observable changed. Self-cleans on the popup's `'close'` event.
  */
-export function applyGlobeMask(
-  map: MapGL,
-  popup: Popup,
-  lastKey: string
-): string {
+export function attach(map: MapGL, popup: Popup): void {
+  let lastKey = '';
+  const update = (): void => {
+    lastKey = applyMask(map, popup, lastKey);
+  };
+  map.on('render', update);
+  popup.on('close', () => {
+    map.off('render', update);
+  });
+}
+
+function applyMask(map: MapGL, popup: Popup, lastKey: string): string {
   const el = popup.getElement() as HTMLElement | undefined;
   if (el === undefined) return lastKey;
 
