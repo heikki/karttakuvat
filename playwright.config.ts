@@ -6,9 +6,13 @@ const baseURL = `http://127.0.0.1:${PORT}`;
 export default defineConfig({
   testDir: 'e2e',
   testMatch: '**/*.e2e.ts',
+  outputDir: 'e2e/.test-results',
   fullyParallel: false,
   workers: 1,
-  reporter: process.env.CI === undefined ? 'list' : [['list'], ['html']],
+  reporter:
+    process.env.CI === undefined
+      ? 'list'
+      : [['list'], ['html', { outputFolder: 'e2e/.report', open: 'never' }]],
   use: {
     baseURL,
     trace: 'retain-on-failure',
