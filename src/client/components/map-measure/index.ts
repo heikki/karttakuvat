@@ -103,10 +103,14 @@ export class MapMeasure extends SignalWatcher(MapFeatureElement) {
     this.addLayers();
     interactionMode.defineMode('measure', {
       onEnter: () => {
-        this.onEnter();
+        this.coords = [];
+        setLayersVisibility(this.api.map, LAYER_IDS, true);
+        this.api.map.on('click', this.onMapClick);
       },
       onExit: () => {
-        this.onExit();
+        this.coords = [];
+        setLayersVisibility(this.api.map, LAYER_IDS, false);
+        this.api.map.off('click', this.onMapClick);
       }
     });
   }
@@ -167,18 +171,6 @@ export class MapMeasure extends SignalWatcher(MapFeatureElement) {
           : { type: 'FeatureCollection', features: [] }
       );
     }
-  }
-
-  private onEnter(): void {
-    this.coords = [];
-    setLayersVisibility(this.api.map, LAYER_IDS, true);
-    this.api.map.on('click', this.onMapClick);
-  }
-
-  private onExit(): void {
-    this.coords = [];
-    setLayersVisibility(this.api.map, LAYER_IDS, false);
-    this.api.map.off('click', this.onMapClick);
   }
 }
 
