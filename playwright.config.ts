@@ -11,7 +11,11 @@ export default defineConfig({
   reporter: process.env.CI === undefined ? 'list' : [['list'], ['html']],
   use: {
     baseURL,
-    trace: 'retain-on-failure'
+    trace: 'retain-on-failure',
+    launchOptions:
+      process.env.E2E_SLOW === undefined
+        ? {}
+        : { slowMo: Number(process.env.E2E_SLOW) }
   },
   projects: [{ name: 'webkit', use: { browserName: 'webkit' } }],
   webServer: {
