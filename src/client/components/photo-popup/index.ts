@@ -1,37 +1,57 @@
-import { SignalWatcher } from '@lit-labs/signals';
+import { signal, SignalWatcher } from '@lit-labs/signals';
 import { css, html, LitElement, nothing } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
+import { customElement, property, state } from 'lit/decorators.js';
 
 import * as actions from '@common/actions';
 import * as edits from '@common/edits';
 import type { Photo } from '@common/types';
 import {
+  computeDateOffsetHours,
+  computeFullDatetimeOffsetHours,
   editableDateStr,
   formatCoords,
   formatDate,
   getThumbUrl,
-  isVideo
+  isVideo,
+  parseExifDate,
+  parseUserDatetime
 } from '@common/utils';
 
-export interface PopupActions {
-  copyLocation: () => void;
-  pasteLocation: () => void;
-  confirmLocation: () => void;
-  copyDate: () => void;
-  pasteDate: () => void;
-  toggleDateEdit: () => void;
-  adjustTime: (hours: number) => void;
-  applyManualDate: (value: string) => void;
+// Module-level copy buffers shared across popup mounts. Signals so that
+// paste-button visibility reacts the moment the user copies.
+const copiedLocation = signal<{ lat: number; lon: number } | null>(null);
+const copiedDate = signal<string | null>(null);
+
+function computeManualDateOffset(
+  originalDate: string,
+  parsed: { day: string; time: string | null }
+): number | null {
+  if (parsed.time === null) {
+    return computeDateOffsetHours(originalDate, parsed.day);
+  }
+  const timeParts = parsed.time.split(':').map(Number);
+  const dayParts = parsed.day.split(':');
+  const target = new Date(
+    parseInt(dayParts[0]!, 10),
+    parseInt(dayParts[1]!, 10) - 1,
+    parseInt(dayParts[2]!, 10),
+    timeParts[0] ?? 0,
+    timeParts[1] ?? 0,
+    timeParts[2] ?? 0
+  );
+  return computeFullDatetimeOffsetHours(originalDate, target);
 }
 
 @customElement('photo-popup')
 export class PhotoPopup extends SignalWatcher(LitElement) {
   @property({ attribute: false }) photo: Photo | null = null;
   @property({ type: Number }) index = 0;
-  @property({ type: Boolean }) dateEditMode = false;
-  @property({ type: Boolean }) showPasteLocation = false;
-  @property({ type: Boolean }) showPasteDate = false;
-  @property({ attribute: false }) actions: PopupActions | null = null;
+
+  // Date edit mode is local UI state. Auto-clears when the photo changes
+  // (see updated() below). Escape inside the input clears it directly;
+  // Escape elsewhere routes through closeDateEdit() called by <map-popup>.
+  @state() private _dateEditMode = false;
+  private _lastSeenUuid: string | null = null;
 
   static override styles = css`
     *,
@@ -171,20 +191,100 @@ export class PhotoPopup extends SignalWatcher(LitElement) {
     if (this.photo !== null) actions.enterPlacement();
   }
 
+  private _copyLocation() {
+    const photo = this.photo;
+    if (photo === null) return;
+    const loc = edits.getEffectiveLocation(photo);
+    if (loc === null) return;
+    copiedLocation.set({ lat: loc.lat, lon: loc.lon });
+  }
+
+  private _pasteLocation() {
+    const photo = this.photo;
+    const copied = copiedLocation.get();
+    if (photo === null || copied === null) return;
+    edits.setCoord(photo.uuid, copied.lat, copied.lon);
+  }
+
+  private _confirmLocation() {
+    const photo = this.photo;
+    if (photo === null) return;
+    const loc = edits.getEffectiveLocation(photo);
+    if (loc === null) return;
+    edits.setCoord(photo.uuid, loc.lat, loc.lon);
+    actions.saveEdits();
+  }
+
+  private _copyDate() {
+    const photo = this.photo;
+    if (photo === null) return;
+    const effectiveDate = edits.getEffectiveDate(photo);
+    if (effectiveDate === '') return;
+    copiedDate.set(effectiveDate);
+  }
+
+  private _pasteDate() {
+    const photo = this.photo;
+    if (photo === null) return;
+    const copied = copiedDate.get();
+    if (copied === null) return;
+    const parsed = parseExifDate(copied);
+    if (parsed === null) return;
+    const offset = computeFullDatetimeOffsetHours(photo.date, parsed);
+    if (offset === null) return;
+    edits.setTimeOffset(photo.uuid, offset);
+  }
+
+  private _adjustTime(hours: number) {
+    const photo = this.photo;
+    if (photo === null) return;
+    edits.addTimeOffset(photo.uuid, hours);
+  }
+
+  private _toggleDateEdit() {
+    this._dateEditMode = !this._dateEditMode;
+  }
+
   private _applyManualDate() {
     const input = this.shadowRoot?.getElementById(
       'date-input'
     ) as HTMLInputElement | null;
-    if (input !== null) {
-      this.actions?.applyManualDate(input.value);
-    }
+    if (input === null) return;
+    const value = input.value;
+    const photo = this.photo;
+    if (photo === null) return;
+    if (value.trim() === '') return;
+    const yearStr = photo.date.split(':')[0];
+    const fallbackYear =
+      yearStr !== undefined && yearStr !== ''
+        ? parseInt(yearStr, 10)
+        : new Date().getFullYear();
+    const parsed = parseUserDatetime(value, fallbackYear);
+    if (parsed === null) return;
+    const offset = computeManualDateOffset(photo.date, parsed);
+    if (offset === null) return;
+    // Clear edit mode before the signal write so the next render sees
+    // the read-only date row.
+    this._dateEditMode = false;
+    edits.setTimeOffset(photo.uuid, offset);
+  }
+
+  /**
+   * Called by `<map-popup>`'s document keydown handler so it can give
+   * date-edit Escape priority over closing the popup. Returns true if
+   * the key was consumed.
+   */
+  closeDateEdit(): boolean {
+    if (!this._dateEditMode) return false;
+    this._dateEditMode = false;
+    return true;
   }
 
   private _onDateInputKey(e: KeyboardEvent) {
     if (e.key === 'Enter') {
       this._applyManualDate();
     } else if (e.key === 'Escape') {
-      this.actions?.toggleDateEdit();
+      this._dateEditMode = false;
     }
     // Stop all keydown propagation so external handlers (arrow nav, spacebar)
     // don't intercept keys meant for this input.
@@ -192,7 +292,12 @@ export class PhotoPopup extends SignalWatcher(LitElement) {
   }
 
   override updated(changed: Map<string, unknown>) {
-    if (changed.has('dateEditMode') && this.dateEditMode) {
+    const uuid = this.photo?.uuid ?? null;
+    if (uuid !== this._lastSeenUuid) {
+      if (this._lastSeenUuid !== null) this._dateEditMode = false;
+      this._lastSeenUuid = uuid;
+    }
+    if (changed.has('_dateEditMode') && this._dateEditMode) {
       const input = this.shadowRoot?.getElementById(
         'date-input'
       ) as HTMLInputElement | null;
@@ -204,8 +309,11 @@ export class PhotoPopup extends SignalWatcher(LitElement) {
     const photo = this.photo!;
     const effectiveDate = edits.getEffectiveDate(photo);
     const dateText = formatDate(effectiveDate, photo.tz);
+    const copied = copiedDate.get();
+    const showPasteDate =
+      copied !== null && effectiveDate !== '' && effectiveDate !== copied;
 
-    if (this.dateEditMode) {
+    if (this._dateEditMode) {
       const inputVal = editableDateStr(effectiveDate);
       return html`
         ${dateText}
@@ -213,7 +321,7 @@ export class PhotoPopup extends SignalWatcher(LitElement) {
           <button
             class="action-btn"
             @click=${() => {
-              this.actions?.adjustTime(-24);
+              this._adjustTime(-24);
             }}
           >
             -1d
@@ -221,7 +329,7 @@ export class PhotoPopup extends SignalWatcher(LitElement) {
           <button
             class="action-btn"
             @click=${() => {
-              this.actions?.adjustTime(24);
+              this._adjustTime(24);
             }}
           >
             +1d
@@ -229,7 +337,7 @@ export class PhotoPopup extends SignalWatcher(LitElement) {
           <button
             class="action-btn"
             @click=${() => {
-              this.actions?.adjustTime(-1);
+              this._adjustTime(-1);
             }}
           >
             -1h
@@ -237,7 +345,7 @@ export class PhotoPopup extends SignalWatcher(LitElement) {
           <button
             class="action-btn"
             @click=${() => {
-              this.actions?.adjustTime(1);
+              this._adjustTime(1);
             }}
           >
             +1h
@@ -245,7 +353,7 @@ export class PhotoPopup extends SignalWatcher(LitElement) {
           <button
             class="action-btn"
             @click=${() => {
-              this.actions?.toggleDateEdit();
+              this._toggleDateEdit();
             }}
           >
             done
@@ -288,7 +396,7 @@ export class PhotoPopup extends SignalWatcher(LitElement) {
         <button
           class="action-btn"
           @click=${() => {
-            this.actions?.copyDate();
+            this._copyDate();
           }}
         >
           copy
@@ -296,16 +404,16 @@ export class PhotoPopup extends SignalWatcher(LitElement) {
         <button
           class="action-btn"
           @click=${() => {
-            this.actions?.pasteDate();
+            this._pasteDate();
           }}
-          style=${this.showPasteDate ? '' : 'display:none'}
+          style=${showPasteDate ? '' : 'display:none'}
         >
           paste
         </button>
         <button
           class="action-btn"
           @click=${() => {
-            this.actions?.toggleDateEdit();
+            this._toggleDateEdit();
           }}
         >
           edit
@@ -317,6 +425,9 @@ export class PhotoPopup extends SignalWatcher(LitElement) {
   private _renderLocationLine() {
     const photo = this.photo!;
     const loc = edits.getEffectiveLocation(photo);
+    const copied = copiedLocation.get();
+    const showPasteLocation =
+      copied !== null && (copied.lat !== loc?.lat || copied.lon !== loc.lon);
 
     return html`
       ${formatCoords(loc)}
@@ -333,7 +444,7 @@ export class PhotoPopup extends SignalWatcher(LitElement) {
           ? html`<button
               class="action-btn"
               @click=${() => {
-                this.actions?.confirmLocation();
+                this._confirmLocation();
               }}
             >
               confirm
@@ -344,7 +455,7 @@ export class PhotoPopup extends SignalWatcher(LitElement) {
           : html`<button
               class="action-btn"
               @click=${() => {
-                this.actions?.copyLocation();
+                this._copyLocation();
               }}
             >
               copy
@@ -352,9 +463,9 @@ export class PhotoPopup extends SignalWatcher(LitElement) {
         <button
           class="action-btn"
           @click=${() => {
-            this.actions?.pasteLocation();
+            this._pasteLocation();
           }}
-          style=${this.showPasteLocation ? '' : 'display:none'}
+          style=${showPasteLocation ? '' : 'display:none'}
         >
           paste
         </button>

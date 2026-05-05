@@ -42,9 +42,12 @@ export const mapContext = createContext<MapApi>(Symbol('map-api'));
  *
  * - `@consume(mapContext) protected api: MapApi` — the typed handle to
  *   the map and its sibling features.
- * - `createRenderRoot` returning `this` — features render into light
- *   DOM (they're headless or DOM-positional only). Shadow DOM is not
- *   needed and would block their CSS from inheriting from the page.
+ * - `createRenderRoot` returning `this` — features are headless effect
+ *   hosts: their job is `firstUpdated` lifecycle + signal effects, not
+ *   a template. Render root is functionally invisible either way, so
+ *   light DOM is the simpler default. When a feature needs visible UI,
+ *   split it off as its own shadow-DOM element (e.g. `<photo-popup>`
+ *   handed to `<map-popup>`) rather than flipping this base class.
  *
  * Subclasses define their lifecycle in `firstUpdated` and read state
  * via `this.api`.

@@ -6,141 +6,21 @@ import * as edits from '@common/edits';
 import selection from '@common/selection';
 import { effect } from '@common/signals';
 import type { Photo } from '@common/types';
-import {
-  computeDateOffsetHours,
-  computeFullDatetimeOffsetHours,
-  getThumbUrl,
-  parseExifDate,
-  parseUserDatetime
-} from '@common/utils';
+import { getThumbUrl } from '@common/utils';
 import { viewState } from '@common/view-state';
 import { MapFeatureElement } from '@components/map-view/api';
-import type { PhotoPopup, PopupActions } from '@components/photo-popup';
+import type { PhotoPopup } from '@components/photo-popup';
 
 import { applyGlobeMask } from './globe-mask';
 import { flyToPopupTo, panToFitPopup } from './pan';
 
 const WHEEL_ZOOM_RATE = 1 / 300;
 
-// Module-level copy buffers for the popup's location and date edits.
-// Plain refs — clipboard sync isn't needed; these only persist within
-// the running app session.
-let copiedLocation: { lat: number; lon: number } | null = null;
-let copiedDate: string | null = null;
-
-function copyLocation(lat: number, lon: number) {
-  copiedLocation = { lat, lon };
-}
-
-function getCopiedLocation(): { lat: number; lon: number } | null {
-  return copiedLocation;
-}
-
-function copyDate(datePart: string) {
-  copiedDate = datePart;
-}
-
-function getCopiedDate(): string | null {
-  return copiedDate;
-}
-
-// Popup-action helpers wired into the PopupActions surface below. All
-// stateless; date-edit-mode lives on <map-popup> itself.
-
-function confirmCurrentLocation(): void {
-  const photo = selection.getPhoto();
-  if (photo === undefined) return;
-  const loc = edits.getEffectiveLocation(photo);
-  if (loc === null) return;
-  edits.setCoord(photo.uuid, loc.lat, loc.lon);
-  actions.saveEdits();
-}
-
-function copyCurrentLocation(): void {
-  const photo = selection.getPhoto();
-  if (photo === undefined) return;
-  const loc = edits.getEffectiveLocation(photo);
-  if (loc === null) return;
-  copyLocation(loc.lat, loc.lon);
-}
-
-function pasteCurrentLocation(): void {
-  const photo = selection.getPhoto();
-  const copied = getCopiedLocation();
-  if (photo === undefined || copied === null) return;
-  edits.setCoord(photo.uuid, copied.lat, copied.lon);
-}
-
-function copyCurrentDate(): void {
-  const photo = selection.getPhoto();
-  if (photo === undefined) return;
-  const effectiveDate = edits.getEffectiveDate(photo);
-  if (effectiveDate === '') return;
-  copyDate(effectiveDate);
-}
-
-function pasteCurrentDate(): void {
-  const photo = selection.getPhoto();
-  if (photo === undefined) return;
-  const copied = getCopiedDate();
-  if (copied === null) return;
-  const parsed = parseExifDate(copied);
-  if (parsed === null) return;
-  const offset = computeFullDatetimeOffsetHours(photo.date, parsed);
-  if (offset === null) return;
-  edits.setTimeOffset(photo.uuid, offset);
-}
-
-function adjustCurrentTime(hours: number): void {
-  const uuid = selection.selectedPhotoUuid.get();
-  if (uuid === null) return;
-  edits.addTimeOffset(uuid, hours);
-}
-
-function computePasteVisibility(photo: Photo): {
-  showPasteLocation: boolean;
-  showPasteDate: boolean;
-} {
-  let showPasteLocation = false;
-  const copiedLoc = getCopiedLocation();
-  if (copiedLoc !== null) {
-    const loc = edits.getEffectiveLocation(photo);
-    showPasteLocation = copiedLoc.lat !== loc?.lat || copiedLoc.lon !== loc.lon;
-  }
-  let showPasteDate = false;
-  const copiedDate = getCopiedDate();
-  if (copiedDate !== null) {
-    const effectiveDate = edits.getEffectiveDate(photo);
-    showPasteDate = effectiveDate !== '' && effectiveDate !== copiedDate;
-  }
-  return { showPasteLocation, showPasteDate };
-}
-
 function getSelectedMarkerCoords(): [number, number] | null {
   const photo = selection.getPhoto();
   if (photo === undefined) return null;
   const { lon, lat } = edits.getEffectiveCoords(photo);
   return [lon, lat];
-}
-
-function computeManualDateOffset(
-  originalDate: string,
-  parsed: { day: string; time: string | null }
-): number | null {
-  if (parsed.time === null) {
-    return computeDateOffsetHours(originalDate, parsed.day);
-  }
-  const timeParts = parsed.time.split(':').map(Number);
-  const dayParts = parsed.day.split(':');
-  const target = new Date(
-    parseInt(dayParts[0]!, 10),
-    parseInt(dayParts[1]!, 10) - 1,
-    parseInt(dayParts[2]!, 10),
-    timeParts[0] ?? 0,
-    timeParts[1] ?? 0,
-    timeParts[2] ?? 0
-  );
-  return computeFullDatetimeOffsetHours(originalDate, target);
 }
 
 @customElement('map-popup')
@@ -159,11 +39,6 @@ export class MapPopup extends MapFeatureElement {
   // Cache key for the last-applied globe-mask state — skip the four
   // style writes per render when nothing observable changed.
   private lastMaskKey = '';
-  private dateEditMode = false;
-  // Tracks the last selected uuid for the date-edit-reset effect: when
-  // selection moves to a different photo while date-edit is on, the mode
-  // should auto-clear so the new popup renders read-only by default.
-  private lastSelectedUuid: string | null = null;
   // Custom-wheel-zoom state: while a popup is open, scroll-zoom on either
   // the popup or the canvas anchors at the selected marker (instead of the
   // cursor) so the marker stays under the mouse. Mouse drags on the popup
@@ -174,21 +49,6 @@ export class MapPopup extends MapFeatureElement {
     type: string;
     handler: (e: MouseEvent) => void;
   }> = [];
-  private readonly popupActions: PopupActions = {
-    confirmLocation: confirmCurrentLocation,
-    copyLocation: copyCurrentLocation,
-    pasteLocation: pasteCurrentLocation,
-    copyDate: copyCurrentDate,
-    pasteDate: pasteCurrentDate,
-    toggleDateEdit: () => {
-      this.dateEditMode = !this.dateEditMode;
-      this.applySelection();
-    },
-    adjustTime: adjustCurrentTime,
-    applyManualDate: (value: string) => {
-      this.applyManualDate(value);
-    }
-  };
 
   override firstUpdated() {
     this.api.map.on('zoomend', () => {
@@ -214,19 +74,8 @@ export class MapPopup extends MapFeatureElement {
       });
     });
 
-    // Must precede applySelection's effect so the date-edit reset fires
-    // first and the popup's Lit re-sync sees the fresh value.
-    effect(() => {
-      const uuid = selection.selectedPhotoUuid.get();
-      const popupOpen = selection.isPopupOpen();
-      if (this.dateEditMode && (!popupOpen || uuid !== this.lastSelectedUuid)) {
-        this.dateEditMode = false;
-      }
-      this.lastSelectedUuid = uuid;
-    });
     effect(() => {
       edits.pendingCoords.get();
-      edits.pendingTimeOffsets.get();
       selection.selectedPhotoUuid.get();
       selection.interactionMode.get();
       this.applySelection();
@@ -235,13 +84,7 @@ export class MapPopup extends MapFeatureElement {
 
   private handleKeydown(e: KeyboardEvent): void {
     if (e.key === 'Escape') {
-      e.preventDefault();
-      if (this.dateEditMode) {
-        this.dateEditMode = false;
-        this.applySelection();
-      } else if (selection.isPopupOpen()) {
-        selection.closePopup();
-      }
+      this.handleEscape(e);
       return;
     }
     if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
@@ -258,35 +101,12 @@ export class MapPopup extends MapFeatureElement {
     }
   }
 
-  private applyManualDate(value: string): void {
-    const photo = selection.getPhoto();
-    if (photo === undefined) return;
-    if (value.trim() === '') return;
-    const yearStr = photo.date.split(':')[0];
-    const fallbackYear =
-      yearStr !== undefined && yearStr !== ''
-        ? parseInt(yearStr, 10)
-        : new Date().getFullYear();
-    const parsed = parseUserDatetime(value, fallbackYear);
-    if (parsed === null) return;
-    const offset = computeManualDateOffset(photo.date, parsed);
-    if (offset === null) return;
-    // Must precede setTimeOffset — its signal write triggers a popup re-sync
-    // that reads dateEditMode.
-    this.dateEditMode = false;
-    edits.setTimeOffset(photo.uuid, offset);
-  }
-
-  private createPopupElement(photo: Photo, index: number): PhotoPopup {
-    const el = document.createElement('photo-popup') as PhotoPopup;
-    el.photo = photo;
-    el.index = index;
-    el.dateEditMode = this.dateEditMode;
-    el.actions = this.popupActions;
-    const paste = computePasteVisibility(photo);
-    el.showPasteLocation = paste.showPasteLocation;
-    el.showPasteDate = paste.showPasteDate;
-    return el;
+  // Date-edit mode lives on <photo-popup>; give it priority over
+  // closing the popup so a stray Escape doesn't lose the edit row.
+  private handleEscape(e: KeyboardEvent): void {
+    e.preventDefault();
+    if (this.mounted?.el.closeDateEdit() === true) return;
+    if (selection.isPopupOpen()) selection.closePopup();
   }
 
   /** Current MapLibre Popup, if any. */
@@ -351,7 +171,9 @@ export class MapPopup extends MapFeatureElement {
     const { lon, lat } = edits.getEffectiveCoords(photo);
     const idx = selection.getPhotoIndex() ?? 0;
 
-    const el = this.createPopupElement(photo, idx);
+    const el = document.createElement('photo-popup') as PhotoPopup;
+    el.photo = photo;
+    el.index = idx;
     const popup = new Popup({
       closeButton: false,
       closeOnClick: false,
@@ -432,11 +254,6 @@ export class MapPopup extends MapFeatureElement {
     const { el } = this.mounted;
     el.photo = photo;
     el.index = index;
-    el.dateEditMode = this.dateEditMode;
-    const paste = computePasteVisibility(photo);
-    el.showPasteLocation = paste.showPasteLocation;
-    el.showPasteDate = paste.showPasteDate;
-    el.requestUpdate();
   }
 
   // Bound to the map's `render` event so the mask follows projection
