@@ -1,23 +1,9 @@
 import type { Map as MapGL, Popup } from 'maplibre-gl';
 
-const BASE_PADDING = 10;
-
-function getPadding(mapRect: DOMRect) {
-  const padding = {
-    top: BASE_PADDING,
-    bottom: BASE_PADDING,
-    left: BASE_PADDING,
-    right: BASE_PADDING
-  };
-  const panel = document.getElementById('filter-panel');
-  if (panel !== null) {
-    const panelRect = panel.getBoundingClientRect();
-    if (panelRect.left < mapRect.right && panelRect.right > mapRect.left) {
-      padding.right = mapRect.right - panelRect.left + BASE_PADDING;
-    }
-  }
-  return padding;
-}
+// The filter panel is fixed at 220px wide and pinned 10px from the
+// viewport's right edge, so the popup needs 240px of right padding to
+// stay clear of it (220 + 10 offset + 10 breathing room).
+const PADDING = { top: 10, bottom: 10, left: 10, right: 240 };
 
 function getPopupRect(
   map: MapGL,
@@ -39,20 +25,19 @@ function calculatePanOffset(
   mapRect: DOMRect,
   popupRect: DOMRect
 ): { panX: number; panY: number } {
-  const padding = getPadding(mapRect);
   let panX = 0;
   let panY = 0;
 
-  if (popupRect.top < mapRect.top + padding.top) {
-    panY = popupRect.top - mapRect.top - padding.top;
-  } else if (popupRect.bottom > mapRect.bottom - padding.bottom) {
-    panY = popupRect.bottom - mapRect.bottom + padding.bottom;
+  if (popupRect.top < mapRect.top + PADDING.top) {
+    panY = popupRect.top - mapRect.top - PADDING.top;
+  } else if (popupRect.bottom > mapRect.bottom - PADDING.bottom) {
+    panY = popupRect.bottom - mapRect.bottom + PADDING.bottom;
   }
 
-  if (popupRect.left < mapRect.left + padding.left) {
-    panX = popupRect.left - mapRect.left - padding.left;
-  } else if (popupRect.right > mapRect.right - padding.right) {
-    panX = popupRect.right - mapRect.right + padding.right;
+  if (popupRect.left < mapRect.left + PADDING.left) {
+    panX = popupRect.left - mapRect.left - PADDING.left;
+  } else if (popupRect.right > mapRect.right - PADDING.right) {
+    panX = popupRect.right - mapRect.right + PADDING.right;
   }
 
   return { panX, panY };

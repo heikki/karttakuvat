@@ -56,11 +56,11 @@ export class AppRoot extends LitElement {
   override render() {
     return html`
       <map-view></map-view>
-      <filter-panel id="filter-panel"></filter-panel>
+      <filter-panel></filter-panel>
       <photo-lightbox id="lightbox"></photo-lightbox>
       <metadata-modal id="metadata-modal"></metadata-modal>
       <files-modal id="files-modal"></files-modal>
-      <placement-panel id="placement-panel"></placement-panel>
+      <placement-panel></placement-panel>
     `;
   }
 }

@@ -1,21 +1,19 @@
+import { SignalWatcher } from '@lit-labs/signals';
 import { css, html, LitElement, nothing } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
+import { customElement } from 'lit/decorators.js';
 
-import type { Photo } from '@common/types';
+import selection from '@common/selection';
 import { formatDate, getThumbUrl } from '@common/utils';
 
 @customElement('placement-panel')
-export class PlacementPanel extends LitElement {
+export class PlacementPanel extends SignalWatcher(LitElement) {
   static override styles = css`
     :host {
-      display: none;
+      display: block;
       position: fixed;
       top: 12px;
       left: 12px;
       z-index: 1500;
-    }
-    :host([active]) {
-      display: block;
     }
     .panel {
       background: #2c2c2e;
@@ -44,15 +42,15 @@ export class PlacementPanel extends LitElement {
     }
   `;
 
-  @property({ type: Object }) photo: Photo | null = null;
-  @property({ type: Boolean, reflect: true }) active = false;
-
+  // eslint-disable-next-line @typescript-eslint/class-methods-use-this -- Lit lifecycle
   override render() {
-    if (this.photo === null) return nothing;
+    if (selection.interactionMode.get() !== 'placement') return nothing;
+    const photo = selection.getPhoto();
+    if (photo === undefined) return nothing;
     return html`
       <div class="panel">
-        <img src=${getThumbUrl(this.photo)} alt="" />
-        <div class="info">${formatDate(this.photo.date, this.photo.tz)}</div>
+        <img src=${getThumbUrl(photo)} alt="" />
+        <div class="info">${formatDate(photo.date, photo.tz)}</div>
         <div class="hint">Click map to set location. Esc to cancel.</div>
       </div>
     `;
