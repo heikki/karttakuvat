@@ -1,6 +1,6 @@
 /**
  * Shared HTTP request handler used by both `src/server/web.ts` (dev) and
- * `src/server/app.ts` (Electrobun launcher). Each caller passes a config that
+ * `src/server/index.ts` (Electrobun launcher). Each caller passes a config that
  * differs only in static-root order, vendor-file overrides, and the
  * post-response hook (logging vs. Full Disk Access detection).
  */

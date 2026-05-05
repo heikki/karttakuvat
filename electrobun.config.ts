@@ -56,7 +56,7 @@ export default {
 
   build: {
     bun: {
-      entrypoint: 'src/server/app.ts',
+      entrypoint: 'src/server/index.ts',
       external: ['prettier'],
       plugins: [pathAliasPlugin],
       define: {
