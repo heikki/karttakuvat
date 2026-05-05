@@ -14,7 +14,7 @@ UI is built with Lit web components (`LitElement`):
 
 ### Map modules
 
-The map is composed of `<map-*>` Lit elements extending `MapFeatureElement` (typed map handle via `@consume(mapContext)`, shadow DOM by default). Most features are headless; `<map-placement>` and `<map-measure>` render small inline panels. Larger UI splits off — `<photo-popup>` is a sibling element handed to `<map-popup>` via MapLibre's `setDOMContent`. Single-file features (`<map-fit>`, `<map-placement>`, `<map-measure>`, `<map-gpx>`) hold all their state and lifecycle in `index.ts`. Multi-file features (`<map-popup>`, `<map-route>`, `<map-markers>`) keep helpers in sibling files alongside the element class. Map-view-internal infrastructure (globe shader, basemap config) lives in `components/map-view/` alongside the orchestrator; cross-cutting state (`data`, `edits`, `selection`, `view-state`, `url-state`) lives in `common/`.
+The map is composed of `<map-*>` Lit elements extending `MapFeatureElement` (typed map handle via `@consume(mapContext)`, shadow DOM by default). Most features are headless; `<map-placement>` and `<map-measure>` render small inline panels. Larger UI splits off — `<photo-popup>` is a sibling element handed to `<map-popup>` via MapLibre's `setDOMContent`. Single-file features (`<map-fit>`, `<map-placement>`, `<map-measure>`, `<map-gpx>`) hold all their state and lifecycle in `index.ts`. Multi-file features (`<map-popup>`, `<map-route>`, `<map-markers>`) keep helpers in sibling files alongside the element class. Map-view-internal infrastructure (globe shader, basemap config) lives in `components/map-view/` alongside the orchestrator; `setup.ts` exposes a single default-exported `setupMap(container, api)` that builds the MapLibre instance and wires every map-level concern (controls, listeners, background, debug, interaction-mode crosshair, basemap-style effect). Cross-cutting state (`data`, `edits`, `selection`, `interaction-mode`, `view-state`, `url-state`) lives in `common/`.
 
 #### MapApi — the public seam
 
@@ -29,22 +29,34 @@ Adding a cross-feature operation is a deliberate two-step: declare it in `MapApi
 
 ### State and commands
 
-State is held in `@lit-labs/signals`, organised into a few stores. Lit components opt into reactivity via the `SignalWatcher` mixin and read signals in `render()`; non-component modules use `effect()` from `@common/signals` for module-level reactions. Commands (one-shot actions) are exposed as plain functions through a single `@common/actions` module — components import from `actions` for app-level commands, so the command surface stays in one place. `actions.ts` reaches the map by calling methods on `<map-view>` (which `implements MapApi`); see the MapApi section above. Cross-cutting reads — `selection.getPhoto()`, `data.filteredPhotos.get()`, `edits.getEffectiveLocation(photo)` — go directly to their store modules.
+State is held in `@lit-labs/signals`, organised into a few stores. Lit components opt into reactivity via the `SignalWatcher` mixin and read signals in `render()`; non-component modules use `effect()` from `@common/signals` for module-level reactions. Commands live alongside the state they touch — filter changes through `data.*` verbs, mode transitions through `interactionMode.*`, selection through `selection.*`. `@common/actions` is reserved for cross-cutting orchestrations that touch multiple stores or reach the map (`resetMap`, `fitToPhotos`, `openExternalMap`, `reloadAlbumGpx`, `saveEdits`); it reaches the map by calling methods on `<map-view>` (which `implements MapApi`).
 
-- `@common/data` — `photos` and `filters` signals; `filteredPhotos` computed.
+- `@common/data` — `photos` and `filteredPhotos`/`albumOptions`/`cameraOptions` signals; verbs (`setYear`, `setAlbum`, `setCamera`, `toggle/soloGps`, `toggle/soloMedia`, `resetFilters`); URL codec for filters. Cascade re-runs once on first photos load so a URL-restored album/camera that no longer exists falls back to `'all'`.
 - `@common/edits` — `pendingCoords`, `pendingTimeOffsets`, `saving` signals; `editCount` computed; function-form readers `getEffectiveCoords/Date/Location(photo)` wrap the underlying signals so any tracking context picks them up.
 - `@common/view-state` — `mapStyle`, `markerStyle`, `routeVisible`, each declared in one line via `urlSignal(key, decode, encode)` from `@common/url-state` so URL seeding and write-back are centralised.
-- `@common/selection` — `selectedPhotoUuid` (also a `urlSignal` bound to `id`) and `interactionMode` signals (see below).
-- `@common/url-state` — `urlSignal()` for one-key reactive bindings, plus imperative writers for the multi-key filter and map-view shapes. All writes coalesce through a debounced flush.
+- `@common/selection` — `selectedPhotoUuid` (a `urlSignal` bound to `id`) plus verbs. `isPopupOpen()` derives from selection plus the current interaction mode.
+- `@common/interaction-mode` — see below.
+- `@common/url-state` — `urlSignal()` plus `updateUrl(applier)` and the map-view codec. All writes coalesce through a debounced flush.
 
 ### Selection
 
-`selection.ts` splits the focused state into two orthogonal signals:
+`selection.ts` owns `selectedPhotoUuid: Signal<string | null>` (URL-bound to `id`). `isPopupOpen()` returns true iff a photo is selected and the current interaction mode isn't `'placement'`. Selection auto-clears when the selected photo leaves the filtered set; the URL-restore path runs once when photos first load.
 
-- `selectedPhotoUuid: Signal<string | null>` — which photo (if any) is currently selected. Persisted to the URL `id` param via an effect.
-- `interactionMode: Signal<'idle' | 'placement' | 'measure' | 'route-edit'>` — the exclusive map-input mode. Because all three exclusive modes live in one enum, they're mutually exclusive by construction; entering one automatically clears the others.
+### Interaction modes
 
-`isPopupOpen()` derives from both: a popup is shown iff a photo is selected and `interactionMode !== 'placement'`. `<map-popup>` and `<map-markers>` mount/unmount via `effect()` subscriptions; `<map-placement>` reads the same signals in its `render()` to show or hide its panel. Selection auto-clears when the selected photo leaves the filtered set; the URL-restore path runs once when photos first load.
+`@common/interaction-mode` owns the exclusive map-input mode (`'placement' | 'measure' | 'route-edit'`). One signal → mutually exclusive by construction; entering one fires the previous mode's `onExit`.
+
+Each owning feature registers itself in `firstUpdated`:
+
+```ts
+interactionMode.defineMode('measure', {
+  onEnter: () => { /* attach map listeners, show layers */ },
+  onExit:  () => { /* tear them down */ },
+  canEnter?: () => boolean   // refuse the transition (e.g. placement needs a selected photo)
+});
+```
+
+A single edge watcher inside the module dispatches `onExit` then `onEnter`; the per-feature copy is gone. Callers transition via `enter`/`exit`/`toggle`. Cross-cutting effects are central, not per-mode: a crosshair effect in `map-view/setup.ts` watches `current` and toggles a canvas class; Escape-to-exit lives in `<map-popup>`'s keydown handler so it sits in the priority chain (date-edit > mode-exit > popup-close).
 
 ### Layer ordering (DOM-order z)
 

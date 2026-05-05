@@ -4,10 +4,10 @@ Geotagged photo map viewer with Apple Photos integration.
 
 ## Project Stats (as of 05.05.2026)
 
-- **TypeScript files**: 63
-- **Lines of code**: 12,526
-- **Total commits**: 502
-- **Total tokens**: ~1,910M | **Total cost**: ~$1,163
+- **TypeScript files**: 64
+- **Lines of code**: 12,498
+- **Total commits**: 505
+- **Total tokens**: ~1,932M | **Total cost**: ~$1,179
 
 ## Updating This Diary
 
@@ -35,7 +35,7 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 
 ## 05.05.2026 — Module consolidation
 
-**Tokens**: 160M | **Cost**: $96
+**Tokens**: 182M | **Cost**: $112
 
 - Internal: layer specs reduced to plain data; per-feature `_LAYER`/`_SOURCE`/`EDIT_IDS` consts removed
 - Internal: helpers re-inlined into their hosts (debug-log, gestures, cascade, popup edits, clipboard, map-utils)
@@ -45,6 +45,8 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 - Internal: URL-backed signals expressed via a `urlSignal(key, decode, encode)` primitive; `firstUrlRun` workaround gone
 - Internal: `MapFeatureElement` defaults to shadow DOM; small visible UI lives with its feature (`<map-measure>` overlay, `<placement-panel>` folded into `<map-placement>`)
 - Internal: map features stop reaching out to sibling panels via `document.getElementById`
+- Internal: interaction mode extracted to its own module via `defineMode`/enter/exit/toggle; `map-view/setup` collapsed to one default export
+- Internal: filter verbs, cascade, and URL codec folded into `data.ts`; `<filter-panel>` becomes pure UI
 
 ## 04.05.2026 — Lit elements & actions module
 
