@@ -1,11 +1,8 @@
-import { signal } from '@lit-labs/signals';
-
 import * as data from '@common/data';
+import * as interactionMode from '@common/interaction-mode';
 import { effect } from '@common/signals';
 import type { Photo } from '@common/types';
 import { urlSignal } from '@common/url-state';
-
-export type InteractionMode = 'idle' | 'placement' | 'measure' | 'route-edit';
 
 export const selectedPhotoUuid = urlSignal<string | null>(
   'id',
@@ -16,7 +13,6 @@ export const selectedPhotoUuid = urlSignal<string | null>(
 // restoration effect below to decide whether the seed actually points
 // at a photo we have, independent of any later user-initiated changes.
 const seedUuid = selectedPhotoUuid.get();
-export const interactionMode = signal<InteractionMode>('idle');
 
 function getPhoto(): Photo | undefined {
   const uuid = selectedPhotoUuid.get();
@@ -34,32 +30,28 @@ function getPhotoIndex(): number | null {
 // Placement hides the popup; measure and route-edit don't conflict with it.
 function isPopupOpen(): boolean {
   return (
-    selectedPhotoUuid.get() !== null && interactionMode.get() !== 'placement'
+    selectedPhotoUuid.get() !== null &&
+    interactionMode.current.get() !== 'placement'
   );
 }
 
 function selectPhoto(uuid: string): void {
   selectedPhotoUuid.set(uuid);
   // Placement targeted the previous selection.
-  if (interactionMode.get() === 'placement') {
-    interactionMode.set('idle');
+  if (interactionMode.current.get() === 'placement') {
+    interactionMode.exit();
   }
 }
 
 function clear(): void {
   selectedPhotoUuid.set(null);
-  interactionMode.set('idle');
+  interactionMode.exit();
 }
 
 // Close the popup without touching interactionMode — measure and
 // route-edit shouldn't exit when the user dismisses the popup.
 function closePopup(): void {
   selectedPhotoUuid.set(null);
-}
-
-function enterPlacement(): void {
-  if (selectedPhotoUuid.get() === null) return;
-  interactionMode.set('placement');
 }
 
 function next(): boolean {
@@ -124,14 +116,12 @@ effect(() => {
 
 export default {
   selectedPhotoUuid,
-  interactionMode,
   getPhoto,
   getPhotoIndex,
   isPopupOpen,
   selectPhoto,
   clear,
   closePopup,
-  enterPlacement,
   next,
   prev,
   toggleOldestNewest

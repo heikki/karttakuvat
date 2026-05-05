@@ -7,7 +7,7 @@ import type {
 
 import * as data from '@common/data';
 import * as edits from '@common/edits';
-import selection from '@common/selection';
+import * as interactionMode from '@common/interaction-mode';
 import { effect } from '@common/signals';
 import type { Photo } from '@common/types';
 import { setLayersVisibility } from '@components/map-view/api';
@@ -55,7 +55,7 @@ let saveTimer: ReturnType<typeof setTimeout> | null = null;
 let suppressNextMapClick = false;
 
 function isActive(): boolean {
-  return selection.interactionMode.get() === 'route-edit';
+  return interactionMode.current.get() === 'route-edit';
 }
 
 /** Apply a state transition with the appropriate side effects. */
@@ -96,13 +96,10 @@ export function initRouteEdit(m: MapGL, h: MapRoute): void {
   map = m;
   host = h;
 
-  let wasActive = false;
-  effect(() => {
-    const active = isActive();
-    if (active === wasActive) return;
-    wasActive = active;
-    if (active) onEnter();
-    else onExit();
+  interactionMode.defineMode('route-edit', {
+    canEnter: () => (host?.getData() ?? host?.buildDefault() ?? null) !== null,
+    onEnter,
+    onExit
   });
 
   // Sync photo point positions when pending edits change
@@ -116,33 +113,17 @@ export function initRouteEdit(m: MapGL, h: MapRoute): void {
   });
 }
 
-export function toggleRouteEdit(): void {
-  if (isActive()) {
-    selection.interactionMode.set('idle');
-    return;
-  }
-  // Precondition: need route data buildable. Bail without flipping the
-  // signal if there isn't anything to edit.
-  if ((host?.getData() ?? host?.buildDefault() ?? null) === null) return;
-  selection.interactionMode.set('route-edit');
-}
-
-export function exitRouteEdit(): void {
-  if (isActive()) selection.interactionMode.set('idle');
-}
-
 // ---------- Lifecycle ----------
 
 function onEnter(): void {
   if (map === null) return;
-  // exitRouteEdit pushes routeData back into the host element; nothing
+  // The host pushes routeData back through setData on exit; nothing
   // reads host.getData() between enter and exit so we don't push it now.
   routeData = host?.getData() ?? host?.buildDefault() ?? null;
   if (routeData === null) return;
   syncPhotoPoints(routeData);
 
   suppressNextMapClick = false;
-  map.getCanvas().classList.add('crosshair');
   setLayerVisibility(true);
   raiseEditPoints();
   updateEditSources();
@@ -155,7 +136,6 @@ function onEnter(): void {
   map.on('mousemove', 'route-edit-hit-layer', onSegmentMove);
   map.on('mouseenter', 'route-edit-points-layer', onPointEnter);
   map.on('mouseleave', 'route-edit-points-layer', onPointLeave);
-  document.addEventListener('keydown', onKeyDown);
 
   transition({ kind: 'idle' });
 }
@@ -168,7 +148,6 @@ function onExit(): void {
 
   transition(null);
   suppressNextMapClick = false;
-  map.getCanvas().classList.remove('crosshair');
   removePopup();
   // Restore blue display layers with current edit data
   if (routeData !== null) host?.setData(routeData);
@@ -182,7 +161,6 @@ function onExit(): void {
   map.off('mousemove', 'route-edit-hit-layer', onSegmentMove);
   map.off('mouseenter', 'route-edit-points-layer', onPointEnter);
   map.off('mouseleave', 'route-edit-points-layer', onPointLeave);
-  document.removeEventListener('keydown', onKeyDown);
 }
 
 function setLayerVisibility(show: boolean): void {
@@ -582,8 +560,4 @@ function onPointLeave(): void {
   if (interaction?.kind === 'hoveringPoint') {
     transition({ kind: 'idle' });
   }
-}
-
-function onKeyDown(e: KeyboardEvent): void {
-  if (e.key === 'Escape') exitRouteEdit();
 }

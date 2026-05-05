@@ -9,8 +9,7 @@ import type {
   MapMouseEvent
 } from 'maplibre-gl';
 
-import selection from '@common/selection';
-import { effect } from '@common/signals';
+import * as interactionMode from '@common/interaction-mode';
 import {
   MapFeatureElement,
   setLayersVisibility
@@ -45,11 +44,7 @@ const LAYERS: LayerSpecification[] = [
 const LAYER_IDS = LAYERS.map((l) => l.id);
 
 function isActive(): boolean {
-  return selection.interactionMode.get() === 'measure';
-}
-
-function onKeyDown(e: KeyboardEvent): void {
-  if (e.key === 'Escape') selection.interactionMode.set('idle');
+  return interactionMode.current.get() === 'measure';
 }
 
 function computeDistance(coords: ReadonlyArray<[number, number]>): number {
@@ -104,20 +99,15 @@ export class MapMeasure extends SignalWatcher(MapFeatureElement) {
     this.coords = [...this.coords, [e.lngLat.lng, e.lngLat.lat]];
   };
 
-  static toggle(): void {
-    selection.interactionMode.set(isActive() ? 'idle' : 'measure');
-  }
-
   override firstUpdated() {
     this.addLayers();
-
-    let wasActive = false;
-    effect(() => {
-      const active = isActive();
-      if (active === wasActive) return;
-      wasActive = active;
-      if (active) this.onEnter();
-      else this.onExit();
+    interactionMode.defineMode('measure', {
+      onEnter: () => {
+        this.onEnter();
+      },
+      onExit: () => {
+        this.onExit();
+      }
     });
   }
 
@@ -181,18 +171,14 @@ export class MapMeasure extends SignalWatcher(MapFeatureElement) {
 
   private onEnter(): void {
     this.coords = [];
-    this.api.map.getCanvas().classList.add('crosshair');
     setLayersVisibility(this.api.map, LAYER_IDS, true);
     this.api.map.on('click', this.onMapClick);
-    document.addEventListener('keydown', onKeyDown);
   }
 
   private onExit(): void {
     this.coords = [];
-    this.api.map.getCanvas().classList.remove('crosshair');
     setLayersVisibility(this.api.map, LAYER_IDS, false);
     this.api.map.off('click', this.onMapClick);
-    document.removeEventListener('keydown', onKeyDown);
   }
 }
 

@@ -1,12 +1,25 @@
 import { SignalWatcher } from '@lit-labs/signals';
 import { css, html, nothing } from 'lit';
 import { customElement } from 'lit/decorators.js';
+import type { MapMouseEvent } from 'maplibre-gl';
 
 import * as edits from '@common/edits';
+import * as interactionMode from '@common/interaction-mode';
 import selection from '@common/selection';
-import { effect } from '@common/signals';
 import { formatDate, getThumbUrl } from '@common/utils';
 import { MapFeatureElement } from '@components/map-view/api';
+
+function onPlacementClick(e: MapMouseEvent): void {
+  const uuid = selection.selectedPhotoUuid.get();
+  if (uuid === null) {
+    selection.clear();
+    return;
+  }
+  e.preventDefault();
+  edits.setCoord(uuid, e.lngLat.lat, e.lngLat.lng);
+  // Selecting the same uuid cancels placement (back to popup view).
+  selection.selectPhoto(uuid);
+}
 
 @customElement('map-placement')
 export class MapPlacement extends SignalWatcher(MapFeatureElement) {
@@ -43,43 +56,20 @@ export class MapPlacement extends SignalWatcher(MapFeatureElement) {
   `;
 
   override firstUpdated() {
-    const map = this.api.map;
-
-    effect(() => {
-      const canvas = map.getCanvas();
-      if (selection.interactionMode.get() === 'placement') {
-        canvas.classList.add('crosshair');
-      } else {
-        canvas.classList.remove('crosshair');
-      }
-    });
-
-    map.on('click', (e) => {
-      if (selection.interactionMode.get() !== 'placement') return;
-      const uuid = selection.selectedPhotoUuid.get();
-      if (uuid === null) {
-        selection.clear();
-        return;
-      }
-      e.preventDefault();
-      edits.setCoord(uuid, e.lngLat.lat, e.lngLat.lng);
-      // Selecting the same uuid cancels placement (back to popup view).
-      selection.selectPhoto(uuid);
-    });
-
-    document.addEventListener('keydown', (e) => {
-      if (
-        e.key === 'Escape' &&
-        selection.interactionMode.get() === 'placement'
-      ) {
-        selection.clear();
+    interactionMode.defineMode('placement', {
+      canEnter: () => selection.selectedPhotoUuid.get() !== null,
+      onEnter: () => {
+        this.api.map.on('click', onPlacementClick);
+      },
+      onExit: () => {
+        this.api.map.off('click', onPlacementClick);
       }
     });
   }
 
   // eslint-disable-next-line @typescript-eslint/class-methods-use-this -- Lit lifecycle
   override render() {
-    if (selection.interactionMode.get() !== 'placement') return nothing;
+    if (interactionMode.current.get() !== 'placement') return nothing;
     const photo = selection.getPhoto();
     if (photo === undefined) return nothing;
     return html`

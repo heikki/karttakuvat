@@ -11,14 +11,7 @@ import type { MapMarkers } from '@components/map-markers';
 import type { MapPopup } from '@components/map-popup';
 
 import { mapContext, type MapApi } from './api';
-import {
-  createMap,
-  installBackground,
-  installControls,
-  installDebugDiagnostics,
-  installListeners,
-  installStyleEffect
-} from './setup';
+import setupMap from './setup';
 
 @customElement('map-view')
 export class MapView extends LitElement implements MapApi {
@@ -92,14 +85,7 @@ export class MapView extends LitElement implements MapApi {
   override firstUpdated() {
     const container =
       this.renderRoot.querySelector<HTMLDivElement>('#container')!;
-    const map = createMap(container);
-
-    installControls(map);
-    installListeners(map, this);
-    installBackground(map);
-    installDebugDiagnostics(map);
-    installStyleEffect(map);
-
+    const map = setupMap(container, this);
     void map.once('load', () => {
       this._map = map;
     });

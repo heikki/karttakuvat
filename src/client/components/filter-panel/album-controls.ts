@@ -3,7 +3,7 @@ import { html, LitElement, type PropertyValues } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 
 import * as actions from '@common/actions';
-import selection from '@common/selection';
+import * as interactionMode from '@common/interaction-mode';
 import { viewState } from '@common/view-state';
 
 import { styles } from './styles';
@@ -22,8 +22,8 @@ export class AlbumControls extends SignalWatcher(LitElement) {
       return;
     }
     if (!viewState.routeVisible.get()) return;
-    if (selection.interactionMode.get() === 'route-edit') {
-      selection.interactionMode.set('idle');
+    if (interactionMode.current.get() === 'route-edit') {
+      interactionMode.exit();
     }
     if (this.album === 'all') viewState.routeVisible.set(false);
   }
@@ -31,7 +31,7 @@ export class AlbumControls extends SignalWatcher(LitElement) {
   override render() {
     const disabled = this.album === 'all';
     const routeActive = viewState.routeVisible.get();
-    const editActive = selection.interactionMode.get() === 'route-edit';
+    const editActive = interactionMode.current.get() === 'route-edit';
     return html`
       <div class="view-buttons">
         <button
@@ -47,9 +47,7 @@ export class AlbumControls extends SignalWatcher(LitElement) {
           class="view-btn ${routeActive ? 'active' : ''}"
           ?disabled=${disabled}
           @click=${() => {
-            if (routeActive && editActive) {
-              selection.interactionMode.set('idle');
-            }
+            if (routeActive && editActive) interactionMode.exit();
             viewState.routeVisible.set(!routeActive);
           }}
         >
@@ -59,7 +57,7 @@ export class AlbumControls extends SignalWatcher(LitElement) {
           class="view-btn ${editActive ? 'active' : ''}"
           ?disabled=${disabled || !routeActive}
           @click=${() => {
-            actions.toggleRouteEdit();
+            interactionMode.toggle('route-edit');
           }}
         >
           Edit

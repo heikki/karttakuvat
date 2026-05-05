@@ -3,6 +3,7 @@ import type { MapLayerMouseEvent } from 'maplibre-gl';
 
 import * as data from '@common/data';
 import * as edits from '@common/edits';
+import * as interactionMode from '@common/interaction-mode';
 import selection from '@common/selection';
 import { effect } from '@common/signals';
 import type { MarkerLayer } from '@common/types';
@@ -60,7 +61,7 @@ export class MapMarkers extends MapFeatureElement {
       data.filteredPhotos.get();
       edits.pendingCoords.get();
       selection.selectedPhotoUuid.get();
-      selection.interactionMode.get();
+      interactionMode.current.get();
       this.refreshView();
     });
   }
@@ -71,7 +72,7 @@ export class MapMarkers extends MapFeatureElement {
 
   private refreshView(): void {
     if (this.currentLayer === null) return;
-    const mode = selection.interactionMode.get();
+    const mode = interactionMode.current.get();
     this.currentLayer.setView({
       photos: data.filteredPhotos.get(),
       selectedPhoto: selection.isPopupOpen()
@@ -97,7 +98,7 @@ export class MapMarkers extends MapFeatureElement {
     const canvas = map.getCanvas();
 
     const onLayerClick = (e: MapLayerMouseEvent): void => {
-      if (selection.interactionMode.get() === 'placement') return;
+      if (interactionMode.current.get() === 'placement') return;
       e.preventDefault();
       e.originalEvent.stopPropagation();
       if (e.features === undefined || e.features.length === 0) return;
@@ -110,12 +111,12 @@ export class MapMarkers extends MapFeatureElement {
     };
 
     const onMouseEnter = (): void => {
-      if (selection.interactionMode.get() !== 'placement') {
+      if (interactionMode.current.get() !== 'placement') {
         canvas.style.cursor = 'pointer';
       }
     };
     const onMouseLeave = (): void => {
-      if (selection.interactionMode.get() !== 'placement') {
+      if (interactionMode.current.get() !== 'placement') {
         canvas.style.cursor = '';
       }
     };

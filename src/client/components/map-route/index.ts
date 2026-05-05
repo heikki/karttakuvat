@@ -4,7 +4,7 @@ import type { GeoJSONSource, LayerSpecification } from 'maplibre-gl';
 
 import * as data from '@common/data';
 import * as edits from '@common/edits';
-import selection from '@common/selection';
+import * as interactionMode from '@common/interaction-mode';
 import { effect } from '@common/signals';
 import type { Photo } from '@common/types';
 import { toUtcSortKey } from '@common/utils';
@@ -100,7 +100,7 @@ export class MapRoute extends MapFeatureElement {
     // Edit mode owns rendering, so display layers hide while editing.
     effect(() => {
       const show =
-        isVisible() && selection.interactionMode.get() !== 'route-edit';
+        isVisible() && interactionMode.current.get() !== 'route-edit';
       setLayersVisibility(this.api.map, LAYER_IDS, show);
     });
 

@@ -6,7 +6,7 @@ import * as actions from '@common/actions';
 import * as data from '@common/data';
 import * as edits from '@common/edits';
 import { HAS_MML } from '@common/features';
-import selection from '@common/selection';
+import * as interactionMode from '@common/interaction-mode';
 import { filtersFromUrl, filtersToUrl, resetUrl } from '@common/url-state';
 import { getYear, isVideo } from '@common/utils';
 import { viewState } from '@common/view-state';
@@ -293,12 +293,12 @@ export class FilterPanel extends SignalWatcher(LitElement) {
                     Reset
                   </button>
                   <button
-                    class="view-btn ${selection.interactionMode.get() ===
+                    class="view-btn ${interactionMode.current.get() ===
                     'measure'
                       ? 'active'
                       : ''}"
                     @click=${() => {
-                      actions.toggleMeasure();
+                      interactionMode.toggle('measure');
                     }}
                   >
                     Measure

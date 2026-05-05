@@ -4,6 +4,7 @@ import { customElement, property, state } from 'lit/decorators.js';
 
 import * as actions from '@common/actions';
 import * as edits from '@common/edits';
+import * as interactionMode from '@common/interaction-mode';
 import type { Photo } from '@common/types';
 import {
   computeDateOffsetHours,
@@ -188,7 +189,7 @@ export class PhotoPopup extends SignalWatcher(LitElement) {
 
   private _onPlacement(e: Event) {
     e.preventDefault();
-    if (this.photo !== null) actions.enterPlacement();
+    if (this.photo !== null) interactionMode.enter('placement');
   }
 
   private _copyLocation() {

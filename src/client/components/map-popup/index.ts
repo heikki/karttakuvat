@@ -3,6 +3,7 @@ import { Popup } from 'maplibre-gl';
 
 import * as actions from '@common/actions';
 import * as edits from '@common/edits';
+import * as interactionMode from '@common/interaction-mode';
 import selection from '@common/selection';
 import { effect } from '@common/signals';
 import type { Photo } from '@common/types';
@@ -66,7 +67,7 @@ export class MapPopup extends MapFeatureElement {
     effect(() => {
       edits.pendingCoords.get();
       selection.selectedPhotoUuid.get();
-      selection.interactionMode.get();
+      interactionMode.current.get();
       this.applySelection();
     });
   }
@@ -90,11 +91,17 @@ export class MapPopup extends MapFeatureElement {
     }
   }
 
-  // Date-edit mode lives on <photo-popup>; give it priority over
-  // closing the popup so a stray Escape doesn't lose the edit row.
+  // Escape priority: date-edit > interaction mode > popup-close. Date edit
+  // wins so a stray Escape doesn't lose the edit row; mode-exit wins over
+  // popup-close so e.g. exiting placement returns to the popup instead of
+  // dismissing it.
   private handleEscape(e: KeyboardEvent): void {
     e.preventDefault();
     if (this.mounted?.el.closeDateEdit() === true) return;
+    if (interactionMode.current.get() !== null) {
+      interactionMode.exit();
+      return;
+    }
     if (selection.isPopupOpen()) selection.closePopup();
   }
 

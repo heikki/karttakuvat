@@ -6,6 +6,7 @@ import {
 } from 'maplibre-gl';
 import type { StyleSpecification } from 'maplibre-gl';
 
+import * as interactionMode from '@common/interaction-mode';
 import selection from '@common/selection';
 import { effect } from '@common/signals';
 import { mapViewFromUrl, mapViewToUrl } from '@common/url-state';
@@ -15,7 +16,7 @@ import type { MapApi } from './api';
 import background from './background';
 import config from './config';
 
-export function showMapError(msg: string, onClick?: () => void): void {
+function showMapError(msg: string, onClick?: () => void): void {
   let banner = document.getElementById('map-error-banner');
   if (banner === null) {
     banner = document.createElement('div');
@@ -80,7 +81,7 @@ function transformStyle(
   };
 }
 
-export function createMap(container: HTMLElement): MapGL {
+function createMap(container: HTMLElement): MapGL {
   const savedView = mapViewFromUrl();
   const center: [number, number] | undefined =
     savedView === null ? undefined : [savedView.lon, savedView.lat];
@@ -103,13 +104,13 @@ export function createMap(container: HTMLElement): MapGL {
   });
 }
 
-export function installControls(map: MapGL): void {
+function installControls(map: MapGL): void {
   map.addControl(new NavigationControl({ showCompass: false }), 'bottom-right');
   map.addControl(new GlobeControl(), 'bottom-right');
   map.addControl(new ScaleControl({ unit: 'metric' }), 'bottom-left');
 }
 
-export function installListeners(map: MapGL, api: MapApi): void {
+function installListeners(map: MapGL, api: MapApi): void {
   map.on('moveend', () => {
     const c = map.getCenter();
     mapViewToUrl({ lat: c.lat, lon: c.lng, zoom: map.getZoom() });
@@ -137,7 +138,7 @@ export function installListeners(map: MapGL, api: MapApi): void {
   // mode (place a pin, add a point, edit the route) and should leave the
   // popup alone.
   map.on('click', (e) => {
-    if (selection.interactionMode.get() !== 'idle') return;
+    if (interactionMode.current.get() !== null) return;
     if (e.defaultPrevented) return;
     if (selection.isPopupOpen()) selection.closePopup();
   });
@@ -152,7 +153,7 @@ export function installListeners(map: MapGL, api: MapApi): void {
   });
 }
 
-export function installBackground(map: MapGL): void {
+function installBackground(map: MapGL): void {
   background.init(map.getContainer());
   background.start();
 
@@ -186,7 +187,7 @@ export function installBackground(map: MapGL): void {
   });
 }
 
-export function installDebugDiagnostics(map: MapGL): void {
+function installDebugDiagnostics(map: MapGL): void {
   let renderFrames = 0;
   let lastRenderTs = 0;
   map.on('render', () => {
@@ -208,7 +209,18 @@ export function installDebugDiagnostics(map: MapGL): void {
   });
 }
 
-export function installStyleEffect(map: MapGL): void {
+// Crosshair cursor on the map canvas while any mode is active. Escape to
+// exit the mode lives in <map-popup>'s keydown handler so it can sit in the
+// shared priority chain with date-edit and popup-close.
+function installInteractionMode(map: MapGL): void {
+  effect(() => {
+    map
+      .getCanvas()
+      .classList.toggle('crosshair', interactionMode.current.get() !== null);
+  });
+}
+
+function installStyleEffect(map: MapGL): void {
   let lastAppliedStyleKey = viewState.mapStyle.get();
   effect(() => {
     const next = viewState.mapStyle.get();
@@ -220,4 +232,21 @@ export function installStyleEffect(map: MapGL): void {
     map.stop();
     map.setStyle(applyGlobeProjection(nextStyle), { transformStyle });
   });
+}
+
+/**
+ * Build the MapLibre instance and wire up all map-level concerns: controls,
+ * background, debug diagnostics, interaction-mode crosshair, basemap-style
+ * effect, and event listeners. Caller still owns the `map.once('load')`
+ * handshake — exposing the map flips the @state that mounts feature children.
+ */
+export default function setupMap(container: HTMLElement, api: MapApi): MapGL {
+  const map = createMap(container);
+  installControls(map);
+  installListeners(map, api);
+  installBackground(map);
+  installDebugDiagnostics(map);
+  installInteractionMode(map);
+  installStyleEffect(map);
+  return map;
 }
