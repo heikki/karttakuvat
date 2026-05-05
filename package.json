@@ -14,7 +14,9 @@
     "install:app": "bun run build:app:stable && cp -r build/stable-macos-arm64/Karttakuvat.app /Applications/",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "test": "bun test src",
+    "test:watch": "bun test src --watch"
   },
   "devDependencies": {
     "@ianvs/prettier-plugin-sort-imports": "^4.7.1",
