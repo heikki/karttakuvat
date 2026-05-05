@@ -1,18 +1,14 @@
 /**
- * Stream original video files from the Apple Photos library with HTTP range support.
+ * Stream a video file with HTTP range support.
  *
  * No conversion or copying — the webview plays the original `.mov`/`.mp4`
  * directly via sendfile(2). Seeking works via standard Range requests.
+ *
+ * This module is pure HTTP/range logic; bundle-layout knowledge lives in
+ * photos-library.
  */
 
 import { extname } from 'node:path';
-
-import {
-  resolveEditedPath,
-  resolveOriginalPath,
-  VIDEO_EDIT_EXT
-} from './image-cache';
-import type { AssetRecord } from './photos-db';
 
 function videoMimeType(filename: string): string {
   const ext = extname(filename).toLowerCase();
@@ -42,36 +38,14 @@ function parseRange(
   return { start, end };
 }
 
-function resolveVideoPath(
-  libraryPath: string,
-  asset: AssetRecord
-): string | null {
-  if (asset.directory === null || asset.filename === null) return null;
-  const edited = asset.hasEdits
-    ? resolveEditedPath(
-        libraryPath,
-        asset.directory,
-        asset.filename,
-        VIDEO_EDIT_EXT
-      )
-    : null;
-  return (
-    edited ?? resolveOriginalPath(libraryPath, asset.directory, asset.filename)
-  );
-}
-
 /**
- * Serve the video for a UUID, honoring the Range header for seeking.
- * Prefers the edited rendition when one exists, so playback matches Photos.
+ * Serve the video at `filePath`, honoring the Range header for seeking.
+ * Returns null when the file doesn't exist on disk.
  */
 export async function serveVideo(
-  libraryPath: string,
-  asset: AssetRecord | undefined,
+  filePath: string | null,
   req: Request
 ): Promise<Response | null> {
-  if (asset?.type !== 'video') return null;
-
-  const filePath = resolveVideoPath(libraryPath, asset);
   if (filePath === null) return null;
 
   const file = Bun.file(filePath);

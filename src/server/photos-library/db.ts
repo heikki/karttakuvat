@@ -3,7 +3,7 @@
  * Read-only access to Apple Photos SQLite database using bun:sqlite.
  *
  * Replaces osxphotos query calls with direct SQL queries.
- * Run standalone: bun src/server/photos-db.ts [--library PATH] [--uuid UUID]
+ * Run standalone: bun src/server/photos-library/db.ts [--library PATH] [--uuid UUID]
  */
 
 import { existsSync } from 'node:fs';
@@ -680,48 +680,4 @@ export function queryMetadata(
   queryMetaRelations(db, uuid, set);
 
   return result;
-}
-
-// ---------- Live library handle ----------
-
-/**
- * Long-lived handle to the Photos library used by HTTP request handlers.
- * Lazy: defers opening Photos.sqlite until the first lookup, so startup
- * doesn't fail when Full Disk Access hasn't been granted yet (the metadata
- * 500 triggers the FDA dialog flow in src/server/index.ts).
- *
- * Item-store rebuild keeps its own short-lived db connection — different
- * lifetime, different concern.
- */
-export interface PhotosLibrary {
-  readonly libraryPath: string;
-  getAsset: (uuid: string) => AssetRecord | undefined;
-  getMetadata: (uuid: string) => Record<string, unknown> | null;
-}
-
-export function openPhotosLibrary(libraryPath?: string): PhotosLibrary {
-  const resolvedPath = libraryPath ?? defaultLibraryPath();
-  let db: Database | null = null;
-  let assetIndex: Map<string, AssetRecord> | null = null;
-
-  function getDb(): Database {
-    db ??= openPhotosDb(resolvedPath);
-    return db;
-  }
-
-  function getAssetIndex(): Map<string, AssetRecord> {
-    if (assetIndex === null) {
-      assetIndex = queryAssetIndex(getDb());
-      console.log(
-        `[image-cache] Loaded ${assetIndex.size} assets from Photos.sqlite`
-      );
-    }
-    return assetIndex;
-  }
-
-  return {
-    libraryPath: resolvedPath,
-    getAsset: (uuid) => getAssetIndex().get(uuid),
-    getMetadata: (uuid) => queryMetadata(getDb(), uuid)
-  };
 }

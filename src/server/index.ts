@@ -5,9 +5,9 @@ const { BrowserView, BrowserWindow, ApplicationMenu, Utils } =
   await import('electrobun/bun');
 
 const { createApiHandler, flushLogBuffer } = await import('./api-routes');
-const { createImageCache } = await import('./image-cache');
 const { openItemStore } = await import('./item-store');
-const { openPhotosLibrary } = await import('./photos-db');
+const { createImageCache, openPhotosLibrary } =
+  await import('./photos-library');
 const { createRequestHandler } = await import('./request-handler');
 const { getSetting, setSetting } = await import('./state');
 
@@ -59,11 +59,10 @@ console.log(`[main] Data directory: ${dataDir}`);
 
 mkdirSync(dataDir, { recursive: true });
 const imageCache = createImageCache({ cacheDir: join(dataDir, 'cache') });
-const photosLibrary = openPhotosLibrary();
+const photosLibrary = openPhotosLibrary({ imageCache });
 const itemStore = openItemStore({ dataDir, imageCache });
 const { routeApiRequest } = createApiHandler(dataDir, {
   itemStore,
-  imageCache,
   photosLibrary
 });
 

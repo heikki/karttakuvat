@@ -12,7 +12,7 @@ import { join } from 'node:path';
 import { Database } from 'bun:sqlite';
 
 import { runAppleScript } from '../../resources/native/native-bridge';
-import { defaultLibraryPath } from './photos-db';
+import { defaultLibraryPath } from './photos-library';
 
 // ---------- Test safety latch ----------
 

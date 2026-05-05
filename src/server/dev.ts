@@ -2,14 +2,13 @@ import { serve } from 'bun';
 
 import indexHtml from '../client/index.html';
 import { createApiHandler, flushLogBuffer } from './api-routes';
-import { createImageCache } from './image-cache';
 import { openItemStore } from './item-store';
-import { openPhotosLibrary } from './photos-db';
+import { createImageCache, openPhotosLibrary } from './photos-library';
 import { createRequestHandler } from './request-handler';
 
 const dataDir = 'data';
 const imageCache = createImageCache({ cacheDir: `${dataDir}/cache` });
-const photosLibrary = openPhotosLibrary();
+const photosLibrary = openPhotosLibrary({ imageCache });
 const itemStore = openItemStore({ dataDir, imageCache });
 itemStore.rebuildComplete
   .then((changed) => {
@@ -25,7 +24,6 @@ itemStore.rebuildComplete
 
 const { routeApiRequest } = createApiHandler(dataDir, {
   itemStore,
-  imageCache,
   photosLibrary
 });
 

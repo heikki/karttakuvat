@@ -9,19 +9,24 @@ import {
   copyFileSync,
   existsSync,
   mkdirSync,
-  readdirSync,
   statSync,
   unlinkSync,
   utimesSync
 } from 'node:fs';
-import { basename, extname, join } from 'node:path';
+import { extname, join } from 'node:path';
 
 import {
   convertToJpeg,
   extractVideoFrame,
   resizeToJpeg
-} from '../../resources/native/native-bridge';
-import { defaultLibraryPath, type AssetRecord } from './photos-db';
+} from '../../../resources/native/native-bridge';
+import { defaultLibraryPath, type AssetRecord } from './db';
+import {
+  PHOTO_EDIT_EXT,
+  resolveEditedPath,
+  resolveOriginalPath,
+  VIDEO_EDIT_EXT
+} from './paths';
 
 interface ImageCacheConfig {
   cacheDir: string;
@@ -41,44 +46,6 @@ export interface ImageCache {
 
 function createThumbnail(fullPath: string, thumbPath: string): boolean {
   return resizeToJpeg(fullPath, thumbPath, 400);
-}
-
-// ---------- Path resolution ----------
-
-export const PHOTO_EDIT_EXT = /\.(?:jpe?g|heic|heif|tiff?)$/i;
-export const VIDEO_EDIT_EXT = /\.(?:mov|mp4|m4v)$/i;
-
-export function resolveOriginalPath(
-  libraryPath: string,
-  directory: string | null,
-  filename: string | null
-): string | null {
-  if (directory === null || filename === null) return null;
-  const p = join(libraryPath, 'originals', directory, filename);
-  return existsSync(p) ? p : null;
-}
-
-export function resolveEditedPath(
-  libraryPath: string,
-  directory: string | null,
-  filename: string | null,
-  extPattern: RegExp
-): string | null {
-  if (directory === null || filename === null) return null;
-  const rendersDir = join(libraryPath, 'resources', 'renders', directory);
-  if (!existsSync(rendersDir)) return null;
-
-  const stem = basename(filename, extname(filename));
-  try {
-    const files = readdirSync(rendersDir);
-    const rendered = files.find(
-      (f) => f.startsWith(stem) && extPattern.test(f)
-    );
-    if (rendered !== undefined) return join(rendersDir, rendered);
-  } catch {
-    // Directory not readable
-  }
-  return null;
 }
 
 // ---------- Source mtime ----------

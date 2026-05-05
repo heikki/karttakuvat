@@ -26,19 +26,19 @@ import {
   tzOffsetHours,
   tzOffsetToSeconds
 } from './date-utils';
-import type { ImageCache } from './image-cache';
-import {
-  openPhotosDb,
-  queryPhotos,
-  queryVideos,
-  type PhotoRecord
-} from './photos-db';
 import {
   quitPhotosApp,
   setDateTime,
   setLocation,
   setTimezone
 } from './photos-edit';
+import {
+  openPhotosDb,
+  queryPhotos,
+  queryVideos,
+  type ImageCache,
+  type PhotoRecord
+} from './photos-library';
 import {
   tzNameFromCoords,
   tzOffsetFromCoords,

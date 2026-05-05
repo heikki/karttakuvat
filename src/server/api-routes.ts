@@ -1,7 +1,6 @@
 import { deleteAlbumFile, getAlbumFiles, setFileVisible } from './album-files';
-import type { ImageCache } from './image-cache';
 import type { ItemStore, LocationEdit, TimeEdit } from './item-store';
-import type { PhotosLibrary } from './photos-db';
+import type { PhotosLibrary } from './photos-library';
 import { getSetting, setSetting } from './state';
 import { serveVideo } from './video-stream';
 
@@ -44,7 +43,6 @@ export function flushLogBuffer(): string[] {
 interface ApiHandlerOptions {
   itemStore: ItemStore;
   photosLibrary: PhotosLibrary;
-  imageCache?: ImageCache;
 }
 
 /**
@@ -52,7 +50,7 @@ interface ApiHandlerOptions {
  * The dataDir should contain `items.json`, `state.json`, `cache/`, `albums/`.
  */
 export function createApiHandler(dataDir: string, options: ApiHandlerOptions) {
-  const { itemStore, imageCache, photosLibrary } = options;
+  const { itemStore, photosLibrary } = options;
 
   async function handleUploadAlbumFile(
     req: Request,
@@ -183,13 +181,8 @@ export function createApiHandler(dataDir: string, options: ApiHandlerOptions) {
     uuid: string,
     size: 'full' | 'thumb'
   ): Response | null {
-    if (imageCache === undefined) return null;
-
-    const asset = photosLibrary.getAsset(uuid);
-    if (asset === undefined) return null;
-
     try {
-      const cachedPath = imageCache.resolve(uuid, size, asset);
+      const cachedPath = photosLibrary.resolveImagePath(uuid, size);
       if (cachedPath === null) return null;
       return new Response(Bun.file(cachedPath));
     } catch (err) {
@@ -379,7 +372,7 @@ export function createApiHandler(dataDir: string, options: ApiHandlerOptions) {
     }
 
     // On-demand image serving: /full/{uuid}.jpg and /thumb/{uuid}.jpg
-    if (imageCache !== undefined && req.method === 'GET') {
+    if (req.method === 'GET') {
       const imageMatch =
         /^\/(?<size>full|thumb)\/(?<id>[A-F0-9-]+)\.jpg$/i.exec(pathname);
       if (imageMatch?.groups !== undefined) {
@@ -395,8 +388,7 @@ export function createApiHandler(dataDir: string, options: ApiHandlerOptions) {
       const videoMatch = /^\/video\/(?<id>[A-F0-9-]+)$/i.exec(pathname);
       if (videoMatch?.groups !== undefined) {
         return serveVideo(
-          photosLibrary.libraryPath,
-          photosLibrary.getAsset(videoMatch.groups.id!),
+          photosLibrary.resolveVideoPath(videoMatch.groups.id!),
           req
         );
       }
