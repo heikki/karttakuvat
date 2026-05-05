@@ -271,7 +271,7 @@ Routes auto-save (1s debounce) via PUT `/api/albums/{album}/route`. Visibility p
 - `GET /api/albums/{album}/route` — load saved route data
 - `PUT /api/albums/{album}/route` — save route (points + segments with geometries)
 - `DELETE /api/albums/{album}/route` — clear saved route
-- `POST /api/route` — proxy to OpenRouteService for segment routing (requires `PUBLIC_ORS_API_KEY` env var or `ors_api_key` in `data/state.json`)
+- `POST /api/route` — proxy to OpenRouteService for segment routing (requires `PUBLIC_ORS_API_KEY` env var or `ors_api_key` in `state.json` inside the data dir)
 
 ## Measurement Mode
 
@@ -314,8 +314,8 @@ Each album can have associated GPX tracks and markdown notes, managed via the al
 
 - **Open**: "Files" button appears in the filter panel when an album is selected
 - **Upload**: drag-and-drop or file picker for `.gpx` and `.md` files, uploaded via POST `/api/albums/{album}/upload`
-- **Storage**: files stored on disk in `data/albums/{album_name}/`
-- **Visibility**: each file has a toggle to show/hide it; state persisted in `data/albums/{album}/_files.json`
+- **Storage**: files stored on disk in `{dataDir}/albums/{album_name}/`
+- **Visibility**: each file has a toggle to show/hide it; state persisted in `{dataDir}/albums/{album}/_files.json`
 - **Deletion**: files can be deleted via the modal, removing the disk file and the visibility entry in `_files.json`
 - **GPX integration**: hidden files are excluded from track rendering on the map
 
@@ -325,19 +325,19 @@ Both `bun run dev` and the Electrobun-packaged app boot the same backend: a sing
 
 ### Item Store
 
-Photo metadata lives in memory in `ItemStore` (`src/server/item-store.ts`), built from `Photos.sqlite` + `geo-tz` at startup. A snapshot at `data/items.json` lets cold starts serve `GET /api/items` immediately while the post-startup rebuild refreshes the list. Edits mutate the in-memory list and rewrite the snapshot in the same call.
+Photo metadata lives in memory in `ItemStore` (`src/server/item-store.ts`), built from `Photos.sqlite` + `geo-tz` at startup. A snapshot at `{dataDir}/items.json` lets cold starts serve `GET /api/items` immediately while the post-startup rebuild refreshes the list. Edits mutate the in-memory list and rewrite the snapshot in the same call.
 
 The rebuild compares `JSON.stringify(fresh)` with the loaded snapshot and reports whether items changed; the desktop launcher uses this to skip the webview reload when nothing changed.
 
 ### Settings and Album Files
 
-Settings (`view`, `window`, `ors_api_key`) live in `data/state.json`. Per-album file visibility lives in `data/albums/{album}/_files.json` sidecars next to `_route.json`.
+Settings (`view`, `window`, `ors_api_key`) live in `{dataDir}/state.json`. Per-album file visibility lives in `{dataDir}/albums/{album}/_files.json` sidecars next to `_route.json`.
 
 ### View State Persistence
 
 Map position, filters, map style, and marker style are persisted between sessions:
 
-- **Desktop app**: saved under the `view` key in `data/state.json` via PUT `/api/view-state`, restored on startup by building the URL with saved query params
+- **Desktop app**: saved under the `view` key in `{dataDir}/state.json` via PUT `/api/view-state`, restored on startup by building the URL with saved query params
 - **Web version**: saved to `localStorage`, restored synchronously at module load before components initialize
 - Both use debounced 1-second save on state changes
 
@@ -349,7 +349,7 @@ Videos in the lightbox are streamed directly from `Photos Library.photoslibrary/
 
 ### Data Directory
 
-Dev builds use `data/` in the project root. Installed builds use `~/Library/Application Support/Karttakuvat/` (overridable via `KARTTAKUVAT_DATA_DIR` env var). Contains `items.json` (snapshot), `state.json` (settings), `cache/` (image cache), and `albums/` (GPX/markdown files plus `_route.json` and `_files.json` sidecars).
+Dev builds use `.data/` in the project root. Installed builds use `~/Library/Application Support/Karttakuvat/` (overridable via `KARTTAKUVAT_DATA_DIR` env var). Contains `items.json` (snapshot), `state.json` (settings), `cache/` (image cache), and `albums/` (GPX/markdown files plus `_route.json` and `_files.json` sidecars).
 
 ## Desktop App (Electrobun)
 
@@ -371,7 +371,7 @@ The "Clear Cache" menu action deletes both cache directories under `{dataDir}/ca
 
 ### Auto-Sync on Startup
 
-The webview loads immediately with the snapshot from `data/items.json`. When `itemStore.rebuildComplete` resolves with `true`, the webview reloads; otherwise it keeps serving snapshot data. Rebuild errors (e.g. missing Full Disk Access) are logged.
+The webview loads immediately with the snapshot from `{dataDir}/items.json`. When `itemStore.rebuildComplete` resolves with `true`, the webview reloads; otherwise it keeps serving snapshot data. Rebuild errors (e.g. missing Full Disk Access) are logged.
 
 ### iCloud Drive Backup
 
@@ -383,7 +383,7 @@ On startup (production only), the app backs up album data to iCloud Drive at `~/
 
 ### Window State Persistence
 
-Window position and size are saved under the `window` key in `data/state.json` on move/resize (debounced 500ms) and restored on launch.
+Window position and size are saved under the `window` key in `{dataDir}/state.json` on move/resize (debounced 500ms) and restored on launch.
 
 ### External Link Handling
 

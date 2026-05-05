@@ -24,7 +24,6 @@ try {
   // ignore
 }
 
-// Find the project root (where src/server/ and data/ live)
 function findProjectRoot(): string | null {
   if (isDev) {
     const root = resolve(resourcesDir, '..', '..', '..', '..', '..');
@@ -35,7 +34,6 @@ function findProjectRoot(): string | null {
 
 const projectRoot = findProjectRoot();
 
-// Data directory: in dev builds, use data/ next to the project root
 function findDataDir(): string {
   if (
     process.env.KARTTAKUVAT_DATA_DIR !== undefined &&
@@ -45,7 +43,7 @@ function findDataDir(): string {
   }
 
   if (projectRoot !== null) {
-    const dataPath = join(projectRoot, 'data');
+    const dataPath = join(projectRoot, '.data');
     if (existsSync(dataPath)) {
       return dataPath;
     }
@@ -159,7 +157,6 @@ const server = Bun.serve({ port: 0, fetch });
 const baseUrl = `http://127.0.0.1:${server.port}`;
 console.log(`[main] Server running on ${baseUrl}`);
 
-// Window state persistence (data/state.json)
 const defaultFrame = { x: 100, y: 100, width: 1200, height: 800 };
 
 function loadWindowState(): {

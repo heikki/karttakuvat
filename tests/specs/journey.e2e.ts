@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-// Fixture (e2e/server.ts):
+// Fixture:
 //   e2e-1 — 2024, Helsinki, iPhone
 //   e2e-2 — 2023, Tampere,  Sony
 //   e2e-3 — 2024, Tampere,  iPhone

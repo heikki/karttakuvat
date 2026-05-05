@@ -1,12 +1,10 @@
 *.dylib
 *.photoslibrary
 .claude
+.data
 .DS_Store
 .env
 artifacts
 build
-data
-e2e/.data
-e2e/.report
-e2e/.test-results
 node_modules
+tests/output

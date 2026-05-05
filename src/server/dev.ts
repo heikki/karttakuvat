@@ -6,7 +6,7 @@ import { openItemStore } from './item-store';
 import { createImageCache, openPhotosLibrary } from './photos-library';
 import { createRequestHandler } from './request-handler';
 
-const dataDir = 'data';
+const dataDir = '.data';
 const imageCache = createImageCache({ cacheDir: `${dataDir}/cache` });
 const photosLibrary = openPhotosLibrary({ imageCache });
 const itemStore = openItemStore({ dataDir, imageCache });

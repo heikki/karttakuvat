@@ -3,7 +3,7 @@
 The project uses two runners chosen by tier:
 
 - **`bun test`** for unit, server-integration, and native smoke tests. Specs are co-located as `*.test.ts` next to source.
-- **Playwright** (WebKit) for end-to-end tests. Specs live under `e2e/` as `*.e2e.ts` — that suffix is intentional, since `*.spec.ts` would also be picked up by bare `bun test` and Playwright's runner cannot execute under bun:test. WebKit is the only target because Electrobun renders the desktop app in WKWebView; running E2E in Chromium would test a different engine than the shipping binary.
+- **Playwright** (WebKit) for end-to-end tests. Specs live under `tests/specs/` as `*.e2e.ts` — that suffix is intentional, since `*.spec.ts` would also be picked up by bare `bun test` and Playwright's runner cannot execute under bun:test. WebKit is the only target because Electrobun renders the desktop app in WKWebView; running E2E in Chromium would test a different engine than the shipping binary.
 
 Run locally:
 
@@ -11,7 +11,7 @@ Run locally:
 bun run test         # bun:test only
 bun run test:watch   # bun:test in watch mode
 bun run e2e:install  # one-time WebKit binary download (~75 MB)
-bun run e2e          # Playwright against bun e2e/server.ts (headless)
+bun run e2e          # Playwright against bun tests/server.ts (headless)
 bun run e2e:headed   # same, headed — defaults to slowMo=700ms; override with E2E_SLOW=200
 ```
 
@@ -45,9 +45,9 @@ Seed: `resources/native/native-bridge.test.ts`.
 
 ### Tier 5 — end-to-end (Playwright)
 
-`e2e/server.ts` boots the same `createApiHandler` + routing the production `src/server/web.ts` uses, but against a tempdir (`e2e/.data/`) pre-seeded with fake items — so no Apple Photos library access is required. Playwright drives WebKit against the running server. Catches integration breakage that unit tests miss (HTML routing, static asset serving, native bridge init via the image cache import).
+`tests/server.ts` boots the same `createApiHandler` + routing the production `src/server/web.ts` uses, but against a tempdir (`tests/output/data/`) pre-seeded with fake items — so no Apple Photos library access is required. Playwright drives WebKit against the running server. Catches integration breakage that unit tests miss (HTML routing, static asset serving, native bridge init via the image cache import).
 
-Seed: `e2e/smoke.spec.ts` — verifies `/api/items` returns the seeded fixture and `<app-root>` mounts.
+Seed: `tests/specs/smoke.e2e.ts` — verifies `/api/items` returns the seeded fixture and `<app-root>` mounts.
 
 ## What we do not test in CI
 

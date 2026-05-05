@@ -1,5 +1,5 @@
 /**
- * Generic key-value settings backed by `data/state.json`.
+ * Generic key-value settings backed by `state.json` inside the data dir.
  *
  * Replaces the SQLite `settings` table. Used for the `view`, `window`, and
  * `ors_api_key` keys. Re-reads the file on each call — the data is tiny and

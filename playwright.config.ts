@@ -4,15 +4,18 @@ const PORT = Number(process.env.E2E_PORT ?? 4757);
 const baseURL = `http://127.0.0.1:${PORT}`;
 
 export default defineConfig({
-  testDir: 'e2e',
+  testDir: 'tests/specs',
   testMatch: '**/*.e2e.ts',
-  outputDir: 'e2e/.test-results',
+  outputDir: 'tests/output/results',
   fullyParallel: false,
   workers: 1,
   reporter:
     process.env.CI === undefined
       ? 'list'
-      : [['list'], ['html', { outputFolder: 'e2e/.report', open: 'never' }]],
+      : [
+          ['list'],
+          ['html', { outputFolder: 'tests/output/report', open: 'never' }]
+        ],
   use: {
     baseURL,
     trace: 'retain-on-failure',
@@ -27,7 +30,7 @@ export default defineConfig({
   },
   projects: [{ name: 'webkit', use: { browserName: 'webkit' } }],
   webServer: {
-    command: 'bun e2e/server.ts',
+    command: 'bun tests/server.ts',
     url: baseURL,
     reuseExistingServer: process.env.CI === undefined,
     timeout: 30_000,

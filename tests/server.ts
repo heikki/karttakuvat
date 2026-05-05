@@ -20,7 +20,7 @@ import {
 import { createRequestHandler } from '../src/server/request-handler';
 
 const port = Number(process.env.E2E_PORT ?? 4757);
-const dataDir = process.env.E2E_DATA_DIR ?? 'e2e/.data';
+const dataDir = process.env.E2E_DATA_DIR ?? 'tests/output/data';
 
 mkdirSync(dataDir, { recursive: true });
 mkdirSync(`${dataDir}/cache`, { recursive: true });

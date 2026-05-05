@@ -1,7 +1,7 @@
 /**
  * In-memory store for the items list, with snapshot persistence.
  *
- * On open, reads `data/items.json` into memory so the API can serve immediately.
+ * On open, reads `items.json` into memory so the API can serve immediately.
  * In a microtask, rebuilds from Photos.sqlite + geo-tz; on change, swaps the
  * in-memory list, evicts orphaned cache files, and rewrites the snapshot.
  *
