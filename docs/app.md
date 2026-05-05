@@ -10,12 +10,11 @@ UI is built with Lit web components (`LitElement`):
 - `<photo-popup>` — single-photo popup on the map
 - `<photo-lightbox>` — full-screen photo viewer
 - `<metadata-modal>` — detailed photo metadata overlay
-- `<placement-panel>` — location placement UI
 - `<files-modal>` — album file management dialog
 
 ### Map modules
 
-The map is composed of `<map-*>` Lit elements, each owning its own directory under `src/client/components/`. Single-file features (`<map-fit>`, `<map-placement>`, `<map-measure>`, `<map-gpx>`) hold all their state and lifecycle in `index.ts`. Multi-file features (`<map-popup>`, `<map-route>`, `<map-markers>`) keep helpers in sibling files alongside the element class. Map-view-internal infrastructure (globe shader, basemap config) lives in `components/map-view/` alongside the orchestrator; cross-cutting state (`data`, `edits`, `selection`, `view-state`) lives in `common/`.
+The map is composed of `<map-*>` Lit elements extending `MapFeatureElement` (typed map handle via `@consume(mapContext)`, shadow DOM by default). Most features are headless; `<map-placement>` and `<map-measure>` render small inline panels. Larger UI splits off — `<photo-popup>` is a sibling element handed to `<map-popup>` via MapLibre's `setDOMContent`. Single-file features (`<map-fit>`, `<map-placement>`, `<map-measure>`, `<map-gpx>`) hold all their state and lifecycle in `index.ts`. Multi-file features (`<map-popup>`, `<map-route>`, `<map-markers>`) keep helpers in sibling files alongside the element class. Map-view-internal infrastructure (globe shader, basemap config) lives in `components/map-view/` alongside the orchestrator; cross-cutting state (`data`, `edits`, `selection`, `view-state`, `url-state`) lives in `common/`.
 
 #### MapApi — the public seam
 
@@ -34,8 +33,9 @@ State is held in `@lit-labs/signals`, organised into a few stores. Lit component
 
 - `@common/data` — `photos` and `filters` signals; `filteredPhotos` computed.
 - `@common/edits` — `pendingCoords`, `pendingTimeOffsets`, `saving` signals; `editCount` computed; function-form readers `getEffectiveCoords/Date/Location(photo)` wrap the underlying signals so any tracking context picks them up.
-- `@common/view-state` — `mapStyle`, `markerStyle`, `routeVisible` signals; each is seeded from the URL at module load and persisted back via an effect.
-- `@common/selection` — `selectedPhotoUuid` and `interactionMode` signals (see below).
+- `@common/view-state` — `mapStyle`, `markerStyle`, `routeVisible`, each declared in one line via `urlSignal(key, decode, encode)` from `@common/url-state` so URL seeding and write-back are centralised.
+- `@common/selection` — `selectedPhotoUuid` (also a `urlSignal` bound to `id`) and `interactionMode` signals (see below).
+- `@common/url-state` — `urlSignal()` for one-key reactive bindings, plus imperative writers for the multi-key filter and map-view shapes. All writes coalesce through a debounced flush.
 
 ### Selection
 
@@ -44,7 +44,7 @@ State is held in `@lit-labs/signals`, organised into a few stores. Lit component
 - `selectedPhotoUuid: Signal<string | null>` — which photo (if any) is currently selected. Persisted to the URL `id` param via an effect.
 - `interactionMode: Signal<'idle' | 'placement' | 'measure' | 'route-edit'>` — the exclusive map-input mode. Because all three exclusive modes live in one enum, they're mutually exclusive by construction; entering one automatically clears the others.
 
-`isPopupOpen()` derives from both: a popup is shown iff a photo is selected and `interactionMode !== 'placement'`. Markers, popup, and placement react via `effect()` on these signals — the popup module mounts/unmounts the MapLibre Popup, markers re-render with selection state, placement shows/hides its panel. Selection auto-clears when the selected photo leaves the filtered set; the URL-restore path runs once when photos first load.
+`isPopupOpen()` derives from both: a popup is shown iff a photo is selected and `interactionMode !== 'placement'`. `<map-popup>` and `<map-markers>` mount/unmount via `effect()` subscriptions; `<map-placement>` reads the same signals in its `render()` to show or hide its panel. Selection auto-clears when the selected photo leaves the filtered set; the URL-restore path runs once when photos first load.
 
 ### Layer ordering (DOM-order z)
 

@@ -4,10 +4,10 @@ Geotagged photo map viewer with Apple Photos integration.
 
 ## Project Stats (as of 05.05.2026)
 
-- **TypeScript files**: 62
-- **Lines of code**: 12,706
-- **Total commits**: 523
-- **Total tokens**: ~1,845M | **Total cost**: ~$1,120
+- **TypeScript files**: 63
+- **Lines of code**: 12,526
+- **Total commits**: 502
+- **Total tokens**: ~1,910M | **Total cost**: ~$1,163
 
 ## Updating This Diary
 
@@ -35,12 +35,16 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 
 ## 05.05.2026 — Module consolidation
 
-**Tokens**: 95M | **Cost**: $53
+**Tokens**: 160M | **Cost**: $96
 
 - Internal: layer specs reduced to plain data; per-feature `_LAYER`/`_SOURCE`/`EDIT_IDS` consts removed
 - Internal: helpers re-inlined into their hosts (debug-log, gestures, cascade, popup edits, clipboard, map-utils)
 - Internal: map-view's api/context/feature-element trio collapsed into `api.ts`
 - Internal: init-only modules folded into the elements that owned them; `<album-files-modal>` → `<files-modal>`
+- Internal: popup pair tightened — edit state into `<photo-popup>`, gestures + globe-mask split into self-cleaning `attach(map, popup)` modules, popup ops renamed open/move/fly
+- Internal: URL-backed signals expressed via a `urlSignal(key, decode, encode)` primitive; `firstUrlRun` workaround gone
+- Internal: `MapFeatureElement` defaults to shadow DOM; small visible UI lives with its feature (`<map-measure>` overlay, `<placement-panel>` folded into `<map-placement>`)
+- Internal: map features stop reaching out to sibling panels via `document.getElementById`
 
 ## 04.05.2026 — Lit elements & actions module
 
