@@ -18,7 +18,7 @@ export class MapView extends LitElement implements MapApi {
   static override styles = css`
     :host {
       display: block;
-      height: calc(100vh - 28px);
+      height: 100vh;
       width: 100%;
       position: relative;
     }
