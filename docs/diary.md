@@ -5,7 +5,7 @@ Geotagged photo map viewer with Apple Photos integration.
 ## Project Stats (as of 05.05.2026)
 
 - **TypeScript files**: 73
-- **Lines of code**: 12,997
+- **Lines of code**: 12,530 (+ 467 tests)
 - **Total commits**: 516
 - **Total tokens**: ~1,948M | **Total cost**: ~$1,190
 
@@ -21,7 +21,8 @@ Gather data with:
 ```bash
 bunx ccusage                    # Token usage and cost per day
 git log --oneline | wc -l       # Total commits
-find . -name "*.ts" | grep -v node_modules | xargs wc -l | tail -1  # Lines
+find . -name "*.ts" -not -path "./node_modules/*" -not -name "*.test.ts" -not -name "*.e2e.ts" -not -path "./e2e/*" -not -name "test-setup.ts" | xargs wc -l | tail -1  # Source lines
+find . \( -name "*.test.ts" -o -name "*.e2e.ts" -o -name "test-setup.ts" -o -path "./e2e/*.ts" \) -not -path "./node_modules/*" | xargs wc -l | tail -1  # Test lines
 git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent commits
 ```
 
