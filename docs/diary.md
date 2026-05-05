@@ -4,10 +4,10 @@ Geotagged photo map viewer with Apple Photos integration.
 
 ## Project Stats (as of 05.05.2026)
 
-- **TypeScript files**: 73
-- **Lines of code**: 12,530 (+ 467 tests)
-- **Total commits**: 516
-- **Total tokens**: ~1,948M | **Total cost**: ~$1,190
+- **TypeScript files**: 81
+- **Lines of code**: 12,548 (+ 1,481 tests)
+- **Total commits**: 530
+- **Total tokens**: ~1,979M | **Total cost**: ~$1,209
 
 ## Updating This Diary
 
@@ -36,7 +36,7 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 
 ## 05.05.2026 — Module consolidation; testing tiers
 
-**Tokens**: 198M | **Cost**: $124
+**Tokens**: 229M | **Cost**: $143
 
 - Internal: layer specs reduced to plain data; per-feature `_LAYER`/`_SOURCE`/`EDIT_IDS` consts removed
 - Internal: helpers re-inlined into their hosts (debug-log, gestures, cascade, popup edits, clipboard, map-utils)
@@ -52,6 +52,11 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 - Internal: Tier 4 smoke loads the native dylib and probes AppleScript via FFI
 - Internal: Playwright WebKit E2E covers /api/items, page mount, and filter-panel collapse
 - Internal: docs/testing.md plus macOS GitHub Actions CI for format/lint/typecheck/test/e2e
+- Internal: bun:test now covers @common data, edits, selection, and url-state — cascade, pending edits, popup gating, URL signals
+- Internal: Playwright adds cascade, filter persistence across reload, full-session journey, and a popup flow with keyboard nav + placement
+- Internal: `KARTTAKUVAT_NO_PHOTOS_WRITES=1` latch guards setLocation/setDateTime/setTimezone/quitPhotosApp so tests can't reach the user's Photos.app
+- Map: cosmic background canvas no longer intercepts clicks (`pointer-events: none`) — surfaced when headless WebKit raced the MapLibre canvas
+- Internal: pin `@types/three` so tsc resolves electrobun's `three` import on CI (electrobun ships raw .ts; skipLibCheck doesn't help)
 
 ## 04.05.2026 — Lit elements & actions module
 
