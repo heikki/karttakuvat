@@ -5,6 +5,7 @@ const baseURL = `http://127.0.0.1:${PORT}`;
 
 export default defineConfig({
   testDir: 'e2e',
+  testMatch: '**/*.e2e.ts',
   fullyParallel: false,
   workers: 1,
   reporter: process.env.CI === undefined ? 'list' : [['list'], ['html']],

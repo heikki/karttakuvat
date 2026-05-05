@@ -3,7 +3,7 @@
 The project uses two runners chosen by tier:
 
 - **`bun test`** for unit, server-integration, and native smoke tests. Specs are co-located as `*.test.ts` next to source.
-- **Playwright** (WebKit) for end-to-end and component tests. Specs live under `e2e/` as `*.spec.ts`. WebKit is the only target because Electrobun renders the desktop app in WKWebView; running E2E in Chromium would test a different engine than the shipping binary.
+- **Playwright** (WebKit) for end-to-end tests. Specs live under `e2e/` as `*.e2e.ts` — that suffix is intentional, since `*.spec.ts` would also be picked up by bare `bun test` and Playwright's runner cannot execute under bun:test. WebKit is the only target because Electrobun renders the desktop app in WKWebView; running E2E in Chromium would test a different engine than the shipping binary.
 
 Run locally:
 
