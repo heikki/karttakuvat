@@ -14,7 +14,6 @@ import {
   unlinkSync,
   utimesSync
 } from 'node:fs';
-import { homedir } from 'node:os';
 import { basename, extname, join } from 'node:path';
 
 import {
@@ -22,7 +21,7 @@ import {
   extractVideoFrame,
   resizeToJpeg
 } from '../../resources/native/native-bridge';
-import type { AssetRecord } from './photos-db';
+import { defaultLibraryPath, type AssetRecord } from './photos-db';
 
 interface ImageCacheConfig {
   cacheDir: string;
@@ -186,9 +185,7 @@ function convertFull(
 
 export function createImageCache(config: ImageCacheConfig): ImageCache {
   const { cacheDir } = config;
-  const libraryPath =
-    config.libraryPath ??
-    join(homedir(), 'Pictures/Photos Library.photoslibrary');
+  const libraryPath = config.libraryPath ?? defaultLibraryPath();
 
   const fullDir = join(cacheDir, 'full');
   const thumbDir = join(cacheDir, 'thumb');

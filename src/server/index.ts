@@ -7,6 +7,7 @@ const { BrowserView, BrowserWindow, ApplicationMenu, Utils } =
 const { createApiHandler, flushLogBuffer } = await import('./api-routes');
 const { createImageCache } = await import('./image-cache');
 const { openItemStore } = await import('./item-store');
+const { openPhotosLibrary } = await import('./photos-db');
 const { createRequestHandler } = await import('./request-handler');
 const { getSetting, setSetting } = await import('./state');
 
@@ -58,10 +59,12 @@ console.log(`[main] Data directory: ${dataDir}`);
 
 mkdirSync(dataDir, { recursive: true });
 const imageCache = createImageCache({ cacheDir: join(dataDir, 'cache') });
+const photosLibrary = openPhotosLibrary();
 const itemStore = openItemStore({ dataDir, imageCache });
 const { routeApiRequest } = createApiHandler(dataDir, {
   itemStore,
-  imageCache
+  imageCache,
+  photosLibrary
 });
 
 // Locate bundled view files

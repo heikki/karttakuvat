@@ -1,15 +1,17 @@
 import { deleteAlbumFile, getAlbumFiles, setFileVisible } from './album-files';
 import type { ImageCache } from './image-cache';
 import type { ItemStore, LocationEdit, TimeEdit } from './item-store';
-import {
-  openPhotosDb,
-  queryAssetIndex,
-  queryMetadata,
-  type AssetRecord
-} from './photos-db';
-import { handleRouteProxy } from './route-proxy';
-import { setSetting } from './state';
-import { defaultLibraryPath, serveVideo } from './video-stream';
+import type { PhotosLibrary } from './photos-db';
+import { getSetting, setSetting } from './state';
+import { serveVideo } from './video-stream';
+
+// Map client profile names to OpenRouteService profile names
+const ORS_PROFILES: Record<string, string> = {
+  driving: 'driving-car',
+  walking: 'foot-walking',
+  hiking: 'foot-hiking',
+  cycling: 'cycling-regular'
+};
 
 function serverError(context: string, err: unknown): Response {
   console.error(`${context} error:`, err);
@@ -41,8 +43,8 @@ export function flushLogBuffer(): string[] {
 
 interface ApiHandlerOptions {
   itemStore: ItemStore;
+  photosLibrary: PhotosLibrary;
   imageCache?: ImageCache;
-  libraryPath?: string;
 }
 
 /**
@@ -50,25 +52,7 @@ interface ApiHandlerOptions {
  * The dataDir should contain `items.json`, `state.json`, `cache/`, `albums/`.
  */
 export function createApiHandler(dataDir: string, options: ApiHandlerOptions) {
-  const { itemStore, imageCache } = options;
-  const libraryPath = options.libraryPath ?? defaultLibraryPath();
-  let photosDb: ReturnType<typeof openPhotosDb> | null = null;
-  let assetIndex: Map<string, AssetRecord> | null = null;
-
-  function getPhotosDb() {
-    photosDb ??= openPhotosDb();
-    return photosDb;
-  }
-
-  function getAssetIndex(): Map<string, AssetRecord> {
-    if (assetIndex === null) {
-      assetIndex = queryAssetIndex(getPhotosDb());
-      console.log(
-        `[image-cache] Loaded ${assetIndex.size} assets from Photos.sqlite`
-      );
-    }
-    return assetIndex;
-  }
+  const { itemStore, imageCache, photosLibrary } = options;
 
   async function handleUploadAlbumFile(
     req: Request,
@@ -160,7 +144,7 @@ export function createApiHandler(dataDir: string, options: ApiHandlerOptions) {
 
   function handleGetMetadata(uuid: string): Response {
     try {
-      const record = queryMetadata(getPhotosDb(), uuid);
+      const record = photosLibrary.getMetadata(uuid);
       if (record === null) {
         return new Response('Not found', { status: 404 });
       }
@@ -201,7 +185,7 @@ export function createApiHandler(dataDir: string, options: ApiHandlerOptions) {
   ): Response | null {
     if (imageCache === undefined) return null;
 
-    const asset = getAssetIndex().get(uuid);
+    const asset = photosLibrary.getAsset(uuid);
     if (asset === undefined) return null;
 
     try {
@@ -253,6 +237,64 @@ export function createApiHandler(dataDir: string, options: ApiHandlerOptions) {
     }
   }
 
+  async function fetchOrsRoute(
+    apiKey: string,
+    coordinates: Array<[number, number]>,
+    orsProfile: string
+  ): Promise<Response> {
+    const url = `https://api.openrouteservice.org/v2/directions/${orsProfile}/geojson`;
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': apiKey
+      },
+      body: JSON.stringify({ coordinates })
+    });
+    if (!resp.ok) {
+      const text = await resp.text();
+      console.error(`[route] ORS ${resp.status}: ${text}`);
+      return new Response(`Routing error: ${resp.status}`, {
+        status: resp.status
+      });
+    }
+    const data = (await resp.json()) as {
+      features?: Array<{ geometry: unknown }>;
+    };
+    const feature = data.features?.[0];
+    if (feature === undefined) {
+      return new Response('No route found', { status: 404 });
+    }
+    return Response.json({ geometry: feature.geometry });
+  }
+
+  async function handleRouteProxy(req: Request): Promise<Response> {
+    const apiKey =
+      process.env.PUBLIC_ORS_API_KEY ??
+      process.env.ORS_API_KEY ??
+      getSetting(dataDir, 'ors_api_key');
+    if (apiKey === null || apiKey === '') {
+      return new Response(
+        'ORS_API_KEY not configured. Set env var or db setting "ors_api_key".',
+        { status: 503 }
+      );
+    }
+    try {
+      const body = (await req.json()) as {
+        coordinates: Array<[number, number]>;
+        profile: string;
+      };
+      const orsProfile = ORS_PROFILES[body.profile];
+      if (orsProfile === undefined || body.coordinates.length < 2) {
+        return new Response('Invalid request', { status: 400 });
+      }
+      return await fetchOrsRoute(apiKey, body.coordinates, orsProfile);
+    } catch (err) {
+      console.error('handleRouteProxy error:', err);
+      return new Response('Internal server error', { status: 500 });
+    }
+  }
+
   /** Route an API request. Returns null if the path doesn't match any API route. */
   // eslint-disable-next-line complexity -- routing dispatch with multiple patterns
   function routeApiRequest(
@@ -278,7 +320,7 @@ export function createApiHandler(dataDir: string, options: ApiHandlerOptions) {
     }
 
     if (pathname === '/api/route' && req.method === 'POST') {
-      return handleRouteProxy(req, dataDir);
+      return handleRouteProxy(req);
     }
 
     const routeMatch = /^\/api\/albums\/(?<album>[^/]+)\/route$/.exec(pathname);
@@ -353,8 +395,8 @@ export function createApiHandler(dataDir: string, options: ApiHandlerOptions) {
       const videoMatch = /^\/video\/(?<id>[A-F0-9-]+)$/i.exec(pathname);
       if (videoMatch?.groups !== undefined) {
         return serveVideo(
-          libraryPath,
-          getAssetIndex().get(videoMatch.groups.id!),
+          photosLibrary.libraryPath,
+          photosLibrary.getAsset(videoMatch.groups.id!),
           req
         );
       }

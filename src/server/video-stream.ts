@@ -5,8 +5,7 @@
  * directly via sendfile(2). Seeking works via standard Range requests.
  */
 
-import { homedir } from 'node:os';
-import { extname, join } from 'node:path';
+import { extname } from 'node:path';
 
 import {
   resolveEditedPath,
@@ -41,10 +40,6 @@ function parseRange(
     return null;
   }
   return { start, end };
-}
-
-export function defaultLibraryPath(): string {
-  return join(homedir(), 'Pictures/Photos Library.photoslibrary');
 }
 
 function resolveVideoPath(

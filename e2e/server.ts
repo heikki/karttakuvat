@@ -13,8 +13,8 @@ import { serve } from 'bun';
 import indexHtml from '../src/client/index.html';
 import { createApiHandler } from '../src/server/api-routes';
 import { createImageCache } from '../src/server/image-cache';
-import { openItemStore } from '../src/server/item-store';
-import type { ItemEntry } from '../src/server/items';
+import { openItemStore, type ItemEntry } from '../src/server/item-store';
+import type { PhotosLibrary } from '../src/server/photos-db';
 import { createRequestHandler } from '../src/server/request-handler';
 
 const port = Number(process.env.E2E_PORT ?? 4757);
@@ -68,9 +68,17 @@ itemStore.rebuildComplete.catch(() => {
   /* ignored — E2E doesn't depend on rebuild */
 });
 
+// E2E doesn't touch the real Photos library; image/metadata routes aren't exercised.
+const photosLibrary: PhotosLibrary = {
+  libraryPath: '',
+  getAsset: () => undefined,
+  getMetadata: () => null
+};
+
 const { routeApiRequest } = createApiHandler(dataDir, {
   itemStore,
-  imageCache
+  imageCache,
+  photosLibrary
 });
 
 const fetch = createRequestHandler({

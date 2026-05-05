@@ -73,10 +73,15 @@ interface AlbumEntry {
 
 // ---------- Database lifecycle ----------
 
+export function defaultLibraryPath(): string {
+  return join(homedir(), 'Pictures/Photos Library.photoslibrary');
+}
+
 export function openPhotosDb(libraryPath?: string): Database {
-  const libPath =
-    libraryPath ?? join(homedir(), 'Pictures/Photos Library.photoslibrary');
-  const dbPath = join(libPath, 'database/Photos.sqlite');
+  const dbPath = join(
+    libraryPath ?? defaultLibraryPath(),
+    'database/Photos.sqlite'
+  );
 
   if (!existsSync(dbPath)) {
     throw new Error(`Photos database not found: ${dbPath}`);
@@ -675,4 +680,48 @@ export function queryMetadata(
   queryMetaRelations(db, uuid, set);
 
   return result;
+}
+
+// ---------- Live library handle ----------
+
+/**
+ * Long-lived handle to the Photos library used by HTTP request handlers.
+ * Lazy: defers opening Photos.sqlite until the first lookup, so startup
+ * doesn't fail when Full Disk Access hasn't been granted yet (the metadata
+ * 500 triggers the FDA dialog flow in src/server/index.ts).
+ *
+ * Item-store rebuild keeps its own short-lived db connection — different
+ * lifetime, different concern.
+ */
+export interface PhotosLibrary {
+  readonly libraryPath: string;
+  getAsset: (uuid: string) => AssetRecord | undefined;
+  getMetadata: (uuid: string) => Record<string, unknown> | null;
+}
+
+export function openPhotosLibrary(libraryPath?: string): PhotosLibrary {
+  const resolvedPath = libraryPath ?? defaultLibraryPath();
+  let db: Database | null = null;
+  let assetIndex: Map<string, AssetRecord> | null = null;
+
+  function getDb(): Database {
+    db ??= openPhotosDb(resolvedPath);
+    return db;
+  }
+
+  function getAssetIndex(): Map<string, AssetRecord> {
+    if (assetIndex === null) {
+      assetIndex = queryAssetIndex(getDb());
+      console.log(
+        `[image-cache] Loaded ${assetIndex.size} assets from Photos.sqlite`
+      );
+    }
+    return assetIndex;
+  }
+
+  return {
+    libraryPath: resolvedPath,
+    getAsset: (uuid) => getAssetIndex().get(uuid),
+    getMetadata: (uuid) => queryMetadata(getDb(), uuid)
+  };
 }

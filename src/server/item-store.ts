@@ -21,21 +21,122 @@ import { join } from 'node:path';
 
 import {
   applyHourOffset,
+  dateToUtc,
   systemTzOffsetHours,
   tzOffsetHours,
   tzOffsetToSeconds
 } from './date-utils';
 import type { ImageCache } from './image-cache';
-import { buildItemEntry, sortEntries, type ItemEntry } from './items';
-import { openPhotosDb, queryPhotos, queryVideos } from './photos-db';
+import {
+  openPhotosDb,
+  queryPhotos,
+  queryVideos,
+  type PhotoRecord
+} from './photos-db';
 import {
   quitPhotosApp,
   setDateTime,
   setLocation,
-  setTimezone,
-  tzNameFromCoords,
-  tzOffsetFromCoords
+  setTimezone
 } from './photos-edit';
+import {
+  tzNameFromCoords,
+  tzOffsetFromCoords,
+  tzOffsetFromTzName
+} from './timezone';
+
+export interface ItemEntry {
+  uuid: string;
+  type: 'photo' | 'video';
+  full: string;
+  thumb: string;
+  lat: number | null;
+  lon: number | null;
+  date: string;
+  tz: string | null;
+  camera: string | null;
+  duration?: string | null;
+  gps: 'user' | 'exif' | 'inferred' | null;
+  gps_accuracy: number | null;
+  albums: string[];
+  photos_url: string;
+}
+
+const DEFAULT_ALBUM_UUID = '81938C84-C5B0-4258-BC19-0B3EFA9BF296';
+
+function formatDuration(seconds: number | null): string | null {
+  if (seconds === null || seconds === 0) return null;
+  const s = Math.trunc(seconds);
+  if (s < 3600) {
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  }
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  return `${h}:${String(m).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+}
+
+function sortedAlbums(record: PhotoRecord): {
+  albums: string[];
+  albumUuids: string[];
+} {
+  const pairs = record.albums.map((name, i) => ({
+    name: name.normalize('NFC'),
+    uuid: record.albumUuids[i] ?? DEFAULT_ALBUM_UUID
+  }));
+  pairs.sort((a, b) => a.name.localeCompare(b.name));
+  return {
+    albums: pairs.map((p) => p.name),
+    albumUuids: pairs.map((p) => p.uuid)
+  };
+}
+
+function buildItemEntry(record: PhotoRecord): ItemEntry {
+  const sorted = sortedAlbums(record);
+  const albumUuid = sorted.albumUuids[0] ?? DEFAULT_ALBUM_UUID;
+  const photosUrl = `photos:albums?albumUuid=${albumUuid}&assetUuid=${record.uuid}`;
+
+  // The Photos.sqlite ZTIMEZONEOFFSET column stores raw GPS-derived offsets
+  // that aren't proper IANA timezone offsets, so always recompute from coords
+  // when available; fall back to Europe/Helsinki for items without coordinates.
+  let tz: string | null = null;
+  if (record.date !== '') {
+    if (record.lat !== null && record.lon !== null) {
+      tz = tzOffsetFromCoords(record.lat, record.lon, record.date);
+    }
+    tz ??= tzOffsetFromTzName('Europe/Helsinki', record.date);
+  }
+
+  const base = {
+    uuid: record.uuid,
+    type: record.type,
+    full: `full/${record.uuid}.jpg`,
+    thumb: `thumb/${record.uuid}.jpg`,
+    lat: record.lat,
+    lon: record.lon,
+    date: record.date,
+    tz,
+    camera: record.camera
+  };
+
+  const tail = {
+    gps: record.gps,
+    gps_accuracy: record.gps_accuracy,
+    albums: sorted.albums,
+    photos_url: photosUrl
+  };
+
+  if (record.type === 'video') {
+    return { ...base, duration: formatDuration(record.duration), ...tail };
+  }
+  return { ...base, ...tail };
+}
+
+function sortEntries(entries: ItemEntry[]): void {
+  entries.sort((a, b) => {
+    const d = dateToUtc(a.date, a.tz).localeCompare(dateToUtc(b.date, b.tz));
+    return d === 0 ? a.uuid.localeCompare(b.uuid) : d;
+  });
+}
 
 export interface LocationEdit {
   uuid: string;
