@@ -337,7 +337,7 @@ Map position, filters, map style, and marker style are persisted between session
 
 ## Desktop App (Electrobun)
 
-The app is packaged as a native macOS desktop app using Electrobun (Bun + system webview). Entry point: `src/app/index.ts`.
+The app is packaged as a native macOS desktop app using Electrobun (Bun + system webview). Entry point: `src/server/app.ts`. The dev/web entry is `src/server/web.ts`; both live in `src/server/` (no separate `src/app/` directory) so the two startup paths are siblings.
 
 ### Architecture
 

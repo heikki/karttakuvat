@@ -4,12 +4,11 @@ import { dirname, join, resolve } from 'node:path';
 const { BrowserView, BrowserWindow, ApplicationMenu, Utils } =
   await import('electrobun/bun');
 
-const { createApiHandler, flushLogBuffer } =
-  await import('../server/api-routes');
-const { createImageCache } = await import('../server/image-cache');
-const { openItemStore } = await import('../server/item-store');
-const { createRequestHandler } = await import('../server/request-handler');
-const { getSetting, setSetting } = await import('../server/state');
+const { createApiHandler, flushLogBuffer } = await import('./api-routes');
+const { createImageCache } = await import('./image-cache');
+const { openItemStore } = await import('./item-store');
+const { createRequestHandler } = await import('./request-handler');
+const { getSetting, setSetting } = await import('./state');
 
 // Detect dev build from version.json
 const resourcesDir = resolve(dirname(process.argv0), '..', 'Resources');

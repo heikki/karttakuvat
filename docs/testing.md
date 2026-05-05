@@ -45,7 +45,7 @@ Seed: `resources/native/native-bridge.test.ts`.
 
 ### Tier 5 — end-to-end (Playwright)
 
-`e2e/server.ts` boots the same `createApiHandler` + routing the production `src/server/server.ts` uses, but against a tempdir (`e2e/.data/`) pre-seeded with one fake item — so the sync-on-empty branch is skipped and no Apple Photos library access is required. Playwright drives WebKit against the running server. Catches integration breakage that unit tests miss (HTML routing, static asset serving, native bridge init via the image cache import).
+`e2e/server.ts` boots the same `createApiHandler` + routing the production `src/server/web.ts` uses, but against a tempdir (`e2e/.data/`) pre-seeded with fake items — so no Apple Photos library access is required. Playwright drives WebKit against the running server. Catches integration breakage that unit tests miss (HTML routing, static asset serving, native bridge init via the image cache import).
 
 Seed: `e2e/smoke.spec.ts` — verifies `/api/items` returns the seeded fixture and `<app-root>` mounts.
 
