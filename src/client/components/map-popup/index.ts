@@ -193,6 +193,7 @@ export class MapPopup extends MapFeatureElement {
     const { lon, lat } = edits.getEffectiveCoords(photo);
     this.setContent(photo, idx);
     this.mounted.popup.setLngLat([lon, lat]);
+    flyToPopupTo(this.api.map, this.mounted.popup, [lon, lat]);
   }
 
   private async flyPopupTo(photo: Photo): Promise<void> {
