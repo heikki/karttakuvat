@@ -4,10 +4,10 @@ Geotagged photo map viewer with Apple Photos integration.
 
 ## Project Stats (as of 08.05.2026)
 
-- **TypeScript files**: 69
-- **Lines of code**: 12,369 (+ 2,332 tests)
-- **Total commits**: 555
-- **Total tokens**: ~2,150M | **Total cost**: ~$1,317
+- **TypeScript files**: 73
+- **Lines of code**: 12,777 (+ 2,592 tests)
+- **Total commits**: 559
+- **Total tokens**: ~2,175M | **Total cost**: ~$1,335
 
 ## Updating This Diary
 
@@ -34,12 +34,17 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 - State the user-visible change only; skip mechanism and backstory unless that _is_ the change.
 - Describe final outcomes, not reverted intermediate attempts.
 
-## 08.05.2026 — E2E rewrite as user-flow journeys
+## 08.05.2026 — E2E rewrite; server deepening; filter additions
 
-**Tokens**: 69M | **Cost**: $41
+**Tokens**: 93M | **Cost**: $60
 
+- Album filter: new "(no album)" option for photos not in any user album
+- "Open in Photos" link works on any user's library (was a stale UUID from the developer's library, deep-linking to a non-existent album)
 - Internal: E2E suite rewritten as thirteen user-flow journeys driven through the UI, one per `docs/flows.md` section
 - Internal: `tests/server.ts` injects a stub `PhotosLibrary` and no-op `PhotosWriter` so save-edits round-trips without touching Photos.app
+- Internal: `AlbumStore` owns the per-album filesystem subtree (files, visibility, route bytes); path-traversal validation at the seam
+- Internal: `OrsClient` owns the OpenRouteService proxy (key resolution, profile mapping, status passthrough)
+- Internal: `createApiHandler` takes an `onEditResult` callback; module-level `scriptLogBuffer` deleted
 
 ## 06.05.2026 — Popup follows pasted location
 
