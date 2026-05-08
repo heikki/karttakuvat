@@ -8,7 +8,7 @@ export const styles = css`
   }
   :host {
     display: block;
-    user-select: none;
+    -webkit-user-select: none;
     font-family:
       -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
