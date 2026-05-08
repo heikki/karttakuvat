@@ -10,6 +10,7 @@
 export {
   defaultLibraryPath,
   openPhotosDb,
+  queryNotInAlbumUuid,
   queryPhotos,
   queryVideos
 } from './db';

@@ -34,6 +34,7 @@ import {
 } from './photos-edit';
 import {
   openPhotosDb,
+  queryNotInAlbumUuid,
   queryPhotos,
   queryVideos,
   type ImageCache,
@@ -62,8 +63,6 @@ export interface ItemEntry {
   photos_url: string;
 }
 
-const DEFAULT_ALBUM_UUID = '81938C84-C5B0-4258-BC19-0B3EFA9BF296';
-
 function formatDuration(seconds: number | null): string | null {
   if (seconds === null || seconds === 0) return null;
   const s = Math.trunc(seconds);
@@ -81,7 +80,7 @@ function sortedAlbums(record: PhotoRecord): {
 } {
   const pairs = record.albums.map((name, i) => ({
     name: name.normalize('NFC'),
-    uuid: record.albumUuids[i] ?? DEFAULT_ALBUM_UUID
+    uuid: record.albumUuids[i] ?? ''
   }));
   pairs.sort((a, b) => a.name.localeCompare(b.name));
   return {
@@ -90,9 +89,12 @@ function sortedAlbums(record: PhotoRecord): {
   };
 }
 
-function buildItemEntry(record: PhotoRecord): ItemEntry {
+function buildItemEntry(
+  record: PhotoRecord,
+  notInAlbumUuid: string
+): ItemEntry {
   const sorted = sortedAlbums(record);
-  const albumUuid = sorted.albumUuids[0] ?? DEFAULT_ALBUM_UUID;
+  const albumUuid = sorted.albumUuids.find(Boolean) ?? notInAlbumUuid;
   const photosUrl = `photos:albums?albumUuid=${albumUuid}&assetUuid=${record.uuid}`;
 
   // The Photos.sqlite ZTIMEZONEOFFSET column stores raw GPS-derived offsets
@@ -221,8 +223,9 @@ function loadSnapshot(snapshotPath: string): {
 function buildFromPhotosDb(): ItemEntry[] {
   const db = openPhotosDb();
   try {
+    const notInAlbumUuid = queryNotInAlbumUuid(db);
     const records = [...queryPhotos(db), ...queryVideos(db)];
-    return records.map(buildItemEntry);
+    return records.map((r) => buildItemEntry(r, notInAlbumUuid));
   } finally {
     db.close();
   }

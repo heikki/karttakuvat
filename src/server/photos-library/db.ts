@@ -400,6 +400,22 @@ export function queryVideos(db: Database): PhotoRecord[] {
   return buildRecords(db, rows, joinTable);
 }
 
+/**
+ * UUID of Photos.app's built-in "Not in album" smart album, used as the
+ * deep-link target for assets the user hasn't filed into any album. The UUID
+ * is library-local — every Photos library generates a fresh one — so we
+ * resolve it dynamically rather than hardcoding.
+ */
+export function queryNotInAlbumUuid(db: Database): string {
+  const row = db
+    .query<
+      { ZUUID: string },
+      []
+    >(`SELECT ZUUID FROM ZGENERICALBUM WHERE ZKIND = 1507 AND ZTITLE = 'Not in album' LIMIT 1`)
+    .get();
+  return row?.ZUUID ?? '';
+}
+
 /** Lightweight asset record for image cache — no album/camera overhead. */
 export interface AssetRecord {
   uuid: string;
