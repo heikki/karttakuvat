@@ -1,10 +1,8 @@
 import { expect, test } from '@playwright/test';
 
-// `KARTTAKUVAT_NO_PHOTOS_WRITES=1` (set by playwright.config.ts) makes the
-// default PhotosWriter throw, but `handleSaveEdits` still returns
-// `{ ok: true }` because it logs per-edit failures and reports overall
-// success. So the client-visible flow is: pending → Save → reload → pending
-// section gone.
+// tests/server.ts injects a no-op PhotosWriter so /api/save-edits round-trips
+// without touching Photos.app. The client-visible flow is:
+// pending → Save → reload → pending section gone.
 
 test('Save edits', async ({ page }) => {
   await page.goto('/?id=e2e-1');
