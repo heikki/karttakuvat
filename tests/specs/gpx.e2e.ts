@@ -25,8 +25,6 @@ test('View GPX tracks for an album', async ({ page }) => {
   await responsePromise;
 
   // Waypoints land in `gpx-waypoints`, tracks in `gpx-tracks`.
-  await expect
-    .poll(() => sourceFeatureCount(page, 'gpx-waypoints'))
-    .toBe(2);
+  await expect.poll(() => sourceFeatureCount(page, 'gpx-waypoints')).toBe(2);
   await expect.poll(() => sourceFeatureCount(page, 'gpx-tracks')).toBe(1);
 });

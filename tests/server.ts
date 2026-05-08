@@ -13,8 +13,10 @@ import { join } from 'node:path';
 import { serve } from 'bun';
 
 import indexHtml from '../src/client/index.html';
+import { createAlbumStore } from '../src/server/album-store';
 import { createApiHandler } from '../src/server/api-routes';
 import { openItemStore, type ItemEntry } from '../src/server/item-store';
+import { createOrsClient } from '../src/server/ors-client';
 import type { PhotosLibrary } from '../src/server/photos-library';
 import { createRequestHandler } from '../src/server/request-handler';
 
@@ -122,9 +124,13 @@ const photosLibrary: PhotosLibrary = {
   })
 };
 
+const albumStore = createAlbumStore(dataDir);
+const orsClient = createOrsClient(dataDir);
 const { routeApiRequest } = createApiHandler(dataDir, {
   itemStore,
-  photosLibrary
+  photosLibrary,
+  albumStore,
+  orsClient
 });
 
 const fetch = createRequestHandler({

@@ -33,7 +33,7 @@ State is held in `@lit-labs/signals`, organised into a few stores. Lit component
 
 - `@common/data` — `photos` and `filteredPhotos`/`albumOptions`/`cameraOptions` signals; verbs (`setYear`, `setAlbum`, `setCamera`, `toggle/soloGps`, `toggle/soloMedia`, `resetFilters`); URL codec for filters. Cascade re-runs once on first photos load so a URL-restored album/camera that no longer exists falls back to `'all'`.
 - `@common/edits` — `pendingCoords`, `pendingTimeOffsets`, `saving` signals; `editCount` computed; function-form readers `getEffectiveCoords/Date/Location(photo)` wrap the underlying signals so any tracking context picks them up.
-- `@common/view-state` — `mapStyle`, `markerStyle`, `routeVisible`, each declared in one line via `urlSignal(key, decode, encode)` from `@common/url-state` so URL seeding and write-back are centralised.
+- `@common/view-state` — `mapStyle`, `markerStyle`, `routeVisible`, each a one-line `urlSignal` from `@common/url-state` so URL seeding and write-back are centralised.
 - `@common/selection` — `selectedPhotoUuid` (a `urlSignal` bound to `id`) plus verbs. `isPopupOpen()` derives from selection plus the current interaction mode.
 - `@common/interaction-mode` — see below.
 - `@common/url-state` — `urlSignal()` plus `updateUrl(applier)` and the map-view codec. All writes coalesce through a debounced flush.
@@ -329,9 +329,23 @@ Photo metadata lives in memory in `ItemStore` (`src/server/item-store.ts`), buil
 
 The rebuild compares `JSON.stringify(fresh)` with the loaded snapshot and reports whether items changed; the desktop launcher uses this to skip the webview reload when nothing changed.
 
-### Settings and Album Files
+### Settings
 
-Settings (`view`, `window`, `ors_api_key`) live in `{dataDir}/state.json`. Per-album file visibility lives in `{dataDir}/albums/{album}/_files.json` sidecars next to `_route.json`.
+Settings (`view`, `window`, `ors_api_key`) live in `{dataDir}/state.json`, re-read on every access — the data is tiny and writes are debounced.
+
+### Album Store
+
+`AlbumStore` (`src/server/album-store.ts`) owns the per-album filesystem subtree at `{dataDir}/albums/{album}/`: GPX/markdown files (with a hard-coded `.gpx`/`.md` allowlist), the `_files.json` visibility sidecar, and the `_route.json` route file. Route content passes through as opaque bytes — the route shape is owned client-side in `map-route/types.ts`. File and route deletes are idempotent.
+
+Album and file names are validated at every entry; bad names (empty, `.`, `..`, or anything containing `/`, `\`, or NUL) throw `InvalidNameError`, which the router maps to a 400. Path traversal is blocked at the seam, so the router never builds paths from request strings directly.
+
+### OpenRouteService Proxy
+
+`OrsClient` (`src/server/ors-client.ts`) handles `/api/route`. Owns API key resolution (env vars first, then the `ors_api_key` setting in `state.json`), client-to-ORS profile-name translation, and pass-through of upstream status codes. The `/api/route` handler in api-routes is a thin shell over it.
+
+### Edit Result Callback
+
+`createApiHandler` accepts an optional `onEditResult` callback fired once per result during `/api/save-edits`. The dev server passes one to print per-edit lines to its terminal; the desktop entry passes none. The callback is the only place this side-channel exists — there is no shared buffer.
 
 ### View State Persistence
 

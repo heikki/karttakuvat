@@ -4,8 +4,10 @@ import { dirname, join, resolve } from 'node:path';
 const { BrowserView, BrowserWindow, ApplicationMenu, Utils } =
   await import('electrobun/bun');
 
-const { createApiHandler, flushLogBuffer } = await import('./api-routes');
+const { createAlbumStore } = await import('./album-store');
+const { createApiHandler } = await import('./api-routes');
 const { openItemStore } = await import('./item-store');
+const { createOrsClient } = await import('./ors-client');
 const { createImageCache, openPhotosLibrary } =
   await import('./photos-library');
 const { createRequestHandler } = await import('./request-handler');
@@ -59,9 +61,13 @@ mkdirSync(dataDir, { recursive: true });
 const imageCache = createImageCache({ cacheDir: join(dataDir, 'cache') });
 const photosLibrary = openPhotosLibrary({ imageCache });
 const itemStore = openItemStore({ dataDir, imageCache });
+const albumStore = createAlbumStore(dataDir);
+const orsClient = createOrsClient(dataDir);
 const { routeApiRequest } = createApiHandler(dataDir, {
   itemStore,
-  photosLibrary
+  photosLibrary,
+  albumStore,
+  orsClient
 });
 
 // Locate bundled view files
@@ -143,9 +149,6 @@ const fetch = createRequestHandler({
   staticRoots: [viewsDir, dataDir],
   onResponse: async (req, res, pathname) => {
     if (pathname.startsWith('/api/')) {
-      for (const line of flushLogBuffer()) {
-        console.log(line);
-      }
       await checkFullDiskAccess(res, pathname);
     }
   }

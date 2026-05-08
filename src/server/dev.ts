@@ -1,8 +1,10 @@
 import { serve } from 'bun';
 
 import indexHtml from '../client/index.html';
-import { createApiHandler, flushLogBuffer } from './api-routes';
+import { createAlbumStore } from './album-store';
+import { createApiHandler, type EditResultEvent } from './api-routes';
 import { openItemStore } from './item-store';
+import { createOrsClient } from './ors-client';
 import { createImageCache, openPhotosLibrary } from './photos-library';
 import { createRequestHandler } from './request-handler';
 
@@ -10,6 +12,21 @@ const dataDir = '.data';
 const imageCache = createImageCache({ cacheDir: `${dataDir}/cache` });
 const photosLibrary = openPhotosLibrary({ imageCache });
 const itemStore = openItemStore({ dataDir, imageCache });
+const albumStore = createAlbumStore(dataDir);
+const orsClient = createOrsClient(dataDir);
+
+function logEditResult(event: EditResultEvent): void {
+  const dim = '\x1b[2m';
+  const reset = '\x1b[0m';
+  const label = event.kind === 'location' ? '📍' : '⏰';
+  if (event.ok) {
+    console.log(`    ${label} ${dim}${event.uuid}${reset}`);
+  } else {
+    console.log(
+      `    ${label} \x1b[31m✗${reset} ${dim}${event.uuid}${reset}\n         ${dim}${event.error ?? ''}${reset}`
+    );
+  }
+}
 itemStore.rebuildComplete
   .then((changed) => {
     console.log(
@@ -24,7 +41,10 @@ itemStore.rebuildComplete
 
 const { routeApiRequest } = createApiHandler(dataDir, {
   itemStore,
-  photosLibrary
+  photosLibrary,
+  albumStore,
+  orsClient,
+  onEditResult: logEditResult
 });
 
 const methodColors: Record<string, string> = {
@@ -61,9 +81,6 @@ const fetch = createRequestHandler({
     const isImage = /\.(?:jpe?g|png|gif|webp|avif|svg|ico)$/i.test(pathname);
     if (!isImage || res.status >= 400) {
       logRequest(req.method, pathname, res.status, ms);
-    }
-    for (const line of flushLogBuffer()) {
-      console.log(line);
     }
   }
 });
