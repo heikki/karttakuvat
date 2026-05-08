@@ -11,9 +11,9 @@ export default defineConfig({
   workers: 1,
   reporter:
     process.env.CI === undefined
-      ? 'list'
+      ? './tests/reporter.ts'
       : [
-          ['list'],
+          ['./tests/reporter.ts'],
           ['html', { outputFolder: 'tests/output/report', open: 'never' }]
         ],
   use: {
