@@ -16,7 +16,16 @@ function resolveWithExtensions(basePath: string): string {
   return basePath;
 }
 
-// Inline plugin to resolve @common/* and @components/* path aliases
+// Inline plugin to resolve tsconfig path aliases at bundle time. Mirrors the
+// `paths` block in tsconfig.json — keep both in sync.
+const ALIASES: Array<{ prefix: string; target: string }> = [
+  { prefix: '@common/', target: 'src/client/common' },
+  { prefix: '@components/', target: 'src/client/components' },
+  { prefix: '@client/', target: 'src/client' },
+  { prefix: '@server/', target: 'src/server' },
+  { prefix: '@native/', target: 'resources/native' }
+];
+
 const pathAliasPlugin = {
   name: 'tsconfig-paths',
   setup(build: {
@@ -25,21 +34,17 @@ const pathAliasPlugin = {
       cb: (args: { path: string }) => { path: string }
     ) => void;
   }) {
-    build.onResolve({ filter: /^@common\// }, (args: { path: string }) => ({
-      path: resolveWithExtensions(
-        resolve(baseDir, 'src/client/common', args.path.replace('@common/', ''))
-      )
-    }));
-
-    build.onResolve({ filter: /^@components\// }, (args: { path: string }) => ({
-      path: resolveWithExtensions(
-        resolve(
-          baseDir,
-          'src/client/components',
-          args.path.replace('@components/', '')
-        )
-      )
-    }));
+    for (const { prefix, target } of ALIASES) {
+      const filter = new RegExp(`^${prefix.replace('/', '\\/')}`);
+      build.onResolve(
+        { filter },
+        (args: { path: string }): { path: string } => ({
+          path: resolveWithExtensions(
+            resolve(baseDir, target, args.path.replace(prefix, ''))
+          )
+        })
+      );
+    }
   }
 };
 

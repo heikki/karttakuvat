@@ -10,15 +10,14 @@
 
 import { copyFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import indexHtml from '@client/index.html';
+import { createAlbumStore } from '@server/album-store';
+import { createApiHandler } from '@server/api-routes';
+import { openItemStore, type ItemEntry } from '@server/item-store';
+import { createOrsClient } from '@server/ors-client';
+import type { PhotosLibrary } from '@server/photos-library';
+import { createRequestHandler } from '@server/request-handler';
 import { serve } from 'bun';
-
-import indexHtml from '../src/client/index.html';
-import { createAlbumStore } from '../src/server/album-store';
-import { createApiHandler } from '../src/server/api-routes';
-import { openItemStore, type ItemEntry } from '../src/server/item-store';
-import { createOrsClient } from '../src/server/ors-client';
-import type { PhotosLibrary } from '../src/server/photos-library';
-import { createRequestHandler } from '../src/server/request-handler';
 
 const port = Number(process.env.E2E_PORT ?? 4757);
 const dataDir = process.env.E2E_DATA_DIR ?? 'tests/output/data';

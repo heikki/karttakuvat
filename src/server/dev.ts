@@ -1,6 +1,6 @@
+import indexHtml from '@client/index.html';
 import { serve } from 'bun';
 
-import indexHtml from '../client/index.html';
 import { createAlbumStore } from './album-store';
 import { createApiHandler, type EditResultEvent } from './api-routes';
 import { openItemStore } from './item-store';

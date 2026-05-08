@@ -9,9 +9,9 @@
  */
 
 import { join } from 'node:path';
+import { runAppleScript } from '@native/native-bridge';
 import { Database } from 'bun:sqlite';
 
-import { runAppleScript } from '../../resources/native/native-bridge';
 import { defaultLibraryPath } from './photos-library';
 
 // ---------- Test safety latch ----------
