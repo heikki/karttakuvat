@@ -20,6 +20,14 @@ const ALL_MEDIA = ['photo', 'video'];
 const DEFAULT_GPS = ['exif', 'inferred', 'user'];
 const DEFAULT_MEDIA: string[] = [...ALL_MEDIA];
 
+// Synthetic option for photos not in any user album, mirrors '(unknown)' in
+// the camera filter. Photos with empty `albums` are matched by this label.
+const NO_ALBUM = '(no album)';
+
+function albumsOf(p: Photo): string[] {
+  return p.albums.length === 0 ? [NO_ALBUM] : p.albums;
+}
+
 const FILTER_KEYS = ['year', 'album', 'camera', 'gps', 'media'] as const;
 
 const DEFAULTS: Filters = {
@@ -89,11 +97,13 @@ export const filters = computed(() => _filters.get());
 function applyCascade(f: Filters, ps: Photo[]): Filters {
   const yearPs =
     f.year === 'all' ? ps : ps.filter((p) => getYear(p) === f.year);
-  const validAlbums = new Set(yearPs.flatMap((p) => p.albums));
+  const validAlbums = new Set(yearPs.flatMap(albumsOf));
   const album =
     f.album !== 'all' && !validAlbums.has(f.album) ? 'all' : f.album;
   const albumPs =
-    album === 'all' ? yearPs : yearPs.filter((p) => p.albums.includes(album));
+    album === 'all'
+      ? yearPs
+      : yearPs.filter((p) => albumsOf(p).includes(album));
   const validCameras = new Set(albumPs.map((p) => p.camera ?? '(unknown)'));
   const camera =
     f.camera !== 'all' && !validCameras.has(f.camera) ? 'all' : f.camera;
@@ -105,7 +115,7 @@ export const albumOptions = computed(() => {
   const f = _filters.get();
   const yearPs =
     f.year === 'all' ? ps : ps.filter((p) => getYear(p) === f.year);
-  return [...new Set(yearPs.flatMap((p) => p.albums))].sort();
+  return [...new Set(yearPs.flatMap(albumsOf))].sort();
 });
 
 export const cameraOptions = computed(() => {
@@ -116,7 +126,7 @@ export const cameraOptions = computed(() => {
   const albumPs =
     f.album === 'all'
       ? yearPs
-      : yearPs.filter((p) => p.albums.includes(f.album));
+      : yearPs.filter((p) => albumsOf(p).includes(f.album));
   return [...new Set(albumPs.map((p) => p.camera ?? '(unknown)'))].sort();
 });
 
@@ -142,7 +152,7 @@ export const filteredPhotos = computed(() => {
     if (f.year !== 'all' && getYear(p) !== f.year) return false;
     if (!matchesGps(p, f.gps)) return false;
     if (!matchesMedia(p, f.media)) return false;
-    if (f.album !== 'all' && !p.albums.includes(f.album)) return false;
+    if (f.album !== 'all' && !albumsOf(p).includes(f.album)) return false;
     if (f.camera !== 'all') {
       const pc = p.camera ?? '(unknown)';
       if (pc !== f.camera) return false;

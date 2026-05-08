@@ -91,6 +91,15 @@ describe('filteredPhotos', () => {
     expect(filteredPhotos.get().map((p) => p.uuid)).toEqual(['b']);
   });
 
+  test('album filter treats empty albums as "(no album)"', () => {
+    photos.set([
+      photo({ uuid: 'a', albums: ['Helsinki'] }),
+      photo({ uuid: 'b', albums: [] })
+    ]);
+    setAlbum('(no album)');
+    expect(filteredPhotos.get().map((p) => p.uuid)).toEqual(['b']);
+  });
+
   test('camera filter treats null camera as "(unknown)"', () => {
     photos.set([
       photo({ uuid: 'a', camera: 'iPhone 15' }),
@@ -143,6 +152,31 @@ describe('option cascades', () => {
     ]);
     setAlbum('Helsinki');
     expect(cameraOptions.get()).toEqual(['iPhone']);
+  });
+
+  test('albumOptions includes "(no album)" when albumless photos exist', () => {
+    photos.set([
+      photo({ uuid: 'a', albums: ['Helsinki'] }),
+      photo({ uuid: 'b', albums: [] })
+    ]);
+    expect(albumOptions.get()).toEqual(['(no album)', 'Helsinki']);
+  });
+
+  test('albumOptions excludes "(no album)" when every photo has an album', () => {
+    photos.set([
+      photo({ uuid: 'a', albums: ['Helsinki'] }),
+      photo({ uuid: 'b', albums: ['Tampere'] })
+    ]);
+    expect(albumOptions.get()).toEqual(['Helsinki', 'Tampere']);
+  });
+
+  test('cameraOptions narrow to albumless photos when album is "(no album)"', () => {
+    photos.set([
+      photo({ uuid: 'a', albums: ['Helsinki'], camera: 'iPhone' }),
+      photo({ uuid: 'b', albums: [], camera: 'Sony' })
+    ]);
+    setAlbum('(no album)');
+    expect(cameraOptions.get()).toEqual(['Sony']);
   });
 });
 
