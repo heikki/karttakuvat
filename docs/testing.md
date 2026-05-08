@@ -57,10 +57,15 @@ Specs are organised by user journey, not by component. Each one mirrors a flow f
 - `edit-date.e2e.ts` — Adjust date/time (±day/hour) + copy/paste date between photos.
 - `map-controls.e2e.ts` — Switch map style + marker style, asserting URL params and active state.
 - `measure.e2e.ts` — Measure distances on the map (click points → distance overlay).
+- `external-maps.e2e.ts` — Open in Apple Maps / Google Maps (`window.open` URL capture).
+- `save-edits.e2e.ts` — Pending edit → Save → server applies → pending section clears.
+- `gpx.e2e.ts` — Album with seeded GPX file → tracks + waypoints land in their MapLibre sources.
+- `files-modal.e2e.ts` — Files button → modal → toggle visibility → close.
+- `routes.e2e.ts` — Route button toggles `photo-route` source population and layer visibility.
 
 **What Tier 5 verifies:** the wired-together server (`createApiHandler` + `createRequestHandler` + Bun routing), the static-asset and image-route paths under WebKit, and the user-driven UI flows end-to-end.
 
-**What Tier 5 does not verify:** the native bridge / image-cache codepath (the fake `PhotosLibrary` returns the fixture path directly, bypassing the dylib), real Apple Photos library reads or writes (the stub returns canned metadata and `null` for video, and `KARTTAKUVAT_NO_PHOTOS_WRITES=1` short-circuits any save), and the Electrobun launcher (no driver — closest proxy is the WebKit engine in Playwright).
+**What Tier 5 does not verify:** the native bridge / image-cache codepath (the fake `PhotosLibrary` returns the fixture path directly, bypassing the dylib), real Apple Photos library reads or writes (the stub returns canned metadata and `null` for video, and a no-op `PhotosWriter` is injected so the save route never reaches AppleScript), and the Electrobun launcher (no driver — closest proxy is the WebKit engine in Playwright).
 
 ## What we do not test in CI
 

@@ -8,7 +8,7 @@
  * library access.
  */
 
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { serve } from 'bun';
 
@@ -86,9 +86,23 @@ const items: ItemEntry[] = [
 // Photos library is touched.
 writeFileSync(join(dataDir, 'items.json'), JSON.stringify(items));
 
+// Seed the Tampere album with a small GPX track so map-gpx has a route to
+// load + parse + render. Visibility defaults to true (no _files.json sidecar).
+const tampereDir = join(dataDir, 'albums', 'Tampere');
+mkdirSync(tampereDir, { recursive: true });
+copyFileSync('tests/fixtures/track.gpx', join(tampereDir, 'track.gpx'));
+
+// No-op PhotosWriter so /api/save-edits succeeds in E2E without touching the
+// real Photos.app via AppleScript.
 const itemStore = openItemStore({
   dataDir,
-  buildFreshItems: () => items
+  buildFreshItems: () => items,
+  photosWriter: {
+    setLocation: () => undefined,
+    setDateTime: () => undefined,
+    setTimezone: () => undefined,
+    quitPhotosApp: () => undefined
+  }
 });
 itemStore.rebuildComplete.catch(() => {
   /* ignored — E2E doesn't depend on rebuild */
