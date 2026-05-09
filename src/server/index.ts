@@ -259,7 +259,20 @@ interface ElectrobunEvent {
 
 function extractUrl(event: ElectrobunEvent): string {
   const detail = event.data?.detail;
-  if (typeof detail === 'string') return detail;
+  if (typeof detail === 'string') {
+    if (detail.startsWith('{')) {
+      try {
+        const parsed = JSON.parse(detail) as { url?: string; allowed?: boolean };
+        // allowed=true means electrobun will navigate the webview internally;
+        // we have nothing to open in the system browser.
+        if (parsed.allowed === true) return '';
+        return parsed.url ?? '';
+      } catch {
+        /* fall through to raw string */
+      }
+    }
+    return detail;
+  }
   if (detail !== undefined && typeof detail.url === 'string') return detail.url;
   return '';
 }
