@@ -10,18 +10,10 @@ test('Filter by media type and location precision', async ({ page }) => {
   const stats = page.locator('filter-panel >> .panel-header p');
   await expect(stats).toHaveText('3 photos');
 
-  const photosBtn = page
-    .locator('filter-panel >> button.filter-btn')
-    .filter({ hasText: 'Photos' });
-  const videosBtn = page
-    .locator('filter-panel >> button.filter-btn')
-    .filter({ hasText: 'Videos' });
-  const exifBtn = page
-    .locator('filter-panel >> button.filter-btn')
-    .filter({ hasText: 'Exif' });
-  const noneBtn = page
-    .locator('filter-panel >> button.filter-btn')
-    .filter({ hasText: 'None' });
+  const photosBtn = page.getByRole('button', { name: 'Photos' });
+  const videosBtn = page.getByRole('button', { name: 'Videos' });
+  const exifBtn = page.getByRole('button', { name: 'Exif' });
+  const noneBtn = page.getByRole('button', { name: 'None' });
 
   // Single-click "Photos" toggles photos off → no items left.
   // Click handler debounces 250ms before firing the toggle (see

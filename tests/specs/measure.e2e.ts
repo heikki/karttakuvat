@@ -19,17 +19,12 @@ test('Measure distances on the map', async ({ page }) => {
   // can't be tripped by an accidental marker hit (map-markers preventDefaults
   // its own click event when a feature is hit). Toggle "Photos" off; the
   // fixture has no videos, so the map ends up empty.
-  await page
-    .locator('filter-panel >> button.filter-btn')
-    .filter({ hasText: 'Photos' })
-    .click();
+  await page.getByRole('button', { name: 'Photos' }).click();
   await expect(page.locator('filter-panel >> .panel-header p')).toHaveText(
     'No results'
   );
 
-  const measureBtn = page
-    .locator('filter-panel >> button.view-btn')
-    .filter({ hasText: 'Measure' });
+  const measureBtn = page.getByRole('button', { name: 'Measure' });
   const overlay = page.locator('map-measure >> .overlay');
   // Resolve canvas position once so we can drive the mouse at absolute
   // viewport coordinates (more reliable for MapLibre than locator.click()).

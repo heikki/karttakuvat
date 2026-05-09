@@ -25,14 +25,8 @@ test('Open in Apple Maps and Google Maps', async ({ page }) => {
     }) as typeof window.open;
   });
 
-  await page
-    .locator('filter-panel >> button.view-btn')
-    .filter({ hasText: 'Apple Maps' })
-    .click();
-  await page
-    .locator('filter-panel >> button.view-btn')
-    .filter({ hasText: 'Google Maps' })
-    .click();
+  await page.getByRole('button', { name: 'Apple Maps' }).click();
+  await page.getByRole('button', { name: 'Google Maps' }).click();
 
   let opened = await page.evaluate(
     () => (window as unknown as { __opened: string[] }).__opened
@@ -56,14 +50,8 @@ test('Open in Apple Maps and Google Maps', async ({ page }) => {
     }) as typeof window.open;
   });
 
-  await page
-    .locator('filter-panel >> button.view-btn')
-    .filter({ hasText: 'Apple Maps' })
-    .click();
-  await page
-    .locator('filter-panel >> button.view-btn')
-    .filter({ hasText: 'Google Maps' })
-    .click();
+  await page.getByRole('button', { name: 'Apple Maps' }).click();
+  await page.getByRole('button', { name: 'Google Maps' }).click();
 
   opened = await page.evaluate(
     () => (window as unknown as { __opened: string[] }).__opened

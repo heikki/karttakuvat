@@ -1,5 +1,4 @@
 import { rmSync } from 'node:fs';
-
 import { expect, test, type Page } from '@playwright/test';
 
 import { layerVisibility, sourceFeatureCount } from './_helpers';
@@ -22,17 +21,11 @@ test.beforeEach(() => {
 // per photo + waypoint — driven by `<map-route>`'s edit module.
 
 async function selectAlbum(page: Page, album: string): Promise<void> {
-  await page
-    .locator('filter-panel >> .panel-body select')
-    .nth(1)
-    .selectOption(album);
+  await page.getByLabel('Album').selectOption(album);
 }
 
 async function clickViewBtn(page: Page, label: string): Promise<void> {
-  await page
-    .locator('filter-panel >> button.view-btn')
-    .filter({ hasText: label })
-    .click();
+  await page.getByRole('button', { name: label }).click();
 }
 
 async function canvasBox(
@@ -55,9 +48,7 @@ test('Toggle photo route on the map', async ({ page }) => {
   // Filter to Tampere → enables the Route button.
   await selectAlbum(page, 'Tampere');
 
-  const routeBtn = page
-    .locator('filter-panel >> button.view-btn')
-    .filter({ hasText: 'Route' });
+  const routeBtn = page.getByRole('button', { name: 'Route' });
   await expect(routeBtn).toBeEnabled();
   await expect(routeBtn).not.toHaveClass(/active/);
 
@@ -98,9 +89,9 @@ test('Edit mode adds a waypoint via clicking a segment', async ({ page }) => {
 
   // Enter edit mode → the edit-points source is populated.
   await clickViewBtn(page, 'Edit');
-  await expect(
-    page.locator('filter-panel >> button.view-btn').filter({ hasText: 'Edit' })
-  ).toHaveClass(/active/);
+  await expect(page.getByRole('button', { name: 'Edit' })).toHaveClass(
+    /active/
+  );
   await expect
     .poll(() => sourceFeatureCount(page, 'route-edit-points'))
     .toBeGreaterThanOrEqual(2);

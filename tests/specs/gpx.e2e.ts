@@ -18,10 +18,7 @@ test('View GPX tracks for an album', async ({ page }) => {
   const responsePromise = page.waitForResponse(
     (r) => r.url().endsWith('/albums/Tampere/track.gpx') && r.ok()
   );
-  await page
-    .locator('filter-panel >> .panel-body select')
-    .nth(1)
-    .selectOption('Tampere');
+  await page.getByLabel('Album').selectOption('Tampere');
   await responsePromise;
 
   // Waypoints land in `gpx-waypoints`, tracks in `gpx-tracks`.

@@ -6,9 +6,10 @@ export function renderSelect(
   value: string,
   onChange: (e: Event) => void
 ) {
+  const id = `filter-${label.toLowerCase()}`;
   return html`
-    <label>${label}</label>
-    <select @change=${onChange}>
+    <label for=${id}>${label}</label>
+    <select id=${id} @change=${onChange}>
       <option value="all" ?selected=${value === 'all'}>All</option>
       ${options.map(
         (o) => html`<option value=${o} ?selected=${o === value}>${o}</option>`

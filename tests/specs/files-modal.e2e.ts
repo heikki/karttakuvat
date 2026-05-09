@@ -10,14 +10,9 @@ test('Manage album files', async ({ page }) => {
   );
 
   // Filter to Tampere → Files button enables.
-  await page
-    .locator('filter-panel >> .panel-body select')
-    .nth(1)
-    .selectOption('Tampere');
+  await page.getByLabel('Album').selectOption('Tampere');
 
-  const filesBtn = page
-    .locator('filter-panel >> button.view-btn')
-    .filter({ hasText: 'Files' });
+  const filesBtn = page.getByRole('button', { name: 'Files' });
   await expect(filesBtn).toBeEnabled();
 
   // Open modal → row for track.gpx.
