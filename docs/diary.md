@@ -2,12 +2,12 @@
 
 Geotagged photo map viewer with Apple Photos integration.
 
-## Project Stats (as of 08.05.2026)
+## Project Stats (as of 09.05.2026)
 
-- **TypeScript files**: 73
-- **Lines of code**: 12,764 (+ 2,581 tests)
-- **Total commits**: 563
-- **Total tokens**: ~2,193M | **Total cost**: ~$1,346
+- **TypeScript files**: 77
+- **Lines of code**: 12,838 (+ 2,692 tests)
+- **Total commits**: 568
+- **Total tokens**: ~2,254M | **Total cost**: ~$1,390
 
 ## Updating This Diary
 
@@ -33,6 +33,15 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 - Skip minor tweaks — only significant features and fixes belong in the entry, especially on busy days.
 - State the user-visible change only; skip mechanism and backstory unless that _is_ the change.
 - Describe final outcomes, not reverted intermediate attempts.
+
+## 09.05.2026 — Map route deepening; e2e ARIA migration
+
+**Tokens**: 61M | **Cost**: $44
+
+- Internal: `<map-route>` deepened — `RouteData` algebra, signal-backed `route-store` owning route + persistence, three derivation effects on the Lit element; edit module mutates the store directly; album-tagged route guards reconcile mid-switch
+- Internal: route e2e covers add-waypoint, reload-persistence, album-switch-persistence
+- Internal: filter-panel `<select>`s get `for`/`id`; e2e migrated to `getByRole`/`getByLabel`
+- Internal: `will-navigate` parses electrobun's JSON detail and respects `allowed: true` (was handing the JSON to macOS `open`)
 
 ## 08.05.2026 — E2E rewrite; server deepening; filter additions
 
