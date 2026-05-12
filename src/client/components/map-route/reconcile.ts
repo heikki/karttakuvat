@@ -7,8 +7,8 @@ import {
   removePoint,
   reorderPhotoPoints,
   syncPhotoPoints
-} from './route-data';
-import type { RouteData, RoutePoint } from './route-data';
+} from './data';
+import type { RouteData, RoutePoint } from './data';
 
 function dropOrphanPhotoPoints(
   r: RouteData,

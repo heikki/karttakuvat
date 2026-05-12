@@ -12,8 +12,8 @@ import {
   syncPhotoPoints,
   updateAdjacentSegments,
   withSegment
-} from './route-data';
-import type { RouteData, RoutePoint, RouteSegment } from './route-data';
+} from './data';
+import type { RouteData, RoutePoint, RouteSegment } from './data';
 
 const photoPt = (uuid: string, lon: number, lat: number): RoutePoint => ({
   type: 'photo',

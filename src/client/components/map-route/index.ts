@@ -17,11 +17,11 @@ import {
   setLayersVisibility
 } from '@components/map-view/api';
 
+import { buildDefault, buildLineFeatures } from './data';
+import type { RouteData } from './data';
 import { initRouteEdit } from './edit';
 import { reconcileWithAlbum } from './reconcile';
 import * as route from './route';
-import { buildDefault, buildLineFeatures } from './route-data';
-import type { RouteData } from './route-data';
 
 const lineLayout = {
   'visibility': 'none' as const,

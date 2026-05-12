@@ -3,8 +3,8 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 import { clear as clearEdits } from '@common/edits';
 import type { Photo } from '@common/types';
 
+import type { RouteData, RoutePoint } from './data';
 import { reconcileWithAlbum } from './reconcile';
-import type { RouteData, RoutePoint } from './route-data';
 
 const photoPt = (uuid: string, lon: number, lat: number): RoutePoint => ({
   type: 'photo',

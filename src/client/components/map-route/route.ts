@@ -2,9 +2,9 @@ import { signal, type Signal } from '@lit-labs/signals';
 
 import type { Photo } from '@common/types';
 
-import * as routeData from './route-data';
-import type { RouteData, SegMethod } from './route-data';
-import { fetchRouteGeometry } from './route-routing';
+import * as routeData from './data';
+import type { RouteData, SegMethod } from './data';
+import { fetchRouteGeometry } from './routing';
 
 // The Photo Route — one route, one album. Album+data live in the signal as
 // a single atomic value so subscribers can never observe a mid-update where

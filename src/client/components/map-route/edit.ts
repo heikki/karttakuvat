@@ -10,6 +10,7 @@ import * as interactionMode from '@common/interaction-mode';
 import { effect } from '@common/signals';
 import { setLayersVisibility } from '@components/map-view/api';
 
+import { buildDefault } from './data';
 import {
   ALL_EDIT_LAYERS,
   createEditLayers,
@@ -20,7 +21,6 @@ import {
 import { findNearestSegment } from './edit-geometry';
 import { createSegmentPopup, showRouteError } from './edit-popup';
 import * as route from './route';
-import { buildDefault } from './route-data';
 
 // ---------- State machine ----------
 
