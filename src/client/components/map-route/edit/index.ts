@@ -10,17 +10,17 @@ import * as interactionMode from '@common/interaction-mode';
 import { effect } from '@common/signals';
 import { setLayersVisibility } from '@components/map-view/api';
 
-import { buildDefault } from './data';
+import { buildDefault } from '../data';
+import * as route from '../route';
 import {
   ALL_EDIT_LAYERS,
   createEditLayers,
   raiseEditPoints,
   setHoverSource,
   updateEditSources
-} from './edit-display';
-import { findNearestSegment } from './edit-geometry';
-import { createSegmentPopup, showRouteError } from './edit-popup';
-import * as route from './route';
+} from './display';
+import { findNearestSegment } from './geometry';
+import { createSegmentPopup, showRouteError } from './popup';
 
 // ---------- State machine ----------
 

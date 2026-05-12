@@ -7,8 +7,8 @@ import type {
 import * as data from '@common/data';
 import type { Photo } from '@common/types';
 
-import { buildLineFeatures } from './data';
-import type { RouteData } from './data';
+import { buildLineFeatures } from '../data';
+import type { RouteData } from '../data';
 
 const EDIT_SOURCES = [
   'route-edit-line',

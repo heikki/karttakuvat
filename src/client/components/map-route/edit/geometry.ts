@@ -1,6 +1,6 @@
 import type { Map as MapGL } from 'maplibre-gl';
 
-import type { RouteData } from './data';
+import type { RouteData } from '../data';
 
 /** Distance from a point to a polyline. */
 function distToPolyline(

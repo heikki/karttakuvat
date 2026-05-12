@@ -2,7 +2,7 @@ import type { Map as MapGL } from 'maplibre-gl';
 
 import { HAS_ROUTING } from '@common/features';
 
-import type { RouteSegment } from './data';
+import type { RouteSegment } from '../data';
 
 interface SegmentPopupOpts {
   map: MapGL;
