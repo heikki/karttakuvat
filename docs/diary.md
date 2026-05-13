@@ -2,12 +2,12 @@
 
 Geotagged photo map viewer with Apple Photos integration.
 
-## Project Stats (as of 09.05.2026)
+## Project Stats (as of 13.05.2026)
 
-- **TypeScript files**: 77
-- **Lines of code**: 12,838 (+ 2,692 tests)
-- **Total commits**: 568
-- **Total tokens**: ~2,254M | **Total cost**: ~$1,390
+- **TypeScript files**: 76
+- **Lines of code**: 12,898 (+ 3,300 tests)
+- **Total commits**: 574
+- **Total tokens**: ~2,324M | **Total cost**: ~$1,446
 
 ## Updating This Diary
 
@@ -33,6 +33,18 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 - Skip minor tweaks — only significant features and fixes belong in the entry, especially on busy days.
 - State the user-visible change only; skip mechanism and backstory unless that _is_ the change.
 - Describe final outcomes, not reverted intermediate attempts.
+
+## 13.05.2026 — Map route cleanup
+
+**Tokens**: 7M | **Cost**: $6
+
+- Internal: trimmed dead code from the map route module
+
+## 12.05.2026 — Map route shape refactor
+
+**Tokens**: 63M | **Cost**: $50
+
+- Internal: reshaped the map route module — pure algebra split from the reactive store, edit code grouped, file layout tidied
 
 ## 09.05.2026 — Map route deepening; e2e ARIA migration
 
