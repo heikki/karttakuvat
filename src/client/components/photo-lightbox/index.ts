@@ -289,10 +289,6 @@ export class PhotoLightbox extends SignalWatcher(LitElement) {
     }
   };
 
-  private _onBackdropClick() {
-    this.hide();
-  }
-
   private _onVideoMouseMove() {
     const video = this.shadowRoot?.querySelector('video');
     if (video === undefined || video === null) return;

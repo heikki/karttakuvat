@@ -8,9 +8,9 @@ import { MapFeatureElement } from '@components/map-view/api';
 
 function computePhotoBounds(): LngLatBounds {
   const bounds = new LngLatBounds();
-  data.filteredPhotos
-    .get()
-    .forEach((p) => bounds.extend([p.lon ?? 0, p.lat ?? 0]));
+  data.filteredPhotos.get().forEach((p) => {
+    bounds.extend([p.lon ?? 0, p.lat ?? 0]);
+  });
   return bounds;
 }
 

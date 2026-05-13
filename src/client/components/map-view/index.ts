@@ -69,6 +69,7 @@ export class MapView extends LitElement implements MapApi {
   // Self-reference handed to features via context. The element instance is
   // stable, so initialValue is fine — internal state changes (this._map flips
   // from undefined to the map) are exposed lazily through the getter/methods.
+  // eslint-disable-next-line @typescript-eslint/no-unused-private-class-members -- constructed for its side effect: ContextProvider registers itself on this host.
   private readonly _ctx = new ContextProvider(this, {
     context: mapContext,
     initialValue: this

@@ -33,13 +33,18 @@ const recordingWriter = (): RecordingWriter => {
   const calls: string[] = [];
   return {
     calls,
-    setLocation: (uuid, lat, lon) =>
-      calls.push(`setLocation ${uuid} ${lat} ${lon}`),
-    setDateTime: (uuid, date, time) =>
-      calls.push(`setDateTime ${uuid} ${date} ${time}`),
-    setTimezone: (uuid, tz, off) =>
-      calls.push(`setTimezone ${uuid} ${tz} ${off}`),
-    quitPhotosApp: () => calls.push('quitPhotosApp')
+    setLocation: (uuid, lat, lon) => {
+      calls.push(`setLocation ${uuid} ${lat} ${lon}`);
+    },
+    setDateTime: (uuid, date, time) => {
+      calls.push(`setDateTime ${uuid} ${date} ${time}`);
+    },
+    setTimezone: (uuid, tz, off) => {
+      calls.push(`setTimezone ${uuid} ${tz} ${off}`);
+    },
+    quitPhotosApp: () => {
+      calls.push('quitPhotosApp');
+    }
   };
 };
 
