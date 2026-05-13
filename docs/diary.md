@@ -29,10 +29,13 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 **Style guide:**
 
 - Add `**Tokens**: NM | **Cost**: $N` from `bunx ccusage` for the entry's date; omit only if no record.
-- One short bullet (≲100 chars) per change; flat list, no sub-bullets or prose.
-- Skip minor tweaks — only significant features and fixes belong in the entry, especially on busy days.
+- The diary is a high-altitude view — commit log has the details. Don't restate it.
+- One short bullet (≲100 chars) per theme. Group related commits into one bullet; never one-per-commit.
+- No identifiers: skip file names, function names, symbol names, directory paths. Describe the theme.
 - State the user-visible change only; skip mechanism and backstory unless that _is_ the change.
+- Skip minor tweaks — only significant features and fixes belong, especially on busy days.
 - Describe final outcomes, not reverted intermediate attempts.
+- Flat list, no sub-bullets or prose.
 
 ## 13.05.2026 — Map route cleanup
 
