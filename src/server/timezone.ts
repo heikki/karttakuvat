@@ -69,7 +69,7 @@ export function tzOffsetFromTzName(
     if (tzPart === undefined) return null;
 
     // tzPart.value is like "GMT+03:00" or "GMT-05:00" or "GMT"
-    const gmtMatch = /^GMT(?<offset>[+-]\d{2}:\d{2})?$/v.exec(tzPart.value);
+    const gmtMatch = /^GMT(?<offset>[+\-]\d{2}:\d{2})?$/v.exec(tzPart.value);
     if (gmtMatch === null) return null;
     return gmtMatch.groups?.offset ?? '+00:00';
   } catch {
