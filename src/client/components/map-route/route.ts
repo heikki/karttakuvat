@@ -118,17 +118,6 @@ export function syncPhotoPoints(photos: Photo[]): boolean {
   return changed;
 }
 
-export function reorderPhotoPoints(photos: Photo[]): boolean {
-  const cur = current.get();
-  if (cur === null) return false;
-  const { route: next, changed } = routeData.reorderPhotoPoints(
-    cur.data,
-    photos
-  );
-  if (changed) current.set({ ...cur, data: next });
-  return changed;
-}
-
 // ---------- Async verbs (race-guarded) ----------
 //
 // The signal's COW identity is the race token: capture the current RouteRef

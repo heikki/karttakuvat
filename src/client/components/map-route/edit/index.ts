@@ -117,15 +117,12 @@ export function initRouteEdit(m: MapGL): void {
 
 function onEnter(): void {
   if (map === null) return;
-  let cur = route.current.get();
-  if (cur === null) {
+  if (route.current.get() === null) {
     const defaultRoute = buildDefault(data.filteredPhotos.get());
     if (defaultRoute === null) return;
     const album = data.filters.get().album;
     if (album === 'all') return;
     route.setRoute(album, defaultRoute);
-    cur = route.current.get();
-    if (cur === null) return;
   }
   route.syncPhotoPoints(data.filteredPhotos.get());
 
