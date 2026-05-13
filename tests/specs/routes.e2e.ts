@@ -40,7 +40,7 @@ async function canvasBox(
 
 test('Toggle photo route on the map', async ({ page }) => {
   await page.goto('/');
-  await expect(page.locator('filter-panel >> .panel-header p')).toHaveText(
+  await expect(page.getByRole('status', { name: 'Photo stats' })).toHaveText(
     '3 photos'
   );
   await expect(page.locator('map-fit')).toBeAttached();
@@ -78,7 +78,7 @@ test('Toggle photo route on the map', async ({ page }) => {
 
 test('Edit mode adds a waypoint via clicking a segment', async ({ page }) => {
   await page.goto('/');
-  await expect(page.locator('filter-panel >> .panel-header p')).toHaveText(
+  await expect(page.getByRole('status', { name: 'Photo stats' })).toHaveText(
     '3 photos'
   );
   await selectAlbum(page, 'Tampere');
@@ -108,7 +108,7 @@ test('Edit mode adds a waypoint via clicking a segment', async ({ page }) => {
 
 test('Route edits persist across a page reload', async ({ page }) => {
   await page.goto('/');
-  await expect(page.locator('filter-panel >> .panel-header p')).toHaveText(
+  await expect(page.getByRole('status', { name: 'Photo stats' })).toHaveText(
     '3 photos'
   );
   await selectAlbum(page, 'Tampere');
@@ -144,7 +144,7 @@ test('Route edits persist across a page reload', async ({ page }) => {
   // auto-loads from disk without any further clicks. The panel header
   // shows "2 photos" after restore (Tampere's photo count, not "3 photos").
   await page.reload();
-  await expect(page.locator('filter-panel >> .panel-header p')).toHaveText(
+  await expect(page.getByRole('status', { name: 'Photo stats' })).toHaveText(
     '2 photos'
   );
   await expect
@@ -160,7 +160,7 @@ test('Route edits persist across a page reload', async ({ page }) => {
 
 test('Route edits persist across album switch and back', async ({ page }) => {
   await page.goto('/');
-  await expect(page.locator('filter-panel >> .panel-header p')).toHaveText(
+  await expect(page.getByRole('status', { name: 'Photo stats' })).toHaveText(
     '3 photos'
   );
   await selectAlbum(page, 'Tampere');

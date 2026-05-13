@@ -9,7 +9,7 @@ import { sourceFeatureCount } from './_helpers';
 
 test('View GPX tracks for an album', async ({ page }) => {
   await page.goto('/');
-  await expect(page.locator('filter-panel >> .panel-header p')).toHaveText(
+  await expect(page.getByRole('status', { name: 'Photo stats' })).toHaveText(
     '3 photos'
   );
   await expect(page.locator('map-fit')).toBeAttached();

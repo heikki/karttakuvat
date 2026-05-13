@@ -318,7 +318,7 @@ export class PhotoPopup extends SignalWatcher(LitElement) {
       const inputVal = editableDateStr(effectiveDate);
       return html`
         ${dateText}
-        <span class="action-buttons">
+        <span class="action-buttons" role="group" aria-label="Date actions">
           <button
             class="action-btn"
             @click=${() => {
@@ -393,7 +393,7 @@ export class PhotoPopup extends SignalWatcher(LitElement) {
 
     return html`
       ${dateText}
-      <span class="action-buttons">
+      <span class="action-buttons" role="group" aria-label="Date actions">
         <button
           class="action-btn"
           @click=${() => {
@@ -432,7 +432,7 @@ export class PhotoPopup extends SignalWatcher(LitElement) {
 
     return html`
       ${formatCoords(loc)}
-      <span class="action-buttons">
+      <span class="action-buttons" role="group" aria-label="Location actions">
         <button
           class="action-btn"
           @click=${(e: Event) => {

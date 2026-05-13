@@ -7,7 +7,7 @@ import { expect, test } from '@playwright/test';
 test('Filter by media type and location precision', async ({ page }) => {
   await page.goto('/');
 
-  const stats = page.locator('filter-panel >> .panel-header p');
+  const stats = page.getByRole('status', { name: 'Photo stats' });
   await expect(stats).toHaveText('3 photos');
 
   const photosBtn = page.getByRole('button', { name: 'Photos' });

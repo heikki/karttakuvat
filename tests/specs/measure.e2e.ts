@@ -11,7 +11,7 @@ test('Measure distances on the map', async ({ page }) => {
 
   // Wait for /api/items to land so the map has finished its initial load
   // before we send canvas clicks.
-  await expect(page.locator('filter-panel >> .panel-header p')).toHaveText(
+  await expect(page.getByRole('status', { name: 'Photo stats' })).toHaveText(
     '3 photos'
   );
 
@@ -20,7 +20,7 @@ test('Measure distances on the map', async ({ page }) => {
   // its own click event when a feature is hit). Toggle "Photos" off; the
   // fixture has no videos, so the map ends up empty.
   await page.getByRole('button', { name: 'Photos' }).click();
-  await expect(page.locator('filter-panel >> .panel-header p')).toHaveText(
+  await expect(page.getByRole('status', { name: 'Photo stats' })).toHaveText(
     'No results'
   );
 

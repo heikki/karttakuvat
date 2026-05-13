@@ -114,7 +114,9 @@ export class FilterPanel extends SignalWatcher(LitElement) {
           }}
         >
           <h2>Karttakuvat</h2>
-          <p>${FilterPanel._renderStats()}</p>
+          <p role="status" aria-label="Photo stats">
+            ${FilterPanel._renderStats()}
+          </p>
         </div>
         ${this._collapsed
           ? nothing
@@ -223,8 +225,15 @@ export class FilterPanel extends SignalWatcher(LitElement) {
                   </button>
                 </div>
                 ${editCount > 0
-                  ? html` <div class="edit-section">
-                      <span class="count">${editCount}</span> pending edits
+                  ? html` <div
+                      class="edit-section"
+                      role="region"
+                      aria-label="Pending edits"
+                    >
+                      <span class="count" aria-label="Pending edit count"
+                        >${editCount}</span
+                      >
+                      pending edits
                       <div class="edit-buttons">
                         <button
                           ?disabled=${isSaving}

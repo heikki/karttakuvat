@@ -8,7 +8,7 @@ test('Open in Apple Maps and Google Maps', async ({ page }) => {
   // 1) No selection → Apple/Google Maps URLs come from the current map
   // center + zoom.
   await page.goto('/');
-  await expect(page.locator('filter-panel >> .panel-header p')).toHaveText(
+  await expect(page.getByRole('status', { name: 'Photo stats' })).toHaveText(
     '3 photos'
   );
   // Wait for the map to be loaded — `<map-fit>` only mounts after

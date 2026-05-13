@@ -5,7 +5,7 @@ import { expect, test } from '@playwright/test';
 
 test('Manage album files', async ({ page }) => {
   await page.goto('/');
-  await expect(page.locator('filter-panel >> .panel-header p')).toHaveText(
+  await expect(page.getByRole('status', { name: 'Photo stats' })).toHaveText(
     '3 photos'
   );
 

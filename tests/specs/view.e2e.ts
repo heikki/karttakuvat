@@ -11,7 +11,7 @@ test('Find a specific photo on the map', async ({ page }) => {
   await page.goto('/?id=e2e-1');
 
   // Filter panel reflects the seeded count: app booted, /api/items resolved.
-  await expect(page.locator('filter-panel >> .panel-header p')).toHaveText(
+  await expect(page.getByRole('status', { name: 'Photo stats' })).toHaveText(
     '3 photos'
   );
 
