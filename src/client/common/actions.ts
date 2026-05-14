@@ -1,10 +1,8 @@
-import selection from '@common/selection';
 import { showAlbumFiles } from '@components/files-modal';
 import { showMetadata } from '@components/metadata-modal';
 import { showLightbox } from '@components/photo-lightbox';
 
 import { saveEdits as saveEditsImpl } from '../save';
-import { viewState } from './view-state';
 
 export { showAlbumFiles, showLightbox, showMetadata };
 
@@ -14,14 +12,6 @@ function getMapView(): HTMLElementTagNameMap['map-view'] | null {
 
 export function fitToPhotos(animate = false, selectFirst = false): void {
   getMapView()?.fitToPhotos(animate, selectFirst);
-}
-
-export function resetMap(): void {
-  selection.clear();
-  viewState.mapStyle.set('satellite');
-  viewState.markerStyle.set('classic');
-  viewState.routeVisible.set(false);
-  getMapView()?.fitToPhotos(true);
 }
 
 export function openExternalMap(provider: 'apple' | 'google'): void {

@@ -7,6 +7,7 @@ import * as data from '@common/data';
 import * as edits from '@common/edits';
 import { HAS_MML } from '@common/features';
 import * as interactionMode from '@common/interaction-mode';
+import selection from '@common/selection';
 import { resetUrl } from '@common/url-state';
 import { getYear, isVideo } from '@common/utils';
 import { viewState } from '@common/view-state';
@@ -39,9 +40,13 @@ function onCameraChange(e: Event): void {
 }
 
 function onReset(): void {
+  selection.clear();
+  viewState.mapStyle.set('satellite');
+  viewState.markerStyle.set('classic');
+  viewState.routeVisible.set(false);
   data.resetFilters();
   resetUrl();
-  actions.resetMap();
+  actions.fitToPhotos(true);
 }
 
 @customElement('filter-panel')

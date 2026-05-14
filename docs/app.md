@@ -10,7 +10,7 @@ Lit + signals client (`src/client/`), Bun server (`src/server/`), ObjC++ native 
 - **Layer order** = template order — see [ADR-0008](adr/0008-dom-order-as-z-order.md). `<map-markers>` keeps its z-position across runtime layer swaps via the invisible `markers-anchor` symbol layer.
 - **State** lives in `@lit-labs/signals` stores under `@common/` — see [ADR-0004](adr/0004-signals-for-state.md). The stores are `data`, `edits`, `selection`, `view-state`, `interaction-mode`, plus the `urlSignal()` primitive in `url-state`.
 - **Interaction modes** (`placement` | `measure` | `route-edit`) are mutually exclusive via one signal — see [ADR-0009](adr/0009-single-interaction-mode-signal.md).
-- **Commands** live alongside the state they touch (`data.*` verbs, `interactionMode.*`, `selection.*`). `@common/actions` is reserved for cross-cutting orchestrations that touch multiple stores or reach the map (`resetMap`, `fitToPhotos`, `openExternalMap`, `reloadAlbumGpx`, `saveEdits`).
+- **Commands** live alongside the state they touch (`data.*` verbs, `interactionMode.*`, `selection.*`). `@common/actions` is the one-shot verbs barrel for Lit components — modal openers, MapApi forwarders, and `saveEdits` — see [ADR-0011](adr/0011-actions-as-one-shot-verbs-barrel.md). Multi-step orchestrations (e.g. the Reset button's filter + URL + viewState + map sequence) stay inlined at their call site.
 
 ### Startup
 
