@@ -1,4 +1,4 @@
-# Development Diary
+# Diary
 
 Geotagged photo map viewer with Apple Photos integration.
 

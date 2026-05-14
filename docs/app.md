@@ -1,4 +1,4 @@
-# Architecture
+# App
 
 Lit + signals client (`src/client/`), Bun server (`src/server/`), ObjC++ native bridge via `bun:ffi` (`resources/native/`). The desktop app wraps the same server in Electrobun. Both `bun run dev` and the desktop app share `createRequestHandler` and run a local `Bun.serve({ port: 0 })` — see [ADR-0005](adr/0005-local-bun-serve-not-views-protocol.md).
 

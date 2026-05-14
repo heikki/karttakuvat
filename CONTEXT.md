@@ -1,4 +1,4 @@
-# Karttakuvat
+# CONTEXT
 
 Globe view of an Apple Photos library — fix missing locations and wrong dates or timezones in place. This file pins terminology used across the codebase and docs; consult it whenever a term is ambiguous.
 

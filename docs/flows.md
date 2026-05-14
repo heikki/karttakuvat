@@ -1,4 +1,4 @@
-# User Flows
+# Flows
 
 Canonical inventory of user-visible flows. Each Tier 5 e2e spec maps to one or more entries here. Behavior detail lives in the relevant component code; this file is the index.
 
