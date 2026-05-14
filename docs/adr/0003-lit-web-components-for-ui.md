@@ -1,0 +1,3 @@
+# Lit web components for the UI
+
+UI is built as `LitElement`-based custom elements (`<filter-panel>`, `<photo-popup>`, `<map-view>` and the `<map-*>` map features). Considered React and Svelte; rejected because: (1) WKWebView in the desktop app handles native custom elements with no runtime overhead; (2) the map is the central concern and MapLibre integrates more naturally with DOM elements than with a virtual-DOM intermediary; (3) one less framework to keep up to date. The Lit decorator syntax (`@property`, `@state`, `@query`, `@consume`) is the legacy TC39-stage-2 form — see ADR-0001 for the version pin this forces.

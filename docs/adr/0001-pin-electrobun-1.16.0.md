@@ -1,0 +1,3 @@
+# Pin electrobun at 1.16.0
+
+Electrobun 1.18.1 ships with Bun 1.3.13, whose programmatic `Bun.build()` emits TC39 standard decorators and no longer respects `experimentalDecorators: true` (oven-sh/bun#30477). This breaks Lit's legacy `@property` / `@state` / `@query` / `@consume` at runtime, and migrating to TC39 standard decorators requires `accessor` everywhere plus untangling `@query` and `@consume` initialization-order issues we couldn't tame in one pass. We pin electrobun at 1.16.0 (with Bun 1.3.10 — the last version where the bundler honors the flag) until oven-sh/bun#30478 lands. `bun run dev` is unaffected because that path uses Bun's runtime transpiler, which still honors the flag — only `Bun.build` is broken.

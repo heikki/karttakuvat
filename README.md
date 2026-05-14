@@ -34,6 +34,10 @@ Get keys from [MML](https://www.maanmittauslaitos.fi/rajapinnat/api-avaimen-ohje
 
 ## Docs
 
-- [App spec](docs/app.md) — current behavior
-- [User flows](docs/flows.md) — interaction flows
-- [Development diary](docs/diary.md) — project stats
+- [Glossary](CONTEXT.md) — terms and relationships
+- [Architecture](docs/app.md) — code shape and seams
+- [User flows](docs/flows.md) — interaction inventory
+- [Gotchas](docs/gotchas.md) — non-obvious behaviors
+- [Testing](docs/testing.md) — five-tier strategy
+- [ADRs](docs/adr/) — architectural decisions
+- [Diary](docs/diary.md) — chronological log

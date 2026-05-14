@@ -1,0 +1,3 @@
+# Desktop app uses local `Bun.serve` over a `views://` custom protocol
+
+Both `bun run dev` and the Electrobun-packaged desktop app boot a single `Bun.serve({ port: 0 })` instance serving view files and API routes on the same origin (`http://127.0.0.1:PORT`). Considered Electrobun's `views://` custom protocol for the desktop app — it would avoid binding a port — but `<script src="...">` resolution behaves inconsistently under that scheme, breaking module loading and HMR. The same-origin local-server approach also means the dev and desktop entries can share `createRequestHandler` rather than maintaining two routing paths. Trade-off: the app binds a port at launch (acceptable; chosen by the OS).

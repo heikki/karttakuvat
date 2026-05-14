@@ -1,0 +1,3 @@
+# Flat JSON files for app state, not SQLite
+
+Server state lives in flat JSON files under the data directory: `items.json` (the photo-metadata snapshot), `state.json` (settings: `view`, `window`, `ors_api_key`), and per-album `_files.json` / `_route.json` sidecars. The earlier implementation used a SQLite `app.db` with a generic settings table, but the data is small (kilobytes), the access patterns are dominated by full-file reads on cold start and debounced full-file writes on update, and the only query needed is "get the whole snapshot." A SQLite dependency added build complexity (native bindings) without buying anything for this workload. Items in memory are the source of truth at runtime; the on-disk JSON is just persistence.

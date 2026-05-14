@@ -1,139 +1,53 @@
 # User Flows
 
-## Browse the collection
+Canonical inventory of user-visible flows. Each Tier 5 e2e spec maps to one or more entries here. Behavior detail lives in the relevant component code; this file is the index.
 
-User opens the app and sees all photos and videos on the map, zoomed to fit. The filter panel shows the total count. Clicking "Fit" re-fits the map and opens a popup on the oldest item.
+## Browse and view
 
-If the user previously had a URL with filters or a selected photo, the app restores that state on load — the same filters, map position, map style, marker style, and open popup are restored.
+- **Browse the collection** — see all photos and videos on the map; URL state restores filters / view / styles / open popup.
+- **Find a photo on the map** — click marker → popup; arrow keys cycle filtered items; Space or thumbnail click → lightbox.
+- **View a photo full size** — lightbox shows date/timezone/coords/camera; arrows cycle; Escape/Space/backdrop closes; trackpad pinch zooms.
+- **Watch a video** — videos play inline in lightbox; native controls auto-hide; Space toggles play/pause; mute persists across videos.
+- **View photo metadata** — info button → modal with all fields from `Photos.sqlite`; UUID has copy button; close with X / backdrop / Escape.
 
-## Find a specific photo on the map
+## Filter
 
-User sees markers on the map (color-coded circles in Classic mode, or white glowing dots in Points mode) and clicks one. A popup appears with a thumbnail, date, coordinates, and overlay buttons (info, Photos.app link).
+- **Filter by year** — dropdown; cascades to repopulate album and camera.
+- **Filter by album** — dropdown (limited by year); cascades to camera; loads visible GPX tracks if any.
+- **Filter by camera** — dropdown (limited by year + album).
+- **Filter by media type** — toggle Photos / Videos; double-click solos.
+- **Filter by location precision** — toggle Exif / Inferred / User / None (color-coded; double-click solos; "None" excluded by default).
 
-The user can press left/right arrow keys to step through all filtered items chronologically. The popup moves to each item's marker on the map. Clicking the thumbnail opens the full-screen viewer. Pressing Space also opens the viewer. Clicking elsewhere on the map dismisses the popup.
+## Map view
 
-## View a photo's full size
+- **Switch basemap** — Aerial / Topo / Maasto / Orto buttons; layers survive the swap.
+- **Switch marker style** — Classic / Points buttons.
+- **Switch projection** — globe control (bottom-right) toggles globe ↔ mercator.
+- **Reset the app** — closes popup, exits modes, defaults filters/styles, clears URL, fits to all photos.
+- **Open in Apple Maps / Google Maps** — opens external map at selected photo or current view.
 
-From a popup, the user can enter the full-screen viewer by clicking the thumbnail or pressing Space. It shows the photo at full resolution with date (including timezone), coordinates, and camera name.
+## Edit
 
-Arrow keys cycle through all filtered items. Close with Escape, Space, or clicking outside the image. Info and "Open in Photos" buttons are available as overlays.
+- **Set a photo's location** — popup "set" → placement mode → click map → marker reappears at new location as pending edit; Escape cancels.
+- **Copy and paste a location** — copy on one photo, paste on another; becomes a pending edit.
+- **Adjust a photo's date/time** — popup "edit" → ±1d / ±1h buttons or manual `D.M.YYYY HH:MM` input; pending until saved.
+- **Copy and paste a date** — copy on one photo, paste on another (computes the hour offset).
+- **Save edits** — "Save to Photos" pushes pending edits to Photos.app; data reloads, popup reopens; alert on error.
+- **Discard edits** — clears all pending location and time edits.
+- **Open a photo in Apple Photos** — Photos.app link button on popup and lightbox.
 
-## Filter by year
+## Album extras
 
-The user picks a year from the dropdown. The album and camera dropdowns are repopulated to show only options available within that year. The map updates to show only matching items. The filter panel updates the count. All filter changes are persisted in the URL.
+- **View GPX tracks** — visible tracks load automatically when an album with `.gpx` files is selected.
+- **Manage album files** — "Files" button → modal to upload / toggle visibility / delete `.gpx` and `.md` files.
+- **View a photo route** — "Route" button → blue chronological line through filtered album photos; loads custom route if saved.
+- **Edit a photo route** — "Edit" button → crosshair cursor; click segment to add waypoint, click waypoint to remove, drag to move, right-click for routing method (straight / driving / hiking / none); auto-saves.
 
-## Filter by album
+## Tools
 
-The user picks an album from the dropdown (options are filtered by the selected year). The camera dropdown is repopulated to show only cameras used in photos matching the current year + album. If GPX track data is available for the selected album, visible tracks are loaded and displayed on the map.
+- **Measure distances** — "Measure" button → click adds points connected by dashed line; cumulative distance overlay; click point to remove.
+- **Collapse the filter panel** — click header to toggle.
 
-## Filter by camera
+## Dismiss
 
-The user picks a camera from the dropdown (options are filtered by year + album).
-
-## Filter by media type
-
-The user clicks toggle buttons to show/hide photos and videos. Single-click toggles one type. Double-click solos that type (e.g. double-click "Videos" to show only videos).
-
-## Filter by location precision
-
-The user clicks location toggle buttons (Exif, Inferred, User, None). Same single-click/double-click behavior. Buttons are color-coded to match marker colors on the map. By default, "None" is excluded — photos without GPS are hidden until the user activates the None button.
-
-## Switch map style
-
-The user clicks one of the map style buttons (Aerial, Topo, plus Maasto and Orto when an MML API key is configured). The active button gets highlighted. Map tiles change while keeping the same view position; photo markers, GPX tracks, and other overlay layers stay visible across the swap. The selected style is saved in the URL.
-
-## Switch marker style
-
-The user clicks one of the marker style buttons (Classic, Points). Classic mode (default) shows color-coded circles with white outlines (blue for GPS, amber for inferred, green for user-set, gray for no location). The selected marker gets a dark highlight ring behind it. Points mode shows minimalist white dots with a WebGL bloom glow effect and integrated night shadow. The selected marker style is saved in the URL.
-
-## Switch map projection
-
-The user clicks the globe control (bottom-right) to toggle between globe and flat (mercator) projections. In globe mode, an animated cosmic background (nebula and twinkling stars) is visible behind the globe. When using the Points marker style, a day/night shadow overlay shows the sun position. The current popup is re-rendered at its position after the projection switch.
-
-## Reset the app
-
-The user clicks the "Reset" button. This closes any open popup, exits measure mode, resets all filters to their defaults (all years, all media types, location types excluding None), resets the map style to satellite, clears the URL, and fits the map to all photos.
-
-## Open in Apple Maps / Google Maps
-
-The user clicks the "Apple Maps" or "Google Maps" button in the filter panel. If a photo is currently selected, the external map opens centered on that photo's location. Otherwise, it opens at the current map center and zoom level. Apple Maps opens in satellite view.
-
-## Set a photo's location
-
-From a popup, the user clicks "set" in the location row. The popup closes, markers hide, a placement panel appears showing the photo's thumbnail and date, and the cursor becomes a crosshair. The user clicks on the map to place the photo. The marker reappears at the new location with a popup. The change is stored as a pending edit.
-
-The user can cancel placement mode by pressing Escape.
-
-## Copy and paste a location
-
-The user clicks "copy" on a photo's location row. Then navigates to another photo and clicks "paste" (which appears when a different location is copied). The pasted location becomes a pending edit.
-
-## Adjust a photo's date/time
-
-From a popup, the user clicks "edit" on the date row. Time adjustment buttons appear: ±1 day, ±1 hour. Each click adjusts the effective date immediately in the popup. The user clicks "done" to exit edit mode.
-
-For precise adjustments, the user can type a date in the text input (format: `D.M.YYYY HH:MM` or just `D.M HH:MM`) and press Enter.
-
-## Copy and paste a date
-
-The user clicks "copy" on a photo's date row. Then navigates to another photo and clicks "paste" (which appears when a different date is copied). This computes the hour offset needed to match the copied datetime.
-
-## Save edits
-
-When pending edits exist, the filter panel shows "N pending edits" with Save and Discard buttons. Clicking "Save to Photos" sends the edits to the server, which applies them to Photos.app and updates items.json. The data reloads and the current popup reopens. On error, an alert is shown.
-
-## Discard edits
-
-Clicking "Discard" clears all pending location and time edits. Markers return to their original positions and dates revert.
-
-## View photo metadata
-
-The user clicks the info button (on a popup image or in the lightbox). A modal appears showing detailed metadata fetched from Photos.sqlite: filename, original filename, dates, timezone, title, description, keywords, albums, persons, camera/lens/EXIF settings, dimensions, file size, coordinates, GPS accuracy, and various flags. The UUID has a copy button. Close with X, backdrop click, or Escape.
-
-## Open a photo in Apple Photos
-
-The popup and the lightbox show a Photos.app link button (visible when the photo has a `photos_url`). Clicking it opens Apple Photos at that specific photo.
-
-## View GPX tracks
-
-When the user selects an album that has associated GPX files, the visible tracks are automatically loaded and displayed on the map as colored lines with waypoint markers. Track visibility is managed per-file via the album files modal.
-
-## Manage album files
-
-When an album is selected, the user clicks the "Files" button in the filter panel to open the album files modal. The modal lists all GPX and markdown files associated with the album. The user can upload new files via drag-and-drop or file picker, toggle file visibility (hidden files are excluded from the map), or delete files. Changes take effect immediately on the map.
-
-## View a photo route
-
-When an album is selected, the user clicks the "Route" button in the filter panel. A blue line appears connecting all filtered photos in chronological order. If a previously edited route with custom waypoints exists for this album, it is loaded from the server. Clicking "Route" again hides the route.
-
-## Edit a photo route
-
-With the route visible, the user clicks the "Edit" button. The cursor changes to a crosshair and the route becomes interactive:
-
-- **Add a waypoint**: click on a route segment to insert a new control point
-- **Remove a waypoint**: click on an existing waypoint (smaller dot) to delete it
-- **Move a point**: drag any point to a new position; routed segments update automatically
-- **Change routing method**: right-click a segment to choose between straight, none, plus driving and hiking when an OpenRouteService API key is configured (none hides the segment)
-
-Changes are auto-saved. Exit edit mode with Escape or by clicking "Edit" again. Switching to "all albums" exits edit mode automatically.
-
-## Measure distances on the map
-
-The user clicks the "Measure" button in the filter panel. The button highlights blue and the cursor becomes a crosshair. Each click on the map adds a point, connected by a dashed red line to previous points. A floating overlay at the top of the screen shows the cumulative distance.
-
-To remove a point, the user clicks on it. To finish, the user presses Escape or clicks the "Measure" button again — all points and the line are cleared.
-
-## Collapse the filter panel
-
-The user clicks the panel header ("Karttakuvat" title area) to collapse the panel body, leaving only the header visible. Clicking again expands it.
-
-## Dismiss things
-
-- **Popup**: click map background or press Escape
-- **Lightbox**: click outside the image, press Escape, or press Space
-- **Metadata modal**: click backdrop, press Escape, or click X
-- **Measurement mode**: press Escape or click "Measure" button
-- **Route edit mode**: press Escape or click "Edit" button
-- **Placement mode**: press Escape
-- **Date edit mode**: press Escape or click "done"
-- Priority order: metadata modal > date edit > placement > route edit > measurement > lightbox > popup
+Priority order: metadata modal > date edit > placement > route edit > measurement > lightbox > popup. Escape works in every context; clicking outside the active surface or pressing the toggle button also dismisses.
