@@ -5,9 +5,9 @@ Geotagged photo map viewer with Apple Photos integration.
 ## Project Stats (as of 14.05.2026)
 
 - **TypeScript files**: 76
-- **Lines of code**: 12,925 (+ 3,271 tests)
-- **Total commits**: 586
-- **Total tokens**: ~2,386M | **Total cost**: ~$1,487
+- **Lines of code**: 12,934 (+ 3,286 tests)
+- **Total commits**: 590
+- **Total tokens**: ~2,449M | **Total cost**: ~$1,530
 
 ## Updating This Diary
 
@@ -37,12 +37,15 @@ git log --pretty=format:"%ad|%s" --date=format:"%Y-%m-%d" | head -50  # Recent c
 - Describe final outcomes, not reverted intermediate attempts.
 - Flat list, no sub-bullets or prose.
 
-## 14.05.2026 — Documentation restructure
+## 14.05.2026 — Documentation restructure; mode-race & route-load fixes
 
-**Tokens**: 12M | **Cost**: $9
+**Tokens**: 75M | **Cost**: $52
 
 - Internal: moved project-knowledge gotchas out of agent memory and into the repo, as a docs file plus inline comments at the relevant call sites
 - Internal: restructured docs around one-purpose-per-file — added a glossary and a directory of one-paragraph decision records; thinned the architecture and user-flows docs to indexes that defer detail to code
+- Internal: tightened the one-shot verbs module to its actual role — modal openers, map-handle forwarders, and save; the multi-step Reset orchestration moved to its single call site
+- Fixed measure mode silently losing the first map click after a cold start — handlers attached too late by an interaction-mode race
+- Fixed a destructive load path that could overwrite a saved photo route with a flat default when an album was opened during a slow route load — the Edit button now waits for the load to resolve before becoming clickable
 
 ## 13.05.2026 — Dependency refresh; desktop bundler version pin
 
