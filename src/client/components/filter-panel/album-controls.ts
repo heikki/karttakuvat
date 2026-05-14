@@ -5,6 +5,7 @@ import { customElement, property } from 'lit/decorators.js';
 import * as actions from '@common/actions';
 import * as interactionMode from '@common/interaction-mode';
 import { viewState } from '@common/view-state';
+import { current as routeCurrent } from '@components/map-route/route';
 
 import { styles } from './styles';
 
@@ -32,6 +33,10 @@ export class AlbumControls extends SignalWatcher(LitElement) {
     const disabled = this.album === 'all';
     const routeActive = viewState.routeVisible.get();
     const editActive = interactionMode.current.get() === 'route-edit';
+    // Mirror canEnter on the button so the load window is visibly
+    // disabled rather than silently refusing the click.
+    const editDisabled =
+      disabled || !routeActive || routeCurrent.get() === null;
     return html`
       <div class="view-buttons">
         <button
@@ -55,7 +60,7 @@ export class AlbumControls extends SignalWatcher(LitElement) {
         </button>
         <button
           class="view-btn ${editActive ? 'active' : ''}"
-          ?disabled=${disabled || !routeActive}
+          ?disabled=${editDisabled}
           @click=${() => {
             interactionMode.toggle('route-edit');
           }}

@@ -10,7 +10,6 @@ import * as interactionMode from '@common/interaction-mode';
 import { effect } from '@common/signals';
 import { setLayersVisibility } from '@components/map-view/api';
 
-import { buildDefault } from '../data';
 import * as route from '../route';
 import {
   ALL_EDIT_LAYERS,
@@ -90,8 +89,7 @@ export function initRouteEdit(m: MapGL): void {
   createEditLayers(m);
 
   interactionMode.defineMode('route-edit', {
-    canEnter: () =>
-      (route.current.get() ?? buildDefault(data.filteredPhotos.get())) !== null,
+    canEnter: () => route.current.get() !== null,
     onEnter,
     onExit
   });
@@ -117,13 +115,7 @@ export function initRouteEdit(m: MapGL): void {
 
 function onEnter(): void {
   if (map === null) return;
-  if (route.current.get() === null) {
-    const defaultRoute = buildDefault(data.filteredPhotos.get());
-    if (defaultRoute === null) return;
-    const album = data.filters.get().album;
-    if (album === 'all') return;
-    route.setRoute(album, defaultRoute);
-  }
+  // canEnter guarantees route.current is non-null here.
   route.syncPhotoPoints(data.filteredPhotos.get());
 
   suppressNextMapClick = false;

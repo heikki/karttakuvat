@@ -17,7 +17,7 @@ import {
   setLayersVisibility
 } from '@components/map-view/api';
 
-import { buildDefault, buildLineFeatures } from './data';
+import { buildLineFeatures } from './data';
 import type { RouteData } from './data';
 import { initRouteEdit } from './edit';
 import { reconcileWithAlbum } from './reconcile';
@@ -98,17 +98,15 @@ export class MapRoute extends MapFeatureElement {
       if (album === null) return;
       const myToken = ++loadToken;
       void (async () => {
-        const saved = await route.loadFromServer(album);
+        const saved = await route.loadFromServer(album, albumPhotosFor(album));
         if (myToken !== loadToken) return;
-        const initial: RouteData | null =
-          saved ?? buildDefault(albumPhotosFor(album));
-        if (initial === null) return;
+        if (saved === null) return;
         const { route: reconciled, changed } = reconcileWithAlbum(
-          initial,
+          saved,
           albumPhotosFor(album)
         );
         route.setRoute(album, reconciled);
-        if ((saved === null || changed) && edits.editCount.get() === 0) {
+        if (changed && edits.editCount.get() === 0) {
           void route.saveToServer(album, reconciled);
         }
       })();

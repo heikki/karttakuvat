@@ -40,6 +40,8 @@ export interface RouteRef {
   data: RouteData;
 }
 
+// Null while the load is in flight or failed; non-null only after a
+// successful load (saved route or buildDefault from a 404).
 export const current: Signal.State<RouteRef | null> = signal<RouteRef | null>(
   null
 );
@@ -56,9 +58,16 @@ export function setRoute(album: string, data: RouteData): void {
 
 // ---------- Server I/O ----------
 
-export async function loadFromServer(album: string): Promise<RouteData | null> {
+// 404 returns a default route so albums without a saved one are still
+// editable; null is reserved for actual load failures so callers can keep
+// the Edit button disabled until they have something usable.
+export async function loadFromServer(
+  album: string,
+  albumPhotos: Photo[]
+): Promise<RouteData | null> {
   try {
     const resp = await fetch(`/api/albums/${encodeURIComponent(album)}/route`);
+    if (resp.status === 404) return routeData.buildDefault(albumPhotos);
     if (!resp.ok) return null;
     return (await resp.json()) as RouteData;
   } catch {
