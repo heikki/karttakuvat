@@ -17,6 +17,8 @@
 #import <CoreMedia/CoreMedia.h>
 #import <AVFoundation/AVFoundation.h>
 
+// kUTTypeJPEG is deprecated; CGImageDestinationCreateWithURL takes a
+// UTI string directly, so use the raw "public.jpeg" identifier.
 static CFStringRef const kJPEGType = CFSTR("public.jpeg");
 
 // ---------- convertToJpeg ----------
@@ -156,7 +158,10 @@ extern "C" int extractVideoFrame(const char* videoPath, const char* outPath, int
 // ---------- runAppleScript ----------
 
 extern "C" int runAppleScript(const char* script, char* errBuf, int errBufLen) {
-    // NSAppleScript must run on the main thread.
+    // NSAppleScript must run on the main thread. Bun's fetch handler can run
+    // on internal worker threads, so the dispatch_sync hop below is required —
+    // removing it intermittently deadlocks the worker. The isMainThread guard
+    // avoids deadlocking when this is already on the main queue.
     __block int result = 0;
     void (^block)(void) = ^{
         @autoreleasepool {

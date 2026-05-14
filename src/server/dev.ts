@@ -85,6 +85,9 @@ const fetch = createRequestHandler({
   }
 });
 
+// Keep `development: false` even in the dev server. Bun's `development: true`
+// mode changes internal threading and error handling in ways that break the
+// app — only the production setting is supported here.
 const server = serve({
   routes: { '/': indexHtml },
   development: false,

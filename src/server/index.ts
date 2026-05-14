@@ -351,7 +351,8 @@ function clearCache() {
   });
 }
 
-// Handle menu actions
+// Handle menu actions. Electrobun delivers the action under `event.data`,
+// not the standard CustomEvent `event.detail` shape — easy to get wrong.
 ApplicationMenu.on('application-menu-clicked', (event: unknown) => {
   const action = (event as ElectrobunEvent).data?.action ?? '';
   switch (action) {
